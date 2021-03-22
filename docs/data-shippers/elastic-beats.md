@@ -219,3 +219,13 @@ output.elasticsearch:
   # api_key can be your ingest or personal token
   api_key: "user:token"
 ```
+
+## Auditbeat 
+
+Auditbeat is a lightweight shipper that ships events in real time to **Axiom** for further analysis. It Collects your Linux audit framework data and monitor the integrity of your files. Auditbeat is use to evaluate the activities of users and processes on your systems. 
+
+You can also use Auditbeat to detect changes to critical files, like binaries and configuration files, and identify potential security policy violations.
+
+### Installation 
+
+Vi the [Auditbeat download page](https://www.elastic.co/downloads/beats/auditbeat) to install Auditbeat on your system. 
