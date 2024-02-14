@@ -30,3 +30,8 @@ Install our Github App to autopropagate changes from youre repo to your deployme
 
 - Mintlify dev isn't running - Run `mintlify install` it'll re-install dependencies.
 - Page loads as a 404 - Make sure you are running in a folder with `mint.json`
+
+npm i # install deps
+npm run mintlify dev # build mintlify locally
+npm run vale sync # sync packages defined in .vale.ini
+npm run vale . # check all included files in subfolders
