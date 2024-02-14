@@ -35,3 +35,15 @@ npm i # install deps
 npm run mintlify dev # build mintlify locally
 npm run vale sync # sync packages defined in .vale.ini
 npm run vale . # check all included files in subfolders
+
+Vale VSCode
+https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode
+
+MDX
+https://marketplace.visualstudio.com/items?itemName=unifiedjs.vscode-mdx
+
+Code Spell Checker
+https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker
+
+- Images with a unknown size use `![Alt tag](/img.png)` syntax
+- Images with a specific size like icons use `<Image width={32} height={32}> syntax`
