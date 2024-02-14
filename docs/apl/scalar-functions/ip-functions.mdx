@@ -1,0 +1,368 @@
+---
+title: 'ip functions'
+excerpt: 'Learn how to use and combine different ip functions in APL'
+tags:
+  ['axiom documentation', 'documentation', 'axiom', 'format ipv4', 'parse_ipv4', 'ipv4', 'ipv4 is private', 'netmask', 'suffix']
+---
+
+# Scalar functions
+
+## IP functions 
+
+
+
+| **Function Name**                        |                      **Description**                                  |
+| ------------------------------------------------ | ---------------------------------------------------------------------- |
+| [format_ipv4()](<#format-ipv4()>)                | Parses input with a netmask and returns string representing IPv4 address. |
+| [parse_ipv4()](<#parse-ipv4()>)                  | Converts input to long (signed 64-bit) number representation.             |
+| [parse_ipv4_mask()](<#parse-ipv4-mask()>)        | Converts input string and IP-prefix mask to long (signed 64-bit) number representation. |
+| [ipv4_is_in_range()](<#ipv4-is-in-range()>)      | Checks if IPv4 string address is in IPv4-prefix notation range. |
+| [ipv4_is_private()](<#ipv4-is-private()>)        |   Checks if IPv4 string address belongs to a set of private network IPs. |
+| [ipv4_netmask_suffix()](<#ipv4-netmask-suffix()>)| Returns the value of the IPv4 netmask suffix from IPv4 string address. |
+
+
+
+---
+
+### IP-prefix notation
+
+IP addresses can be defined with `IP-prefix notation` using a slash (**/**) character. The IP address to the LEFT of the slash (**/***) is the base IP address. The number (1 to 32) to the RIGHT of the slash (**/**) is the number of contiguous 1 bit in the netmask.
+
+For example, `192.168.2.0/24` will have an associated net/subnetmask containing 24 contiguous bits or `255.255.255.0` in dotted decimal format.
+
+---
+
+## format_ipv4()
+
+Parses input with a netmask and returns string representing IPv4 address.
+
+
+### Arguments
+
+- Expr(IP): A string or number representation of the IPv4 address.
+
+### Returns
+
+If conversion is successful, the result will be a string representing IPv4 address. If conversion isn't successful, the result will be an empty string.
+
+### Example 
+
+```apl copy
+format_ipv4(ip)
+```
+
+```apl copy
+['sample-http-logs']
+| project str_ipv4 = format_ipv4("192.168.2.0")
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20str_ipv4%20%3D%20format_ipv4%28%5C%22192.168.2.0%5C%22%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+- Result
+
+```json copy
+{
+  "str_ipv4": "192.168.2.0"
+}
+```
+
+
+---
+
+## parse_ipv4()
+
+Converts IPv4 string to long (signed 64-bit) number representation.
+
+### Arguments
+
+- Expr: String expression representing IPv4 that will be converted to long. String may include net-mask using IP-prefix notation.
+
+### Returns
+
+If conversion is successful, the result will be a long number. If conversion isn't successful, the result will be `null.`
+
+### Example
+
+```apl copy
+parse_ipv4(Expr)
+```
+
+```apl copy
+['sample-http-logs']
+| project parsed_ipv4 = parse_ipv4("192.168.2.0")
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20parsed_ipv4%20%3D%20parse_ipv4%28%5C%22192.168.2.0%5C%22%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+- Result 
+
+```json copy
+{
+  "parsed_ipv4": 3232236032
+}
+```
+
+---
+
+## parse_ipv4_mask()
+
+Converts the input string of IPv4 and netmask to long number representation (signed 64-bit).
+
+### Arguments
+
+- `Expr:` A string representation of the IPv4 address that will be converted to long.
+- `PrefixMask:` An integer from 0 to 32 representing the number of most-significant bits that are taken into account.
+
+### Returns
+
+If conversion is successful, the result will be a long number. If conversion isn't successful, the result will be `null.`
+
+### Example
+
+```apl copy
+parse_ipv4_mask(Expr, PrefixMask)
+```
+
+```apl copy
+['sample-http-logs']
+| project parsed_ipv4 = parse_ipv4_mask("192.5.1.4", 24)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20parsed_ipv4%20%3D%20parse_ipv4_mask%28%5C%22192.5.1.4%5C%22%2C%2024%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+- Result 
+
+```json copy
+{
+  "parsed_ipv4": 3221553408
+}
+```
+
+--- 
+
+## ipv4_is_in_range()
+
+Checks if IPv4 string address is in IPv4-prefix notation range.
+
+
+### Arguments 
+
+- Ipv4Address: A string expression representing an IPv4 address.
+- Ipv4Range: A string expression representing an IPv4 range using [IP-prefix notation](https://axiom.co/docs/apl/scalar-functions/ip-functions#ip-prefix-notation).
+
+
+### Returns
+
+- `true`: If the long representation of the first IPv4 string argument is in range of the second IPv4 string argument.
+- `false`: Otherwise.
+- `null`: If conversion for one of the two IPv4 strings wasn't successful.
+
+### Examples 
+
+```apl copy
+ipv4_is_in_range('192.168.1.5', '192.168.1.2/24') 
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20project%20ipv4_range%20%3D%20ipv4_is_in_range%28'192.168.1.5'%2C%20'192.168.1.2%2F24'%29%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+- Result 
+
+```json copy
+{
+  "ipv4_in_range": true
+}
+```
+
+```apl copy
+ipv4_is_in_range("127.2.3.1", "127.2.3.1") == true 
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20ipv4_range%20%3D%20ipv4_is_in_range%28%5C%22127.2.3.1%5C%22%2C%20%5C%22127.2.3.1%5C%22%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+- Result 
+
+```json copy
+{
+  "ipv4_range": true
+}
+```
+
+---
+
+```apl copy
+ipv4_is_in_range('192.168.1.5', '192.168.1.5/24') == true
+```
+
+---
+
+```apl copy
+ipv4_is_in_range('192.168.1.5', '192.168.2.1/24') == false 
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%7Cproject%20ipv4_range%20%3D%20ipv4_is_in_range%28%27%20192.168.1.5%27%2C%20%27192.168.2.1%2F24%27%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+- Result 
+
+```json copy
+{
+  "ipv4_range": false
+}
+```
+
+---
+
+## ipv4_is_private()
+
+Checks if IPv4 string address belongs to a set of private network IPs.
+
+### Private IPv4 addresses
+
+The private IPv4 addresses reserved for private networks by the Internet Assigned Numbers Authority (IANA) are:
+
+| **IP address range**           | **Number of addresses**	               |  **Largest CIDR block (subnet mask)** |
+| ------------------------------- | ------------------------------------------------- | ----------------------------------------- |
+|  **10.0.0.0 – 10.255.255.255**       |  **16777216**                 |      **10.0.0.0/8 (255.0.0.0)**                   |
+| **172.16.0.0 – 172.31.255.255**      | **1048576**                   |  **172.16.0.0/12 (255.240.0.0)**                  |
+|  **192.168.0.0 – 192.168.255.255**   |  **65536**	                   | **192.168.0.0/16 (255.255.0.0)**                  |
+
+
+
+### Arguments 
+
+- Expr: A string expression representing an IPv4 address. IPv4 strings can be masked using [IP-prefix notation.](https://axiom.co/docs/apl/scalar-functions/ip-functions#ip-prefix-notation)
+
+
+### Returns 
+
+- `true`: If the IPv4 address belongs to any of the private network ranges.
+- `false`: Otherwise.
+- `null`: If parsing of the input as IPv4 address string wasn't successful.
+
+
+### Example 
+
+```apl copy
+ipv4_is_private('192.168.2.1') == true
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20ipv4_range%20%3D%20ipv4_is_private%28%27192.168.2.1%27%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+- Result 
+
+```json copy
+{
+  "ipv4_private": true
+}
+```
+
+
+
+```apl copy
+ipv4_is_private('208.1.2.3') == false
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20ipv4_private%20%3D%20ipv4_is_private%28%27208.1.2.3%27%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+- Result 
+
+```json copy
+{
+  "ipv4_private": false
+}
+```
+
+---
+
+## ipv4_netmask_suffix()
+
+Returns the value of the IPv4 netmask suffix from IPv4 string address.
+
+
+### Arguments
+
+
+Expr: A string expression representing an IPv4 address. IPv4 strings can be masked using [IP-prefix notation](/docs/apl/scalar-functions/ip-functions#ip-prefix-notation).
+
+
+### Returns
+
+- The value of the netmask suffix the IPv4 address. If suffix is not present in the input, a value of **32** (full netmask suffix) is returned.
+
+- null: If parsing of the input as IPv4 address string wasn't successful.
+
+
+### Example
+
+```apl copy
+ipv4_netmask_suffix('192.164.2.2/24') == 24
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20netmask_suffix%20%3D%20ipv4_netmask_suffix%28%27192.164.2.2%2F24%27%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+- Result 
+
+```json copy
+{
+  "netmask_suffix": 24
+}
+```
+
+```apl copy
+ipv4_netmask_suffix('192.166.1.2') == 32
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20netmask_suffix%20%3D%20ipv4_netmask_suffix%28%27192.166.1.2%27%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+- Result 
+
+```json copy
+{
+  "netmask_suffix": 32
+}
+```

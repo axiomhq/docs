@@ -1,0 +1,148 @@
+---
+title: 'where operator'
+excerpt: 'Lean how to filter out a dataset to a branch of rows that meets a condition when executed.'
+tags:
+    ['axiom documentation', 'documentation', 'axiom', 'tabular operators', 'where operator']
+---
+
+# where operator
+
+Filters out a dataset to a branch of rows that meets a **condition** when executed.
+
+## Syntax
+
+```apl copy
+| where condition
+```
+
+## Arguments
+
+| **name**                  |        **type**                       | **description**                        |
+| ------------------------- | ------------------------------------- | ------------------------------------------ |
+| **Condition** | `boolean` | A bool expression over the fields of the dataset, it is then checked for each row in your dataset |
+
+## Returns
+
+Rows in **dataset** for which **condition** is true.
+
+## Examples
+
+```apl copy
+['sample-http-logs']
+| where method == 'GET' and content_type == 'image/jpeg'
+```
+
+<div style={{ textAlign: 'right' }}>
+  {' '}
+  <a style={{
+            backgroundColor: 'rgb(64 105 255/var(--tw-text-opacity))',
+            display: 'inline-block',
+            color: 'white',
+            textAlign: 'center',
+            width: '20%',
+            textDecoration: 'none' }} href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20method%20%3D%3D%20%27GET%27%20and%20content_type%20%3D%3D%20%27image%2Fjpeg%27%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D">Run in Playground</a>
+</div>
+
+
+
+## Using * has in APL's where Operator
+
+The * has pattern in APL is a dynamic and powerful tool within the where operator. It offers users the flexibility to search for specific substrings across all fields in a dataset without the need to specify each field name individually. This becomes especially advantageous when dealing with datasets that have numerous or dynamically named fields.
+
+## Basic where * has Usage
+
+Find events where any fields contains a specific substring.
+
+```apl copy
+['sample-http-logs'] 
+| where * has "GET"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22GET%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Combining Multiple Substrings:
+
+Find events where any field contains one of multiple substrings.
+
+```apl copy
+['sample-http-logs'] 
+| where * has "GET" or * has "text"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22GET%5C%22%20or%20%2A%20has%20%5C%22text%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+## Using * has with other operators
+
+Suppose you want to find events where any field contains a substring, and another specific field equals a certain value.
+
+```apl copy
+['sample-http-logs'] 
+| where * has "css" and req_duration_ms == 1
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22css%5C%22%20and%20req_duration_ms%20%3D%3D%201%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Advanced Chaining
+
+Filter data based on several conditions, including fields containing certain substrings, then summarize by another specific criterion.
+
+```apl copy
+['sample-http-logs']
+| where * has "GET" and * has "css"
+| summarize Count=count() by method, content_type, server_datacenter
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22GET%5C%22%20and%20%2A%20has%20%5C%22css%5C%22%5Cn%7C%20summarize%20Count%3Dcount%28%29%20by%20method%2C%20content_type%2C%20server_datacenter%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Using with Aggregates
+
+Find the average of a specific field for events where any field contains a certain substring.
+
+```apl copy
+['sample-http-logs']
+| where * has "japan"
+| summarize avg(req_duration_ms)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22japan%5C%22%5Cn%7C%20summarize%20avg%28req_duration_ms%29%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## String Case Transformation
+
+If you're unsure about the case of the substring in the dataset, convert everything to lowercase for comparison.
+
+```apl copy
+['sample-http-logs']
+| where * has "japan"
+| summarize avg(req_duration_ms)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22japan%5C%22%5Cn%7C%20summarize%20avg%28req_duration_ms%29%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>

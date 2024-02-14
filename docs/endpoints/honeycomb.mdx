@@ -1,0 +1,69 @@
+---
+title: 'Send logs from HoneyComb'
+excerpt: "Integrate Axiom in your existing HoneyComb stack with minimal effort and without breaking any of your existing HoneyComb workflows."
+tags: ['axiom documentation', 'documentation', 'axiom', 'endpoints', 'http', 'syslog', 'splunk', 'datadog', 'loki', 'honeycomb']
+---
+
+# HoneyComb
+
+To send events from HoneyComb, specify the values of your `env vars` in your HoneyComb code.
+
+- **APIKey/WriteKey:** This will be your APIKey generated from [HoneyComb](https://docs.honeycomb.io/working-with-your-data/settings/#api-keys).
+- **APIHost:** The APIHost value is your endpoints URL <a style={{ textDecoration: 'none' }} rel="nofollow">`https://opbizplsf8klnw.ingress.axiom.co`</a> generated when creating your endpoints.
+- **Dataset:** Axiom [Dataset](/docs/reference/settings#dataset) created from the Axiom dashboard where your service and honeycomb logs will be sent.
+
+## Examples
+
+### Send logs from HoneyComb using JavaScript
+
+```js copy
+const Libhoney = require('libhoney');
+const hny = new Libhoney({
+  writeKey: '',
+  dataset: '',
+  apiHost: '',
+});
+
+hny.sendNow({ message: 'Welcome to Axiom Endpoints!' });
+```
+
+### Send logs from HoneyComb using Python
+
+```py copy
+import libhoney
+libhoney.init(writekey="", dataset="", api_host="")
+
+event = libhoney.new_event()
+event.add_field("foo", "bar")
+event.add({"message": "Welcome, to Axiom Endpoints!"})
+event.send()
+```
+
+### Send logs from HoneyComb using Golang
+
+```go copy
+package main
+
+import (
+	"github.com/honeycombio/libhoney-go"
+)
+
+func main() {
+	libhoney.Init(libhoney.Config{
+		WriteKey: "",
+		Dataset:  "",
+		APIHost:  "",
+	})
+
+	defer libhoney.Close() // Flush any pending calls to Honeycomb
+
+	var ev = libhoney.NewEvent()
+	ev.Add(map[string]interface{}{
+		"duration_ms":    155.67,
+		"method":         "post",
+		"hostname":       "endpoints",
+		"payload_length": 43,
+	})
+	ev.Send()
+}
+```

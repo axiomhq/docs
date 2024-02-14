@@ -1,0 +1,348 @@
+---
+title: 'Send OpenTelemetry data to Axiom'
+excerpt: 'Learn how OpenTelemetry-compatible events flow into Axiom and explore Axiom comprehensive observability through browsing, querying, dashboards, and alerting of OpenTelemetry data.'
+tags:
+  ['axiom documentation', 'documentation', 'axiom', 'guide', 'opentelemetry', 'otel', 'otlp', 'traces', 'logs', 'http exporter', 'http', 'grpc']
+---
+
+# Send OpenTelemetry data to Axiom
+
+OpenTelemetry (otel) is a set of APIs, libraries, and agents to capture distributed traces and metrics from your application. It's a Cloud Native Computing Foundation (CNCF) project that was started to create a unified solution for service and application performance monitoring.
+
+The OpenTelemetry project has published strong specifications for the three main pillars of observability: logs, traces, and metrics. These schemas are supported by all tools and services that support interacting with OpenTelemetry. **Axiom supports OpenTelemetry natively on an API level**, allowing you to connect any existing OpenTelemetry shipper, library, or tool to Axiom for sending data.
+
+OpenTelemetry-compatible events flow into Axiom, where they are organized into datasets for easy segmentation. Users can create a dataset to receive OpenTelemetry data and obtain an API token for ingestion. Axiom provides comprehensive observability through browsing, querying, dashboards, and alerting of OpenTelemetry data.
+
+---
+
+Otel traces, and Otel logs support is already live, and we're continually enhancing it to serve our customers' needs better, and we are excited to announce that we will soon be extending our support to OpenTelemetry Metrics (OTel Metrics). This feature is under active development and will be available soon.
+
+| OpenTelemetry Component                                            | Currently Supported |
+| ------------------------------------------------------------------ | ------------------- |
+| [Traces](https://opentelemetry.io/docs/concepts/signals/traces/)   | Yes                 |
+| [Logs](https://opentelemetry.io/docs/concepts/signals/logs/)       | Yes                 |
+| [Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/) | No (Coming Soon)    |
+
+---
+
+## OpenTelemetry Collector
+
+Configuring the OpenTelemetry collector is as simple as creating an http exporter that sends data to the Axiom API together with headers to set the dataset and API token:
+
+```yaml
+exporters:
+  otlphttp:
+    compression: gzip
+    endpoint: https://api.axiom.co
+    headers:
+      authorization: Bearer <YOUR_API_TOKEN>
+      x-axiom-dataset: <YOUR_DATASET>
+
+service:
+  pipelines:
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlphttp
+```
+
+When using the OTLP/HTTP endpoint for traces and logs, the following endpoint URLs should be used in your SDK exporter Otel configuration.
+
+- Traces: `https://api.axiom.co/v1/traces`
+- Logs: `https://api.axiom.co/v1/logs`
+
+---
+
+## OpenTelemetry for Go
+
+Below is an example that configures an golang application using the [OpenTelemetry SDK for Go](https://github.com/open-telemetry/opentelemetry-go) to send OpenTelemetry data to Axiom.
+
+```go copy
+package main
+
+import (
+	"context"
+	"crypto/tls"
+
+	// Importing OpenTelemetry packages for tracing.
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+)
+
+// Constants for service configuration.
+const (
+	serviceName           = "axiom-go-otel"
+	serviceVersion        = "0.1.0"
+	otlpEndpoint          = "api.axiom.co"
+	bearerToken           = "Bearer $API_TOKEN"
+	deploymentEnvironment = "production"
+)
+
+// SetupTracer initializes the tracer.
+func SetupTracer() (func(context.Context) error, error) {
+	ctx := context.Background()
+	return InstallExportPipeline(ctx)
+}
+
+// Resource returns a new resource with service attributes.
+func Resource() *resource.Resource {
+	return resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String(serviceName),
+		semconv.ServiceVersionKey.String(serviceVersion),
+		attribute.String("environment", deploymentEnvironment),
+	)
+}
+
+// InstallExportPipeline sets up the OpenTelemetry tracing pipeline.
+func InstallExportPipeline(ctx context.Context) (func(context.Context) error, error) {
+	// Creates a new OTLP HTTP exporter with specified endpoint and headers.
+	exporter, err := otlptracehttp.New(ctx,
+		otlptracehttp.WithEndpoint(otlpEndpoint),
+		otlptracehttp.WithHeaders(map[string]string{
+			"Authorization":   bearerToken,
+			"Content-Type":    "application/json",
+			"X-AXIOM-DATASET": "$DATASET",
+		}),
+		otlptracehttp.WithTLSClientConfig(&tls.Config{}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Sets up a new tracer provider with the exporter and resource.
+	tracerProvider := trace.NewTracerProvider(
+		trace.WithBatcher(exporter),
+		trace.WithResource(Resource()),
+	)
+	otel.SetTracerProvider(tracerProvider)
+
+	// Configures global text map propagator for context propagation.
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
+	return tracerProvider.Shutdown, nil
+}
+```
+
+---
+
+## OpenTelemetry for Ruby
+
+To send traces to an OpenTelemetry Collector using the [OTLP over HTTP in Ruby](https://github.com/open-telemetry/opentelemetry-ruby), you will need to use the `opentelemetry-exporter-otlp-http` gem provided by the OpenTelemetry project.
+
+```bash
+require 'opentelemetry/sdk'
+require 'opentelemetry/exporter/otlp/http'
+require 'opentelemetry/resource/detectors'
+
+OpenTelemetry::SDK.configure do |c|
+  c.service_name = 'my-service'
+  c.service_version = '1.0'
+  c.resource = OpenTelemetry::Resource::Detectors::AutoDetector.detect
+  c.add_span_processor(
+    OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor.new(
+      OpenTelemetry::Exporter::OTLP::HTTP::SpanExporter.new(
+        endpoint: 'http://your-opentelemetry-collector:4318',
+        headers: {
+          'authorization' => 'Bearer <YOUR_API_TOKEN>'
+          'x-axiom-dataset' => '<YOUR_DATASET>'
+        }
+      )
+    )
+  )
+end
+```
+
+---
+
+## OpenTelemetry for Java
+
+Here is a basic configuration for a Java application that sends traces to an OpenTelemetry Collector using OTLP over HTTP using the [OpenTelemetry Java SDK](https://github.com/open-telemetry/opentelemetry-java):
+
+```java
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.exporter.otlp.trace.OtlpHttpSpanExporter;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+
+public class Application {
+    public static void main(String[] args) {
+        // Configure the OtlpHttpSpanExporter
+        OtlpHttpSpanExporter spanExporter = OtlpHttpSpanExporter.builder()
+                .setEndpoint("https://api.axiom.co")
+                .addHeader("Authorization", "Bearer YOUR_API_TOKEN") // replace "your-api-token" with your actual token
+                .addHeader("X-AXIOM-DATASET", "YOUR_DATASET") // replace "your-dataset" with your actual dataset
+                .build();
+        // Add the span processor to the TracerProvider
+        OpenTelemetrySdk.getGlobalTracerManagement()
+                .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build());
+        // Get a tracer
+        Tracer tracer = OpenTelemetry.getGlobalTracer("myTracerName");
+        // Start a span
+        Span span = tracer.spanBuilder("mySpanName").startSpan();
+        try (Scope scope = span.makeCurrent()) {
+            // Your work here
+            // Add an attribute to the span
+            span.setAttribute("exampleKey", "exampleValue");
+        } finally {
+            // End the span
+            span.end();
+        }
+    }
+}
+```
+
+---
+
+## OpenTelemetry for .NET
+
+You can send traces to Axiom using the [OpenTelemetry .NET SDK](https://github.com/open-telemetry/opentelemetry-dotnet) by configuring an OTLP HTTP exporter in your .NET application. Here is a simple example:
+
+```csharp
+
+// standard imports...
+
+public class Program
+{
+    public static void Main()
+    {
+        // Create a tracer provider with the OTLP exporter
+        using var tracerProvider = Sdk.CreateTracerProviderBuilder()
+            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("my-service-name"))
+            .AddSource("my-source-name")
+            .AddOtlpExporter(otlpOptions =>
+            {
+                otlpOptions.Endpoint = new Uri("https://api.axiom.co");
+                otlpOptions.Headers = new Metadata
+                {
+                    {"Authorization", "YOUR_AXIOM_API_TOKEN"},
+                    {"X-Axiom-Dataset", "YOUR_AXIOM_DATASET"},
+                };
+            })
+            .Build();
+
+        // Get a tracer
+        var tracer = tracerProvider.GetTracer("my-source-name");
+
+        // Start a span and do some work
+        using (var scope = tracer.StartActiveSpan("my-span-name", out var span))
+        {
+            try
+            {
+                // Your work here
+                // Simulating work with a delay
+                Thread.Sleep(1000);
+
+                // Optionally, you can add events or attributes onto your span
+                span.AddEvent("An event in my span");
+            }
+            catch (Exception ex)
+            {
+                // If there's an error, record the exception into the span
+                span.RecordException(ex);
+                throw; // rethrow the exception
+            }
+            finally
+            {
+                // End the span
+                span.End();
+            }
+        }
+    }
+}
+```
+
+---
+
+## OpenTelemetry for Python
+
+You can send traces to Axiom using the [OpenTelemetry Python SDK](https://github.com/open-telemetry/opentelemetry-python) by configuring an OTLP HTTP exporter in your Python application. Here is a simple example:
+
+```python
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+# Define the service name resource for the tracer.
+resource = Resource(attributes={
+    SERVICE_NAME: "NAME_OF_SERVICE" # Replace `NAME_OF_SERVICE` with the name of the service you want to trace.
+})
+
+# Create a TracerProvider with the defined resource for creating tracers.
+provider = TracerProvider(resource=resource)
+
+# Configure the OTLP/HTTP Span Exporter with Axiom headers and endpoint. Replace `API_TOKEN` with your Axiom API key, and replace `DATASET_NAME` with the name of the Axiom dataset where you want to send data.
+otlp_exporter = OTLPSpanExporter(
+    endpoint="https://api.axiom.co/v1/traces",
+    headers={
+        "Authorization": "Bearer API_TOKEN",
+        "X-Axiom-Dataset": "DATASET_NAME"
+    }
+)
+
+# Create a BatchSpanProcessor with the OTLP exporter to batch and send trace spans.
+processor = BatchSpanProcessor(otlp_exporter)
+provider.add_span_processor(processor)
+
+# Set the TracerProvider as the global tracer provider.
+trace.set_tracer_provider(provider)
+
+# Define a tracer for external use in different parts of the app.
+service1_tracer = trace.get_tracer("service1")
+```
+
+---
+
+## OpenTelemetry for Node
+
+You can send traces to Axiom using the [OpenTelemetry Node SDK](https://github.com/open-telemetry/opentelemetry-js) by configuring an OTLP HTTP exporter in your Node application. Here is a simple example:
+
+```js
+const opentelemetry = require('@opentelemetry/sdk-node');
+const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
+const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-proto');
+const { BatchSpanProcessor } = require('@opentelemetry/sdk-trace-base');
+const { Resource } = require('@opentelemetry/resources');
+const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
+
+// Initialize OTLP trace exporter with the URL and headers for the Axiom API
+const traceExporter = new OTLPTraceExporter({
+  url: 'https://api.axiom.co/v1/traces', // Axiom API endpoint for trace data
+  headers: {
+    'Authorization': 'Bearer $API_TOKEN', // Replace $API_TOKEN with your actual API token
+    'X-Axiom-Dataset': '$DATASET' // Replace $DATASET with your dataset
+  },
+});
+
+// Define the resource attributes, in this case, setting the service name for the traces
+const resource = new Resource({
+  [SemanticResourceAttributes.SERVICE_NAME]: 'node traces', // Name for the tracing service
+});
+
+// Create a NodeSDK instance with the configured span processor, resource, and auto-instrumentations
+const sdk = new opentelemetry.NodeSDK({
+  spanProcessor: new BatchSpanProcessor(traceExporter), // Use BatchSpanProcessor for batching and sending traces
+  resource: resource, // Attach the defined resource to provide additional context
+  instrumentations: [getNodeAutoInstrumentations()], // Automatically instrument common Node.js modules
+});
+
+// Start the OpenTelemetry SDK
+sdk.start();
+```

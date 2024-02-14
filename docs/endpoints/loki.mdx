@@ -1,0 +1,76 @@
+---
+title: 'Send events from Loki'
+excerpt: 'Integrate Axiom in your existing Loki stack with minimal effort and without breaking any of your existing Loki workflows.'
+tags:   
+  ['axiom documentation', 'documentation', 'axiom', 'endpoints', 'http', 'syslog', 'splunk', 'datadog', 'loki', 'honeycomb', 'javascript', 'python']
+---
+
+# Loki
+
+To send events from **Loki**, specify the values of your `env vars` in your Loki `code`.
+
+- **host/url**: The host value is your endpoints URL <a style={{ textDecoration: 'none' }} rel="nofollow">`https://opfjghplsd8klnw.ingress.axiom.co`</a> generated when creating your endpoints.
+- **labels/tags**: Optionally specify the `labels or tags` for your app.
+
+
+## Examples
+
+
+### Send logs from Loki using JavaScript
+
+```js copy
+const { createLogger, transports, format, } = require("winston");
+const LokiTransport = require("winston-loki");
+
+let logger;
+
+const initializeLogger = () => {
+  if (logger) {
+    return;
+  }
+
+  logger = createLogger({
+    transports: [
+      new LokiTransport({
+        host: "$LOKI_ENDPOINT_URL",
+        labels: { app: "axiom-loki-endpoint" },
+        json: true,
+        format: format.json(),
+        replaceTimestamp: true,
+        onConnectionError: (err) => console.error(err),
+      }),
+      new transports.Console({
+        format: format.combine(format.simple(), format.colorize()),
+      }),
+    ],
+  });
+};
+
+initializeLogger()
+logger.info("Starting app...");
+```
+
+### Send logs from Loki using Python
+
+```py copy
+import logging
+import logging_loki
+
+# Create a handler
+handler = logging_loki.LokiHandler(
+    url='$LOKI_ENDPOINT_URL',
+    tags={'app': 'axiom-loki-py-endpoint'},
+    version='1',
+)
+
+# Create a logger
+logger = logging.getLogger('loki')
+
+# Add the handler to the logger
+logger.addHandler(handler)
+
+# Log some messages
+logger.info('Hello, world from Python!')
+logger.warning('This is a warning')
+logger.error('This is an error')
+```

@@ -1,0 +1,79 @@
+---
+title: 'union operator'
+excerpt: 'Learn how to combine events from two or more datasets, returning rows from each of them.'
+tags:
+    ['tabular operators', 'union operator']
+---
+
+# Union operator 
+
+Combines events from two or more datasets, returning rows from each of them. This operator processes rows sourced from multiple datasets into a set of results. Based on the set union principle from mathematics, `union` is ideal for merging data from multiple sources for comprehensive data analysis.
+
+## Syntax
+
+```apl
+['DatasetA']
+| union ['DatasetB', 'DatasetC', ...]
+```
+
+## Arguments
+
+| name | type | description |
+| --- | --- | --- |
+| Dataset name | **string** | Name of the dataset to be included in the union. Multiple datasets can be included in the union. |
+
+## Returns
+
+A combined event comprising all rows from the included datasets. If fields overlap, they are merged. Non-overlapping fields are retained in their original form.
+
+
+
+## Examples
+
+**Basic union**
+
+Combines all rows from `github-push-event` and `github-pull-request-event` without any transformation or filtering.
+
+```apl
+['github-push-event']
+| union ['github-pull-request-event']
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27github-push-event%27%5D%5Cn%7C%20union%20%5B%27github-pull-request-event%27%5D%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+**Filtering after union**
+
+Combines the datasets, and then filters the data to only include rows where the `method` is `GET`.
+
+```apl
+['sample-http-logs']
+| union ['github-issues-event']
+| where method == "GET"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20union%20%5B%27github-issues-event%27%5D%5Cn%7C%20where%20method%20%3D%3D%20%5C%22GET%5C%22%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+**Aggregating after union**
+
+Combines the datasets and summarizes the data, counting the occurrences of each combination of `content_type` and `actor`.
+
+
+```apl
+['sample-http-logs']
+| union ['github-pull-request-event']
+| summarize Count = count() by content_type, actor
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20union%20%5B%27github-pull-request-event%27%5D%5Cn%7C%20summarize%20Count%20%3D%20count%28%29%20by%20content_type%2C%20actor%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>

@@ -1,0 +1,871 @@
+---
+title: 'Getting Started with APL'
+excerpt: 'Explore how to use APL in Axiom Data Explorer to run queries using Tabular Operators, Scalar Functions, and Aggregation Functions.'
+tags: ['axiom documentation', 'documentation', 'axiom', 'APL', 'tutorial', 'apl overview', 'tabular operators', 'scalar functions', 'aggregation functions']
+---
+
+# Getting Started With (APL)
+
+In this tutorial, you'll explore how to use APL in Axiom Data Explorer to run queries using Tabular Operators, Scalar Functions, and Aggregation Functions.
+
+## Prerequisites
+
+- Sign up and log in to [Axiom Account](https://app.axiom.co/)
+- Ingest data into your dataset or you can run queries on our [Play Sandbox](/play)
+
+## Overview of APL
+
+Every query, starts with a Dataset embedded in **square brackets**, with the starting expression being a tabular operator statement. The query's tabular expression statements produce the results of the query.
+
+Before you can start writing tabular operators or any function, the pipe (`|`) delimeter starts the query statements as they flow from one function to another.
+
+![Tutorials Page](/doc-assets/shots/tutorial2.png)
+
+---
+
+## Commonly used Operators
+
+To run queries on each function or operator in this tutorial, click the **Run in Playground** button.
+
+[summarize](/docs/apl/tabular-operators/summarize-operator): Produces a table that aggregates the content of the dataset.
+
+The following query returns the count of events by **time**
+
+```apl copy
+['github-push-event']
+| summarize count() by bin_auto(_time)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27github-push-event%27%5D%5Cn%7C%20summarize%20count%28%29%20by%20bin_auto%28_time%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+You can use the [aggregation functions](/docs/apl/aggregation-function/statistical-functions) with the **summarize operator** to produce different columns.
+
+---
+
+```apl copy
+['github-push-event']
+| summarize max_if = maxif(push_id, true) by size
+| top 10 by max_if desc
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27github-push-event%27%5D%5Cn%7C%20summarize%20max_if%20%3D%20maxif%28push_id%2C%20true%29%20by%20size%5Cn%7C%20top%2010%20by%20max_if%20desc%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+---
+
+```apl copy
+['sample-http-logs']
+| summarize cities = dcount(['geo.city']) by server_datacenter
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20summarize%20cities%20%3D%20dcount%28%5B%27geo.city%27%5D%29%20by%20server_datacenter%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+The result of a summarize operation has:
+
+- A row for every combination of by values
+
+- Each column named in by
+
+- A column for each expression
+
+
+---
+
+[where](/docs/apl/tabular-operators/where-operator): Filters the content of the dataset that meets a **condition** when executed.
+
+The following query filters the data by **method** and **content_type**:
+
+```apl copy
+['sample-http-logs']
+| where method == "GET" and content_type == "application/octet-stream"
+| project method , content_type
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20method%20%3D%3D%20%5C%22GET%5C%22%20and%20content_type%20%3D%3D%20%5C%22application%2Foctet-stream%5C%22%5Cn%7C%20project%20method%20%2C%20content_type%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+[count](/docs/apl/tabular-operators/count-operator): Returns the number of events from the input dataset.
+
+```apl copy
+['sample-http-logs']
+| count
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20count%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+```apl copy
+['sample-http-logs']
+| summarize count() by bin_auto(_time)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20summarize%20count%28%29%20by%20bin_auto%28_time%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+---
+
+[project](/docs/apl/tabular-operators/project-operator): Selects a subset of columns.
+
+```apl copy
+['sample-http-logs']
+| project content_type, ['geo.country'], method, resp_body_size_bytes, resp_header_size_bytes
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20content_type%2C%20%5B%27geo.country%27%5D%2C%20method%2C%20resp_body_size_bytes%2C%20resp_header_size_bytes%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+[take](/docs/apl/tabular-operators/take-operator): Returns up to the specified number of rows.
+
+```apl copy
+['sample-http-logs']
+| take 100
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20take%20100%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+---
+
+The **limit** operator is an alias to the **take** operator.
+
+```apl copy
+['sample-http-logs']
+| limit 10
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20limit%2010%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+## Scalar Functions
+
+#### [parse_json()](</docs/apl/scalar-functions/string-functions#parse-json()>)
+
+The following query extracts the JSON elements from an array:
+
+```apl copy
+['sample-http-logs']
+| project parsed_json = parse_json( "config_jsonified_metrics")
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20parsed_json%20%3D%20parse_json%28%20%5C%22config_jsonified_metrics%5C%22%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+#### [replace_string()](</docs/apl/scalar-functions/string-functions#parse-json()>): Replaces all string matches with another string.
+
+```apl copy
+['sample-http-logs']
+| extend replaced_string = replace_string( "creator", "method", "machala" )
+| project replaced_string
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20replaced_string%20%3D%20replace_string%28%20%5C%22creator%5C%22%2C%20%5C%22method%5C%22%2C%20%5C%22machala%5C%22%20%29%5Cn%7C%20project%20replaced_string%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+#### [split()](</docs/apl/scalar-functions/string-functions#split()>): Splits a given string according to a given delimiter and returns a string array.
+
+```apl copy
+['sample-http-logs']
+| project split_str = split("method_content_metrics", "_")
+| take 20
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20split_str%20%3D%20split%28%5C%22method_content_metrics%5C%22%2C%20%5C%22_%5C%22%29%5Cn%7C%20take%2020%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+---
+
+#### [strcat_delim()](</docs/apl/scalar-functions/string-functions#strcat-delim()>): Concatenates a string array into a string with a given delimiter.
+
+```apl copy
+['sample-http-logs']
+| project strcat = strcat_delim(":", ['geo.city'], resp_body_size_bytes)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20strcat%20%3D%20strcat_delim%28%5C%22%3A%5C%22%2C%20%5B%27geo.city%27%5D%2C%20resp_body_size_bytes%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+---
+
+#### [indexof()](</docs/apl/scalar-functions/string-functions#indexof()>): Reports the zero-based index of the first occurrence of a specified string within the input string.
+
+```apl copy
+['sample-http-logs']
+| extend based_index =  indexof( ['geo.country'], content_type, 45, 60, resp_body_size_bytes ), specified_time = bin(resp_header_size_bytes, 30)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20based_index%20%3D%20%20indexof%28%20%5B%27geo.country%27%5D%2C%20content_type%2C%2045%2C%2060%2C%20resp_body_size_bytes%20%29%2C%20specified_time%20%3D%20bin%28resp_header_size_bytes%2C%2030%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+---
+
+## Regex Examples
+
+
+```apl copy
+['sample-http-logs']
+| project remove_cutset = trim_start_regex("[^a-zA-Z]", content_type )
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20remove_cutset%20%3D%20trim_start_regex%28%5C%22%5B%5Ea-zA-Z%5D%5C%22%2C%20content_type%20%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Finding Logs from a Specific City
+
+```apl copy
+['sample-http-logs']
+| where tostring(geo.city) matches regex "^Camaquã$"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20tostring%28%5B%27geo.city%27%5D%29%20matches%20regex%20%5C%22%5ECamaqu%C3%A3%24%5C%22%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Identifying Logs from a Specific User Agent
+
+
+```apl copy
+['sample-http-logs']
+| where tostring(user_agent) matches regex "Mozilla/5.0"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20tostring%28user_agent%29%20matches%20regex%20%5C%22Mozilla%2F5.0%5C%22%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Finding Logs with Response Body Size in a Certain Range
+
+
+```apl copy
+['sample-http-logs']
+| where toint(resp_body_size_bytes) >= 4000 and toint(resp_body_size_bytes) <= 5000
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20toint%28resp_body_size_bytes%29%20%3E%3D%204000%20and%20toint%28resp_body_size_bytes%29%20%3C%3D%205000%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Finding Logs with User Agents Containing Windows NT
+
+```apl copy
+['sample-http-logs']
+| where tostring(user_agent) matches regex @"Windows NT [\d\.]+"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?qid=m8yNkSVVjGq-s0z19c" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Finding Logs with Specific Response Header Size
+
+```apl copy
+['sample-http-logs']
+| where toint(resp_header_size_bytes) == 31
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20toint%28resp_header_size_bytes%29%20%3D%3D%2031%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Finding Logs with Specific Request Duration
+
+```apl copy
+['sample-http-logs']
+| where toreal(req_duration_ms) < 1
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20toreal%28req_duration_ms%29%20%3C%201%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Finding Logs where TLS is Enabled and Method is POST
+
+```apl copy
+['sample-http-logs']
+| where tostring(is_tls) == "true" and tostring(method) == "POST"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20tostring%28is_tls%29%20%3D%3D%20%5C%22true%5C%22%20and%20tostring%28method%29%20%3D%3D%20%5C%22POST%5C%22%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+## Array functions
+
+#### [array_concat()](</docs/apl/scalar-functions/array-functions#array_concat()>): Concatenates a number of dynamic arrays to a single array.
+
+```apl copy
+['sample-http-logs']
+| extend concatenate = array_concat( dynamic([5,4,3,87,45,2,3,45]))
+| project concatenate
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20concatenate%20%3D%20array_concat%28%20dynamic%28%5B5%2C4%2C3%2C87%2C45%2C2%2C3%2C45%5D%29%29%5Cn%7C%20project%20concatenate%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+#### [array_sum()](</docs/apl/scalar-functions/array-functions#array-sum()>): Calculates the sum of elements in a dynamic array.
+
+```apl copy
+['sample-http-logs']
+| extend summary_array=dynamic([1,2,3,4])
+| project summary_array=array_sum(summary_array)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20summary_array%3Ddynamic%28%5B1%2C2%2C3%2C4%5D%29%5Cn%7C%20project%20summary_array%3Darray_sum%28summary_array%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+## Conversion functions
+
+#### [todatetime()](</docs/apl/scalar-functions/conversion-functions#todatetime()>): Converts input to datetime scalar.
+
+```apl copy
+['sample-http-logs']
+| extend dated_time = todatetime("2026-08-16")
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20dated_time%20%3D%20todatetime%28%5C%222026-08-16%5C%22%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+#### [dynamic_to_json()](</docs/apl/scalar-functions/conversion-functions#dynamic-to-json()>): Converts a scalar value of type dynamic to a canonical string representation.
+
+```apl copy
+['sample-http-logs']
+| extend dynamic_string = dynamic_to_json(dynamic([10,20,30,40 ]))
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20dynamic_string%20%3D%20dynamic_to_json%28dynamic%28%5B10%2C20%2C30%2C40%20%5D%29%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+---
+
+## String Operators
+
+[We support various query string](/docs/apl/scalar-operators/string-operators), [logical](/docs/apl/scalar-operators/logical-operators) and [numerical operators](/docs/apl/scalar-operators/numerical-operators).
+
+In the query below, we use the **contains** operator, to find the strings that contain the string **-bot** and **[bot]**:
+
+```apl copy
+['github-issue-comment-event']
+| extend bot = actor contains "-bot" or actor contains "[bot]"
+| where bot == true
+| summarize count() by bin_auto(_time), actor
+| take 20
+```
+
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27github-issue-comment-event%27%5D%5Cn%7C%20extend%20bot%20%3D%20actor%20contains%20%5C%22-bot%5C%22%20or%20actor%20contains%20%5C%22%5Bbot%5D%5C%22%5Cn%7C%20where%20bot%20%3D%3D%20true%5Cn%7C%20summarize%20count%28%29%20by%20bin_auto%28_time%29%2C%20actor%5Cn%7C%20take%2020%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+```apl copy
+['sample-http-logs']
+| extend user_status = status contains "200" , agent_flow = user_agent contains "(Windows NT 6.4; AppleWebKit/537.36 Chrome/41.0.2225.0 Safari/537.36"
+| where user_status == true
+| summarize count() by bin_auto(_time), status
+| take 15
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20user_status%20%3D%20status%20contains%20%5C%22200%5C%22%20%2C%20agent_flow%20%3D%20user_agent%20contains%20%5C%22%28Windows%20NT%206.4%3B%20AppleWebKit%2F537.36%20Chrome%2F41.0.2225.0%20Safari%2F537.36%5C%22%5Cn%7C%20where%20user_status%20%3D%3D%20true%5Cn%7C%20summarize%20count%28%29%20by%20bin_auto%28_time%29%2C%20status%5Cn%7C%20take%2015%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+---
+
+## Hash Functions
+
+- [hash_md5()](</docs/apl/scalar-functions/hash-functions#hash-md5()>): Returns an MD5 hash value for the input value.
+
+- [hash_sha256()](</docs/apl/scalar-functions/hash-functions#hash-sha256()>): Returns a sha256 hash value for the input value.
+
+- [hash_sha1()](</docs/apl/scalar-functions/hash-functions#hash-sha1()>): Returns a sha1 hash value for the input value.
+
+```apl copy
+['sample-http-logs']
+| extend sha_256 = hash_md5( "resp_header_size_bytes" ), sha_1 = hash_sha1( content_type), md5 = hash_md5( method), sha512 = hash_sha512( "resp_header_size_bytes" )
+| project sha_256, sha_1, md5, sha512
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20sha_256%20%3D%20hash_md5%28%20%5C%22resp_header_size_bytes%5C%22%20%29%2C%20sha_1%20%3D%20hash_sha1%28%20content_type%29%2C%20md5%20%3D%20hash_md5%28%20method%29%2C%20sha512%20%3D%20hash_sha512%28%20%5C%22resp_header_size_bytes%5C%22%20%29%5Cn%7C%20project%20sha_256%2C%20sha_1%2C%20md5%2C%20sha512%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## List all unique groups
+
+```apl
+['sample-http-logs']
+| distinct ['id'], is_tls
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20distinct%20%5B'id'%5D%2C%20is_tls%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Count of all events per service
+
+```apl
+['sample-http-logs']
+| summarize Count = count() by server_datacenter
+| order by Count desc
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20Count%20%3D%20count%28%29%20by%20server_datacenter%5Cn%7C%20order%20by%20Count%20desc%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Change the time clause 
+
+```apl
+['github-issues-event']
+| where _time == ago(1m)
+| summarize count(), sum(['milestone.number']) by _time=bin(_time, 1m)
+```
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27github-issues-event%27%5D%5Cn%7C%20where%20_time%20%3D%3D%20ago%281m%29%5Cn%7C%20summarize%20count%28%29%2C%20sum%28%5B%27milestone.number%27%5D%29%20by%20_time%3Dbin%28_time%2C%201m%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+---
+
+## Rounding Functions
+
+- [floor()](</docs/apl/scalar-functions/rounding-functions#floor()>): Calculates the largest integer less than, or equal to, the specified numeric expression.
+
+- [ceiling()](</docs/apl/scalar-functions/rounding-functions#ceiling()>): Calculates the smallest integer greater than, or equal to, the specified numeric expression.
+
+- [bin()](</docs/apl/scalar-functions/rounding-functions#bin()>): Rounds values down to an integer multiple of a given bin size.
+
+```apl copy
+['sample-http-logs']
+| extend largest_integer_less = floor( resp_header_size_bytes ), smallest_integer_greater = ceiling( req_duration_ms ), integer_multiple = bin( resp_body_size_bytes, 5 )
+| project largest_integer_less, smallest_integer_greater, integer_multiple
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20largest_integer_less%20%3D%20floor%28%20resp_header_size_bytes%20%29%2C%20smallest_integer_greater%20%3D%20ceiling%28%20req_duration_ms%20%29%2C%20integer_multiple%20%3D%20bin%28%20resp_body_size_bytes%2C%205%20%29%5Cn%7C%20project%20largest_integer_less%2C%20smallest_integer_greater%2C%20integer_multiple%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+---
+
+## Truncate Decimals using Round Function 
+
+```apl
+['sample-http-logs']
+| project rounded_value = round(req_duration_ms, 2)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20project%20rounded_value%20%3D%20round%28req_duration_ms%2C%202%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Truncate Decimals using Floor Function
+
+```apl
+['sample-http-logs']
+| project floor_value = floor(resp_body_size_bytes), ceiling_value = ceiling(req_duration_ms)
+```
+
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20project%20floor_value%20%3D%20floor%28resp_body_size_bytes%29%2C%20ceiling_value%20%3D%20ceiling%28req_duration_ms%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+##  HTTP 5xx responses (day wise) for the last 7 days - one bar per day
+
+```apl copy
+['sample-http-logs']
+| where _time > ago(7d)
+| where req_duration_ms >= 5 and req_duration_ms < 6
+| summarize count() by bin(_time, 1d)
+| order by _time desc
+```
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20where%20_time%20%3E%20ago%287d%29%5Cn%7C%20where%20req_duration_ms%20%3E%3D%205%20and%20req_duration_ms%20%3C%206%5Cn%7C%20summarize%20count%28%29%20by%20bin%28_time%2C%201d%29%5Cn%7C%20order%20by%20_time%20desc%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%227d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Implement a remapper on remote address logs
+
+```apl copy
+['sample-http-logs']
+| extend RemappedStatus = case(req_duration_ms >= 0.57, "new data", resp_body_size_bytes >= 1000, "size bytes", resp_header_size_bytes == 40, "header values", "doesntmatch")
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20extend%20RemappedStatus%20%3D%20case%28req_duration_ms%20%3E%3D%200.57%2C%20%5C%22new%20data%5C%22%2C%20resp_body_size_bytes%20%3E%3D%201000%2C%20%5C%22size%20bytes%5C%22%2C%20resp_header_size_bytes%20%3D%3D%2040%2C%20%5C%22header%20values%5C%22%2C%20%5C%22doesntmatch%5C%22%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+## Advanced Aggregations
+
+In this section, you will learn how to run queries using different functions and operators.
+
+```apl copy
+['sample-http-logs']
+| extend prospect = ['geo.city'] contains "Okayama" or uri contains "/api/v1/messages/back"
+| extend possibility = server_datacenter contains "GRU" or status contains "301"
+| summarize count(), topk( user_agent, 6 ) by bin(_time, 10d), ['geo.country']
+| take 4
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20prospect%20%3D%20%5B%27geo.city%27%5D%20contains%20%5C%22Okayama%5C%22%20or%20uri%20contains%20%5C%22%2Fapi%2Fv1%2Fmessages%2Fback%5C%22%5Cn%7C%20extend%20possibility%20%3D%20server_datacenter%20contains%20%5C%22GRU%5C%22%20or%20status%20contains%20%5C%22301%5C%22%5Cn%7C%20summarize%20count%28%29%2C%20topk%28%20user_agent%2C%206%20%29%20by%20bin%28_time%2C%2010d%29%2C%20%5B%27geo.country%27%5D%5Cn%7C%20take%204%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Searching map fields 
+
+```apl
+['otel-demo-traces']
+| where isnotnull( ['attributes.custom'])
+| extend extra = tostring(['attributes.custom'])
+| search extra:"0PUK6V6EV0"
+| project _time, trace_id, name, ['attributes.custom']
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%5Cn%7C%20where%20isnotnull%28%20%5B'attributes.custom'%5D%29%5Cn%7C%20extend%20extra%20%3D%20tostring%28%5B'attributes.custom'%5D%29%5Cn%7C%20search%20extra%3A%5C%220PUK6V6EV0%5C%22%5Cn%7C%20project%20_time%2C%20trace_id%2C%20name%2C%20%5B'attributes.custom'%5D%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Configure Processing Rules 
+
+```apl
+['sample-http-logs']
+| where _sysTime > ago(1d)
+| summarize count() by method
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20_sysTime%20%3E%20ago%281d%29%5Cn%7C%20summarize%20count%28%29%20by%20method%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%221d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Return different values based on the evaluation of a condition
+
+```apl
+['sample-http-logs']
+| extend MemoryUsageStatus = iff(req_duration_ms > 10000, "Highest", "Normal")
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20MemoryUsageStatus%20%3D%20iff%28req_duration_ms%20%3E%2010000%2C%20%27Highest%27%2C%20%27Normal%27%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Compute time between two log entries
+
+```apl
+['sample-http-logs']
+| where content_type == 'text'
+| project start=_time, id=['id']
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20content_type%20%3D%3D%20%27text%27%5Cn%7C%20project%20start%3D_time%2C%20id%3D%5B%27id%27%5D%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+## Working with different operators
+
+```apl copy
+['hn']
+| extend superman = text contains "superman" or title contains "superman"
+| extend batman = text contains "batman" or title contains "batman"
+| extend hero = case(
+    superman and batman, "both",
+    superman, "superman   ", // spaces change the color
+    batman, "batman       ",
+    "none")
+| where (superman or batman) and not (batman and superman)
+| summarize count(), topk(type, 3) by bin(_time, 30d), hero
+| take 10
+```
+
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27hn%27%5D%5Cn%7C%20extend%20superman%20%3D%20text%20contains%20%5C%22superman%5C%22%20or%20title%20contains%20%5C%22superman%5C%22%5Cn%7C%20extend%20batman%20%3D%20text%20contains%20%5C%22batman%5C%22%20or%20title%20contains%20%5C%22batman%5C%22%5Cn%7C%20extend%20hero%20%3D%20case%28%5Cn%20%20%20%20superman%20and%20batman%2C%20%5C%22both%5C%22%2C%5Cn%20%20%20%20superman%2C%20%5C%22superman%20%20%20%5C%22%2C%20%2F%2F%20spaces%20change%20the%20color%5Cn%20%20%20%20batman%2C%20%5C%22batman%20%20%20%20%20%20%20%5C%22%2C%5Cn%20%20%20%20%5C%22none%5C%22%29%5Cn%7C%20where%20%28superman%20or%20batman%29%20and%20not%20%28batman%20and%20superman%29%5Cn%7C%20summarize%20count%28%29%2C%20topk%28type%2C%203%29%20by%20bin%28_time%2C%2030d%29%2C%20hero%5Cn%7C%20take%2010%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+```apl copy
+['sample-http-logs']
+| summarize flow = dcount( content_type) by ['geo.country']
+| take 50
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20summarize%20flow%20%3D%20dcount%28%20content_type%29%20by%20%5B%27geo.country%27%5D%5Cn%7C%20take%2050%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+## Get the JSON into a property bag using parse-json
+
+```apl
+example
+| where isnotnull(log)
+| extend parsed_log = parse_json(log)
+| project service, parsed_log.level, parsed_log.message
+```
+
+<RunInPlayGround 
+    href="https://axiom.co/docs/apl/by-example/parse-json#parse-json" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+---
+
+## Get average response using project keep function
+
+```apl copy
+['sample-http-logs']
+| where ['geo.country']  == "United States" or ['id'] == 'b2b1f597-0385-4fed-a911-140facb757ef'
+| extend systematic_view = ceiling( resp_header_size_bytes )
+| extend resp_avg = cos( resp_body_size_bytes )
+| project-away systematic_view
+| project-keep resp_avg
+| take 5
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20%5C%22United%20States%5C%22%20or%20%5B'id'%5D%20%3D%3D%20%5C%22b2b1f597-0385-4fed-a911-140facb757ef%5C%22%5Cn%7C%20extend%20systematic_view%20%3D%20ceiling%28%20resp_header_size_bytes%20%29%5Cn%7C%20extend%20resp_avg%20%3D%20cos%28%20resp_body_size_bytes%20%29%5Cn%7C%20project-away%20systematic_view%5Cn%7C%20project-keep%20resp_avg%5Cn%7C%20take%205%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Combine multiple percentiles into a single chart in APL
+
+```apl
+['sample-http-logs']
+| summarize percentiles_array(req_duration_ms, 50, 75, 90) by bin_auto(_time)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20percentiles_array(req_duration_ms%2C%2050%2C%2075%2C%2090)%20by%20bin_auto(_time)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+## Combine mathematical functions
+
+```apl copy
+['sample-http-logs']
+| extend tangent = tan( req_duration_ms ), cosine = cos( resp_header_size_bytes ), absolute_input = abs( req_duration_ms ), sine = sin( resp_header_size_bytes ), power_factor = pow( req_duration_ms, 4)
+| extend angle_pi = degrees( resp_body_size_bytes ), pie = pi()
+| project tangent, cosine, absolute_input, angle_pi, pie, sine, power_factor
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20tangent%20%3D%20tan%28%20req_duration_ms%20%29%2C%20cosine%20%3D%20cos%28%20resp_header_size_bytes%20%29%2C%20absolute_input%20%3D%20abs%28%20req_duration_ms%20%29%2C%20sine%20%3D%20sin%28%20resp_header_size_bytes%20%29%2C%20power_factor%20%3D%20pow%28%20req_duration_ms%2C%204%29%5Cn%7C%20extend%20angle_pi%20%3D%20degrees%28%20resp_body_size_bytes%20%29%2C%20pie%20%3D%20pi%28%29%5Cn%7C%20project%20tangent%2C%20cosine%2C%20absolute_input%2C%20angle_pi%2C%20pie%2C%20sine%2C%20power_factor%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+```apl copy
+['github-issues-event']
+| where actor !endswith "[bot]"
+| where repo startswith "kubernetes/"
+| where action == "opened"
+| summarize count() by bin_auto(_time)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27github-issues-event%27%5D%5Cn%7C%20where%20actor%20%21endswith%20%5C%22%5Bbot%5D%5C%22%5Cn%7C%20where%20repo%20startswith%20%5C%22kubernetes%2F%5C%22%5Cn%7C%20where%20action%20%3D%3D%20%5C%22opened%5C%22%5Cn%7C%20summarize%20count%28%29%20by%20bin_auto%28_time%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+---
+
+
+## Change global configuration attributes
+
+```apl
+['sample-http-logs']
+| extend status = coalesce(status, "info")
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20status%20%3D%20coalesce(status%2C%20%5C%22info%5C%22)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Set defualt value on event field
+
+```apl
+['sample-http-logs']
+| project status = case(
+    isnotnull(status) and status != "", content_type, // use the contenttype if it's not null and not an empty string
+    "info" // default value
+  )
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20project%20status%20%3D%20case(isnotnull(status)%20and%20status%20!%3D%20%5C%22%5C%22%2C%20content_type%2C%20%5C%22info%5C%22)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>

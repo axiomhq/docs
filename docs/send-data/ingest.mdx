@@ -1,0 +1,253 @@
+---
+title: 'Send Data'
+excerpt: "Use Axiom's API to ingest, transport, and retrieve data from different sources such as relational databases, web logs, application logs, and kubernetes."
+tags:
+    ['axiom documentation', 'documentation', 'axiom', 'send data', 'data shippers', 'integrations', 'elasticsearch', 'endpoints', 'json', 'ndjson', 'csv']
+---
+
+
+# Send Data
+
+Send (ingest), transport, and fetch data from different sources such as Relational database, web logs, batch data, real-time, application logs, streaming data, etc. for later usage with the Axiom API.
+
+You can also collect, load, group, and move data from one or more sources to Axiom where it can be stored and further analyzed.
+
+Before ingesting data, you need to generate an API Token from the **Settings->Tokens** page on the Axiom Dashboard. See [API Tokens documentation](/docs/usage/settings#token) for more detail.
+
+<br />
+
+Once you have an [API token](https://axiom.co/docs/reference/settings#api-token), there are different ways to get your data into Axiom:
+
+1. Using the [Ingest API](#ingest-api);
+2. Using a [Data Shipper](#data-shippers) (Logstash, Filebeat, Metricbeat, Fluentd, etc.);
+3. Using the [Elasticsearch Bulk API](https://axiom.co/docs/send-data/elasticsearch-bulk-api) that Axiom supports natively.
+4. Using the [Integrations we support](#integrations)
+5. Using [Endpoints](#endpoints)
+
+## Ingest API
+
+Axiom exports a simple REST API that can accept any of the following formats:
+
+### Ingest using JSON
+
+- `application/json` - single event or json array of events
+
+#### Example
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/$DATASET_NAME/ingest' \
+  -H 'Authorization: Bearer $API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '[
+        {
+          "_time":"2021-02-04T03:11:23.222Z",
+          "data":{"key1":"value1","key2":"value2"}
+        },
+        {
+          "data":{"key3":"value3"},
+          "attributes":{"key4":"value4"}
+        },
+        {
+          "tags": {
+            "server": "aws",
+            "source": "wordpress"
+          }
+        }
+      ]'
+```
+
+### Ingest using NDJSON
+
+- `application/x-ndjson`- Ingests multiple JSON objects, each represented as a separate line.
+
+#### Example
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/$DATASET_NAME/ingest' \
+  -H 'Authorization: Bearer $API_TOKEN' \
+  -H 'Content-Type: application/x-ndjson' \
+  -d '{"id":1,"name":"machala"}
+  {"id":2,"name":"axiom"}
+  {"id":3,"name":"apl"}
+  {"index": {"_index": "products"}}
+  {"timestamp": "2016-06-06T12:00:00+02:00", "attributes": {"key1": "value1","key2": "value2"}}
+  {"queryString": "count()"}'
+```
+
+### Ingest using CSV
+
+- `text/csv` - this should include the header line with field names separated by commas
+
+#### Example
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/$DATASET_NAME/ingest' \
+      -H 'Authorization: Bearer $API_TOKEN' \
+      -H 'Content-Type: text/csv' \
+      -d 'user, name
+         foo, bar'
+```
+
+---
+
+## Supported Libraries
+
+If you would like to instead use a language binding, currently our client libraries are available:
+
+- [axiom-go](https://github.com/axiomhq/axiom-go)
+- [axiom-node](https://github.com/axiomhq/axiom-node)
+- [axiom-rs](https://github.com/axiomhq/axiom-rs)
+- [next-axiom](https://github.com/axiomhq/next-axiom)
+- [axiom-py](https://github.com/axiomhq/axiom-py)
+
+---
+
+## Limits
+
+Limits help prevent potential issues that could arise from the ingestion of excessively large events or data structures that are too complex. They help maintain system performance, allow for effective data processing, and manage resources effectively.
+
+| Kind                         |    Limit    |
+| ---------------------------- |    ----:    |
+| Maximum event size           |   1MB       |
+| Maximum events in a batch    |   10000     |
+| Maximum field name length    |   200 bytes |
+
+---
+
+## Field Restrictions
+
+
+Axiom imposes restrictions on the number of fields that each dataset can contain. 
+
+If a dataset exceeds the permitted field limit, an error will be generated. To prevent this, ensure that the number of fields in any dataset you are ingesting into Axiom doesn't surpass the allowed limit.
+
+Please note that the specific field limit depends on your [Axiom pricing tier](/pricing).
+
+---
+
+## timestamp field
+
+-  `_time` must conform to a valid timestamp or not be present at all. If `_time` is not present, the server will assign a timestamp. Axiom accepts many date strings and timestamps without knowing the format in advance, including Unix Epoch, RFC3339, and ISO 8601.
+
+---
+
+## Data Shippers
+
+Configure, read, collect, and send logs to your Axiom deployment using a variety of data shippers. Data shippers are lightweight agents that acquire logs and metrics enabling you to ship data directly into Axiom.
+
+---
+
+<a href="/docs/send-data/cloudfront/" title="AWS CloudFront" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>AWS CloudFront</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+<a href="/docs/send-data/cloudwatch/" title="AWS CloudWatch Logs" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>AWS CloudWatch Logs</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+<a href="/docs/send-data/elastic-beats/" title="Elastic Beats" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>Elastic Beats</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+<a href="/docs/send-data/fluent-bit/" title="Fluent Bit" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>Fluent Bit</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+<a href="/docs/send-data/fluentd/" title="FluentD" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>FluentD</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+{/* <a href="/docs/send-data/axiom-honeycomb-proxy/" title="Honeycomb Proxy" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>Honeycomb Proxy</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+--- */}
+
+<a href="/docs/send-data/heroku-log-drains/" title="Heroku Log Drains" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>Heroku Log Drains</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+<a href="/docs/send-data/kubernetes-filebeat/" title="Kubernetes" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>Kubernetes</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+<a href="/docs/send-data/logstash/" title="Logstash" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>Logstash</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+<a href="/docs/send-data/loki-multiplexer/" title="Loki Multiplexer" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>Loki Multiplexer</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+<a href="/docs/send-data/syslog-proxy/" title="Syslog" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>Syslog Proxy</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+<a href="/docs/send-data/vector/" title="Vector" className="flex justify-between">
+  <Image src="/doc-assets/integrate.svg" width={24} height={24} alt="integrations icon" />
+  <span>Vector</span>
+  <Image src="/doc-assets/chevron-right.svg" width={16} height={16} alt="go" />
+</a>
+
+---
+
+## Integrations 
+
+Send logs and metrics from Vercel, Netlify, and other supported integrations we support. 
+
+![CloudFront overview](/doc-assets/shots/integrations-2.png)
+
+Get [started with integrations here](https://axiom.co/docs/integrations/introduction)
+
+
+## Endpoints
+
+Endpoints enable you to easily integrate Axiom into your existing data flow by allowing you to use tools and libraries that you are already familiar with.
+
+You can create an Endpoint for your favorite services like HoneyComb, Jaeger, Grafana Loki, or Splunk and eventually send the logs from these Services directly into Axiom.
+
+![CloudFront overview](/doc-assets/shots/endpoints-356.png)
+
+Get [started with endpoints here](https://axiom.co/docs/integrations/introduction)

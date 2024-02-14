@@ -1,0 +1,166 @@
+---
+title: 'Monitors and Notifiers'
+excerpt: 'Learn how to setup monitors and notifiers to be alerted when errors or other conditions are met by events.'
+tags:
+    ['axiom documentation', 'documentation', 'axiom', 'dashboards', 'monitors', 'notifiers', 'slack', 'email', 'pagerduty', 'webhook', 'opsgenie', 'discord', 'discord webhook']
+---
+
+# Monitoring and Notifiers
+
+**Setup Monitors and Notifiers to be alerted when errors or other conditions are met by events.**
+
+This section introduces Monitors and Notifiers, and how they work together to enable alerting to you, your team members, and external services.
+
+## Monitors
+
+Monitors are background tasks that can be configured to run queries on intervals and check whether the values produced from the results exceed a threshold. If they do, then the monitor would switch to it's **triggered** state and alert external parties via it's Notifier configuration.
+
+![monitors page](/doc-assets/shots/monitors-1.png)
+
+Monitors can be created using the **Simple Query Builder** or **Advanced Query Language**
+
+![monitors page](/doc-assets/shots/add-monitor-1.png)
+
+
+Monitors are very simple to setup and use the same Query Builder as in the [Analytics Page](/docs/usage/analyze). Clicking on the "New Monitor" button or selecting an existing monitor will display the editing slide-out:
+
+![monitors slide out](/doc-assets/shots/monitor-options-1.png)
+
+With reference to the above monitor slide-out, below is a description of the available options:
+
+### Monitor Options
+
+- **Name** - Used when notifying to indicate which monitor has been triggered
+- **Description** - Helpful for team members to understand why this monitor was created
+- **Trigger Options**
+  - **Comparison Types**: `above`, `above-or-equal`, `below`, `below-or-equal` are the options on how to compare the values produced by the query to the threshold.
+  - **Value** - the value to compare the results of this query to
+- **Check Options**
+  - **Frequency** - how often the monitor should be run
+  - **Time Range** - what should the time range be for the check query (now - $time)
+- **Notifiers** - connect configured Notifiers to receive alerts when the monitor is triggered ([See below](#notifiers)).
+
+### Query Builder
+
+The monitors query builder mimics that of the Analytics [Query Builder](/docs/usage/analyze#building-a-query) with some restrictions:
+
+- Only one visualization is allowed
+
+The goal of the query is to produce one or more rows of results (> 1 in the case of a group-by being used) that can each be compared to the Trigger Options above to determine whether the monitor is triggered.
+
+---
+
+**Group By**
+
+If a group by clause is used, then a monitor can trigger once for every group that is produced by a query. A monitor will stay triggered until all groups are back within threshold. Groups are a great way of getting more specific alerts where necessary.
+
+### Snooze
+
+A monitor can be snoozed by clicking the 'alarm clock' icon in the slide-out's toolbar. By snoozing a monitor, no checks will be carried out by the monitor until the snooze time is elapsed. As no checks are run, there will be no triggering or notifications either.
+
+## Notifiers
+
+Notifiers are how monitors alert external parties when they are triggered.
+
+Axiom currently supports four notifiers, each of which can be configured multiple times to allow for different options (e.g. separate slack channel notifiers for web and backend).
+
+---
+
+## Email
+
+Create email notifiers with team members to have everyone emailed when a monitor is triggered/resolved.
+
+![Email notifier](/doc-assets/shots/email-notifier-1.png)
+
+---
+
+## Slack
+
+Create Slack notifiers to notify specific channels in your Slack organization. Currently this notifier requires setting up an [Incoming Webhook](https://api.slack.com/incoming-webhooks) for it to work.
+
+To configure a new “Incoming Webhook” in Slack go to **Apps & integrations** > **Manage** > **Custom integrations** > **Incoming WebHooks** and follow the instructions.
+
+
+![slack notifier](/doc-assets/shots/slack-notifier-1.png)
+
+
+
+---
+
+## PagerDuty
+
+Create a PagerDuty notifier to use all the incident management features of PagerDuty with Axiom. Triggered/resolve states will be managed by Axiom, and you can configure schedules/alerting rules/etc inside PagerDuty.
+
+To configure a new “Service” in PagerDuty using the Events V2 API, go to **Configuration** > **Services** > **Add New Service** and create a new Service named ‘Axiom’ with all the default settings and take note of the Integration Key to enter above. 
+
+You will also need to provide an API Access Key with the right permissions which can be generated from **pagerduty.com/api_keys**.
+
+
+![Pagerduty notifier](/doc-assets/shots/pagerduty-1.png)
+
+
+
+---
+
+## Webhook
+
+Create Webhook notifiers to connect to internal or external services using your own handlers. They are simple to setup and contain all the details you'll need.
+
+The URL will receive a HTTP(s) POST with a content type of `application/json` and a payload that looks like the below:
+
+```json
+{
+    "action":"close",
+    "sender":"monitors"
+    "event":{
+        "id":"f11f8121-c949-4b59-84ba-40ef868f4d54",
+        "name":"Queue backlogging",
+        "title":"Current value is above threshold value 2500",
+        "body":"Triggered with a value of 2782",
+        "value":"2782",
+        "timestamp":"2021-02-23T14:43:45.34205696Z",
+        "source":"monitors.qKKbK6n4xeokNBF9GC.COUNT",
+        "priority":0,
+        "snoozedUntil":"0001-01-01T00:00:00Z",
+        "state":3
+    },
+}
+```
+
+![webhook notifier](/doc-assets/shots/webhook-notifier-1.png)
+
+---
+
+## Opsgenie
+
+Create an Opsgenie notifier that ensures critical incidents are never missed with Axiom. Triggered/resolve states will be managed by Axiom, and you can configure custom applications alerts, monitor timers, etc inside Opsgenie.
+
+To configure a new integration in Opsgenie, go to **Teams** > **Integrations** > **Add Integration** > **API Integration**.
+
+![Opsgenie notifier](/doc-assets/shots/opsgenie-notifier-1.png)
+
+
+---
+
+## Discord 
+
+Create an Discord notifer that ensures critical incidents are never missed with Axiom. Triggered/resolve states will be managed by Axiom, and you can configure custom alerts, and monitor timers. 
+
+- To get the token, go to discord.com/developers/applications and create a new application.
+- Click Bot > Add Bot > Reset Token to get your Discord token.
+- Then go to OAuth2 > URL Generator, check the Bot scope and the Send Messages permission, then copy and open the generated URL to add the bot to your server.
+- To get the channel ID, go to User Settings > Advanced and enable developer mode. Then right-click a channel and click Copy ID.
+- Confirm if the check box of the **Discord Bot** has the proper allow channel access permissions from your settings.
+
+![Discord Notifier](/doc-assets/shots/discord-notifier-1.png)
+
+---
+
+## Discord Webhook 
+
+Create Discord Webhook notifier to connect to internal or external services using your own handlers.
+
+To get your webhook URL, go to **Server Settings** > **Integrations** > **New Webhook** > **Copy Webhook URL**.
+
+
+![Discord Notifier](/doc-assets/shots/discord-webhook-notifer-1.png)

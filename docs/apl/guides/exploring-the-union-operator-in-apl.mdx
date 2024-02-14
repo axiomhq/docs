@@ -1,0 +1,170 @@
+---
+title: "Exploring the Union Operator in APL"
+excerpt: "This guide will help you understand the Union Operator in Axiom Processing Language (APL), enhance your data querying skills, and learn how to merge data from multiple datasets."
+tags: ['guides', 'union operator']
+---
+
+# Exploring the Union Operator in Axiom Processing Language (APL)
+
+We are excited to introduce the powerful capabilities of the `union` operator in Axiom Processing Language (APL). This operator is a game-changer in data processing as it adeptly combines events from two or more datasets, returning rows from each. The `union` operator processes rows sourced from multiple datasets into a cohesive set of results. The `union` operator not only enhances data analysis but also simplifies the management of complex datasets, making it an invaluable tool for querying.
+
+
+## Importance of the Union Operator
+
+The `union` operator is important in querying because it allows the combination of data from multiple sources. This is useful when datasets contain related or complementary data. It simplifies queries and events that require a comprehensive view of data points collected from these different sources.
+
+
+## Scenario: Union of Two Datasets
+
+To understand how the `union` operator works, consider these datasets:
+
+**Server requests**
+
+| _time | status | method | trace_id |
+| ----- | ----------- | -------- | ------ |
+| 12:10 | 200 | GET | 1 |
+| 12:15 | 200 | POST | 2 |
+| 12:20 | 503 | POST | 3 |
+| 12:25 | 200 | POST | 4 |
+
+
+**Application logs**
+
+| _time | trace_id | message |
+| ------- | -------- | ------- |
+| 12:12 | 1 | foo |
+| 12:21 | 3 | bar |
+| 13:35 | 27 | baz |
+
+Performing a union on `Server requests` and `Application logs` would result in a new dataset with all the rows from both `DatasetA` and `DatasetB`.
+
+A union of **requests** and **logs** would produce the following result set:
+
+| _time | status | method | trace_id | message |
+| ----------- | ------------ | ---------- | -------- | --- |
+| 12:10 | 200 | GET | 1 |  |
+| 12:12 |  |  | 1 | foo |
+| 12:15 | 200 | POST | 2 |  |
+| 12:20 | 503 | POST | 3 |  |
+| 12:21 |  |  | 3 | bar |
+| 12:25 | 200 | POST | 4 |  |
+| 13:35 |  |  | 27 | baz |
+
+This result combines the rows and merges types for overlapping fields.
+
+Let's explore some examples of the union operator in action to better understand its practical applications:
+
+
+## Filtering and Projecting Specific Data from Combined Log Sources
+
+This query combines GitHub pull request event logs and GitHub push events, filters by actions made by `github-actions[bot]`, and displays key event details such as `time`, `repository`,  `commits`, `head` , `id`.
+
+```apl
+['github-pull-request-event']
+| union ['github-push-event']
+| where actor == "github-actions[bot]"
+| project _time, repo, ['id'], commits, head
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27github-pull-request-event%27%5D%5Cn%7C%20union%20%5B%27github-push-event%27%5D%5Cn%7C%20where%20actor%20%3D%3D%20%5C%22github-actions%5Bbot%5D%5C%22%5Cn%7C%20project%20_time%2C%20repo%2C%20%5B%27id%27%5D%2C%20commits%2C%20head%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Union with Field Removing
+
+Removes the `content_type` and `commits` field in the datasets `sample-http-logs` and `github-push-event` before combining the datasets.
+
+```apl
+['sample-http-logs']
+| union ['github-push-event']
+| project-away content_type, commits
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20union%20%5B%27github-push-event%27%5D%5Cn%7C%20project-away%20content_type%2C%20commits%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Filtering After Union
+
+Performs a union and then filters the resulting set to only include rows where the `method` is `GET`.
+
+```apl
+['sample-http-logs']
+| union ['github-issues-event']
+| where method == "GET"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20union%20%5B%27github-issues-event%27%5D%5Cn%7C%20where%20method%20%3D%3D%20%5C%22GET%5C%22%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Union with Order By
+
+After the union, the result is ordered by the `type` field.
+
+```apl
+['sample-http-logs']
+| union hn
+| order by type
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20union%20hn%5Cn%7C%20order%20by%20type%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Union with Joint Conditions
+
+Performs a union and then filters the resulting dataset for rows where `content_type` contains the letter `a` and `city` is `seattle`.
+
+```apl
+['sample-http-logs']
+| union ['github-pull-request-event']
+| where content_type contains "a" and ['geo.city']  == "Seattle"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20union%20%5B%27github-pull-request-event%27%5D%5Cn%7C%20where%20content_type%20contains%20%5C%22a%5C%22%20and%20%5B%27geo.city%27%5D%20%20%3D%3D%20%5C%22Seattle%5C%22%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Union and Counting Unique Values
+
+After the union, the query calculates the number of unique `geo.city`  and `repo` entries in the combined dataset.
+
+```apl
+['sample-http-logs']
+| union ['github-push-event']
+| summarize UniqueNames = dcount(['geo.city']), UniqueData = dcount(repo)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20union%20%5B%27github-push-event%27%5D%5Cn%7C%20summarize%20UniqueNames%20%3D%20dcount%28%5B%27geo.city%27%5D%29%2C%20UniqueData%20%3D%20dcount%28repo%29%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Benefits of the Union Operator
+
+- Combine logs from different system components to pinpoint common issues or failures.
+- Consolidate security events from various sources to identify patterns and threats.
+- Unify events from product touch points for a richer understanding of user behavior.
+- Encourage logical groupings of related events in distinct datasets with convenient search.
+
+## Best Practices of the Union Operator
+
+To maximize the effectiveness of the union operator in APL, here are some best practices to consider:
+
+- Before using the `union` operator, ensure that the fields being merged have compatible data types.
+
+- Field and Column Projection: Use `project` or `project-away` to include or exclude specific fields. This can improve performance and the clarity of your results, especially when you only need a subset of the available data.
+
+Ready to use the power of the union operator in your datasets? Start integrating these practices into your APL workflows today and transform your querying experience!

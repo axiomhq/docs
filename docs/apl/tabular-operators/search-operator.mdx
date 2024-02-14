@@ -1,0 +1,286 @@
+---
+title: 'search operator'
+excerpt: 'Learn how to perform a full-text scan across multiple fields in a specified dataset.'
+tags:
+    ['axiom documentation', 'documentation', 'axiom', 'tabular operators', 'search operator']
+---
+
+# Search Operator 
+
+## What is the search operator in APL
+
+The search operator in APL is a special operator that scans full-text search over the specified datasets. Instead of specifying a particular field or condition, the search operator allows for a broad search across multiple fields for a given text or phrase. 
+
+## Importance of the search operator:
+
+- Versatility: It allows users to find a specific text or term across various fields within a dataset that they choose or select for their search, without the necessity to specify each field.
+
+- Efficiency: Saves time when you aren’t sure which field or datasets in APL might contain the information you are looking for. 
+
+- User-Friendliness: It’s particularly useful for users or developers unfamiliar with the schema details of a given database. 
+
+
+
+## Search operator syntax
+
+```apl copy
+search [kind=<Search Kind>] <Search-Expression>
+```
+
+or
+
+```apl copy
+search [kind= CaseSensitivity ] SearchPredicate
+```
+
+## Parameters
+
+| Name           |             Type |                   Required |         Description |
+|----------------|-----------------|-------------------------------------|-----------------------------------------------|
+| **Dataset** | string        |             &check;            | The data to be searched over in a dataset.|
+| **CaseSensitivity** or **Search Kind**               | string |                  | A flag that controls the behavior of all `string` scalar operators, such as `has`, with respect to case sensitivity. Valid values are `default`, `case_insensitive`, `case_sensitive`. The options `default` and `case_insensitive` are synonymous, since the default behavior is case insensitive.|
+| **SearchPredicate** or **SearchExpression** | string |  &check; | A boolean expression to be evaluated for every event in the input. If it returns `true`, the record is outputted.|
+
+
+
+## Search predicate syntax 
+
+The SearchPredicate allows you to search for specific terms in all fields of a dataset. The operator that will be applied to a search term depends on the presence and placement of a wildcard asterisk (*) in the term, as shown in the following table.
+
+
+|Literal   |Operator   |
+|----------|-----------|
+|`axiomk`   |`has`      |
+|`*axiomk`  |`hassuffix`|
+|`axiomk*`  |`hasprefix`|
+|`*axiomk*` |`contains` |
+|`ax*ig`   |`matches regex`|
+
+
+You can also restrict the search to a specific field, look for an exact match instead of a term match, or search by regular expression. The syntax for each of these cases is shown in the following table.
+
+|Syntax|Explanation|
+|--|--|
+|**FieldName**`:`**StringLiteral** | This syntax can be used to restrict the search to a specific field. The default behavior is to search all fields. |
+|**FieldName**`==`**StringLiteral** | This syntax can be used to search for exact matches of a field against a string value. The default behavior is to look for a term-match.|
+| **Field** `matches regex` **StringLiteral** | This syntax indicates regular expression matching, in which *StringLiteral* is the regex pattern.|
+
+
+Use boolean expressions to combine conditions and create more complex searches. For example, `"axiom" and b==789` would result in a search for events that have the term axiom in any field and the value 789 in the b field.
+
+
+
+## Search predicate syntax examples 
+
+
+|# |Syntax                                       |Meaning (equivalent `where`)                                  |Comments                                                      |
+|---|--------------------------------------------|--------------------------------------------------------------|--------------------------------------------------------------|
+|1  |`search "axiom"`                             |`where * has "axiom"`                                         |                                                                                                                           
+|2  |`search field:"axiom"`                         |`where field has "axiom"`                                   |                                                          |
+|3  |`search field=="axiom"`                        |`where field=="axiom"`                                      |                                                          |
+|4  |`search "axiom*"`                            |`where * hasprefix "axiom"`                                   |                                                              |
+|5  |`search "*axiom"`                            |`where * hassuffix "axiom"`                                   |                                                              |
+|6  |`search "*axiom*"`                           |`where * contains "axiom"`                                    |                                                              |
+|7  |`search "Pad*FG"`                            |`where * matches regex @"\bPad.*FG\b"`                        |                                                              |
+|8  |`search *`                                   |`where 0==0`                                                  |                                                              |
+|9 |`search field matches regex "..."`             |`where field matches regex "..."`                               |                                                            |
+|10 |`search kind=case_sensitive`                 |                                                              |All string comparisons are case-sensitive                      |
+|11 |`search "axiom" and ("log" or "metric")`        |`where * has "axiom" and (* has "log" or * has "metric")`        |                                                         |
+|12 |`search "axiom" or (A>a and A<b)`            |`where * has "axiom" or (A>a and A<b)`                        |                                                              |
+|13 |`search "AxI?OM"`                            |`where * matches regex @"\bAxI.OM\b"`                         |? matches a single character                                  |
+|14  |`search "axiom" and not field:"error"`         |`where * has "axiom" and not field has "error"`                 |Excluding a field from the search                            |
+
+
+
+
+
+
+## Examples: 
+
+## Global term search 
+
+Search for a term over the dataset in scope. 
+
+```apl copy
+['sample-http-logs']
+| search "image"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20%5C%22image%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+## Conditional global term search 
+
+Search for records that match both terms in the dataset. 
+
+```apl copy
+['sample-http-logs']
+| search "jpeg" and ("GET" or "true")
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20%5C%22jpeg%5C%22%20and%20%28%5C%22GET%5C%22%20or%20%5C%22true%5C%22%29%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Case-sensitive search 
+
+Search for events that match both case-sensitive terms in the dataset.
+
+```apl copy
+['sample-http-logs']
+| search kind=case_sensitive "css"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20kind%3Dcase_sensitive%20%5C%22css%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Search specific Fields 
+
+Search for a term in the “method” and “user_agent” fields in the dataset. 
+
+```apl copy
+['sample-http-logs']
+| search method:"GET" or user_agent :"Mozilla"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20method%3A%5C%22GET%5C%22%20or%20user_agent%3A%5C%22Mozilla%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Limit search by timestamp 
+
+Search for a term over the dataset if the term appears in an event with a date greater than the given date. 
+
+```apl copy
+['sample-http-logs']
+| search "get" and _time > datetime('2022-09-16')
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20%5C%22get%5C%22%20and%20_time%20%3E%20datetime%28%272022-09-16%27%29%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+## Using kind=default
+
+By default, the search is case-insensitive and uses the simple search.
+
+```apl copy
+['sample-http-logs']
+| search kind=default "INDIA"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20kind%3Ddefault%20%5C%22INDIA%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Using kind=case_sensitive
+
+Search for logs that contain the term "text" with case sensitivity.
+
+```apl copy
+['sample-http-logs']
+| search kind=case_sensitive "text"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20kind%3Dcase_sensitive%20%5C%22text%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+## Using kind=case_insensitive
+
+
+Explicitly search for logs that contain the term "CSS" without case sensitivity.
+
+```apl copy
+['sample-http-logs']
+| search kind=case_insensitive "CSS"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20kind%3Dcase_insensitive%20%5C%22CSS%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Using search *
+
+Search all logs. This would essentially return all rows in the dataset.
+
+```apl copy
+['sample-http-logs']
+| search *
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20%2A%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+## Contain any substring 
+
+Search for logs that contain any substring of "brazil".
+
+```apl copy
+['sample-http-logs']
+| search "*brazil*"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20%5C%22%2Abrazil%2A%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+
+## Search for Multiple Independent Terms
+
+Search the logs for entries that contain either the term "GET" or "covina", irrespective of their context or the fields they appear in.
+
+```apl copy
+['sample-http-logs']
+| search "GET" or "covina"
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20%5C%22GET%5C%22%20or%20%5C%22covina%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+## Best practices in using the search operator:
+
+- **Avoid Overuse:** For known schema and recurring queries, it's more efficient to use field-specific queries. Using broader queries with `search` can be expensive and may not be suitable for dashboards or monitors unless fully understood.
+
+- **Combine with other operators:** After using the search operator to find the desired data, use other APL operators to refine, aggregate, and format results.
+
+- **Use search kinds effectively:** If you are aware of the pattern, make use of kind to specify if it's a `default` search, `case_insensitive`, or `case_sensitive`.

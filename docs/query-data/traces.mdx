@@ -1,0 +1,145 @@
+---
+title: 'Exploring Traces'
+excerpt: "Learn how to observe how requests propagate through your distributed systems, understand the interactions between microservices, and trace the life of the request through your application's architecture."
+tags:
+    ['axiom documentation', 'documentation', 'axiom', 'traces', 'tracing', 'span', 'trace', 'schema', 'http', 'otel', 'otlp', 'waterfall view']
+---
+
+# Exploring Traces
+
+Distributed tracing in Axiom allows you to observe how requests propagate through your distributed systems. This could involve a user request going through several microservices, and resources until the requested information is retrieved and returned. By tracing these requests, you're able to understand the interactions between these microservices, pinpoint issues, understand latency, and trace the life of the request through your application's architecture.
+
+### Traces and Spans
+
+1. **Trace:** A trace is a representation of a single operation or transaction as it moves through a system. A trace is made up of multiple spans.
+
+2. **Span:** Each span represents a logical unit of work in the system with a start and end time. For example, an HTTP request handling process might be a span.
+
+Each span includes metadata like unique identifiers (`trace_id` and `span_id`), start & end times, parent-child relationships with other spans, and optional events, logs, or other details to help describe the span's operation.
+
+### Trace Schema Overview
+
+| Field            | Type     | Description                                       |
+| ---------------- | -------- | ------------------------------------------------- |
+| `trace_id`       | String   | Unique identifier for a trace                     |
+| `span_id`        | String   | Unique identifier for a span within a trace       |
+| `parent_span_id` | String   | Identifier of the parent span                     |
+| `name`           | String   | Name of the span e.g. the operation               |
+| `kind`           | String   | Type of the span (e.g., client, server, producer) |
+| `duration`       | Timespan | Duration of the span                              |
+| `error`          | boolean  | Whether this span contains an error               |
+| `status.code`    | String   | Status of the span (e.g. null, OK, error)         |
+| `status.message` | String   | Status message of the span                        |
+| `attributes`     | Object   | Key-value pairs providing additional metadata     |
+| `events`         | Array    | Timestamped events associated with the span       |
+| `links`          | Array    | Links to related spans or external resources      |
+| `resource`       | Object   | Information about the source of the span          |
+
+---
+
+Below we explore the various ways Axiom can be used to analyze and interrogate your trace data from simple overviews to complex queries.
+
+
+## Browsing traces with the OpenTelemetry App
+
+The Axiom OpenTelemetry app automatically detects any OpenTelemetry trace data flowing into your datasets and publishes dashboards that let you easily browse your trace data:
+
+![OpenTelemetry Traces app](/doc-assets/shots/otel-traces-apps.png)
+
+![OpenTelemetry Traces app](/doc-assets/shots/otel-traces-app-default.png)
+
+### Navigating the App
+
+- Use the **Filter Bar** at the top of the app to narrow the charts to a specific service or operation.
+- Use the **Search Input** to find a trace id in the selected time period.
+- Use the **Slowest Operations** chart to identify performance issues across services and traces.
+- Use the **Top Errors** list to quickly identify the worst-offending causes of errors.
+- Use the **Results** table to get an overview and navigate between services, operations, and traces.
+
+### Viewing a Trace
+
+Clicking on any trace id in a results table will show the "trace waterfall" view which will allow you to see that span in context of the entire trace from start to finish.
+
+![OpenTelemetry Traces app](/doc-assets/shots/otel-traces-app-view-waterfall.png)
+
+### Customizing the App
+
+Should you want to customize the app to your own liking, use the fork button at any time to duplicate an editable version for you and your team.
+
+---
+
+## Querying Traces
+
+In Axiom, trace events are just like any other events inside datasets. This means they are directly queryable in the UI. While this is can be a powerful experience, it is important to note some important details to consider before querying:
+
+- Directly aggregating upon the `duration` field will produce aggregate values across _every span_ in the dataset. This is usually not the desired outcome when wanting to inspect a service's performance or robustness.
+
+- For request, rate, and duration aggregations, it's best to only include the **root span**, which is as easy as using `isnull(parent_span_id)`
+
+---
+
+## Waterfall View of Traces
+
+To see how spans in a trace are related to each other, explore the trace in a waterfall view. In this view, each span in the trace is correlated with its parent and child spans.
+
+To explore spans within a trace using the OpenTelemetry Traces app, follow these steps:
+
+1. Click the `Dashboards` tab.
+2. Click `OpenTelemetry Traces`.
+3. In the `Slowest Operations` chart, click the service that contains the trace.
+4. In the list of trace IDs, click the trace you want to explore.
+5. Explore how spans within the trace are related to each other in the waterfall view.
+
+![OpenTelemetry Traces app](/doc-assets/shots/otel-traces-app-waterfall.png)
+
+
+To access the waterfall view from Explore, follow these steps:
+
+1. Ensure the dataset you work with has trace data.
+2. Click the `Explore` tab.
+3. Run a query that returns the `_time` and `trace_id` fields. For example, the following query returns the number of spans in each trace:
+
+    ```apl
+    ['otel-demo-traces']
+    | summarize count() by trace_id
+    ```
+
+4. In the list of trace IDs, click the trace you want to explore.
+5. Explore how spans within the trace are related to each other in the waterfall view.
+
+![OpenTelemetry Traces app](/doc-assets/shots/otel-traces-app-trace-ids.png)
+
+---
+
+## Example Queries
+
+Below are a collection of queries that can help get you started with traces inside Axiom. Queries are all executable on the [Axiom Play sandbox](https://axiom.co/play).
+
+**Number of requests, avg response**
+
+```apl
+['otel-demo-traces']
+| where isnull(parent_span_id)
+| summarize count(),
+            avg(duration),
+            percentiles_array(duration, 95, 99, 99.9)
+  by bin_auto(_time)
+
+```
+
+**Top five slowest services by operation**
+
+```apl
+['otel-demo-traces']
+| summarize count(), avg(duration) by name
+| sort by avg_duration desc
+| limit 5
+```
+
+**Top 5 errors per service and operation**
+
+```apl
+['otel-demo-traces']
+| summarize topk(['status.message'], 5) by ['service.name'], name
+| limit 5
+```

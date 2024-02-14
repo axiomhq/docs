@@ -1,0 +1,101 @@
+---
+title: 'Send events from Splunk'
+excerpt: 'Integrate Axiom in your existing Splunk app with minimal effort and without breaking any of your existing Splunk stack.'
+tags: ['axiom documentation', 'documentation', 'axiom', 'endpoints', 'http', 'syslog', 'splunk', 'datadog', 'loki', 'honeycomb', 'javascript', 'python']
+---
+
+# Splunk
+
+To send events from **Splunk**, specify the values of your `env vars` in your Splunk `code`.
+
+- **token** This will be your **token** generated from [Splunk](https://docs.splunk.com/Observability/admin/authentication-tokens/api-access-tokens.html).
+- **url/host:** The value of your endpoints URL <a style={{ textDecoration: 'none' }} rel="nofollow">`https://opbivdzfdlohfblnw.ingress.axiom.co/collector/event`</a> generated when creating your endpoints.
+
+## Examples
+
+### Send logs from Splunk using JavaScript
+
+```js copy
+var SplunkLogger = require('splunk-logging').Logger;
+
+var config = {
+  token: '$SPLUNK_TOKEN',
+  url: '$AXIOM_ENDPOINT_URL',
+};
+
+var Logger = new SplunkLogger({
+  token: config.token,
+  url: config.url,
+  host: '$AXIOM_ENDPOINT_URL',
+});
+
+var payload = {
+  // Message can be anything; doesn't have to be an object
+  message: {
+    temperature: '70F',
+    chickenCount: 500,
+  },
+};
+
+console.log('Sending payload', payload);
+Logger.send(payload, function (err, resp, body) {
+  // If successful, body will be { text: 'Success', code: 0 }
+  console.log('Response from Splunk', body);
+});
+```
+
+### Send logs from Splunk using Python
+
+- Your Splunk deployment `port` and `index` values are required in your Python code.
+
+```py copy
+import logging
+from splunk_handler import SplunkHandler
+splunk = SplunkHandler(
+        host="$AXIOM_SPLUNK_ENDPOINT_URL",
+        port='8088',
+        token='',
+        index='main'
+    )
+
+logging.getLogger('').addHandler(splunk)
+
+logging.warning('Axiom endpoints!')
+```
+
+### Send logs from Splunk using Golang
+
+```js copy
+package main
+
+import "github.com/docker/docker/daemon/logger/splunk"
+
+func main() {
+
+	// Create new Splunk client
+	splunk := splunk.NewClient(
+		nil,
+		"https://{$AXIOM_SPLUNK_ENDPOINT}:8088/services/collector",
+		"{your-token}",
+		"{your-source}",
+		"{your-sourcetype}",
+		"{your-index}"
+	)
+
+
+	err := splunk.Log(
+		interface{"msg": "axiom endpoints", "msg2": "endpoints"}
+	)
+	if err != nil {
+        	return err
+        }
+
+
+	err = splunk.LogWithTime(
+		time.Now(),
+		interface{"msg": "axiom endpoints", "msg2": "endpoints"}
+	)
+	if err != nil {
+		return err
+	}
+```

@@ -1,0 +1,82 @@
+---
+title: 'summarize operator'
+excerpt: 'Learn how to produce a table that aggregates the content of the dataset.'
+tags: 
+    ['axiom documentation', 'documentation', 'axiom', 'tabular operators', 'summarize operator']
+---
+
+# summarize operator
+
+Produces a table that aggregates the content of the dataset.
+
+## Syntax
+
+```apl copy
+| summarize [[Column =] Aggregation [, ...]] [by [Column =] GroupExpression [, ...]]
+```
+
+## Arguments
+
+| **name**        | **type**       | **description**                                                                          |
+| --------------- | -------------- | ---------------------------------------------------------------------------------------- |
+| Field           | **string**     | Result Field Name                                                                        |
+| Aggregation     | **function**   | A call to an aggregation function such as min() or max(), with Field names as arguments. |
+| GroupExpression | **expression** | A scalar expression that can reference the dataset                                       |
+
+## Returns
+
+- The input rows are arranged into groups having the same values of the `by` expressions.
+- Then the specified aggregation functions are computed over each group, producing a row for each group.
+- The result contains the `by` columns and also at least one column for each computed aggregate. (Some aggregation functions return multiple columns.)
+
+## Examples
+
+```apl copy
+['http-logs']
+| summarize topk(content_type, 20)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20topk(content_type%2C%2020)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+
+```apl copy
+['githubreleaseevent']
+| summarize topk(repo, 20) by bin(_time, 24h)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27github-push-event%27%5D%7C%20summarize%20topk(repo%2C%2020)%20by%20bin(_time%2C%2024h)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+Returns a table that shows the heatmap in each interval [0, 30], [30, 20, 10], and so on. This example has a cell for `HISTOGRAM(req_duration_ms)`.
+
+```apl copy
+['http-logs']
+| summarize histogram(req_duration_ms, 30)
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20histogram(req_duration_ms%2C%2030)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+```apl copy
+['githubpushevent']
+| where _time > ago(7d)
+| where repo contains "axiom"
+| summarize count(), numCommits=sum(size) by _time=bin(_time, 3h), repo
+| take 100
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27github-push-event%27%5D%20%7C%20where%20_time%20%3E%20ago(7d)%20%7C%20where%20repo%20contains%20%5C%22axiom%5C%22%20%7C%20summarize%20count()%2C%20numCommits%3Dsum(size)%20by%20_time%3Dbin(_time%2C%203h)%2C%20repo%20%7C%20take%20100%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
