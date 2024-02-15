@@ -1,49 +1,57 @@
-# Mintlify Starter Kit
+## Initial setup
 
-Click on `Use this template` to copy the Mintlify starter kit. The starter kit contains examples including
+1. Install Node.js.
+2. Clone this repo.
+3. Go to the root folder in your terminal, and run the following to install Node dependencies:
 
-- Guide pages
-- Navigation
-- Customizations
-- API Reference pages
-- Use of popular components
+    ```
+    npm i
+    ```
 
-### Development
+4. Install the following VS Code extensions:
+    - [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode)
+    - [MDX](https://marketplace.visualstudio.com/items?itemName=unifiedjs.vscode-mdx)
+    - [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker)
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mintlify) to preview the documentation changes locally. To install, use the following command
+## Build locally
+
+Run the following in your terminal to build the documentation locally:
 
 ```
-npm i -g mintlify
+npm run mintlify dev
 ```
 
-Run the following command at the root of your documentation (where mint.json is)
+## Check for broken links
+
+Run the following in your terminal to check for broken links:
 
 ```
-mintlify dev
+npm run mintlify broken-links
 ```
 
-### Publishing Changes
+## Check style
 
-Install our Github App to autopropagate changes from youre repo to your deployment. Changes will be deployed to production automatically after pushing to the default branch. Find the link to install on your dashboard. 
+Run the following in your terminal to check the style of a file:
 
-#### Troubleshooting
+```
+npm run vale example.mdx
+```
+
+Run the following in your terminal to check the style of all files in the current folder and its subfolders:
+
+```
+npm run vale .
+```
+
+## Update Vale
+
+Run the following in your terminal to sync the style packages defined in `.vale.ini`. Only do this if the packages are outdated or broken.
+
+```
+npm run vale sync
+```
+
+## Troubleshoot Mintlify
 
 - Mintlify dev isn't running - Run `mintlify install` it'll re-install dependencies.
 - Page loads as a 404 - Make sure you are running in a folder with `mint.json`
-
-npm i # install deps
-npm run mintlify dev # build mintlify locally
-npm run vale sync # sync packages defined in .vale.ini
-npm run vale . # check all included files in subfolders
-
-Vale VSCode
-https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode
-
-MDX
-https://marketplace.visualstudio.com/items?itemName=unifiedjs.vscode-mdx
-
-Code Spell Checker
-https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker
-
-- Images with a unknown size use `![Alt tag](/img.png)` syntax
-- Images with a specific size like icons use `<Image width={32} height={32}> syntax`
