@@ -1,0 +1,3116 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Axiom Public API",
+    "description": "A public and stable API for interacting with Axiom services",
+    "termsOfService": "http://axiom.co/terms",
+    "contact": {
+      "name": "Axiom support team",
+      "url": "https://axiom.co",
+      "email": "hello@axiom.co"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.axiom.co/v1/"
+    }
+  ],
+  "security": [
+    {
+      "Auth": []
+    }
+  ],
+  "paths": {
+    "/datasets": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "description": "Retrieve list of datasets",
+        "operationId": "getDatasets",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "example": [
+                    {
+                      "id": "example-dataset",
+                      "name": "example-dataset",
+                      "description": "This is an example dataset",
+                      "who": "John Doe",
+                      "created": "2020-01-01T00:00:00.000Z"
+                    },
+                    {
+                      "id": "example-dataset-2",
+                      "name": "example-dataset-2",
+                      "description": "This is an example dataset",
+                      "who": "Foo Bar",
+                      "created": "2020-02-01T00:00:00.000Z"
+                    }
+                  ],
+                  "items": {
+                    "$ref": "#/components/schemas/DatasetSpec"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "description": "Create a dataset",
+        "operationId": "createDataset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDataset"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSpec"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "ManageDatasets"
+            ]
+          }
+        ],
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/datasets/_apl": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "description": "Query",
+        "operationId": "queryApl",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "legacy",
+                "tabular"
+              ]
+            }
+          },
+          {
+            "name": "nocache",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "saveAsKind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "when saveAsKind is true, this parameter indicates the id of the associated dataset",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/APLRequestWithOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful APL result",
+            "headers": {
+              "X-QueryLimit-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-QueryLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-QueryLimit-Reset": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Axiom-History-Query-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "CanQuery"
+            ]
+          }
+        ],
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/datasets/{id}": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "description": "Retrieve dataset by ID",
+        "operationId": "getDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSpec"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Datasets"
+        ],
+        "description": "Update dataset",
+        "operationId": "updateDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDataset"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "DatasetSpec",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSpec"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "ManageDatasets"
+            ]
+          }
+        ],
+        "x-codegen-request-body-name": "payload"
+      },
+      "delete": {
+        "tags": [
+          "Datasets"
+        ],
+        "description": "Delete dataset",
+        "operationId": "deleteDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "(empty)",
+            "content": {}
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "ManageDatasets"
+            ]
+          }
+        ]
+      }
+    },
+    "/datasets/{id}/ingest": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "description": "Ingest",
+        "operationId": "ingestIntoDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "description": "a JSON or ND-JSON array of events to ingest",
+                "example": [
+                  {
+                    "message": "Hello, World!",
+                    "foo": "bar"
+                  },
+                  {
+                    "bar": "foz"
+                  }
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ingest status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "CanIngest"
+            ]
+          }
+        ],
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/datasets/{id}/query": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "description": "Query (Legacy)",
+        "operationId": "queryDataset",
+        "parameters": [
+          {
+            "name": "saveAsKind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "streaming-duration",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nocache",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequestWithOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Result",
+            "headers": {
+              "X-QueryLimit-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-QueryLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-QueryLimit-Reset": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Axiom-History-Query-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "CanQuery"
+            ]
+          }
+        ],
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/datasets/{id}/trim": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "description": "Trim dataset",
+        "operationId": "trimDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrimOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "TrimResult",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrimResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "ManageDatasets"
+            ]
+          }
+        ],
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/user": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "description": "Get current user",
+        "operationId": "getCurrentUser",
+        "responses": {
+          "200": {
+            "description": "User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "APLRequestWithOptions": {
+        "required": [
+          "apl"
+        ],
+        "type": "object",
+        "properties": {
+          "apl": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "includeCursor": {
+            "type": "boolean"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/QueryOptions"
+          },
+          "startTime": {
+            "type": "string",
+            "description": "start and end time for the query, these must be specified as RFC3339 strings\nor using relative time expressions (e.g. now-1h, now-1d, now-1w, etc)"
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {}
+            },
+            "description": "Variables is an optional set of additional variables that are inserted into the APL"
+          }
+        },
+        "example": {
+          "apl": "[dataset_name] | limit 10",
+          "startTime": "string",
+          "endTime": "string"
+        }
+      },
+      "AggInfo": {
+        "type": "object",
+        "properties": {
+          "args": {
+            "type": "array",
+            "description": "Args specifies any non-field arguments for the aggregation. Fx. [10] for topk(players, 10).",
+            "items": {
+              "type": "object",
+              "properties": {}
+            },
+            "x-go-name": "Args"
+          },
+          "fields": {
+            "type": "array",
+            "description": "Fields specifies the names of the fields this aggregation is computed on.\nFx [\"players\"] for topk(players, 10)",
+            "items": {
+              "type": "string"
+            },
+            "x-go-name": "Fields"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name is the system name of the aggregation, which is the string form of aggregation.Type.\nIf the aggregation is aliased, the alias is stored in the parent FieldInfo",
+            "x-go-name": "Name"
+          }
+        },
+        "description": "AggInfo captures information about an aggregation",
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "AggInfo"
+        }
+      },
+      "Aggregation": {
+        "required": [
+          "field",
+          "op"
+        ],
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string",
+            "x-go-name": "Alias"
+          },
+          "argument": {
+            "type": "object",
+            "properties": {},
+            "x-go-name": "Argument"
+          },
+          "field": {
+            "type": "string",
+            "x-go-name": "Field"
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "count",
+              "distinct",
+              "sum",
+              "avg",
+              "min",
+              "max",
+              "topk",
+              "percentiles",
+              "histogram",
+              "stdev",
+              "variance",
+              "argmin",
+              "argmax",
+              "makeset",
+              "rate",
+              "makelist"
+            ],
+            "x-go-name": "Op"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Aggregation"
+        }
+      },
+      "AplResult": {
+        "required": [
+          "buckets",
+          "datasetNames",
+          "format",
+          "request",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "buckets": {
+            "$ref": "#/components/schemas/Timeseries"
+          },
+          "datasetNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-go-name": "DatasetNames"
+          },
+          "fieldsMetaMap": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/DatasetField"
+              }
+            },
+            "description": "FieldsMetaMap contains the unit information (if we have it) for each field in the given dataset entry",
+            "x-go-name": "FieldsMetaMap"
+          },
+          "format": {
+            "type": "string",
+            "description": "Format specifies the result set format. Either \"legacy\" (default) or \"tabular\".",
+            "x-go-name": "Format"
+          },
+          "matches": {
+            "type": "array",
+            "description": "Matches hold the matching events of a filter query in the \"legacy\" result format",
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            },
+            "x-go-name": "Matches"
+          },
+          "request": {
+            "$ref": "#/components/schemas/QueryRequest"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "tables": {
+            "type": "array",
+            "description": "Tables hold the result tables in the \"tabular\" result format",
+            "items": {
+              "$ref": "#/components/schemas/Table"
+            },
+            "x-go-name": "Tables"
+          }
+        },
+        "example": {
+          "buckets": {
+            "series": [
+              {
+                "endTime": "2022-07-26T02:48:46.931Z",
+                "groups": [
+                  {
+                    "aggregations": [
+                      {
+                        "op": "string",
+                        "value": {}
+                      }
+                    ],
+                    "group": {
+                      "additionalProp1": {},
+                      "additionalProp2": {},
+                      "additionalProp3": {}
+                    },
+                    "id": 0
+                  }
+                ],
+                "startTime": "2022-07-26T02:48:46.931Z"
+              }
+            ],
+            "totals": [
+              {
+                "aggregations": [
+                  {
+                    "op": "string",
+                    "value": {}
+                  }
+                ],
+                "group": {
+                  "additionalProp1": {},
+                  "additionalProp2": {},
+                  "additionalProp3": {}
+                },
+                "id": 0
+              }
+            ]
+          },
+          "datasetNames": [
+            "string"
+          ],
+          "fieldsMetaMap": {
+            "additionalProp1": [
+              {
+                "description": "string",
+                "hidden": true,
+                "name": "string",
+                "type": "string",
+                "unit": "string"
+              }
+            ],
+            "additionalProp2": [
+              {
+                "description": "string",
+                "hidden": true,
+                "name": "string",
+                "type": "string",
+                "unit": "string"
+              }
+            ],
+            "additionalProp3": [
+              {
+                "description": "string",
+                "hidden": true,
+                "name": "string",
+                "type": "string",
+                "unit": "string"
+              }
+            ]
+          },
+          "matches": [
+            {
+              "_rowId": "string",
+              "_sysTime": "2022-07-26T02:48:46.931Z",
+              "_time": "2022-07-26T02:48:46.931Z",
+              "data": {
+                "additionalProp1": {},
+                "additionalProp2": {},
+                "additionalProp3": {}
+              }
+            }
+          ],
+          "request": {
+            "aggregations": [
+              {
+                "alias": "string",
+                "argument": {},
+                "field": "string",
+                "op": "count"
+              }
+            ],
+            "continuationToken": "string",
+            "cursor": "string",
+            "endTime": "string",
+            "fieldsMeta": [
+              {
+                "description": "string",
+                "hidden": true,
+                "name": "string",
+                "type": "string",
+                "unit": "string"
+              }
+            ],
+            "filter": {
+              "caseSensitive": true,
+              "children": [
+                "string"
+              ],
+              "field": "string",
+              "op": "and",
+              "value": {}
+            },
+            "groupBy": [
+              "string"
+            ],
+            "includeCursor": true,
+            "limit": 0,
+            "order": [
+              {
+                "desc": true,
+                "field": "string"
+              }
+            ],
+            "project": [
+              {
+                "alias": "string",
+                "field": "string"
+              }
+            ],
+            "resolution": "string",
+            "startTime": "string",
+            "virtualFields": [
+              {
+                "alias": "string",
+                "expr": "string"
+              }
+            ]
+          },
+          "status": {
+            "blocksExamined": 0,
+            "cacheStatus": 0,
+            "continuationToken": "string",
+            "elapsedTime": 0,
+            "isEstimate": true,
+            "isPartial": true,
+            "maxBlockTime": "2022-07-26T02:48:46.931Z",
+            "messages": [
+              {
+                "code": "string",
+                "count": 0,
+                "msg": "string",
+                "priority": "string"
+              }
+            ],
+            "minBlockTime": "2022-07-26T02:48:46.931Z",
+            "numGroups": 0,
+            "rowsExamined": 0,
+            "rowsMatched": 0
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "AplResult"
+        }
+      },
+      "BucketInfo": {
+        "title": "BucketInfo captures information about how a grouped query is sorted into buckets.",
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Field specifies the field used to create buckets on. Normally this would be _time.",
+            "x-go-name": "Field"
+          },
+          "size": {
+            "type": "object",
+            "properties": {},
+            "description": "An integer or float representing the fixed bucket size.\nWhen the bucket field is _time this value is in nanoseconds.",
+            "x-go-name": "Size"
+          }
+        },
+        "description": "The standard mode of operation for Kirby is to create buckets on the _time column,",
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "BucketInfo"
+        }
+      },
+      "CreateDataset": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Dataset description",
+            "default": ""
+          },
+          "name": {
+            "type": "string",
+            "description": "Dataset unique name"
+          }
+        },
+        "example": {
+          "description": "string",
+          "name": "string"
+        }
+      },
+      "DatasetCoreInfo": {
+        "required": [
+          "compressedBytes",
+          "compressedBytesHuman",
+          "created",
+          "inputBytes",
+          "inputBytesHuman",
+          "name",
+          "numBlocks",
+          "numEvents",
+          "numFields",
+          "who"
+        ],
+        "type": "object",
+        "properties": {
+          "compressedBytes": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "compressedBytesHuman": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetField"
+            }
+          },
+          "inputBytes": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "inputBytesHuman": {
+            "type": "string"
+          },
+          "integrationFilters": {
+            "$ref": "#/components/schemas/IntegrationDatasetFilters"
+          },
+          "maxTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "minTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "numBlocks": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "numEvents": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "numFields": {
+            "type": "integer",
+            "format": "uint32"
+          },
+          "quickQueries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntegrationQuickQuery"
+            }
+          },
+          "who": {
+            "type": "string"
+          }
+        }
+      },
+      "DatasetField": {
+        "required": [
+          "hidden",
+          "name",
+          "type",
+          "unit"
+        ],
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "x-go-name": "Description"
+          },
+          "hidden": {
+            "type": "boolean",
+            "x-go-name": "Hidden"
+          },
+          "name": {
+            "type": "string",
+            "x-go-name": "Name"
+          },
+          "type": {
+            "type": "string",
+            "x-go-name": "Type"
+          },
+          "unit": {
+            "type": "string",
+            "x-go-name": "Unit"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "DatasetField"
+        }
+      },
+      "DatasetFields": {
+        "required": [
+          "datasetName",
+          "fields"
+        ],
+        "type": "object",
+        "properties": {
+          "datasetName": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetField"
+            }
+          }
+        }
+      },
+      "DatasetFieldsInfo": {
+        "required": [
+          "fields",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetField"
+            }
+          },
+          "integrationFilters": {
+            "$ref": "#/components/schemas/IntegrationDatasetFilters"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quickQueries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntegrationQuickQuery"
+            }
+          }
+        }
+      },
+      "DatasetInfo": {
+        "required": [
+          "compressedBytes",
+          "compressedBytesHuman",
+          "created",
+          "inputBytes",
+          "inputBytesHuman",
+          "name",
+          "numBlocks",
+          "numEvents",
+          "numFields"
+        ],
+        "type": "object",
+        "properties": {
+          "compressedBytes": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "CompressedBytes"
+          },
+          "compressedBytesHuman": {
+            "type": "string",
+            "x-go-name": "CompressedBytesHuman"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "Created"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Field"
+            },
+            "x-go-name": "Fields"
+          },
+          "inputBytes": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "InputBytes"
+          },
+          "inputBytesHuman": {
+            "type": "string",
+            "x-go-name": "InputBytesHuman"
+          },
+          "maxTime": {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "MaxTime"
+          },
+          "minTime": {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "MinTime"
+          },
+          "name": {
+            "type": "string",
+            "x-go-name": "Name"
+          },
+          "numBlocks": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "NumBlocks"
+          },
+          "numEvents": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "NumEvents"
+          },
+          "numFields": {
+            "type": "integer",
+            "format": "uint32",
+            "x-go-name": "NumFields"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "DatasetInfo"
+        }
+      },
+      "DatasetSpec": {
+        "required": [
+          "created",
+          "description",
+          "id",
+          "name",
+          "who"
+        ],
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "string",
+            "description": "The RFC3339-formatted time when the dataset was created.",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string",
+            "description": "Dataset description"
+          },
+          "id": {
+            "type": "string",
+            "description": "Dataset ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique dataset name"
+          },
+          "who": {
+            "type": "string",
+            "description": "Name of the dataset creator"
+          }
+        },
+        "example": {
+          "created": "2022-07-20T02:35:14.137Z",
+          "description": "string",
+          "id": "string",
+          "name": "string",
+          "who": "string"
+        }
+      },
+      "ElasticBulkIndex": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Status"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "ElasticBulkIndex"
+        }
+      },
+      "Entry": {
+        "required": [
+          "_rowId",
+          "_sysTime",
+          "_time",
+          "data"
+        ],
+        "type": "object",
+        "properties": {
+          "_rowId": {
+            "type": "string",
+            "x-go-name": "RowID"
+          },
+          "_sysTime": {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "SysTime"
+          },
+          "_time": {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "Time"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {}
+            },
+            "x-go-name": "Data"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Entry"
+        }
+      },
+      "EntryGroup": {
+        "required": [
+          "group",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "aggregations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryGroupAgg"
+            },
+            "x-go-name": "Aggregations"
+          },
+          "group": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {}
+            },
+            "x-go-name": "Group"
+          },
+          "id": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "ID"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "EntryGroup"
+        }
+      },
+      "EntryGroupAgg": {
+        "required": [
+          "op",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {},
+            "x-go-name": "Data"
+          },
+          "op": {
+            "type": "string",
+            "x-go-name": "Alias"
+          },
+          "value": {
+            "type": "object",
+            "properties": {},
+            "x-go-name": "Value"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "EntryGroupAgg"
+        }
+      },
+      "Field": {
+        "required": [
+          "name",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "x-go-name": "Name"
+          },
+          "type": {
+            "type": "string",
+            "x-go-name": "Type"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Field"
+        }
+      },
+      "FieldInfo": {
+        "title": "FieldInfo captures information about a field used in the tabular result format. See Table.",
+        "type": "object",
+        "properties": {
+          "agg": {
+            "$ref": "#/components/schemas/AggInfo"
+          },
+          "name": {
+            "type": "string",
+            "x-go-name": "Name"
+          },
+          "type": {
+            "type": "string",
+            "x-go-name": "Type"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "FieldInfo"
+        }
+      },
+      "Filter": {
+        "required": [
+          "field",
+          "op"
+        ],
+        "type": "object",
+        "properties": {
+          "caseSensitive": {
+            "type": "boolean",
+            "description": "Supported for these filters: starts-with, not-starts-with, ends-with, not-ends-with, contains, not-contains, eq, ne.",
+            "x-go-name": "CaseSensitive"
+          },
+          "children": {
+            "type": "array",
+            "description": "Supported for these filters: and, or, not.",
+            "items": {
+              "type": "string"
+            },
+            "x-go-name": "Children"
+          },
+          "field": {
+            "type": "string",
+            "x-go-name": "Field"
+          },
+          "op": {
+            "type": "string",
+            "description": "we also support '==', but we're not exporting that to swagger, cause it can't deal with it\nadd >, >=, <, <= to that list, it breaks codegen",
+            "enum": [
+              "and",
+              "or",
+              "not",
+              "eq",
+              "!=",
+              "ne",
+              "exists",
+              "not-exists",
+              "gt",
+              "gte",
+              "lt",
+              "lte",
+              "starts-with",
+              "not-starts-with",
+              "ends-with",
+              "not-ends-with",
+              "contains",
+              "not-contains",
+              "regexp",
+              "not-regexp"
+            ],
+            "x-go-name": "Op"
+          },
+          "value": {
+            "type": "object",
+            "properties": {},
+            "x-go-name": "Value"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Filter"
+        }
+      },
+      "GroupInfo": {
+        "title": "GroupInfo captures information about a grouping clause in the tabular result format. See Table.",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "x-go-name": "Name"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "GroupInfo"
+        }
+      },
+      "IntegrationConfigFilter": {
+        "required": [
+          "field",
+          "kind",
+          "name",
+          "options",
+          "visible"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "select"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntegrationConfigFilterOption"
+            }
+          },
+          "parentField": {
+            "type": "string"
+          },
+          "visible": {
+            "type": "array",
+            "description": "Where in the frontend should this filter be visible\ne.g. [\"datasets\", \"stream\", \"dashboards\"]",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "integrationsModels",
+            "package": "github.com/axiomhq/axiom/pkg/core/common/integrations/swagger"
+          },
+          "type": "ConfigFilter"
+        }
+      },
+      "IntegrationConfigFilterOption": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentValue": {
+            "type": "string",
+            "description": "If this filter has a parentField, then this is the value to match on\nif the parentField filter is set"
+          },
+          "reset": {
+            "type": "boolean",
+            "description": "selecting this option would reset the filter\nusually for \"All\", etc first options"
+          },
+          "sub": {
+            "type": "string"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "integrationsModels",
+            "package": "github.com/axiomhq/axiom/pkg/core/common/integrations/swagger"
+          },
+          "type": "ConfigFilterOption"
+        }
+      },
+      "IntegrationDatasetFilters": {
+        "required": [
+          "filters",
+          "integrationName",
+          "integrationSlug"
+        ],
+        "type": "object",
+        "properties": {
+          "filters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntegrationConfigFilter"
+            }
+          },
+          "integrationName": {
+            "type": "string"
+          },
+          "integrationSlug": {
+            "type": "string"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "integrationsModels",
+            "package": "github.com/axiomhq/axiom/pkg/core/common/integrations/swagger"
+          },
+          "type": "DatasetFilters"
+        }
+      },
+      "IntegrationQuery": {
+        "required": [
+          "endTime",
+          "resolution",
+          "startTime"
+        ],
+        "type": "object",
+        "properties": {
+          "aggregations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Aggregation"
+            }
+          },
+          "continuationToken": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "fieldsMeta": {
+            "type": "array",
+            "description": "FieldsMeta contains the unit information (if we have it) for each field",
+            "items": {
+              "$ref": "#/components/schemas/DatasetField"
+            }
+          },
+          "filter": {
+            "$ref": "#/components/schemas/Filter"
+          },
+          "groupBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "includeCursor": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer",
+            "format": "uint32"
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "project": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Projection"
+            }
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/IntegrationQueryOptions"
+          },
+          "resolution": {
+            "type": "string",
+            "description": "The time resolution of the query’s graph, in seconds. Valid values are\nthe query’s time range /100 at maximum and /1000 at minimum or \"auto\"."
+          },
+          "startTime": {
+            "type": "string",
+            "description": "start and end time for the query, these must be specified as RFC3339 strings\nor using relative time expressions (e.g. now-1h, now-1d, now-1w, etc)"
+          },
+          "virtualFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VirtualColumn"
+            }
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "integrationsModels",
+            "package": "github.com/axiomhq/axiom/pkg/core/common/integrations/swagger"
+          },
+          "type": "Query"
+        }
+      },
+      "IntegrationQueryOptions": {
+        "required": [
+          "integrationsFilter"
+        ],
+        "type": "object",
+        "properties": {
+          "integrationsFilter": {
+            "type": "string"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "integrationsModels",
+            "package": "github.com/axiomhq/axiom/pkg/core/common/integrations/swagger"
+          },
+          "type": "QueryOptions"
+        }
+      },
+      "IntegrationQuickQuery": {
+        "required": [
+          "defaultQuery",
+          "description",
+          "id",
+          "name",
+          "shortcuts"
+        ],
+        "type": "object",
+        "properties": {
+          "defaultQuery": {
+            "$ref": "#/components/schemas/IntegrationQuery"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "shortcuts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntegrationShortcut"
+            }
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "integrationsModels",
+            "package": "github.com/axiomhq/axiom/pkg/core/common/integrations/swagger"
+          },
+          "type": "QuickQuery"
+        }
+      },
+      "IntegrationShortcut": {
+        "required": [
+          "iconName",
+          "intlKey",
+          "query"
+        ],
+        "type": "object",
+        "properties": {
+          "iconName": {
+            "type": "string"
+          },
+          "intlKey": {
+            "type": "string"
+          },
+          "query": {
+            "$ref": "#/components/schemas/IntegrationQuery"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "integrationsModels",
+            "package": "github.com/axiomhq/axiom/pkg/core/common/integrations/swagger"
+          },
+          "type": "Shortcut"
+        }
+      },
+      "Interval": {
+        "required": [
+          "endTime",
+          "startTime"
+        ],
+        "type": "object",
+        "properties": {
+          "endTime": {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "EndTime"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryGroup"
+            },
+            "x-go-name": "Groups"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "StartTime"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Interval"
+        }
+      },
+      "Message": {
+        "required": [
+          "count",
+          "msg",
+          "priority"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "x-go-name": "Code"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "Count"
+          },
+          "msg": {
+            "type": "string",
+            "x-go-name": "Msg"
+          },
+          "priority": {
+            "type": "string",
+            "x-go-name": "Priority"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Message"
+        }
+      },
+      "Order": {
+        "required": [
+          "desc",
+          "field"
+        ],
+        "type": "object",
+        "properties": {
+          "desc": {
+            "type": "boolean",
+            "x-go-name": "Desc"
+          },
+          "field": {
+            "type": "string",
+            "x-go-name": "Field"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Order"
+        }
+      },
+      "Projection": {
+        "required": [
+          "field"
+        ],
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string",
+            "x-go-name": "Alias"
+          },
+          "field": {
+            "type": "string",
+            "x-go-name": "Field"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Projection"
+        }
+      },
+      "QueryOptions": {
+        "type": "object",
+        "properties": {
+          "against": {
+            "type": "string"
+          },
+          "againstStart": {
+            "type": "string"
+          },
+          "againstTimestamp": {
+            "type": "string"
+          },
+          "aggChartOpts": {
+            "type": "string"
+          },
+          "caseSensitive": {
+            "type": "string"
+          },
+          "containsTimeFilter": {
+            "type": "string"
+          },
+          "datasets": {
+            "type": "string"
+          },
+          "displayNull": {
+            "type": "string"
+          },
+          "editorContent": {
+            "type": "string"
+          },
+          "endColumn": {
+            "type": "string"
+          },
+          "endLineNumber": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "integrationsFilter": {
+            "type": "string"
+          },
+          "openIntervals": {
+            "type": "string"
+          },
+          "quickRange": {
+            "type": "string"
+          },
+          "resolution": {
+            "type": "string"
+          },
+          "shownColumns": {
+            "type": "string"
+          },
+          "startColumn": {
+            "type": "string"
+          },
+          "startLineNumber": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "timeSeriesVariant": {
+            "type": "string"
+          },
+          "timeSeriesView": {
+            "type": "string"
+          }
+        }
+      },
+      "QueryRequest": {
+        "required": [
+          "endTime",
+          "resolution",
+          "startTime"
+        ],
+        "type": "object",
+        "properties": {
+          "aggregations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Aggregation"
+            },
+            "x-go-name": "Aggregations"
+          },
+          "continuationToken": {
+            "type": "string",
+            "x-go-name": "ContinuationToken"
+          },
+          "cursor": {
+            "type": "string",
+            "x-go-name": "Cursor"
+          },
+          "endTime": {
+            "type": "string",
+            "x-go-name": "EndTime"
+          },
+          "fieldsMeta": {
+            "type": "array",
+            "description": "FieldsMeta contains the unit information (if we have it) for each field",
+            "items": {
+              "$ref": "#/components/schemas/DatasetField"
+            },
+            "x-go-name": "FieldsMeta"
+          },
+          "filter": {
+            "$ref": "#/components/schemas/Filter"
+          },
+          "groupBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-go-name": "GroupBy"
+          },
+          "includeCursor": {
+            "type": "boolean",
+            "x-go-name": "IncludeCursor"
+          },
+          "limit": {
+            "type": "integer",
+            "format": "uint32",
+            "x-go-name": "Limit"
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            },
+            "x-go-name": "Order"
+          },
+          "project": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Projection"
+            },
+            "x-go-name": "Project"
+          },
+          "resolution": {
+            "type": "string",
+            "description": "The time resolution of the query’s graph, in seconds. Valid values are\nthe query’s time range /100 at maximum and /1000 at minimum or \"auto\".",
+            "x-go-name": "Resolution"
+          },
+          "startTime": {
+            "type": "string",
+            "description": "start and end time for the query, these must be specified as RFC3339 strings\nor using relative time expressions (e.g. now-1h, now-1d, now-1w, etc)",
+            "x-go-name": "StartTime"
+          },
+          "virtualFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VirtualColumn"
+            },
+            "x-go-name": "VirtualColumns"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "QueryRequest"
+        }
+      },
+      "QueryRequestWithOptions": {
+        "required": [
+          "endTime",
+          "resolution",
+          "startTime"
+        ],
+        "type": "object",
+        "properties": {
+          "aggregations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Aggregation"
+            }
+          },
+          "continuationToken": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "filter": {
+            "$ref": "#/components/schemas/Filter"
+          },
+          "groupBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "includeCursor": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer",
+            "format": "uint32"
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "project": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Projection"
+            }
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/QueryOptions"
+          },
+          "resolution": {
+            "type": "string",
+            "description": "The time resolution of the query’s graph, in seconds. Valid values are\nthe query’s time range /100 at maximum and /1000 at minimum or \"auto\"."
+          },
+          "startTime": {
+            "type": "string",
+            "description": "start and end time for the query, these must be specified as RFC3339 strings\nor using relative time expressions (e.g. now-1h, now-1d, now-1w, etc)"
+          },
+          "virtualFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VirtualColumn"
+            }
+          }
+        },
+        "example": {
+          "aggregations": [],
+          "continuationToken": "string",
+          "cursor": "string",
+          "endTime": "string",
+          "filter": {},
+          "groupBy": [
+            "string"
+          ],
+          "includeCursor": true,
+          "limit": 10,
+          "order": [
+            {
+              "desc": true,
+              "field": "string"
+            }
+          ],
+          "project": [
+            {
+              "alias": "string",
+              "field": "string"
+            }
+          ],
+          "queryOptions": {
+            "displayNull": "0"
+          },
+          "resolution": "string",
+          "startTime": "string"
+        }
+      },
+      "RangeInfo": {
+        "title": "RangeInfo specifies the window a query was restricted to.",
+        "type": "object",
+        "properties": {
+          "end": {
+            "type": "string",
+            "description": "End is the ending time the query is limited by.\nQueries are restricted to the interval [start,end).",
+            "format": "date-time",
+            "x-go-name": "End"
+          },
+          "field": {
+            "type": "string",
+            "description": "Field specifies the field name on which the query range was restricted. Normally _time",
+            "x-go-name": "Field"
+          },
+          "start": {
+            "type": "string",
+            "description": "Start is the starting time the query is limited by.\nQueries are restricted to the interval [start,end).",
+            "format": "date-time",
+            "x-go-name": "Start"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "RangeInfo"
+        }
+      },
+      "Result": {
+        "required": [
+          "buckets",
+          "format",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "buckets": {
+            "$ref": "#/components/schemas/Timeseries"
+          },
+          "fieldsMeta": {
+            "type": "array",
+            "description": "FieldsMeta contains the unit information (if we have it) for each field",
+            "items": {
+              "$ref": "#/components/schemas/DatasetField"
+            },
+            "x-go-name": "FieldsMeta"
+          },
+          "format": {
+            "type": "string",
+            "description": "Format specifies the result set format. Either \"legacy\" (default) or \"tabular\".",
+            "x-go-name": "Format"
+          },
+          "matches": {
+            "type": "array",
+            "description": "Matches hold the matching events of a filter query in the \"legacy\" result format",
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            },
+            "x-go-name": "Matches"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "tables": {
+            "type": "array",
+            "description": "Tables hold the result tables in the \"tabular\" result format",
+            "items": {
+              "$ref": "#/components/schemas/Table"
+            },
+            "x-go-name": "Tables"
+          }
+        },
+        "example": {
+          "buckets": {
+            "series": [
+              {
+                "endTime": "2022-07-26T03:00:48.925Z",
+                "groups": [
+                  {
+                    "aggregations": [
+                      {
+                        "op": "string",
+                        "value": {}
+                      }
+                    ],
+                    "group": {
+                      "additionalProp1": {},
+                      "additionalProp2": {},
+                      "additionalProp3": {}
+                    },
+                    "id": 0
+                  }
+                ],
+                "startTime": "2022-07-26T03:00:48.925Z"
+              }
+            ],
+            "totals": [
+              {
+                "aggregations": [
+                  {
+                    "op": "string",
+                    "value": {}
+                  }
+                ],
+                "group": {
+                  "additionalProp1": {},
+                  "additionalProp2": {},
+                  "additionalProp3": {}
+                },
+                "id": 0
+              }
+            ]
+          },
+          "fieldsMeta": [
+            {
+              "description": "string",
+              "hidden": true,
+              "name": "string",
+              "type": "string",
+              "unit": "string"
+            }
+          ],
+          "matches": [
+            {
+              "_rowId": "string",
+              "_sysTime": "2022-07-26T03:00:48.925Z",
+              "_time": "2022-07-26T03:00:48.925Z",
+              "data": {
+                "additionalProp1": {},
+                "additionalProp2": {},
+                "additionalProp3": {}
+              }
+            }
+          ],
+          "status": {
+            "blocksExamined": 0,
+            "cacheStatus": 0,
+            "continuationToken": "string",
+            "elapsedTime": 0,
+            "isEstimate": true,
+            "isPartial": true,
+            "maxBlockTime": "2022-07-26T03:00:48.925Z",
+            "messages": [
+              {
+                "code": "string",
+                "count": 0,
+                "msg": "string",
+                "priority": "string"
+              }
+            ],
+            "minBlockTime": "2022-07-26T03:00:48.925Z",
+            "numGroups": 0,
+            "rowsExamined": 0,
+            "rowsMatched": 0
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Result"
+        }
+      },
+      "SourceInfo": {
+        "title": "SourceInfo specifies the provenance of a results Table.",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "x-go-name": "Name"
+          }
+        },
+        "description": "Result sources will typically be the names of a datasets that were searched,\nbut may be expanded to other things in the future.",
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "SourceInfo"
+        }
+      },
+      "StarredQueryWithId": {
+        "required": [
+          "created",
+          "id",
+          "kind",
+          "metadata",
+          "name",
+          "query",
+          "who"
+        ],
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "analytics",
+              "stream",
+              "apl"
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "query": {
+            "type": "object",
+            "properties": {}
+          },
+          "who": {
+            "type": "string"
+          }
+        }
+      },
+      "Stats": {
+        "required": [
+          "compressedBytes",
+          "compressedBytesHuman",
+          "inputBytes",
+          "inputBytesHuman",
+          "numBlocks",
+          "numEvents"
+        ],
+        "type": "object",
+        "properties": {
+          "compressedBytes": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "CompressedBytes"
+          },
+          "compressedBytesHuman": {
+            "type": "string",
+            "x-go-name": "CompressedBytesHuman"
+          },
+          "datasets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetInfo"
+            },
+            "x-go-name": "Datasets"
+          },
+          "inputBytes": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "InputBytes"
+          },
+          "inputBytesHuman": {
+            "type": "string",
+            "x-go-name": "InputBytesHuman"
+          },
+          "numBlocks": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "NumBlocks"
+          },
+          "numEvents": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "NumEvents"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbnode",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/node"
+          },
+          "type": "Stats"
+        }
+      },
+      "Status": {
+        "required": [
+          "blocksExamined",
+          "cacheStatus",
+          "elapsedTime",
+          "isPartial",
+          "maxBlockTime",
+          "minBlockTime",
+          "numGroups",
+          "rowsExamined",
+          "rowsMatched"
+        ],
+        "type": "object",
+        "properties": {
+          "blocksExamined": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "BlocksExamined"
+          },
+          "cacheStatus": {
+            "type": "integer",
+            "format": "uint8",
+            "x-go-name": "CacheStatus"
+          },
+          "continuationToken": {
+            "type": "string",
+            "x-go-name": "ContinuationToken"
+          },
+          "elapsedTime": {
+            "type": "integer",
+            "format": "int64",
+            "x-go-name": "ElapsedTime"
+          },
+          "isEstimate": {
+            "type": "boolean",
+            "x-go-name": "IsEstimate"
+          },
+          "isPartial": {
+            "type": "boolean",
+            "x-go-name": "IsPartial"
+          },
+          "maxBlockTime": {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "MaxBlockTime"
+          },
+          "maxCursor": {
+            "type": "string",
+            "description": "Row id of the newest row, as seen server side.\nMay be higher than what the results include if the server scanned more data than included in the results.\nCan be used to efficiently resume time-sorted non-aggregating queries (ie filtering only).",
+            "x-go-name": "MaxCursor"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "x-go-name": "Messages"
+          },
+          "minBlockTime": {
+            "type": "string",
+            "format": "date-time",
+            "x-go-name": "MinBlockTime"
+          },
+          "minCursor": {
+            "type": "string",
+            "description": "Row id of the oldest row, as seen server side.\nMay be lower than what the results include if the server scanned more data than included in the results.\nCan be used to efficiently resume time-sorted non-aggregating queries (ie filtering only).",
+            "x-go-name": "MinCursor"
+          },
+          "numGroups": {
+            "type": "integer",
+            "format": "uint32",
+            "x-go-name": "NumGroups"
+          },
+          "rowsExamined": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "RowsExamined"
+          },
+          "rowsMatched": {
+            "type": "integer",
+            "format": "uint64",
+            "x-go-name": "RowsMatched"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Status"
+        }
+      },
+      "Table": {
+        "title": "Table defines the schema for query results in the \"tabular\" result format.",
+        "type": "object",
+        "properties": {
+          "buckets": {
+            "$ref": "#/components/schemas/BucketInfo"
+          },
+          "columns": {
+            "type": "array",
+            "description": "Columns contain a series of arrays with the raw result data.\nThe columns here line up with the fields in the Fields array.",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {}
+              }
+            },
+            "x-go-name": "Columns"
+          },
+          "fields": {
+            "type": "array",
+            "description": "Fields contain information about the fields included in these results.\nThe order of the fields match up with the order of the data in Columns.",
+            "items": {
+              "$ref": "#/components/schemas/FieldInfo"
+            },
+            "x-go-name": "Fields"
+          },
+          "groups": {
+            "type": "array",
+            "description": "Groups specifies which grouping operations has been performed on the results.",
+            "items": {
+              "$ref": "#/components/schemas/GroupInfo"
+            },
+            "x-go-name": "GroupBy"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name is the name assigned to this table. Defaults to \"0\". The name \"_totals\" is reserved for system use.",
+            "x-go-name": "Name"
+          },
+          "order": {
+            "type": "array",
+            "description": "Order echoes the ordering clauses that was used to sort the results.",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            },
+            "x-go-name": "Order"
+          },
+          "range": {
+            "$ref": "#/components/schemas/RangeInfo"
+          },
+          "sources": {
+            "type": "array",
+            "description": "Sources contain the names of the datasets that contributed data to these results.",
+            "items": {
+              "$ref": "#/components/schemas/SourceInfo"
+            },
+            "x-go-name": "Sources"
+          }
+        },
+        "description": "The tabular result format can be enabled via APLQueryParams.ResultFormat or QueryParams.ResultFormat.",
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Table"
+        }
+      },
+      "Timeseries": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interval"
+            },
+            "x-go-name": "Series"
+          },
+          "totals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryGroup"
+            },
+            "x-go-name": "Totals"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "Timeseries"
+        }
+      },
+      "Token": {
+        "required": [
+          "id",
+          "name",
+          "permissions",
+          "scopes"
+        ],
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TrimOptions": {
+        "required": [
+          "maxDuration"
+        ],
+        "type": "object",
+        "properties": {
+          "maxDuration": {
+            "type": "string",
+            "example": "1h"
+          }
+        },
+        "example": {
+          "maxDuration": "1h"
+        }
+      },
+      "TrimResult": {
+        "required": [
+          "numDeleted"
+        ],
+        "type": "object",
+        "properties": {
+          "numDeleted": {
+            "type": "integer",
+            "description": "numDeleted has been deprecated on 2022-09-14.\nThere is currently no way to tell how much was trimmed via the trim result.\nIf you need to check how much was deleted you can either query the removed time range,\nor poll the dataset info endpoint.",
+            "format": "int64",
+            "x-go-name": "NumDeleted"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "TrimResult"
+        }
+      },
+      "UpdateDataset": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "description": "string"
+        }
+      },
+      "UsageItem": {
+        "required": [
+          "breakdown",
+          "quantity",
+          "totalUsd"
+        ],
+        "type": "object",
+        "properties": {
+          "breakdown": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "quantityHuman": {
+            "type": "string"
+          },
+          "totalUsd": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "User": {
+        "required": [
+          "email",
+          "id",
+          "name",
+          "permissions",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "User email address"
+          },
+          "id": {
+            "type": "string",
+            "description": "Unique ID"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "description": "array<string> of permission names",
+            "items": {
+              "type": "string"
+            }
+          },
+          "role": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "id": "string",
+          "name": "string",
+          "emails": [
+            "string"
+          ]
+        }
+      },
+      "VirtualColumn": {
+        "required": [
+          "alias",
+          "expr"
+        ],
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string",
+            "x-go-name": "Alias"
+          },
+          "expr": {
+            "type": "string",
+            "x-go-name": "Expr"
+          }
+        },
+        "x-go-type": {
+          "hints": {
+            "noValidation": true
+          },
+          "import": {
+            "alias": "dbdatasets",
+            "package": "github.com/axiomhq/axiom/pkg/db/client/swagger/datasets"
+          },
+          "type": "VirtualColumn"
+        }
+      },
+      "NotFoundError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "code": 404,
+          "message": "Not found"
+        }
+      },
+      "ForbiddenError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "code": 401,
+          "message": "Unauthorized"
+        }
+      }
+    },
+    "responses": {
+      "ConnectNextStep": {
+        "description": "the next step for an integration",
+        "content": {
+          "application/json": {
+            "schema": {
+              "required": [
+                "kind",
+                "properties"
+              ],
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "redirect"
+                  ]
+                },
+                "properties": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "schema": {
+          "maximum": 1000,
+          "minimum": 1,
+          "type": "integer",
+          "format": "int64",
+          "default": 100
+        }
+      },
+      "Offset": {
+        "name": "offset",
+        "in": "query",
+        "schema": {
+          "minimum": 0,
+          "type": "integer",
+          "format": "int64",
+          "default": 0
+        }
+      }
+    },
+    "securitySchemes": {
+      "Auth": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+            "tokenUrl": "https://www.googleapis.com/oauth2/v4/token",
+            "scopes": {
+              "CanIngest": "Allow ingesting of data",
+              "CanQuery": "Allow querying",
+              "CanUpdate": "Can update Axiom",
+              "ChangeAccess": "Allow editing of users on this organization, and assigning them permissions",
+              "ChangeApiKeys": "Allow creating and disabling API keys",
+              "ChangeAuthentication": "Allow creating and updating authentication mechanisms",
+              "ChangeDashboards": "Allow creating and updating dashboards",
+              "ChangeIntegrations": "Allow creating and editing of integrations",
+              "ChangeMonitorsAndNotifiers": "Allow creating and editing of monitors and notifiers",
+              "ChangeSavedQueries": "Allow creating and updating saved queries",
+              "ChangeVirtualFields": "Allow creating and editing virtual fields",
+              "ManageAPITokens": "Manage API tokens",
+              "ManageBilling": "Manage billing, changing pricing tiers, viewing invoices",
+              "ManageDatasets": "Allow editing and deleting of datasets",
+              "ManageEndpoints": "Manage endpoints, changing endpoints, viewing endpoints for integrations",
+              "ManageSharedAccessKeys": "Manage shared access signing keys",
+              "ViewDashboards": "Allow viewing of dashboards",
+              "ViewMonitorsAndNotifiers": "Allow viewing of monitors and notifiers",
+              "ViewSavedQueries": "Allow viewing of saved queries",
+              "ViewVirtualFields": "Allow viewing of virtual fields"
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-original-swagger-version": "2.0"
+}
