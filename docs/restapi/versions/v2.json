@@ -1,0 +1,2477 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Axiom",
+    "description": "A public and stable API for interacting with axiom services",
+    "termsOfService": "http://axiom.co/terms",
+    "contact": {
+      "name": "Axiom support team",
+      "url": "https://axiom.co",
+      "email": "hello@axiom.co"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "2.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.axiom.co/v2/"
+    }
+  ],
+  "security": [
+    {
+      "Auth": []
+    }
+  ],
+  "paths": {
+    "/annotations": {
+      "get": {
+        "tags": [
+          "annotations"
+        ],
+        "description": "Get annotations",
+        "operationId": "getAnnotations",
+        "parameters": [
+          {
+            "name": "datasets",
+            "in": "query",
+            "description": "Optional: Filter for dataset names.",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "description": "Optional: Filter for events after this date. Use RFC3339 time format.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "description": "Optional: Filter for events before this date. Use RFC3339 time format.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Annotation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Annotation"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "annotations|read"
+            ]
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "annotations"
+        ],
+        "description": "Create annotation",
+        "operationId": "createAnnotation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewAnnotation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Annotation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Annotation"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "annotations|create"
+            ]
+          }
+        ],
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/annotations/{id}": {
+      "get": {
+        "tags": [
+          "annotations"
+        ],
+        "description": "Get annotation by ID",
+        "operationId": "getAnnotation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Unique ID of the annotation",
+            "required": true,
+            "schema": {
+              "pattern": "^ann_",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Annotation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Annotation"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "annotations|read"
+            ]
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "annotations"
+        ],
+        "description": "Update annotation",
+        "operationId": "updateAnnotation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Unique ID of the annotation",
+            "required": true,
+            "schema": {
+              "pattern": "^ann_",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatedAnnotation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Annotation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Annotation"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "annotations|update"
+            ]
+          }
+        ],
+        "x-codegen-request-body-name": "payload"
+      },
+      "delete": {
+        "tags": [
+          "annotations"
+        ],
+        "description": "Delete annotation",
+        "operationId": "deleteAnnotation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Unique ID of the annotation",
+            "required": true,
+            "schema": {
+              "pattern": "^ann_",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success",
+            "content": {}
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "annotations|delete"
+            ]
+          }
+        ]
+      }
+    },
+    "/authed": {
+      "get": {
+        "description": "Get user auth status",
+        "operationId": "getAuthed",
+        "responses": {
+          "200": {
+            "description": "User is authed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "orgID": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-preview": true
+      }
+    },
+    "/datasets": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Get list of datasets",
+        "description": "Get list of datasets",
+        "operationId": "getDatasets",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "example": [
+                    {
+                      "created": "2020-01-01T00:00:00.000Z",
+                      "description": "This is an example dataset",
+                      "id": "example-dataset",
+                      "name": "example-dataset",
+                      "who": "John Doe"
+                    },
+                    {
+                      "created": "2020-02-01T00:00:00.000Z",
+                      "description": "This is an example dataset",
+                      "id": "example-dataset-2",
+                      "name": "example-dataset-2",
+                      "who": "Foo Bar"
+                    }
+                  ],
+                  "items": {
+                    "$ref": "#/components/schemas/Dataset"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "example": {
+                    "code": 401,
+                    "message": "Unauthorized"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-preview": true
+      },
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Create dataset",
+        "description": "Create dataset",
+        "operationId": "createDataset",
+        "parameters": [
+          {
+            "name": "referrer",
+            "in": "query",
+            "description": "Referrer slug",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDataset"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dataset"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "example": {
+                    "code": 401,
+                    "message": "Unauthorized"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "datasets|create"
+            ]
+          }
+        ],
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/datasets/{id}": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Get dataset by ID",
+        "description": "Get dataset by ID",
+        "operationId": "getDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dataset"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "example": {
+                    "code": 401,
+                    "message": "Unauthorized"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "example": {
+                    "code": 404,
+                    "message": "Not found"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "datasets|delete"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      },
+      "put": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Update dataset",
+        "description": "Update dataset",
+        "operationId": "updateDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDataset"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Dataset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dataset"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "example": {
+                    "code": 401,
+                    "message": "Unauthorized"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "datasets|update"
+            ]
+          }
+        ],
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      },
+      "delete": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Delete dataset",
+        "description": "Delete dataset",
+        "operationId": "deleteDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "(empty)",
+            "content": {}
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "example": {
+                    "code": 401,
+                    "message": "Unauthorized"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "datasets|delete"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      }
+    },
+    "/datasets/{id}/trim": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Trim dataset by duration",
+        "description": "Trim dataset",
+        "operationId": "trimDataset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrimOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "TrimResult",
+            "content": {}
+          },
+          "401": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "example": {
+                    "code": 401,
+                    "message": "Unauthorized"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "example": {
+                    "code": 404,
+                    "message": "Not found"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "datasets|update"
+            ]
+          }
+        ],
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/monitors": {
+      "get": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Get monitors",
+        "operationId": "getMonitors",
+        "responses": {
+          "200": {
+            "description": "Monitor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Monitor"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "monitors|read"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      },
+      "post": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Create monitor",
+        "operationId": "createMonitor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Monitor"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Monitor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Monitor"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "monitors|create"
+            ]
+          }
+        ],
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/monitors/{id}": {
+      "get": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Get monitor by ID",
+        "operationId": "getMonitor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Monitor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Monitor"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "monitors|read"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      },
+      "put": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Update monitor",
+        "operationId": "updateMonitor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Monitor"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Monitor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Monitor"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "monitors|update"
+            ]
+          }
+        ],
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      },
+      "delete": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Delete monitor",
+        "operationId": "deleteMonitor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success",
+            "content": {}
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "monitors|delete"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      }
+    },
+    "/monitors/{id}/history": {
+      "get": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Get monitor history",
+        "operationId": "getMonitorHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startTime",
+            "in": "query",
+            "description": "Start time (ISO 8601 format) for filtering alert history.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "description": "End time (ISO 8601 format) for filtering alert history.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AlertHistory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlertHistory"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "monitors|read"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      }
+    },
+    "/notifiers": {
+      "get": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Get notifiers",
+        "operationId": "getNotifiers",
+        "responses": {
+          "200": {
+            "description": "Notifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Notifier"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "notifiers|read"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      },
+      "post": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Create notifier",
+        "operationId": "createNotifier",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Notifier"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Notifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notifier"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "notifiers|create"
+            ]
+          }
+        ],
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/notifiers/{id}": {
+      "get": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Get notifier by ID",
+        "operationId": "getNotifier",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notifier"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "notifiers|read"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      },
+      "put": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Update notifier",
+        "operationId": "updateNotifier",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Notifier"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Notifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notifier"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "notifiers|update"
+            ]
+          }
+        ],
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      },
+      "delete": {
+        "tags": [
+          "Monitors"
+        ],
+        "description": "Delete notifier",
+        "operationId": "deleteNotifier",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "(empty)",
+            "content": {}
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "notifiers|delete"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      }
+    },
+    "/query": {
+      "post": {
+        "tags": [
+          "query"
+        ],
+        "summary": "Query datasets using APL",
+        "description": "Query data",
+        "operationId": "query",
+        "parameters": [
+          {
+            "name": "nocache",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "description": "end time for the query, these must be specified as RFC3339 strings\nor using relative time expressions (e.g. now-1h, now-1d, now-1w, etc)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "description": "start time for the query, these must be specified as RFC3339 strings\nor using relative time expressions (e.g. now-1h, now-1d, now-1w, etc)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeCursor",
+            "in": "query",
+            "description": "includeCursor specifies whether the cursor should be included in the results.\nThis is useful for clients that want to resume a query at a later time. includeCursor is only advised to be set to true when you are resolving a deep-link to a specific row, and never otherwise.\nThe only thing it controls is that the DB will include the row pointed to be the cursor in the results.\nIt does not control whether or not cursors are returned. They are always returned (only for time sorted filter-queries).",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AplRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful result of query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplResult"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "query/*|read"
+            ]
+          },
+          {
+            "Shared": []
+          }
+        ],
+        "x-axiom-not-suspended": true,
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/user": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "description": "Get current user",
+        "operationId": "getCurrentUser",
+        "responses": {
+          "200": {
+            "description": "User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-preview": true
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "description": "Get users",
+        "operationId": "getUsers",
+        "responses": {
+          "200": {
+            "description": "User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "users|read"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      },
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "description": "Create user",
+        "operationId": "createUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "users|create"
+            ]
+          }
+        ],
+        "x-axiom-not-suspended": true,
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "description": "Get user by ID",
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "users|read"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "description": "Update user",
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "users|update"
+            ]
+          }
+        ],
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "description": "Delete user",
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "(empty)",
+            "content": {}
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "users|delete"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      }
+    },
+    "/users/{id}/role": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "description": "Update user role",
+        "operationId": "updateUserRole",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "users|update"
+            ]
+          }
+        ],
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/version": {
+      "get": {
+        "description": "Get version of Axiom instance",
+        "operationId": "getVersion",
+        "responses": {
+          "200": {
+            "description": "Version of the invoked instance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-axiom-preview": true
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AggInfo": {
+        "type": "object",
+        "properties": {
+          "args": {
+            "type": "array",
+            "description": "Args specifies any non-field arguments for the aggregation. Fx. [10] for topk(players, 10).",
+            "items": {
+              "type": "object"
+            }
+          },
+          "fields": {
+            "type": "array",
+            "description": "Fields specifies the names of the fields this aggregation is computed on.\nFx [\"players\"] for topk(players, 10)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "Name is the system name of the aggregation, which is the string form of aggregation.Type.\nIf the aggregation is aliased, the alias is stored in the parent FieldInfo"
+          }
+        },
+        "description": "AggInfo captures information about an aggregation"
+      },
+      "AlertHistory": {
+        "required": [
+          "checkId",
+          "name",
+          "state",
+          "timestamp"
+        ],
+        "type": "object",
+        "properties": {
+          "checkId": {
+            "type": "string",
+            "description": "ID of the check that triggered the alert."
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the alert."
+          },
+          "state": {
+            "type": "string",
+            "description": "State of the alert.",
+            "enum": [
+              "open",
+              "closed"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the transition into the current state.",
+            "format": "date-time"
+          }
+        }
+      },
+      "Annotation": {
+        "required": [
+          "datasets",
+          "id",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "datasets": {
+            "minItems": 1,
+            "type": "array",
+            "description": "array<string> of dataset names for which the annotation appears on charts",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "description": {
+            "maxLength": 512,
+            "type": "string",
+            "description": "Explanation of the event the annotation marks on the charts"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "End time of the annotation",
+            "format": "date-time",
+            "nullable": true
+          },
+          "id": {
+            "$ref": "#/components/schemas/AnnotationID"
+          },
+          "time": {
+            "type": "string",
+            "description": "Time the annotation marks on the charts. If you don't include this field, Axiom assigns the time of the API request to the annotation.",
+            "format": "date-time"
+          },
+          "title": {
+            "maxLength": 256,
+            "type": "string",
+            "description": "Summary of the annotation that appears on the charts"
+          },
+          "type": {
+            "maxLength": 256,
+            "pattern": "^[a-z0-9-]+$",
+            "type": "string",
+            "description": "Type of the event marked by the annotation. Use only alphanumeric characters or hyphens. For example, \"production-deployment\"."
+          },
+          "url": {
+            "maxLength": 512,
+            "type": "string",
+            "description": "URL relevant for the event marked by the annotation. For example, link to GitHub pull request."
+          }
+        },
+        "example": {
+          "datasets": [
+            "my-dataset"
+          ],
+          "description": "Deploy new feature to the sales form",
+          "endTime": "2024-02-06T11:39:28.382Z",
+          "id": "ann_123",
+          "time": "2024-02-06T10:39:28.382Z",
+          "title": "Production deployment",
+          "type": "deploy",
+          "url": "https://example.com"
+        }
+      },
+      "AnnotationID": {
+        "type": "string",
+        "x-go-type": {
+          "import": {
+            "package": "github.com/axiomhq/axiom/pkg/core/ids"
+          },
+          "type": "AnnotationID"
+        }
+      },
+      "AplRequest": {
+        "required": [
+          "apl"
+        ],
+        "type": "object",
+        "properties": {
+          "apl": {
+            "type": "string"
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        }
+      },
+      "AplResult": {
+        "required": [
+          "status",
+          "tables"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "tables": {
+            "type": "array",
+            "description": "Tables hold the result data for a query",
+            "items": {
+              "$ref": "#/components/schemas/Table"
+            }
+          }
+        }
+      },
+      "BucketInfo": {
+        "title": "BucketInfo captures information about how a grouped query is sorted into buckets.",
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Field specifies the field used to create buckets on. Normally this would be _time."
+          },
+          "size": {
+            "type": "object",
+            "description": "An integer or float representing the fixed bucket size.\nWhen the bucket field is _time this value is in nanoseconds."
+          }
+        },
+        "description": "The standard mode of operation for Kirby is to create buckets on the _time column,"
+      },
+      "CreateDataset": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Dataset description",
+            "default": ""
+          },
+          "name": {
+            "type": "string",
+            "description": "Dataset unique name"
+          }
+        },
+        "example": {
+          "description": "string",
+          "name": "string"
+        }
+      },
+      "CreateUserRequest": {
+        "required": [
+          "email",
+          "name",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        }
+      },
+      "CustomNotifierConfig": {
+        "required": [
+          "body",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "Dataset": {
+        "required": [
+          "created",
+          "description",
+          "id",
+          "name",
+          "who"
+        ],
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "string",
+            "description": "The RFC3339-formatted time when the dataset was created.",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string",
+            "description": "Dataset description"
+          },
+          "id": {
+            "type": "string",
+            "description": "Dataset ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique dataset name"
+          },
+          "who": {
+            "type": "string",
+            "description": "Name of the dataset creator"
+          }
+        },
+        "example": {
+          "created": "2022-07-20T02:35:14.137Z",
+          "description": "string",
+          "id": "string",
+          "name": "string",
+          "who": "string"
+        }
+      },
+      "DiscordConfig": {
+        "type": "object",
+        "properties": {
+          "discordChannel": {
+            "type": "string"
+          },
+          "discordToken": {
+            "type": "string"
+          }
+        }
+      },
+      "DiscordWebhookConfig": {
+        "type": "object",
+        "properties": {
+          "discordWebhookUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "EmailConfig": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "FieldInfo": {
+        "title": "FieldInfo captures information about a field used in the tabular result format. See Table.",
+        "type": "object",
+        "properties": {
+          "agg": {
+            "$ref": "#/components/schemas/AggInfo"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "GroupInfo": {
+        "title": "GroupInfo captures information about a grouping clause in the tabular result format. See Table.",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "Message": {
+        "required": [
+          "code",
+          "count",
+          "message",
+          "priority"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "message": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "trace",
+              "debug",
+              "info",
+              "warn",
+              "error",
+              "fatal"
+            ]
+          }
+        }
+      },
+      "MicrosoftTeamsConfig": {
+        "type": "object",
+        "properties": {
+          "microsoftTeamsUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "Monitor": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "alertOnNoData": {
+            "type": "boolean"
+          },
+          "aplQuery": {
+            "type": "string"
+          },
+          "columnName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "disabledUntil": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "intervalMinutes": {
+            "minimum": 1,
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notifierIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notifyByGroup": {
+            "type": "boolean"
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "Below",
+              "BelowOrEqual",
+              "Above",
+              "AboveOrEqual"
+            ]
+          },
+          "rangeMinutes": {
+            "minimum": 1,
+            "type": "integer",
+            "format": "int64"
+          },
+          "resolvable": {
+            "type": "boolean"
+          },
+          "threshold": {
+            "type": "number",
+            "format": "double"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Threshold",
+              "MatchEvent",
+              "FieldAnomalyDetection"
+            ]
+          }
+        }
+      },
+      "NewAnnotation": {
+        "required": [
+          "datasets",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "datasets": {
+            "type": "array",
+            "description": "array<string> of dataset names for which the annotation appears on charts",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "maxLength": 512,
+            "type": "string",
+            "description": "Explanation of the event the annotation marks on the charts"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "End time of the annotation",
+            "format": "date-time"
+          },
+          "time": {
+            "type": "string",
+            "description": "Time the annotation marks on the charts. If you don't include this field, Axiom assigns the time of the API request to the annotation.",
+            "format": "date-time"
+          },
+          "title": {
+            "maxLength": 256,
+            "type": "string",
+            "description": "Summary of the annotation that appears on the charts"
+          },
+          "type": {
+            "maxLength": 256,
+            "pattern": "^[a-z0-9-]+$",
+            "type": "string",
+            "description": "Type of the event marked by the annotation. Use only alphanumeric characters or hyphens. For example, \"production-deployment\"."
+          },
+          "url": {
+            "maxLength": 512,
+            "type": "string",
+            "description": "URL relevant for the event marked by the annotation. For example, link to GitHub pull request."
+          }
+        }
+      },
+      "Notifier": {
+        "required": [
+          "name",
+          "properties"
+        ],
+        "type": "object",
+        "properties": {
+          "disabledUntil": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/NotifierProperties"
+          }
+        }
+      },
+      "NotifierProperties": {
+        "type": "object",
+        "properties": {
+          "customWebhook": {
+            "$ref": "#/components/schemas/CustomNotifierConfig"
+          },
+          "discord": {
+            "$ref": "#/components/schemas/DiscordConfig"
+          },
+          "discordWebhook": {
+            "$ref": "#/components/schemas/DiscordWebhookConfig"
+          },
+          "email": {
+            "$ref": "#/components/schemas/EmailConfig"
+          },
+          "microsoftTeams": {
+            "$ref": "#/components/schemas/MicrosoftTeamsConfig"
+          },
+          "opsgenie": {
+            "$ref": "#/components/schemas/OpsGenieConfig"
+          },
+          "pagerduty": {
+            "$ref": "#/components/schemas/PagerDutyConfig"
+          },
+          "slack": {
+            "$ref": "#/components/schemas/SlackConfig"
+          },
+          "webhook": {
+            "$ref": "#/components/schemas/WebhookConfig"
+          }
+        }
+      },
+      "OpsGenieConfig": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string"
+          },
+          "isEU": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Order": {
+        "required": [
+          "desc",
+          "field"
+        ],
+        "type": "object",
+        "properties": {
+          "desc": {
+            "type": "boolean"
+          },
+          "field": {
+            "type": "string"
+          }
+        }
+      },
+      "PagerDutyConfig": {
+        "type": "object",
+        "properties": {
+          "routingKey": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "RangeInfo": {
+        "title": "RangeInfo specifies the window a query was restricted to.",
+        "type": "object",
+        "properties": {
+          "end": {
+            "type": "string",
+            "description": "End is the ending time the query is limited by.\nQueries are restricted to the interval (start,end).",
+            "format": "date-time"
+          },
+          "field": {
+            "type": "string",
+            "description": "Field specifies the field name on which the query range was restricted. Normally _time"
+          },
+          "start": {
+            "type": "string",
+            "description": "Start is the starting time the query is limited by.\nQueries are restricted to the interval (start,end).",
+            "format": "date-time"
+          }
+        }
+      },
+      "SlackConfig": {
+        "type": "object",
+        "properties": {
+          "slackUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "SourceInfo": {
+        "title": "SourceInfo specifies the provenance of a results Table.",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "description": "Result sources will typically be the names of a datasets that were searched,\nbut may be expanded to other things in the future."
+      },
+      "Status": {
+        "required": [
+          "elapsedTimeNs",
+          "isCached",
+          "isEstimated",
+          "rowsExamined",
+          "rowsMatched"
+        ],
+        "type": "object",
+        "properties": {
+          "elapsedTimeNs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "isCached": {
+            "type": "boolean"
+          },
+          "isEstimated": {
+            "type": "boolean"
+          },
+          "maxCursor": {
+            "type": "string",
+            "description": "Row id of the newest row, as seen server side.\nMay be higher than what the results include if the server scanned more data than included in the results.\nCan be used to efficiently resume time-sorted non-aggregating queries (ie filtering only)."
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          },
+          "minCursor": {
+            "type": "string",
+            "description": "Row id of the oldest row, as seen server side.\nMay be lower than what the results include if the server scanned more data than included in the results.\nCan be used to efficiently resume time-sorted non-aggregating queries (ie filtering only)."
+          },
+          "rowsExamined": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "rowsMatched": {
+            "type": "integer",
+            "format": "uint64"
+          }
+        }
+      },
+      "Table": {
+        "title": "Table defines the schema for query results.",
+        "type": "object",
+        "properties": {
+          "buckets": {
+            "$ref": "#/components/schemas/BucketInfo"
+          },
+          "columns": {
+            "type": "array",
+            "description": "Columns contain a series of arrays with the raw result data.\nThe columns here line up with the fields in the Fields array.",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "fields": {
+            "type": "array",
+            "description": "Fields contain information about the fields included in these results.\nThe order of the fields match up with the order of the data in Columns.",
+            "items": {
+              "$ref": "#/components/schemas/FieldInfo"
+            }
+          },
+          "groups": {
+            "type": "array",
+            "description": "Groups specifies which grouping operations has been performed on the results.",
+            "items": {
+              "$ref": "#/components/schemas/GroupInfo"
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "Name is the name assigned to this table. Defaults to \"0\". The name \"_totals\" is reserved for system use."
+          },
+          "order": {
+            "type": "array",
+            "description": "Order echoes the ordering clauses that was used to sort the results.",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "range": {
+            "$ref": "#/components/schemas/RangeInfo"
+          },
+          "sources": {
+            "type": "array",
+            "description": "Sources contain the names of the datasets that contributed data to these results.",
+            "items": {
+              "$ref": "#/components/schemas/SourceInfo"
+            }
+          }
+        }
+      },
+      "TrimOptions": {
+        "required": [
+          "maxDuration"
+        ],
+        "type": "object",
+        "properties": {
+          "maxDuration": {
+            "type": "string",
+            "example": "1h"
+          }
+        },
+        "example": {
+          "maxDuration": "1h"
+        }
+      },
+      "UpdateDataset": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "description": "string"
+        }
+      },
+      "UpdatedAnnotation": {
+        "type": "object",
+        "properties": {
+          "datasets": {
+            "type": "array",
+            "description": "array<string> of dataset names for which the annotation appears on charts",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "description": {
+            "maxLength": 512,
+            "type": "string",
+            "description": "Explanation of the event the annotation marks on the charts"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "End time of the annotation",
+            "format": "date-time"
+          },
+          "time": {
+            "type": "string",
+            "description": "Time the annotation marks on the charts. If you don't include this field, Axiom assigns the time of the API request to the annotation.",
+            "format": "date-time"
+          },
+          "title": {
+            "maxLength": 256,
+            "type": "string",
+            "description": "Summary of the annotation that appears on the charts"
+          },
+          "type": {
+            "maxLength": 256,
+            "pattern": "^[a-z0-9-]+$",
+            "type": "string",
+            "description": "Type of the event marked by the annotation. Use only alphanumeric characters or hyphens. For example, \"production-deployment\"."
+          },
+          "url": {
+            "maxLength": 512,
+            "type": "string",
+            "description": "URL relevant for the event marked by the annotation. For example, link to GitHub pull request."
+          }
+        }
+      },
+      "User": {
+        "required": [
+          "email",
+          "id",
+          "name",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserDetailsRole"
+          }
+        }
+      },
+      "UserDetailsRole": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "UserRole": {
+        "required": [
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          }
+        }
+      },
+      "UserUpdate": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "WebhookConfig": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responses": {
+      "ForbiddenError": {
+        "description": "Forbidden",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "example": {
+                "code": 401,
+                "message": "Unauthorized"
+              }
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "Not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "example": {
+                "code": 404,
+                "message": "Not found"
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "schema": {
+          "maximum": 1000,
+          "minimum": 1,
+          "type": "integer",
+          "format": "int64",
+          "default": 100
+        }
+      },
+      "Offset": {
+        "name": "offset",
+        "in": "query",
+        "schema": {
+          "minimum": 0,
+          "type": "integer",
+          "format": "int64",
+          "default": 0
+        }
+      },
+      "id": {
+        "name": "id",
+        "in": "path",
+        "description": "Unique ID of the annotation",
+        "required": true,
+        "schema": {
+          "pattern": "^ann_",
+          "type": "string"
+        }
+      }
+    },
+    "securitySchemes": {
+      "Auth": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+            "tokenUrl": "https://www.googleapis.com/oauth2/v4/token",
+            "scopes": {}
+          }
+        }
+      },
+      "Shared": {
+        "type": "apiKey",
+        "name": "tk",
+        "in": "query"
+      }
+    }
+  },
+  "x-original-swagger-version": "2.0"
+}

@@ -31,7 +31,8 @@
         "tags": [
           "Datasets"
         ],
-        "description": "Retrieve list of datasets",
+        "summary": "Get datasets",
+        "description": "Get list of datasets available to the current user.",
         "operationId": "getDatasets",
         "responses": {
           "200": {
@@ -63,7 +64,7 @@
               }
             }
           },
-          "401": {
+          "403": {
             "description": "Forbidden",
             "content": {
               "application/json": {
@@ -102,7 +103,7 @@
               }
             }
           },
-          "401": {
+          "403": {
             "description": "Forbidden",
             "content": {
               "application/json": {
@@ -210,7 +211,7 @@
               }
             }
           },
-          "401": {
+          "403": {
             "description": "Forbidden",
             "content": {
               "application/json": {
@@ -259,7 +260,7 @@
               }
             }
           },
-          "401": {
+          "403": {
             "description": "Forbidden",
             "content": {
               "application/json": {
@@ -318,7 +319,7 @@
               }
             }
           },
-          "401": {
+          "403": {
             "description": "Forbidden",
             "content": {
               "application/json": {
@@ -359,7 +360,7 @@
             "description": "(empty)",
             "content": {}
           },
-          "401": {
+          "403": {
             "description": "Forbidden",
             "content": {
               "application/json": {
@@ -390,15 +391,100 @@
           {
             "name": "id",
             "in": "path",
+            "description": "Unique ID of the dataset where you want to send data.",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timestamp-field",
+            "in": "query",
+            "description": "The name of the field to use as the timestamp. If not specified, the timestamp will be the time the event was received by Axiom.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timestamp-format",
+            "in": "query",
+            "description": "The date-time format of the timestamp field. The reference time is `Mon Jan 2 15:04:05 -0700 MST 2006`, as specified in https://pkg.go.dev/time/?tab=doc#Parse",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "csv-delimiter",
+            "in": "query",
+            "description": "The delimiter to use when parsing CSV data. If not specified, the default delimiter is `,`.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Axiom-CSV-Fields",
+            "in": "header",
+            "description": "A list of optional comma separated fields to use for CSV ingestion. If not specified, the first line of the CSV will be used as the field names.",
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "X-Axiom-Event-Labels",
+            "in": "header",
+            "description": "An optional JSON encoded object with additional labels to add to all events in the request",
             "schema": {
               "type": "string"
             }
           }
         ],
         "requestBody": {
+          "description": "Data you want to send to Axiom in a supported format.",
           "content": {
             "application/json": {
+              "schema": {
+                "type": "array",
+                "description": "a JSON or ND-JSON array of events to ingest",
+                "example": [
+                  {
+                    "message": "Hello, World!",
+                    "foo": "bar"
+                  },
+                  {
+                    "bar": "foz"
+                  }
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "text/csv": {
+              "schema": {
+                "type": "array",
+                "description": "a JSON or ND-JSON array of events to ingest",
+                "example": [
+                  {
+                    "message": "Hello, World!",
+                    "foo": "bar"
+                  },
+                  {
+                    "bar": "foz"
+                  }
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "application/x-ndjson": {
               "schema": {
                 "type": "array",
                 "description": "a JSON or ND-JSON array of events to ingest",
@@ -426,7 +512,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Result"
+                  "$ref": "#/components/schemas/IngestStatus"
                 }
               }
             }
@@ -533,7 +619,7 @@
               }
             }
           },
-          "401": {
+          "403": {
             "description": "Forbidden",
             "content": {
               "application/json": {
@@ -592,7 +678,7 @@
               }
             }
           },
-          "401": {
+          "403": {
             "description": "Forbidden",
             "content": {
               "application/json": {
@@ -631,7 +717,7 @@
               }
             }
           },
-          "401": {
+          "403": {
             "description": "Forbidden",
             "content": {
               "application/json": {
@@ -1568,7 +1654,7 @@
           },
           "op": {
             "type": "string",
-            "description": "we also support '==', but we're not exporting that to swagger, cause it can't deal with it\nadd >, >=, <, <= to that list, it breaks codegen",
+            "description": "We also support '==', but we're not exporting that to swagger, because it can't deal with it add >, >=, <, <= to that list, it breaks codegen.",
             "enum": [
               "and",
               "or",
@@ -2351,6 +2437,74 @@
           "type": "RangeInfo"
         }
       },
+      "IngestStatus": {
+        "required": [
+          "failed",
+          "ingested",
+          "processedBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "blocksCreated": {
+            "type": "integer",
+            "description": "Number of blocks created",
+            "format": "uint32"
+          },
+          "failed": {
+            "type": "integer",
+            "description": "Number of failures that occurred during ingest",
+            "format": "uint64"
+          },
+          "failures": {
+            "type": "array",
+            "description": "List of failures that occurred during ingest",
+            "items": {
+              "$ref": "#/components/schemas/IngestFailure"
+            }
+          },
+          "ingested": {
+            "type": "integer",
+            "description": "Number of events ingested",
+            "format": "uint64"
+          },
+          "processedBytes": {
+            "type": "integer",
+            "description": "Number of bytes processed",
+            "format": "uint64"
+          },
+          "walLength": {
+            "type": "integer",
+            "description": "Length of the WAL",
+            "format": "uint32"
+          }
+        },
+        "example": {
+          "ingested": 2,
+          "failed": 0,
+          "failures": [],
+          "processedBytes": 16
+        }
+      },
+      "IngestFailure": {
+        "required": [
+          "error",
+          "timestamp"
+        ],
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "example": {
+          "error": "string",
+          "timestamp": "2022-07-26T02:48:46.931Z"
+        }
+      },
       "Result": {
         "required": [
           "buckets",
@@ -3011,7 +3165,7 @@
           "message": "Not found"
         }
       },
-      "ForbiddenError": {
+      "UnauthorizedError": {
         "type": "object",
         "properties": {
           "code": {
@@ -3024,6 +3178,21 @@
         "example": {
           "code": 401,
           "message": "Unauthorized"
+        }
+      },
+      "ForbiddenError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "code": 403,
+          "message": "Forbidden"
         }
       }
     },
