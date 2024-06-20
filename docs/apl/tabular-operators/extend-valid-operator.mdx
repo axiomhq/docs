@@ -1,0 +1,70 @@
+---
+title: 'extend-valid operator'
+description: 'Creates calculated columns that are used to filter out rows. If valid it then appends them to the result set.'
+tags:
+    ['axiom documentation', 'documentation', 'axiom', 'tabular operators', 'extend-valid operator']
+---
+
+# extend-valid operator
+
+Creates calculated columns that are used to filter out rows. If valid it then appends them to the
+result set.
+
+This is a shorthand operator to create a field while also doing basic checking on the validity
+of the field. In many cases, additional checks are required and it is recommended in those cases
+a combination of an [extend](extend-operator) and a [where](where-operator) operator are used. The
+basic checks that are preformed are dependent on the type of the expression. Checks are as follows:
+
+ * [Dictionaries](../data-types/scalar-data-types#the-dynamic-data-type). The valid is checked to ensure it is not [null](../data-types/null-values) and has at least one entry in
+   the dictionary.
+ * [Arrays](../data-types/scalar-data-types#the-dynamic-data-type). Arrays should not be [null](../data-types/null-values) and should have at least one value.
+ * [Strings](../data-types/scalar-data-types#the-string-data-type). Strings should not be empty and have at least one character in them.
+ * [Other types](/docs/apl/data-types/scalar-data-types). The same logic as tobool and a check for true
+
+Some situations you'd want to not use **extend-valid** for including checking to see if a map has a
+particular key in it. Cases where an empty array is valid. Where returning and empty string could
+be a useful result. Or when a value of a number being 0 should be included in the new field.
+
+### Syntax
+
+```apl copy
+| extend-valid alias1 = expression1, alias2 = expression2, alias3 = ...
+```
+
+### Arguments
+
+| **name**                | **type**       | **description**                                |
+| ----------------------- | -------------- | ---------------------------------------------- |
+| Alias                   | **string**     | The name of the column to add or update.       |
+| Expression              | **expression** | A calculation over the columns of the dataset. |
+
+### Returns
+
+Rows in **dataset** for which **Expression** is valid with:
+
+- Column names noted by extend that already exist in the input are removed and appended as their new calculated values.
+- Column names noted by extend that do not exist in the input are appended as their new calculated values.
+
+### Examples
+
+```apl
+['http-logs']
+// if content_type is "" this will filter the row
+| extend-valid upper_ct = toupper(content_type)
+```
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend-valid%20upper_ct%20%3D%20toupper%28content_type%29%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+```apl
+['http-logs']
+// if extract us unable to find the regex, this will filter the row
+| extend-valid extension = extract('/([a-z]*)', 1, content_type)
+```
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend-valid%20extension%20%3D%20extract%28%27%2F%28%5Ba-z%5D%2A%29%27%2C%201%2C%20content_type%29%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>

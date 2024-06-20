@@ -1,17 +1,17 @@
 ---
-title: 'Send Logstash logs to Axiom'
-description: 'This step-by-step guide will help you collect, and parse logs from your logstash processing pipeline into Axiom'
+title: 'Send data from Logstash to Axiom'
+description: 'This step-by-step guide helps you collect, and parse logs from your logstash processing pipeline into Axiom'
 tags:
   ['axiom documentation', 'documentation', 'axiom', 'guide', 'logs', 'logstash', 'logstash logs', 'grok filter', 'mutate filter', 'drop filter', 'clone filter', 'geoip filter']
 ---
 
-# Send Logstash logs to Axiom
+# Send data from Logstash to Axiom
 
 ## Logstash
 
-Logstash is an open-source log aggregation, transformation tool, and server-side data processing pipeline that simultaneously ingests data from many sources. With Logstash, you can collect, parse, send, and store logs for future use on **Axiom**.
+Logstash is an open-source log aggregation, transformation tool, and server-side data processing pipeline that simultaneously ingests data from many sources. With Logstash, you can collect, parse, send, and store logs for future use on Axiom.
 
-Logstash works as a Data pipeline tool with Axiom, where, from one end, the data is input from your servers and system and, from the other end, **Axiom** takes out the data and converts it into useful information.
+Logstash works as a data pipeline tool with Axiom, where, from one end, the data is input from your servers and system and, from the other end, Axiom takes out the data and converts it into useful information.
 
 It can read data from various `input` sources, filter data for the specified configuration, and eventually store it.
 
@@ -21,33 +21,27 @@ Logstash sits between your data and where you want to keep it.
 
 Visit the [Logstash download page](https://www.elastic.co/downloads/logstash) to install Logstash on your system.
 
----
+Specify the `org-id` header if you are using personal token. However, it’s best to use an API token to avoid the need to set the `org-id` header.
 
-Specify the org-id header if you are using **Personal Token**. However, it's best to use an **API Token** to avoid the need to set the org-id header.
-
-Learn more about [API and Personal Token](/docs/usage/settings#token)
-
----
+Learn more about [API and personal tokens](/docs/usage/settings#token)
 
 ## Configuration
 
-To configure the `logstash.conf` file, define the source, set the rules to format your data, and set **Axiom** as the destination to which the data will be forwarded.
+To configure the `logstash.conf` file, define the source, set the rules to format your data, and set Axiom as the destination where the data is sent.
 
-The logstash configuration works with Opensearch, so you can use the Opensearch syntax to define the source and destination.
+The Logstash configuration works with OpenSearch, so you can use the OpenSearch syntax to define the source and destination.
 
 The Logstash Pipeline has three stages:
 
-- **[Input stage](https://www.elastic.co/guide/en/logstash/8.0/pipeline.html#_inputs):** which generates the event & Ingest Data of all volumes, Sizes, forms, and Sources
-- **[Filter stage](https://www.elastic.co/guide/en/logstash/8.0/pipeline.html#_filters):** modifies the event as you specify in the filter component
-- **[Output stage](https://www.elastic.co/guide/en/logstash/8.0/pipeline.html#_outputs):** shifts and sends the event into **Axiom.**
+- [Input stage](https://www.elastic.co/guide/en/logstash/8.0/pipeline.html#_inputs) generates the event & Ingest Data of all volumes, Sizes, forms, and Sources
+- [Filter stage](https://www.elastic.co/guide/en/logstash/8.0/pipeline.html#_filters) modifies the event as you specify in the filter component
+- [Output stage](https://www.elastic.co/guide/en/logstash/8.0/pipeline.html#_outputs) shifts and sends the event into Axiom.
 
----
-
-## OpenSearch Output
+## OpenSearch output
 
 For installation instructions for the plugin, check out the [OpenSearch documentation](https://opensearch.org/docs/latest/clients/logstash/index/#install-logstash)
 
-In `logstash.conf`, configure your logstash pipeline to collect and send data logs to **Axiom**
+In `logstash.conf`, configure your Logstash pipeline to collect and send data logs to Axiom.
 
 The example below shows Logstash configuration that sends data to Axiom:
 
@@ -68,18 +62,17 @@ output{
 }
 ```
 
-
 ## Combining filters with conditionals on Logstash events
 
 Logstash provides an extensive array of filters that allow you to enhance, manipulate, and transform your data. These filters can be used to perform tasks such as extracting, removing, and adding new fields and changing the content of fields.
 
-Some valuable filters include:
+Some valuable filters include the following.
 
-## Grok Filter Plugin
+## Grok filter plugin
 
 The Grok filter plugin allows you to parse the unstructured log data into something structured and queryable, and eventually send the structured logs to Axiom. It matches the unstructured data to patterns and maps the data to specified fields.
 
-Here's an example of how to use the Grok plugin:
+Here’s an example of how to use the Grok plugin:
 
 ```js copy
 input{
@@ -114,13 +107,13 @@ output{
 }
 ```
 
-- This configuration parses Apache log data by matching the pattern of `COMBINEDAPACHELOG`.
+This configuration parses Apache log data by matching the pattern of `COMBINEDAPACHELOG`.
 
-## Mutate Filter Plugin
+## Mutate filter plugin
 
 The Mutate filter plugin allows you to perform general transformations on fields. For example, rename, convert, strip, and modify fields in event data.
 
-Here's an example of using the Mutate plugin:
+Here’s an example of using the Mutate plugin:
 
 ```js copy
 input{
@@ -139,7 +132,6 @@ filter {
   }
 }
 
-
 output{
   opensearch{
     hosts => ["https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic"]
@@ -152,12 +144,11 @@ output{
 
 This configuration renames the field `hostname` to `host`, converts the `response` field value to an integer, changes the `method` field to uppercase, and removes the `request` and `httpversion` fields.
 
-
-## Drop Filter Plugin
+## Drop filter plugin
 
 The Drop filter plugin allows you to drop certain events based on specified conditions. This helps you to filter out unnecessary data.
 
-Here's an example of using the Drop plugin:
+Here’s an example of using the Drop plugin:
 
 ```js copy
 input {
@@ -185,11 +176,11 @@ output{
 
 This configuration drops all events of type `syslog` with severity `debug`.
 
-## Clone Filter Plugin
+## Clone filter plugin
 
 The Clone filter plugin creates a copy of an event and stores it in a new event. The event continues along the pipeline until it ends or is dropped.
 
-Here's an example of using the Clone plugin:
+Here’s an example of using the Clone plugin:
 
 ```js copy
 input {
@@ -217,12 +208,11 @@ output{
 
 This configuration creates a new event named `cloned_event` that is a clone of the original event.
 
-
-## GeoIP Filter Plugin
+## GeoIP filter plugin
 
 The GeoIP filter plugin adds information about the geographical location of IP addresses. This data includes the latitude, longitude, continent, country, and so on.
 
-Here's an example of using the GeoIP plugin:
+Here’s an example of using the GeoIP plugin:
 
 ```js copy
 input{
@@ -237,7 +227,6 @@ filter {
     source => "ip"
   }
 }
-
 
 output{
   opensearch{

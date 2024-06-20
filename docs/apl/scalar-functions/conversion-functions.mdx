@@ -11,17 +11,79 @@ tags:
 
 | **Function Name**                                | **Description**                                                                           |
 | ------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| [ensure_field()](<#ensure-field()>)              | Ensures the existence of a field and returns its value or a typed nil if it doesn't exist. |
 | [tobool()](<#tobool()>)                          | Converts input to boolean (signed 8-bit) representation.                                  |
 | [todatetime()](<#todatetime()>)                  | Converts input to datetime scalar.                                                        |
-| [todouble(), toreal()](<#todouble(),-toreal()>)] | Converts the input to a value of type `real`. `(todouble()` and `toreal()` are synonyms.) |
+| [todouble(), toreal()](<#todouble(),-toreal()>) | Converts the input to a value of type `real`. `todouble()` and `toreal()` are synonyms. |
 | [tostring()](<#tostring()>)                      | Converts input to a string representation.                                                |
 | [totimespan()](<#totimespan()>)                  | Converts input to timespan scalar.                                                        |
 | [tohex()](<#tohex()>)                            | Converts input to a hexadecimal string.                                                   |
 | [tolong()](<#tolong()>)                          | Converts input to long (signed 64-bit) number representation.                             |
 | [dynamic_to_json()](<#dynamic-to-json()>)        | Converts a scalar value of type dynamic to a canonical string representation.             |
 | [isbool()](<#isbool()>)                          | Returns a value of true or false if the expression value is passed.                       |
+| [toint()](<#toint()>)                          | Converts the input to an integer value (signed 32-bit) number representation.                |
 
----
+## ensure_field()
+
+Ensures the existence of a field and returns its value or a typed nil if it doesn't exist.
+
+### Arguments 
+
+| **name**       | **type**   | **description**                |
+|------------|--------|------------------------------------------------------------------------------------|
+| field_name | string | The name of the field to ensure exists.                                             |
+| field_type | type   | The type of the field. See [scalar data types](https://axiom.co/docs/apl/data-types/scalar-data-types) for supported types.|
+
+### Returns 
+
+This function returns the value of the specified field if it exists, otherwise it returns a typed nil.
+
+### Examples 
+
+```apl
+ensure_field(field_name, field_type)
+```
+
+### Handle missing fields
+
+In this example, the value of `show_field` is nil because the `myfield` field doesn't exist.
+
+```apl
+['sample-http-logs']
+| extend show_field = ensure_field("myfield", typeof(string))
+```
+
+<RunInPlayGround
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20show_field%20%3D%20ensure_field%28%27myfield%27%2C%20typeof%28string%29%29%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+### Access existing fields
+
+In this example, the value of `newstatus` is the value of `status` because the `status` field exists.
+
+```apl
+['sample-http-logs']
+| extend newstatus = ensure_field("status", typeof(string))
+```
+
+<RunInPlayGround
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20newstatus%20%3D%20ensure_field%28%27status%27%2C%20typeof%28string%29%29%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>
+
+### Future-proof queries
+
+In this example, the query is prepared for a field named `upcoming_field` that is expected to be added to the data soon. By using `ensure_field()`, logic can be written around this future field, and the query will work when the field becomes available.
+
+
+```apl
+['sample-http-logs']
+| extend new_field = ensure_field("upcoming_field", typeof(int))
+| where new_field > 100
+```
 
 ## tobool()
 
@@ -35,7 +97,7 @@ Converts input to boolean (signed 8-bit) representation.
 
 - If conversion is successful, result will be a boolean. If conversion isn't successful, result will be `false`
 
-### Example
+### Examples
 
 ```apl copy
 tobool(Expr)
@@ -61,8 +123,6 @@ tobool("true") == true
 }
 ```
 
----
-
 ## todatetime()
 
 Converts input to datetime scalar.
@@ -75,7 +135,7 @@ Converts input to datetime scalar.
 
 If the conversion is successful, the result will be a datetime value. Else, the result will be `false.`
 
-### Example
+### Examples
 
 ```apl copy
 todatetime(Expr)
@@ -99,8 +159,6 @@ todatetime("2022-11-13")
 }
 ```
 
----
-
 ## todouble(), toreal()
 
 Converts the input to a value of type real. **(todouble() is an alternative word to toreal())**
@@ -113,7 +171,7 @@ Converts the input to a value of type real. **(todouble() is an alternative word
 
 If conversion is successful, the result is a value of type real. If conversion is not successful, the result returns false.
 
-### Example
+### Examples
 
 ```apl copy
 toreal(Expr)todouble(Expr)
@@ -129,7 +187,6 @@ toreal("1567") == 1567
     rel="noopener noreferrer"
 />
 
-
 - Result:
 
 ```json copy
@@ -137,8 +194,6 @@ toreal("1567") == 1567
   "conversion_function": true
 }
 ```
-
----
 
 ## tostring()
 
@@ -152,8 +207,7 @@ Converts input to a string representation.
 
 If the Expression value is non-null, the result will be a string representation of the Expression. If the Expression value is null, the result will be an empty string.
 
-
-### Example
+### Examples
 
 ```apl copy
 tostring(Expr)
@@ -169,7 +223,6 @@ tostring(axiom) == "axiom"
     rel="noopener noreferrer"
 />
 
-
 - Result: 
 
 ```json copy
@@ -177,8 +230,6 @@ tostring(axiom) == "axiom"
   "conversion_function": "axiom"
 }
 ```
-
----
 
 ## totimespan
 
@@ -192,7 +243,7 @@ Converts input to timespan scalar.
 
 If conversion is successful, result will be a timespan value. Else, result will be false.
 
-### Example
+### Examples
 
 ```apl copy
 totimespan(Expr)
@@ -212,8 +263,6 @@ totimespan(Expr)
 }
 ```
 
----
-
 ## tohex()
 
 Converts input to a hexadecimal string.
@@ -226,7 +275,7 @@ Converts input to a hexadecimal string.
 
 If conversion is successful, result will be a string value. If conversion is not successful, result will be false.
 
-### Example
+### Examples
 
 ```apl copy
 tohex(value)
@@ -245,7 +294,6 @@ tohex(546) == '222'
     target="_blank" 
     rel="noopener noreferrer"
 />
-
 
 - Result:
 
@@ -267,7 +315,7 @@ Converts input to long (signed 64-bit) number representation.
 
 If conversion is successful, result will be a long number. If conversion is not successful, result will be false.
 
-### Example
+### Examples
 
 ```apl copy
 tolong(Expr)
@@ -283,7 +331,6 @@ tolong("241") == 241
     rel="noopener noreferrer"
 />
 
-
 - Result: 
 
 ```json copy
@@ -291,8 +338,6 @@ tolong("241") == 241
   "conversion_function": 241
 }
 ```
-
----
 
 ## dynamic_to_json()
 
@@ -306,7 +351,7 @@ Converts a scalar value of type `dynamic` to a canonical `string` representation
 
 Returns a canonical representation of the input as a value of type `string`, according to the following rules:
 
-- If the input is a scalar value of type other than `dynamic`, the output is the application of `tostring()` to that value.
+- If the input is a scalar value of type other than `dynamic`, the output is the app of `tostring()` to that value.
 
 - If the input in an array of values, the output is composed of the characters **[, ,, and ]** interspersed with the canonical representation described here of each array element.
 
@@ -337,8 +382,6 @@ dynamic_to_json(dynamic)
 }
 ```
 
----
-
 ## isbool()
 
 Returns a value of true or false if the expression value is passed.
@@ -351,7 +394,7 @@ Returns a value of true or false if the expression value is passed.
 
 Returns `true` if expression value is a bool, `false` otherwise.
 
-### Example
+### Examples
 
 ```apl copy
 isbool(expression)
@@ -367,7 +410,6 @@ isbool("pow") == false
     rel="noopener noreferrer"
 />
 
-
 - Result: 
 
 ```json copy
@@ -375,3 +417,35 @@ isbool("pow") == false
   "conversion_function": false
 }
 ```
+
+---
+
+## toint()
+
+Converts the input to an integer value (signed 32-bit) number representation.
+
+
+### Arguments
+
+- Value: The value to convert to an [integer](https://axiom.co/docs/apl/data-types/scalar-data-types#the-int-data-type).
+
+### Returns 
+
+If the conversion is successful, the result will be an integer. Otherwise, the result will be `null`.
+
+
+### Examples 
+
+```apl
+toint(value)
+```
+
+```apl
+| project toint("456") == 456
+```
+
+<RunInPlayGround 
+    href="https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20toint%28%5C%22456%5C%22%29%20%3D%3D%20456%22%7D" 
+    target="_blank" 
+    rel="noopener noreferrer"
+/>

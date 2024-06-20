@@ -1,19 +1,19 @@
 ---
-title: 'Send OpenTelemetery data from a Python app to Axiom'
-description: 'This guide explains how to send OpenTelemetery data from a Python app to Axiom using the Python OpenTelemetry SDK.'
+title: 'Send OpenTelemetry data from a Python app to Axiom'
+description: 'This guide explains how to send OpenTelemetry data from a Python app to Axiom using the Python OpenTelemetry SDK.'
 tags:
     ['guides', 'python']
 ---
-# Send OpenTelemetery data from a Python app to Axiom
+# Send OpenTelemetry data from a Python app to Axiom
 
-This guide explains how to send OpenTelemetery data from a Python app to Axiom using the [Python OpenTelemetry SDK](https://opentelemetry.io/docs/instrumentation/python/).
+This guide explains how to send OpenTelemetry data from a Python app to Axiom using the [Python OpenTelemetry SDK](https://opentelemetry.io/docs/instrumentation/python/).
 
 ## Prerequisites
 
 - Install Python version 3.7 or higher.
 - Create an Axiom account. To sign up for a free account, go to the [Axiom app](https://app.axiom.co/).
-- Create a dataset in Axiom. This is where the Python app sends telemetry data. For more information, see [Data Settings](https://axiom.co/docs/reference/settings#data).
-- Create an API key in Axiom with permissions to query and ingest data. For more information, see [Access Settings](https://axiom.co/docs/reference/settings#access-overview).
+- Create a dataset in Axiom. This is where the Python app sends telemetry data. For more information, see [Data Settings](/docs/reference/datasets).
+- Create an API key in Axiom with permissions to query and ingest data. For more information, see [Access Settings](/docs/reference/tokens).
 
 ## Install required dependencies
 
@@ -43,37 +43,50 @@ pip install -r requirements.txt
 
 ## Create an app.py file
 
-Create an `app.py` file with the following content. This file creates a basic HTTP server using Flask.
+Create an `app.py` file with the following content. This file creates a basic HTTP server using Flask. It also demonstrates the usage of span links to establish relationships between spans across different traces.
 
 ```python
+# app.py
+
 from flask import Flask
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry import trace
 from random import randint
-import exporter  # Import the OpenTelemetry configuration and the exporter that sends trace data to Axiom.
+import exporter
 
-# Initialize a new Flask app.
+# Creating a Flask app instance
 app = Flask(__name__)
 
-# Instrument the Flask app with OpenTelemetry.
+# Automatically instruments Flask app to enable tracing
 FlaskInstrumentor().instrument_app(app)
 
-# Retrieve a tracer object from the exporter module for tracing operations.
+# Retrieving a tracer from the custom exporter
 tracer = exporter.service1_tracer
 
 @app.route("/rolldice")
-def roll_dice():
-    # Define a route in the Flask app. When this route is accessed, it triggers the roll_dice function.
-    with tracer.start_as_current_span("roll_dice_span"):
-        # Create a new tracing span named `roll_dice_span`.
-        return str(roll())  # Simulate a dice roll and return the result as a string.
+def roll_dice(parent_span=None):
+    # Starting a new span for the dice roll. If a parent span is provided, link to its span context.
+    with tracer.start_as_current_span("roll_dice_span", 
+          links=[trace.Link(parent_span.get_span_context())] if parent_span else None) as span:
+        # Spans can be created with zero or more Links to other Spans that are related.
+        # Links allow creating connections between different traces
+        return str(roll())
+
+@app.route("/roll_with_link")
+def roll_with_link():
+    # Starting a new 'parent_span' which may later link to other spans
+    with tracer.start_as_current_span("parent_span") as parent_span:
+        # A common scenario is to correlate one or more traces with the current span.
+        # This can help in tracing and debugging complex interactions across different parts of the app.
+        result = roll_dice(parent_span)
+        return f"Dice roll result (with link): {result}"
 
 def roll():
-    # Define a function to simulate rolling a dice, returning a random integer between 1 and 6.
+    # Function to generate a random number between 1 and 6
     return randint(1, 6)
 
-# Main app runner. Only executed when the script is the main program.
 if __name__ == "__main__":
-    # Run the Flask app on port 8080 with debug mode enabled for additional debugging information.
+    # Starting the Flask server on the specified PORT and enabling debug mode
     app.run(port=8080, debug=True)
 ```
 
@@ -141,15 +154,15 @@ In your browser, go to http://127.0.0.1:8080/rolldice to interact with your Pyth
 
 ## Observe the telemetry data in Axiom
 
-In Axiom, go the **Stream** tab and click your dataset. This page displays the traces sent to Axiom and enables you to monitor and analyze your app's performance and behavior.
+In Axiom, go the **Stream** tab and click your dataset. This page displays the traces sent to Axiom and enables you to monitor and analyze your app’s performance and behavior.
 
-![Observing the Telemetry Data in Axiom image](/doc-assets/shots/opentelemetry-data-python-axiom.png)
+![Observing the Telemetry data in Axiom image](/doc-assets/shots/opentelemetry-data-python-axiom.png)
 
 ## Dynamic OpenTelemetry traces dashboard
 
 In Axiom, go the **Dashboards** tab and click **OpenTelemetry Traces (python)**. This pre-built traces dashboard provides further insights into the performance and behavior of your app.
 
-![Dynamic OpenTelemetry Traces Dashboard](/doc-assets/shots/opentelemetry-dashboard-python-traces.png)
+![Dynamic OpenTelemetry Traces dashboard](/doc-assets/shots/opentelemetry-dashboard-python-traces.png)
 
 ## Send data from an existing Python project
 
@@ -170,7 +183,7 @@ Manual instrumentation in Python with OpenTelemetry involves adding code to crea
     with tracer.start_as_current_span("operation_name"):
     ```
 
-3. Add relevant metadata and logs to your spans to enrich the trace data, providing more context for your data. 
+3. Add relevant metadata and logs to your spans to enrich the trace data, providing more context for your data.
 
     ```python
     with tracer.start_as_current_span("operation_name") as span:
@@ -203,14 +216,14 @@ After you set them up, these libraries automatically trace relevant operations w
 
 | Field Category                          | Field Name                              | Description |
 |-----------------------------------------|-----------------------------------------|-------------|
-| **Unique Identifiers**                  |                                         |             |
+| Unique Identifiers                  |                                         |             |
 |                                         | _rowid                                  | Unique identifier for each row in the trace data. |
 |                                         | span_id                                 | Unique identifier for the span within the trace. |
 |                                         | trace_id                                | Unique identifier for the entire trace. |
-| **Timestamps**                          |                                         |             |
+| Timestamps                          |                                         |             |
 |                                         | _systime                                | System timestamp when the trace data was recorded. |
 |                                         | _time                                   | Timestamp when the actual event being traced occurred. |
-| **HTTP Attributes**                     |                                         |             |
+| HTTP Attributes                     |                                         |             |
 |                                         | attributes.custom["http.host"]          | Host information where the HTTP request was sent. |
 |                                         | attributes.custom["http.server_name"]   | Server name for the HTTP request. |
 |                                         | attributes.http.flavor                  | HTTP protocol version used. |
@@ -220,13 +233,13 @@ After you set them up, these libraries automatically trace relevant operations w
 |                                         | attributes.http.status_code             | HTTP response status code. |
 |                                         | attributes.http.target                  | Specific target of the HTTP request. |
 |                                         | attributes.http.user_agent              | User agent string of the client. |
-| **Network Attributes**                  |                                         |             |
+| Network Attributes                  |                                         |             |
 |                                         | attributes.net.host.port                | Port number on the host receiving the request. |
 |                                         | attributes.net.peer.port                | Port number on the peer (client) side. |
 |                                         | attributes.custom["net.peer.ip"]        | IP address of the peer in the network interaction. |
-| **Operational Details**                 |                                         |             |
+| Operational Details                 |                                         |             |
 |                                         | duration                                | Time taken for the operation. |
-|                                         | kind                                    | Type of span (e.g., server, client). |
+|                                         | kind                                    | Type of span (for example,, server, client). |
 |                                         | name                                    | Name of the span. |
 |                                         | scope                                   | Instrumentation scope. |
 |                                         | service.name                            | Name of the service generating the trace. |
@@ -235,22 +248,22 @@ After you set them up, these libraries automatically trace relevant operations w
 
 The `exporter.py` file imports the following libraries:
 
-**from opentelemetry import trace**
+from opentelemetry import trace
 
 This module creates and manages trace data in your app. It creates spans and tracers which track the execution flow and performance of your app.
 
-**from opentelemetry.sdk.trace import TracerProvider**
+from opentelemetry.sdk.trace import TracerProvider
 
-`TracerProvider` acts as a container for the configuration of your app's tracing behavior. It allows you to define how spans are generated and processed, essentially serving as the central point for managing trace creation and propagation in your app.
+`TracerProvider` acts as a container for the configuration of your app’s tracing behavior. It allows you to define how spans are generated and processed, essentially serving as the central point for managing trace creation and propagation in your app.
 
-**from opentelemetry.sdk.trace.export import BatchSpanProcessor**
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-`BatchSpanProcessor` is responsible for batching spans before they are exported. This is an important aspect of efficient trace data management as it aggregates multiple spans into fewer network requests, reducing the overhead on your app's performance and the tracing backend.
+`BatchSpanProcessor` is responsible for batching spans before they are exported. This is an important aspect of efficient trace data management as it aggregates multiple spans into fewer network requests, reducing the overhead on your app’s performance and the tracing backend.
 
-**from opentelemetry.sdk.resources import Resource, SERVICE_NAME**
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 
-The `Resource` class is used to describe your app's service attributes, such as its name, version, and environment. This contextual information is attached to the traces and helps in identifying and categorizing trace data, making it easier to filter and analyze in your monitoring setup.
+The `Resource` class is used to describe your app’s service attributes, such as its name, version, and environment. This contextual information is attached to the traces and helps in identifying and categorizing trace data, making it easier to filter and analyze in your monitoring setup.
 
-**from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter**
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-The `OTLPSpanExporter` is responsible for sending your app's trace data to a backend that supports the OTLP such as Axiom. It formats the trace data according to the OTLP standards and transmits it over HTTP, ensuring compatibility and standardization in how telemetry data is sent across different systems and services.
+The `OTLPSpanExporter` is responsible for sending your app’s trace data to a backend that supports the OTLP such as Axiom. It formats the trace data according to the OTLP standards and transmits it over HTTP, ensuring compatibility and standardization in how telemetry data is sent across different systems and services.

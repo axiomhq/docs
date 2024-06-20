@@ -1,0 +1,57 @@
+---
+title: 'Manage GB-hours for query execution'
+description: "Learn how to calculate and manage query compute resources in GB-hours to optimize usage within Axiom."
+tags:
+    ['query', 'gb hours']
+---
+
+# Manage GB-hours for query execution
+
+We measure the resources used to execute queries in terms of GB-hours.
+
+## What GB-hours are
+
+When you run queries, your usage of the Axiom platform is measured in query-hours. The unit of this measurement is GB-hours which reflects the duration (measured in milliseconds) serverless functions are running to execute your query multiplied by the amount of memory (GB) allocated to execution. This metric is important for monitoring and managing your usage against the monthly allowance included in your plan.
+
+## How Axiom measures query-hours
+
+Axiom uses serverless computing to execute queries efficiently. The consumption of serverless compute resources is measured along two dimensions:
+
+- Time: The duration (in milliseconds) for which the serverless function is running to execute your query.
+- Memory allocation: The amount of memory (in GB) allocated to the serverless function during execution.
+
+## Run queries and understand costs
+
+When you run queries on Axiom, the cost in GB-hours is determined by the shape and size of the events in your dataset and the volume of events scanned to return a query result. After executing a query, you can find the associated query cost in the response header labeled as `X-Axiom-Query-Cost-Gbms`.
+
+## Determine query cost
+
+1. Go to an API testing tool like Postman.
+
+2. Send a `POST` request `https://api.axiom.co/v1/datasets/_apl?format=tabular` or `https://api.axiom.co/v1/datasets/_apl?format=legacy` with the following configuration:
+
+    - `Content-Type` header with the value `application/json`.
+    - `Authorization` header with the value `Bearer API_TOKEN`. Replace `API_TOKEN` with your Axiom API token.
+    - In the body of your request, enter your query in JSON format. For example:
+
+        ```json
+        {
+          "apl": "telegraf | count",
+          "startTime": "2024-01-11T19:25:00Z",
+          "endTime": "2024-02-13T19:25:00Z"
+        }
+        ```
+
+        `apl` specifies the Axiom Processing Language (APL) query to run. In this case, `"telegraf | count"` indicates that you query the `telegraf` dataset and use the `count` operator to aggregate the data.
+
+        `startTime` and `endTime` define the time range of your query. In this case, `"2024-01-11T19:25:00Z"` is the start time, and `"2024-02-13T19:25:00Z"` is the end time, both in ISO 8601 format. This time range limits the query to events recorded within these specific dates and times.
+
+3. In the response to your request, the information about the query cost in GB-milliseconds is in the `X-Axiom-Query-Cost-Gbms` header.
+
+## Example of GB-hour calculation
+
+As an example, a typical query analyzing 1 million events might consume approximately 1 GB-second. There are 3,600 seconds in an hour which means that an organization can run 3,600 of these queries before reaching 1 GB-hour of query usage. This is an example and the actual usage depends on the complexity of the query and the input data.
+
+## Plan and GB-hours allowance
+
+Your GB-hours allowance depends on your pricing plan. To learn more about the plan offerings and find the one that best suits your needs, see [Axiom Pricing](https://axiom.co/pricing).

@@ -1,40 +1,43 @@
 ---
-title: 'OpenTelemetery using Node.js'
-description: 'This guide demonstrates how to configure OpenTelemetry in a Node.js application to send telemetry data to Axiom.'
+title: 'OpenTelemetry using Node.js'
+description: 'This guide demonstrates how to configure OpenTelemetry in a Node.js app to send telemetry data to Axiom.'
 tags:
     ['guides', 'nodejs', 'typescript']
 ---
 
-# Send OpenTelemetery data from a TypeScript app to Axiom
+# Send OpenTelemetry data from a TypeScript app to Axiom
 
-OpenTelemetry provides a [unified approach to collecting telemetry data](https://opentelemetry.io/docs/instrumentation/js/) from your Node.js and TypeScript applications. This guide demonstrates how to configure OpenTelemetry in a Node.js application to send telemetry data to Axiom using OpenTelemetry SDK. 
+OpenTelemetry provides a [unified approach to collecting telemetry data](https://opentelemetry.io/docs/instrumentation/js/) from your Node.js and TypeScript apps. This guide demonstrates how to configure OpenTelemetry in a Node.js app to send telemetry data to Axiom using OpenTelemetry SDK.
 
 ## Prerequisites
 
-To configure OpenTelemetry in a Node.js application for sending telemetry data to Axiom, certain prerequisites are necessary. These include:
+To configure OpenTelemetry in a Node.js app for sending telemetry data to Axiom, certain prerequisites are necessary. These include:
 
 - **Node:js:** Node.js version 14 or newer.
-- **Node.js Application**: Use your own application written in Node.js, or you can start with the provided **`app.ts`** sample.
-- **Axiom API Key**: Obtain an Axiom API Key with ingesting and querying permissions from your [Access Settings](https://axiom.co/docs/reference/settings#access-overview). If you don’t have an Axiom account, sign up for a free account at [Axiom](https://app.axiom.co/).
+- **Node.js Application**: Use your own app written in Node.js, or you can start with the provided **`app.ts`** sample.
+- **Axiom API Key**: Obtain an Axiom API Key with ingesting and querying permissions from your [Access Settings](https://axiom.co/docs/reference/settings#access-overview). If you don't have an Axiom account, sign up for a free account at [Axiom](https://app.axiom.co/).
 - **Dataset**: You will need a dataset to which traces will be sent. You can create one from the [Data Settings](https://axiom.co/docs/reference/settings#data).
-
 
 ## Core Application (app.ts)
 
-`app.ts` is the core of the application. It uses Express.js to create a simple web server. The server has an endpoint `/rolldice` that returns a random number, simulating a basic API. 
+`app.ts` is the core of the app. It uses Express.js to create a simple web server. The server has an endpoint `/rolldice` that returns a random number, simulating a basic API. It also demonstrates the usage of span links to establish relationships between spans across different traces.
 
 ```js
 /*app.ts*/
 
 // Importing OpenTelemetry instrumentation for tracing
 import './instrumentation'; 
+import { trace, context } from '@opentelemetry/api';
 
-// Importing Express.js: A minimal and flexible Node.js web application framework
+// Importing Express.js: A minimal and flexible Node.js web app framework
 import express from 'express';
 
 // Setting up the server port: Use the PORT environment variable or default to 8080
 const PORT = parseInt(process.env.PORT || '8080');
 const app = express();
+
+// Get the tracer from the global tracer provider
+const tracer = trace.getTracer('node-traces');
 
 /**
  * Function to generate a random number between min and max (inclusive).
@@ -48,7 +51,37 @@ function getRandomNumber(min: number, max: number): number {
 
 // Defining a route handler for '/rolldice' that returns a random dice roll
 app.get('/rolldice', (req, res) => {
-  res.send(getRandomNumber(1, 6).toString());
+  const span = trace.getSpan(context.active());
+  /**
+   * Spans can be created with zero or more Links to other Spans that are related.
+   * Links allow creating connections between different traces 
+   */
+  const rollDiceSpan = tracer.startSpan('roll_dice_span', {
+    links: span ? [{ context: span.spanContext() }] : [],
+  });
+  
+  // Set the rollDiceSpan as the currently active span
+  context.with(trace.setSpan(context.active(), rollDiceSpan), () => {
+    const diceRoll = getRandomNumber(1, 6).toString();
+    res.send(diceRoll);
+    rollDiceSpan.end();
+  });
+});
+
+// Defining a route handler for '/roll_with_link' that creates a parent span and calls '/rolldice'
+app.get('/roll_with_link', (req, res) => {
+  /**
+   * A common scenario is to correlate one or more traces with the current span.
+   * This can help in tracing and debugging complex interactions across different parts of the app.
+   */
+  const parentSpan = tracer.startSpan('parent_span');
+  
+  // Set the parentSpan as the currently active span
+  context.with(trace.setSpan(context.active(), parentSpan), () => {
+    const diceRoll = getRandomNumber(1, 6).toString();
+    res.send(`Dice roll result (with link): ${diceRoll}`);
+    parentSpan.end();
+  });
 });
 
 // Starting the server on the specified PORT and logging the listening message
@@ -56,8 +89,6 @@ app.listen(PORT, () => {
   console.log(`Listening for requests on http://localhost:${PORT}`);
 });
 ```
-
----
 
 ## Exporter (instrumentation.ts)
 
@@ -104,8 +135,6 @@ const sdk = new NodeSDK({
 sdk.start();
 ```
 
----
-
 ## Installing the Dependencies
 
 Navigate to the root directory of your project and run the following command to install the required dependencies:
@@ -117,10 +146,9 @@ This command will install all the necessary packages listed in your `package.jso
 
 ## Setting Up TypeScript Development Environment
 
-To run the TypeScript application, you need to set up a TypeScript development environment. This includes adding a `package.json` file to manage your project's dependencies and scripts, and a `tsconfig.json` file to manage TypeScript compiler options.
+To run the TypeScript app, you need to set up a TypeScript development environment. This includes adding a `package.json` file to manage your project’s dependencies and scripts, and a `tsconfig.json` file to manage TypeScript compiler options.
 
 ### Add `package.json`
-
 
 Create a `package.json` file in the root of your project with the following content:
 
@@ -178,14 +206,11 @@ Create a `tsconfig.json` file in the root of your project with the following con
 }
 ```
 
-This configuration file specifies how the TypeScript compiler should transpile TypeScript files into JavaScript. 
-
-
----
+This configuration file specifies how the TypeScript compiler should transpile TypeScript files into JavaScript.
 
 ## Running the Instrumented Application 
 
-To run your Node.js application with OpenTelemetry instrumentation, make sure your API token, and dataset is set in the `instrumentation.ts` file. 
+To run your Node.js app with OpenTelemetry instrumentation, make sure your API token, and dataset is set in the `instrumentation.ts` file.
 
 ### In Development Mode 
 
@@ -197,16 +222,15 @@ npm run dev
 
 This command will start the OpenTelemetry instrumentation in development mode using `ts-node-dev`. It sets up the exporter for tracing and restarts the server automatically whenever you make changes to the files.
 
-
 ### In Production Mode
 
-To run the application in production mode, you need to first build the TypeScript files into JavaScript. Run the following command to build your application:
+To run the app in production mode, you need to first build the TypeScript files into JavaScript. Run the following command to build your application:
 
 ```bash
 npm run build
 ```
 
-This command compiles the TypeScript files to JavaScript based on the settings specified in `tsconfig.json`. Once the build process is complete, you can start your application in production mode with:
+This command compiles the TypeScript files to JavaScript based on the settings specified in `tsconfig.json`. Once the build process is complete, you can start your app in production mode with:
 
 ```bash
 npm start
@@ -214,24 +238,19 @@ npm start
 
 The server will start on the specified port, and you can interact with it by sending requests to the `/rolldice` endpoint.
 
-
 ## Observe the telemetry data in Axiom
 
-As you interact with your application, traces will be collected and exported to Axiom, where you can monitor and analyze your application’s performance and behavior. 
+As you interact with your app, traces will be collected and exported to Axiom, where you can monitor and analyze your app’s performance and behavior.
 
 ![Observing the telemetry data in Axiom image](/doc-assets/shots/observing-the-node-telemetry-data-in-axiom.png)
 
-
 ## Dynamic OpenTelemetry traces dashboard
 
-This data can then be further viewed and analyzed in Axiom's dashboard, providing insights into the performance and behaviour of your application.
+This data can then be further viewed and analyzed in Axiom’s dashboard, providing insights into the performance and behaviour of your app.
 
 ![Observing the telemetry data in Axiom image](/doc-assets/shots/dynamic-otel-node-traces-dashbaord.png)
 
-
-
 ## Send data from an existing Node project
-
 
 ### Manual Instrumentation 
 
@@ -239,7 +258,7 @@ Manual instrumentation in Node.js requires adding code to create and manage span
 
 1. Initialize Tracer:
 
-Import and configure a tracer in your Node.js application. Use the tracer configured in your instrumentation setup (instrumentation.ts).
+Import and configure a tracer in your Node.js app. Use the tracer configured in your instrumentation setup (instrumentation.ts).
 
 ```js
 // Assuming OpenTelemetry SDK is already configured
@@ -264,7 +283,7 @@ try {
 
 3. Annotate Spans:
 
-Add metadata and logs to your spans for the trace data. 
+Add metadata and logs to your spans for the trace data.
 
 ```js
 span.setAttribute('key', 'value');
@@ -273,7 +292,7 @@ span.addEvent('event name', { eventKey: 'eventValue' });
 
 ### Automatic Instrumentation 
 
-Automatic instrumentation in Node.js simplifies adding telemetry data to your application. It uses pre-built libraries to automatically instrument common frameworks and libraries.
+Automatic instrumentation in Node.js simplifies adding telemetry data to your app. It uses pre-built libraries to automatically instrument common frameworks and libraries.
 
 1. Install Instrumentation Libraries:
 
@@ -284,7 +303,7 @@ npm install @opentelemetry/auto-instrumentations-node
 ```
 
 2. Instrument Application:
-Configure your application to use these libraries, which will automatically generate spans for standard operations.
+Configure your app to use these libraries, which will automatically generate spans for standard operations.
 
 ```js
 // In your instrumentation setup (instrumentation.ts)
@@ -297,7 +316,6 @@ const sdk = new NodeSDK({
 ```
 
 After you set them up, these libraries automatically trace relevant operations without additional code changes in your app.
-
 
 ## Reference
 
@@ -328,7 +346,7 @@ After you set them up, these libraries automatically trace relevant operations w
 |                                         | attributes.custom["net.peer.ip"]                | IP address of the peer in the network interaction. |
 | **Operational Details**                 |                                                 |             |
 |                                         | duration                                        | Time taken for the operation. |
-|                                         | kind                                            | Type of span (e.g., server, client). |
+|                                         | kind                                            | Type of span (for example,, server, client). |
 |                                         | name                                            | Name of the span. |
 |                                         | scope                                           | Instrumentation scope. |
 |                                         | service.name                                    | Name of the service generating the trace. |
@@ -347,23 +365,22 @@ After you set them up, these libraries automatically trace relevant operations w
 |                                         | telemetry.sdk.name                              | Name of the telemetry SDK. |
 |                                         | telemetry.sdk.version                           | Version of the telemetry SDK. |
 
-
 ### List of imported libraries
 
 The `instrumentation.ts` file imports the following libraries:
 
 ### **`@opentelemetry/sdk-node`**
 
-This package is the core SDK for OpenTelemetry in Node.js. It provides the primary interface for configuring and initializing OpenTelemetry in a Node.js application. It includes functionalities for managing traces and context propagation. The SDK is designed to be extensible, allowing for custom configurations and integration with different telemetry backends like Axiom.
+This package is the core SDK for OpenTelemetry in Node.js. It provides the primary interface for configuring and initializing OpenTelemetry in a Node.js app. It includes functionalities for managing traces and context propagation. The SDK is designed to be extensible, allowing for custom configurations and integration with different telemetry backends like Axiom.
 
 ### **`@opentelemetry/auto-instrumentations-node`**
 
-This package offers automatic instrumentation for Node.js applications. It simplifies the process of instrumenting various common Node.js libraries and frameworks. By using this package, developers can automatically collect telemetry data (such as traces) from their applications without needing to manually instrument each library or API call. This is important for applications with complex dependencies, as it ensures comprehensive and consistent telemetry collection across the application.
+This package offers automatic instrumentation for Node.js apps. It simplifies the process of instrumenting various common Node.js libraries and frameworks. By using this package, developers can automatically collect telemetry data (such as traces) from their apps without needing to manually instrument each library or API call. This is important for apps with complex dependencies, as it ensures comprehensive and consistent telemetry collection across the app.
 
 ### **`@opentelemetry/exporter-trace-otlp-proto`**
 
-The **`@opentelemetry/exporter-trace-otlp-proto`** package provides an exporter that sends trace data using the OpenTelemetry Protocol (OTLP). OTLP is the standard protocol for transmitting telemetry data in the OpenTelemetry ecosystem. This exporter allows Node.js applications to send their collected traces to any backend that supports OTLP, such as Axiom. The use of OTLP ensures broad compatibility and a standardized way of transmitting telemetry data.
+The **`@opentelemetry/exporter-trace-otlp-proto`** package provides an exporter that sends trace data using the OpenTelemetry Protocol (OTLP). OTLP is the standard protocol for transmitting telemetry data in the OpenTelemetry ecosystem. This exporter allows Node.js apps to send their collected traces to any backend that supports OTLP, such as Axiom. The use of OTLP ensures broad compatibility and a standardized way of transmitting telemetry data.
 
 ### **`@opentelemetry/sdk-trace-base`**
 
-Contained within this package is the **`BatchSpanProcessor`**, among other foundational elements for tracing in OpenTelemetry. The **`BatchSpanProcessor`** is a component that collects and processes spans (individual units of trace data). As the name suggests, it batches these spans before sending them to the configured exporter (in this case, the `OTLPTraceExporter`). This batching mechanism is efficient as it reduces the number of outbound requests by aggregating multiple spans into fewer batches. It helps in the performance and scalability of trace data export in an OpenTelemetry-instrumented application.
+Contained within this package is the **`BatchSpanProcessor`**, among other foundational elements for tracing in OpenTelemetry. The **`BatchSpanProcessor`** is a component that collects and processes spans (individual units of trace data). As the name suggests, it batches these spans before sending them to the configured exporter (in this case, the `OTLPTraceExporter`). This batching mechanism is efficient as it reduces the number of outbound requests by aggregating multiple spans into fewer batches. It helps in the performance and scalability of trace data export in an OpenTelemetry-instrumented app.
