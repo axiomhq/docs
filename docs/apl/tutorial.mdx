@@ -29,7 +29,7 @@ To run queries on each function or operator in this tutorial, click the **Run in
 
 The following query returns the count of events by **time**
 
-```apl copy
+```apl
 ['github-push-event']
 | summarize count() by bin_auto(_time)
 ```
@@ -44,7 +44,7 @@ You can use the [aggregation functions](/docs/apl/aggregation-function/statistic
 
 ## Top 10 GitHub push events by maximum push id
 
-```apl copy
+```apl
 ['github-push-event']
 | summarize max_if = maxif(push_id, true) by size
 | top 10 by max_if desc
@@ -58,7 +58,7 @@ You can use the [aggregation functions](/docs/apl/aggregation-function/statistic
 
 ## Distinct City count by server datacenter
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize cities = dcount(['geo.city']) by server_datacenter
 ```
@@ -81,7 +81,7 @@ The result of a summarize operation has:
 
 The following query filters the data by **method** and **content_type**:
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where method == "GET" and content_type == "application/octet-stream"
 | project method , content_type
@@ -95,7 +95,7 @@ The following query filters the data by **method** and **content_type**:
 
 [count](/docs/apl/tabular-operators/count-operator): Returns the number of events from the input dataset.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | count
 ```
@@ -122,7 +122,7 @@ The following query filters the data by **method** and **content_type**:
 
 [project](/docs/apl/tabular-operators/project-operator): Selects a subset of columns.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | project content_type, ['geo.country'], method, resp_body_size_bytes, resp_header_size_bytes
 ```
@@ -135,7 +135,7 @@ The following query filters the data by **method** and **content_type**:
 
 [take](/docs/apl/tabular-operators/take-operator): Returns up to the specified number of rows.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | take 100
 ```
@@ -148,7 +148,7 @@ The following query filters the data by **method** and **content_type**:
 
 The **limit** operator is an alias to the **take** operator.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | limit 10
 ```
@@ -165,7 +165,7 @@ The **limit** operator is an alias to the **take** operator.
 
 The following query extracts the JSON elements from an array:
 
-```apl copy
+```apl
 ['sample-http-logs']
 | project parsed_json = parse_json( "config_jsonified_metrics")
 ```
@@ -178,7 +178,7 @@ The following query extracts the JSON elements from an array:
 
 #### [replace_string()](</docs/apl/scalar-functions/string-functions#parse-json()>): Replaces all string matches with another string.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend replaced_string = replace_string( "creator", "method", "machala" )
 | project replaced_string
@@ -192,7 +192,7 @@ The following query extracts the JSON elements from an array:
 
 #### [split()](</docs/apl/scalar-functions/string-functions#split()>): Splits a given string according to a given delimiter and returns a string array.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | project split_str = split("method_content_metrics", "_")
 | take 20
@@ -206,7 +206,7 @@ The following query extracts the JSON elements from an array:
 
 #### [strcat_delim()](</docs/apl/scalar-functions/string-functions#strcat-delim()>): Concatenates a string array into a string with a given delimiter.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | project strcat = strcat_delim(":", ['geo.city'], resp_body_size_bytes)
 ```
@@ -219,7 +219,7 @@ The following query extracts the JSON elements from an array:
 
 #### [indexof()](</docs/apl/scalar-functions/string-functions#indexof()>): Reports the zero-based index of the first occurrence of a specified string within the input string.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend based_index =  indexof( ['geo.country'], content_type, 45, 60, resp_body_size_bytes ), specified_time = bin(resp_header_size_bytes, 30)
 ```
@@ -232,7 +232,7 @@ The following query extracts the JSON elements from an array:
 
 ## Regex Examples
 
-```apl copy
+```apl
 ['sample-http-logs']
 | project remove_cutset = trim_start_regex("[^a-zA-Z]", content_type )
 ```
@@ -245,7 +245,7 @@ The following query extracts the JSON elements from an array:
 
 ## Finding logs from a specific City
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where tostring(geo.city) matches regex "^Camaquã$"
 ```
@@ -258,7 +258,7 @@ The following query extracts the JSON elements from an array:
 
 ## Identifying logs from a specific user agent
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where tostring(user_agent) matches regex "Mozilla/5.0"
 ```
@@ -271,7 +271,7 @@ The following query extracts the JSON elements from an array:
 
 ## Finding logs with response body size in a certain range
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where toint(resp_body_size_bytes) >= 4000 and toint(resp_body_size_bytes) <= 5000
 ```
@@ -284,7 +284,7 @@ The following query extracts the JSON elements from an array:
 
 ## Finding logs with user agents containing Windows NT
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where tostring(user_agent) matches regex @"Windows NT [\d\.]+"
 ```
@@ -297,7 +297,7 @@ The following query extracts the JSON elements from an array:
 
 ## Finding logs with specific response header size
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where toint(resp_header_size_bytes) == 31
 ```
@@ -310,7 +310,7 @@ The following query extracts the JSON elements from an array:
 
 ## Finding logs with specific request duration
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where toreal(req_duration_ms) < 1
 ```
@@ -323,7 +323,7 @@ The following query extracts the JSON elements from an array:
 
 ## Finding logs where TLS is enabled and method is POST
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where tostring(is_tls) == "true" and tostring(method) == "POST"
 ```
@@ -338,7 +338,7 @@ The following query extracts the JSON elements from an array:
 
 #### [array_concat()](</docs/apl/scalar-functions/array-functions#array_concat()>): Concatenates a number of dynamic arrays to a single array.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend concatenate = array_concat( dynamic([5,4,3,87,45,2,3,45]))
 | project concatenate
@@ -352,7 +352,7 @@ The following query extracts the JSON elements from an array:
 
 #### [array_sum()](</docs/apl/scalar-functions/array-functions#array-sum()>): Calculates the sum of elements in a dynamic array.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend summary_array=dynamic([1,2,3,4])
 | project summary_array=array_sum(summary_array)
@@ -368,7 +368,7 @@ The following query extracts the JSON elements from an array:
 
 #### [todatetime()](</docs/apl/scalar-functions/conversion-functions#todatetime()>): Converts input to datetime scalar.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend dated_time = todatetime("2026-08-16")
 ```
@@ -381,7 +381,7 @@ The following query extracts the JSON elements from an array:
 
 #### [dynamic_to_json()](</docs/apl/scalar-functions/conversion-functions#dynamic-to-json()>): Converts a scalar value of type dynamic to a canonical string representation.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend dynamic_string = dynamic_to_json(dynamic([10,20,30,40 ]))
 ```
@@ -398,7 +398,7 @@ The following query extracts the JSON elements from an array:
 
 In the query below, we use the **contains** operator, to find the strings that contain the string **-bot** and **[bot]**:
 
-```apl copy
+```apl
 ['github-issue-comment-event']
 | extend bot = actor contains "-bot" or actor contains "[bot]"
 | where bot == true
@@ -412,7 +412,7 @@ In the query below, we use the **contains** operator, to find the strings that c
     rel="noopener noreferrer"
 />
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend user_status = status contains "200" , agent_flow = user_agent contains "(Windows NT 6.4; AppleWebKit/537.36 Chrome/41.0.2225.0 Safari/537.36"
 | where user_status == true
@@ -434,7 +434,7 @@ In the query below, we use the **contains** operator, to find the strings that c
 
 - [hash_sha1()](</docs/apl/scalar-functions/hash-functions#hash-sha1()>): Returns a sha1 hash value for the input value.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend sha_256 = hash_md5( "resp_header_size_bytes" ), sha_1 = hash_sha1( content_type), md5 = hash_md5( method), sha512 = hash_sha512( "resp_header_size_bytes" )
 | project sha_256, sha_1, md5, sha512
@@ -494,7 +494,7 @@ In the query below, we use the **contains** operator, to find the strings that c
 
 - [bin()](</docs/apl/scalar-functions/rounding-functions#bin()>): Rounds values down to an integer multiple of a given bin size.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend largest_integer_less = floor( resp_header_size_bytes ), smallest_integer_greater = ceiling( req_duration_ms ), integer_multiple = bin( resp_body_size_bytes, 5 )
 | project largest_integer_less, smallest_integer_greater, integer_multiple
@@ -534,7 +534,7 @@ In the query below, we use the **contains** operator, to find the strings that c
 
 ##  HTTP 5xx responses (day wise) for the last 7 days - one bar per day
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where _time > ago(7d)
 | where req_duration_ms >= 5 and req_duration_ms < 6
@@ -549,7 +549,7 @@ In the query below, we use the **contains** operator, to find the strings that c
 
 ## Implement a remapper on remote address logs
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend RemappedStatus = case(req_duration_ms >= 0.57, "new data", resp_body_size_bytes >= 1000, "size bytes", resp_header_size_bytes == 40, "header values", "doesntmatch")
 ```
@@ -564,7 +564,7 @@ In the query below, we use the **contains** operator, to find the strings that c
 
 In this section, you will learn how to run queries using different functions and operators.
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend prospect = ['geo.city'] contains "Okayama" or uri contains "/api/v1/messages/back"
 | extend possibility = server_datacenter contains "GRU" or status contains "301"
@@ -637,7 +637,7 @@ In this section, you will learn how to run queries using different functions and
 
 ## Working with different operators
 
-```apl copy
+```apl
 ['hn']
 | extend superman = text contains "superman" or title contains "superman"
 | extend batman = text contains "batman" or title contains "batman"
@@ -657,7 +657,7 @@ In this section, you will learn how to run queries using different functions and
     rel="noopener noreferrer"
 />
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize flow = dcount( content_type) by ['geo.country']
 | take 50
@@ -686,7 +686,7 @@ example
 
 ## Get average response using project keep function
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where ['geo.country']  == "United States" or ['id'] == 'b2b1f597-0385-4fed-a911-140facb757ef'
 | extend systematic_view = ceiling( resp_header_size_bytes )
@@ -717,7 +717,7 @@ example
 
 ## Combine mathematical functions
 
-```apl copy
+```apl
 ['sample-http-logs']
 | extend tangent = tan( req_duration_ms ), cosine = cos( resp_header_size_bytes ), absolute_input = abs( req_duration_ms ), sine = sin( resp_header_size_bytes ), power_factor = pow( req_duration_ms, 4)
 | extend angle_pi = degrees( resp_body_size_bytes ), pie = pi()
@@ -730,7 +730,7 @@ example
     rel="noopener noreferrer"
 />
 
-```apl copy
+```apl
 ['github-issues-event']
 | where actor !endswith "[bot]"
 | where repo startswith "kubernetes/"

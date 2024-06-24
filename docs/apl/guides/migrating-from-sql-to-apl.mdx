@@ -51,7 +51,7 @@ While SQL and APL are query languages, there are some key differences to conside
 
 A basic APL query follows this structure: 
 
-```apl copy
+```apl
 | <DatasetName>
 | <FilteringOperation> 
 | <ProjectionOperation> 
@@ -66,7 +66,7 @@ Let’s see some examples of how to convert SQL queries to APL.
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT *
 FROM [Sample-http-logs]
 WHERE method = 'GET';
@@ -89,7 +89,7 @@ WHERE method = 'GET';
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT Country, COUNT(*)
 FROM [Sample-http-logs]
 GROUP BY method;
@@ -97,7 +97,7 @@ GROUP BY method;
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize count() by method
 ```
@@ -112,7 +112,7 @@ GROUP BY method;
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT TOP 10 Status, Method
 FROM [Sample-http-logs]
 ORDER BY Method DESC;
@@ -120,7 +120,7 @@ ORDER BY Method DESC;
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | top 10 by method desc
 | project status, method
@@ -136,7 +136,7 @@ ORDER BY Method DESC;
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT method, status, geo.country
 FROM [Sample-http-logs]
 WHERE resp_header_size_bytes >= 18;
@@ -144,7 +144,7 @@ WHERE resp_header_size_bytes >= 18;
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where resp_header_size_bytes >= 18
 | project method, status, ['geo.country']
@@ -160,7 +160,7 @@ WHERE resp_header_size_bytes >= 18;
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT geo.country
 FROM [Sample-http-logs]
 GROUP BY geo.country
@@ -169,7 +169,7 @@ HAVING COUNT(*) > 100;
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize count() by ['geo.country']
 | where count_ > 100
@@ -185,7 +185,7 @@ HAVING COUNT(*) > 100;
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT geo.country,
        COUNT(*) AS TotalRequests,
        AVG(req_duration_ms) AS AverageRequest,
@@ -197,7 +197,7 @@ GROUP BY geo.country;
 
 **APL:** 
 
-```apl copy
+```apl
 Users
 | summarize TotalRequests = count(),
             AverageRequest = avg(req_duration_ms),
@@ -215,14 +215,14 @@ Users
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT SUM(resp_body_size_bytes) AS TotalBytes
 FROM  [Sample-http-logs];
 ```
 
 **APL:** 
 
-```apl copy
+```apl
 [‘sample-http-logs’]
 | summarize TotalBytes = sum(resp_body_size_bytes)
 ```
@@ -237,14 +237,14 @@ FROM  [Sample-http-logs];
 
 **SQL:**
 
-```sql copy
+```sql
 SELECT AVG(req_duration_ms) AS AverageRequest
 FROM [Sample-http-logs];
 ```
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize AverageRequest = avg(req_duration_ms)
 ```
@@ -259,14 +259,14 @@ FROM [Sample-http-logs];
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT MIN(req_duration_ms) AS MinRequest, MAX(req_duration_ms) AS MaxRequest
 FROM [Sample-http-logs];
 ```
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize MinRequest = min(req_duration_ms), MaxRequest = max(req_duration_ms)
 ```
@@ -281,14 +281,14 @@ FROM [Sample-http-logs];
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT COUNT(DISTINCT method) AS UniqueMethods
 FROM [Sample-http-logs];
 ```
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize UniqueMethods = dcount(method)
 ```
@@ -303,14 +303,14 @@ FROM [Sample-http-logs];
 
 **SQL:**
 
-```sql copy
+```sql
 SELECT STDDEV(req_duration_ms) AS StdDevRequest
 FROM  [Sample-http-logs];
 ```
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize StdDevRequest = stdev(req_duration_ms)
 ```
@@ -325,14 +325,14 @@ FROM  [Sample-http-logs];
 
 **SQL:**
 
-```sql copy
+```sql
 SELECT VAR(req_duration_ms) AS VarRequest
 FROM  [Sample-http-logs];
 ```
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize VarRequest = variance(req_duration_ms)
 ```
@@ -347,14 +347,14 @@ FROM  [Sample-http-logs];
 
 **SQL:**
 
-```sql copy
+```sql
 SELECT COUNT(*) AS TotalDuration, SUM(req_duration_ms) AS TotalDuration, AVG(Price) AS AverageDuration
 FROM  [Sample-http-logs];
 ```
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize TotalOrders = count(), TotalDuration = sum( req_duration_ms), AverageDuration = avg(req_duration_ms)
 ```
@@ -369,7 +369,7 @@ FROM  [Sample-http-logs];
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT status, COUNT(*) AS TotalStatus, SUM(resp_header_size_bytes) AS TotalRequest
 FROM [Sample-http-logs];
 GROUP BY status
@@ -378,7 +378,7 @@ ORDER BY TotalSpent DESC;
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize TotalStatus = count(), TotalRequest = sum(resp_header_size_bytes) by status
 | order by TotalRequest desc
@@ -394,7 +394,7 @@ ORDER BY TotalSpent DESC;
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT COUNT(*) AS HighContentStatus
 FROM  [Sample-http-logs];
 WHERE resp_header_size_bytes  > 1;
@@ -402,7 +402,7 @@ WHERE resp_header_size_bytes  > 1;
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | where resp_header_size_bytes > 1
 | summarize HighContentStatus = count()
@@ -418,7 +418,7 @@ WHERE resp_header_size_bytes  > 1;
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT Status
 FROM [Sample-http-logs];
 GROUP BY Status
@@ -427,7 +427,7 @@ HAVING COUNT(*) > 10;
 
 **APL:** 
 
-```apl copy
+```apl
 ['sample-http-logs']
 | summarize OrderCount = count() by status
 | where OrderCount > 10
@@ -443,7 +443,7 @@ HAVING COUNT(*) > 10;
 
 **SQL:** 
 
-```sql copy
+```sql
 SELECT content_type, COUNT(*) AS RequestCount
 FROM  [Sample-http-logs];
 WHERE content_type = ‘text/csv’;
@@ -623,7 +623,7 @@ FROM  [Sample-http-logs];
 
 **SQL:**
 
-```sql copy
+```sql
 SELECT TRIM(content_type) AS TrimmedFirstName
 FROM [Sample-http-logs];
 ```
