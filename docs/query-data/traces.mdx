@@ -101,7 +101,7 @@ To access the waterfall view from Explore, follow these steps:
 2. Click the `Explore` tab.
 3. Run a query that returns the `_time` and `trace_id` fields. For example, the following query returns the number of spans in each trace:
 
-    ```apl
+    ```kusto
     ['otel-demo-traces']
     | summarize count() by trace_id
     ```
@@ -137,7 +137,7 @@ Below are a collection of queries that can help get you started with traces insi
 
 Number of requests, average response
 
-```apl
+```kusto
 ['otel-demo-traces']
 | where isnull(parent_span_id)
 | summarize count(),
@@ -149,7 +149,7 @@ Number of requests, average response
 
 Top five slowest services by operation
 
-```apl
+```kusto
 ['otel-demo-traces']
 | summarize count(), avg(duration) by name
 | sort by avg_duration desc
@@ -158,7 +158,7 @@ Top five slowest services by operation
 
 Top five errors per service and operation
 
-```apl
+```kusto
 ['otel-demo-traces']
 | summarize topk(['status.message'], 5) by ['service.name'], name
 | limit 5
@@ -184,7 +184,7 @@ Trace spans often include many custom attributes under the `attributes.custom` f
 
 To access nested custom attributes, you can use Axiom Processing Language (APL) for example:
 
-```apl
+```kusto
 ['otel-demo-traces'] 
 | where ['attributes.custom']['app.synthetic_request'] == true
 ```
@@ -194,7 +194,7 @@ If you frequently need to query the same nested attribute, consider creating a v
 1. Go to "Datasets" and click the f(x) button
 2. Define the new virtual field, for example:
 
-```apl
+```kusto
 ['otel-demo-traces']
 | extend useragent = ['attributes.custom']['User-Agent']
 ```
@@ -203,7 +203,7 @@ If you frequently need to query the same nested attribute, consider creating a v
 
 To create a typed virtual field, you can specify the type, e.g.:
 
-```apl
+```kusto
 | extend deployment_id = tostring(['attributes.custom']['deployment_id'])
 ```
 
@@ -221,7 +221,7 @@ Span links in Axiom are based on the [OpenTelemetry specification](https://opent
 
 1. Run the following APL query to find traces with span links, for example:
 
-```apl
+```kusto
 ['dataset'] 
 | where isnotempty(links)
 ```
