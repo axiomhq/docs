@@ -20,9 +20,9 @@ The documentation is based on the [Mintlify](https://mintlify.com/) framework.
     ```
 
 Optional: install the following VS Code extensions:
-    - [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker)
-    - [MDX](https://marketplace.visualstudio.com/items?itemName=unifiedjs.vscode-mdx)
-    - [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode)
+- [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker)
+- [MDX](https://marketplace.visualstudio.com/items?itemName=unifiedjs.vscode-mdx)
+- [Vale VSCode](https://marketplace.visualstudio.com/items?itemName=ChrisChinchilla.vale-vscode)
 
 ## Build locally
 
