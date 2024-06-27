@@ -54,7 +54,7 @@ Run the following in your terminal to check the style of all files in the curren
 vale .
 ```
 
-## Troubleshoot Mintlify
+## Troubleshooting
 
-- Mintlify dev isn’t running - Run `mintlify install` it'll re-install dependencies.
-- Page loads as a 404 - Make sure you are running in a folder with `mint.json`
+- If the local build fails, run `mintlify install` to re-install dependencies.
+- If a page loads as a 404, make sure you run the local build in the root folder where the file `mint.json` is present.
