@@ -92,28 +92,47 @@ To configure a new “Service” in PagerDuty using the Events V2 API, go to **C
 
 You will also need to provide an API Access Key with the right permissions which can be generated at **pagerduty.com/api_keys**.
 
-### Webhook
+### Custom Webhook
 
-Create webhook notifiers to connect to internal or external services using your own handlers.
+Create customizable webhook notifiers to connect to internal or external services.
 
-The URL will receive a HTTP(s) POST with a content type of `application/json` and a payload as shown below:
+The URL will receive a HTTP(s) POST with a content type of `application/json`, together with any other headers specified. The following variables are available when defining the content of your webhook:
+
+`.Action` — This has value "open" when the notification corresponds to a match monitor matching or a threshold monitor triggering, and has value "closed" when the notification corresponds to a threshold monitor resolving.
+
+`.MonitorID` — The unique identifier for the monitor associated with the notification.
+
+`.Body` — The message body associated with the notification. When the notification corresponds to a match monitor, this is the matching event data. When the notification corresponds to a threshold monitor, this provides information about the value that gave rise to the monitor triggering or resolving.
+
+`.Description` — The description of the monitor associated with the notification.
+
+`.QueryEndTime` — The end time applied in the monitor query that gave rise to the notification.
+
+`.QueryStartTime` — The start time applied in the monitor query that gave rise to the notification.
+
+`.Timestamp` — The time the notification was generated.
+
+`.Title` — The name of the monitor associated with the notification.
+
+`.Value` — When the notification corresponds to a threshold monitor, this is the value that gave rise to the monitor triggering or resolving.
+
+You can use the Go Template syntax to interact with these variables when defining a custom body for your webhook.
+
+A sample webhook body is shown below. This applies the default template shown on creating a custom webhook to a sample notification generated from a threshold monitor triggering.
 
 ```json
 {
-    "action":"close",
-    "sender":"monitors"
-    "event":{
-        "id":"f11f8121-c949-4b59-84ba-40ef868f4d54",
-        "name":"Queue backlogging",
-        "title":"Current value is above threshold value 2500",
-        "body":"Triggered with a value of 2782",
-        "value":"2782",
-        "timestamp":"2021-02-23T14:43:45.34205696Z",
-        "source":"monitors.qKKbK6n4xeokNBF9GC.COUNT",
-        "priority":0,
-        "snoozedUntil":"0001-01-01T00:00:00Z",
-        "state":3
-    },
+  "action": "Open",
+  "event": {
+    "monitorID": "CabI3w142069etTgd0",
+    "body": "Current value of 57347 is above or equal to the threshold value of 0",
+    "description": "",
+    "queryEndTime": "2024-06-28 14:55:57.631364493 +0000 UTC",
+    "queryStartTime": "2024-06-28 14:45:57.631364493 +0000 UTC",
+    "timestamp": "2024-06-28 14:55:57 +0000 UTC",
+    "title": "Axiom Monitor Test Triggered",
+    "value": 57347
+  }
 }
 ```
 
