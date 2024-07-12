@@ -1215,6 +1215,16 @@
                 }
               }
             }
+          },
+          "default": {
+            "description": "User or system error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplQueryError"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1229,6 +1239,193 @@
         ],
         "x-axiom-not-suspended": true,
         "x-axiom-preview": true,
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/tokens": {
+      "get": {
+        "tags": [
+          "tokens"
+        ],
+        "description": "Get API tokens",
+        "operationId": "getAPITokens",
+        "responses": {
+          "200": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/APIToken"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|read"
+            ]
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "tokens"
+        ],
+        "description": "Create API token",
+        "operationId": "createAPIToken",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAPIToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "CreateApiTokenResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAPITokenResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|create"
+            ]
+          }
+        ],
+        "x-axiom-not-suspended": true,
+        "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/tokens/{id}": {
+      "get": {
+        "tags": [
+          "tokens"
+        ],
+        "description": "Get API token by ID",
+        "operationId": "getAPIToken",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIToken"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|read"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "tokens"
+        ],
+        "description": "Delete API token",
+        "operationId": "deleteAPIToken",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "(empty)",
+            "content": {}
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|delete"
+            ]
+          }
+        ]
+      }
+    },
+    "/tokens/{id}/regenerate": {
+      "post": {
+        "tags": [
+          "tokens"
+        ],
+        "description": "Regenerate API token",
+        "operationId": "regenerateAPIToken",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateAPIToken"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "description": "CreateAPITokenResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAPITokenResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|update"
+            ]
+          }
+        ],
+        "x-axiom-not-suspended": true,
         "x-codegen-request-body-name": "payload"
       }
     },
@@ -1516,6 +1713,42 @@
   },
   "components": {
     "schemas": {
+      "APIToken": {
+        "required": [
+          "datasetCapabilities",
+          "id",
+          "name",
+          "orgCapabilities"
+        ],
+        "type": "object",
+        "properties": {
+          "datasetCapabilities": {
+            "$ref": "#/components/schemas/datasetCapabilities"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the token"
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "Expiration date of the token (ISO 8601 format)",
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true
+          },
+          "id": {
+            "type": "string",
+            "description": "ID of the token"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the token"
+          },
+          "orgCapabilities": {
+            "$ref": "#/components/schemas/orgCapabilities"
+          }
+        }
+      },
       "AggInfo": {
         "type": "object",
         "properties": {
@@ -1576,6 +1809,7 @@
         "required": [
           "datasets",
           "id",
+          "time",
           "type"
         ],
         "type": "object",
@@ -1605,7 +1839,7 @@
           },
           "time": {
             "type": "string",
-            "description": "Time the annotation marks on the charts. If you don’t include this field, Axiom assigns the time of the API request to the annotation.",
+            "description": "Time the annotation marks on the charts. If you don't include this field, Axiom assigns the time of the API request to the annotation.",
             "format": "date-time"
           },
           "title": {
@@ -1647,6 +1881,66 @@
           "type": "AnnotationID"
         }
       },
+      "AplQueryError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "Status is the http status code associated with this error"
+          },
+          "detail": {
+            "$ref": "#/components/schemas/AplQueryErrorDetail"
+          },
+          "message": {
+            "type": "string",
+            "description": "a formatted user-facing error message"
+          }
+        }
+      },
+      "AplQueryErrorDetail": {
+        "type": "object",
+        "properties": {
+          "column": {
+            "type": "integer",
+            "description": "Column is the column associated with this compile type error",
+            "format": "int64"
+          },
+          "compileErrorCode": {
+            "type": "integer",
+            "description": "CompileErrorCode is a special error code that is only available for Compile Errors\nIt is an integer value that can be used to identify the error",
+            "format": "int64",
+            "enum": [
+              1,
+              2,
+              16,
+              17,
+              32,
+              33,
+              34
+            ]
+          },
+          "errorType": {
+            "type": "integer",
+            "description": "Error Type is an integer value indicating the kind of error",
+            "format": "int64",
+            "enum": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          "line": {
+            "type": "integer",
+            "description": "Line is the line associated with this compile type error",
+            "format": "int64"
+          },
+          "message": {
+            "type": "string",
+            "description": "Message is the raw error message without any formatting"
+          }
+        }
+      },
       "AplRequest": {
         "required": [
           "apl"
@@ -1658,7 +1952,9 @@
           },
           "variables": {
             "type": "object",
-            "additionalProperties": false
+            "additionalProperties": {
+              "type": "object"
+            }
           }
         }
       },
@@ -1695,6 +1991,50 @@
           }
         },
         "description": "The standard mode of operation for Kirby is to create buckets on the _time column,"
+      },
+      "CreateAPIToken": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "datasetCapabilities": {
+            "$ref": "#/components/schemas/datasetCapabilities"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the token"
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "Expiration date of the token (ISO 8601 format)",
+            "format": "date-time",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the token"
+          },
+          "orgCapabilities": {
+            "$ref": "#/components/schemas/orgCapabilities"
+          }
+        }
+      },
+      "CreateAPITokenResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/APIToken"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string",
+                "x-go-name": "Value"
+              }
+            }
+          }
+        ]
       },
       "CreateDataset": {
         "required": [
@@ -1994,7 +2334,7 @@
           },
           "time": {
             "type": "string",
-            "description": "Time the annotation marks on the charts. If you don’t include this field, Axiom assigns the time of the API request to the annotation.",
+            "description": "Time the annotation marks on the charts. If you don't include this field, Axiom assigns the time of the API request to the annotation.",
             "format": "date-time"
           },
           "title": {
@@ -2122,6 +2462,25 @@
             "type": "string",
             "description": "Start is the starting time the query is limited by.\nQueries are restricted to the interval (start,end).",
             "format": "date-time"
+          }
+        }
+      },
+      "RegenerateAPIToken": {
+        "required": [
+          "existingTokenExpiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "existingTokenExpiresAt": {
+            "type": "string",
+            "description": "Expiration date of the existing token (ISO 8601 format)",
+            "format": "date-time"
+          },
+          "newTokenExpiresAt": {
+            "type": "string",
+            "description": "Expiration date of the new token (ISO 8601 format)",
+            "format": "date-time",
+            "nullable": true
           }
         }
       },
@@ -2290,7 +2649,7 @@
           },
           "time": {
             "type": "string",
-            "description": "Time the annotation marks on the charts. If you don’t include this field, Axiom assigns the time of the API request to the annotation.",
+            "description": "Time the annotation marks on the charts. If you don't include this field, Axiom assigns the time of the API request to the annotation.",
             "format": "date-time"
           },
           "title": {
@@ -2372,6 +2731,247 @@
         "properties": {
           "url": {
             "type": "string"
+          }
+        }
+      },
+      "datasetCapabilities": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "ingest": {
+              "type": "array",
+              "description": "Ingest capability",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "create"
+                ]
+              },
+              "x-omitempty": true
+            },
+            "query": {
+              "type": "array",
+              "description": "Query capability",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "read"
+                ]
+              },
+              "x-omitempty": true
+            },
+            "starredQueries": {
+              "type": "array",
+              "description": "Starred queries capability",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "create",
+                  "read",
+                  "update",
+                  "delete"
+                ]
+              },
+              "x-omitempty": true
+            },
+            "virtualFields": {
+              "type": "array",
+              "description": "Virtual fields capability",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "create",
+                  "read",
+                  "update",
+                  "delete"
+                ]
+              },
+              "x-omitempty": true
+            }
+          }
+        }
+      },
+      "orgCapabilities": {
+        "type": "object",
+        "properties": {
+          "annotations": {
+            "type": "array",
+            "description": "Annotations capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "apiTokens": {
+            "type": "array",
+            "description": "API tokens capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "billing": {
+            "type": "array",
+            "description": "Billing capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "update"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "dashboards": {
+            "type": "array",
+            "description": "Dashboards capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "datasets": {
+            "type": "array",
+            "description": "Datasets capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "endpoints": {
+            "type": "array",
+            "description": "Endpoints capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "flows": {
+            "type": "array",
+            "description": "Flows capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "integrations": {
+            "type": "array",
+            "description": "Integrations capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "monitors": {
+            "type": "array",
+            "description": "Monitors capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "notifiers": {
+            "type": "array",
+            "description": "Notifiers capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "rbac": {
+            "type": "array",
+            "description": "Access control capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "sharedAccessKeys": {
+            "type": "array",
+            "description": "Shared access keys capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "update"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "users": {
+            "type": "array",
+            "description": "Users capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "create",
+                "read",
+                "update",
+                "delete"
+              ]
+            },
+            "x-omitempty": true
           }
         }
       }
