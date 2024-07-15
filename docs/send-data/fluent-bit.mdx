@@ -233,25 +233,21 @@ Replace `$DATASET` with your Axiom dataset name and `$API_TOKEN` with your Axiom
 
 ### Create Docker Compose file (docker-compose.yaml)
 
-Ensure the `volumes` section correctly maps the `fluent-bit.conf` file to `/fluent-bit/etc/fluent-bit.conf` inside the container.
+Ensure the `volumes` section correctly maps the `fluent-bit.conf` file to `/fluent-bit/etc/fluent-bit.conf` inside the container with read-only access.
 
 ```yaml
 version: '3'
 
 services:
-
   fluentbit:
     image: fluent/fluent-bit:latest
     container_name: fluent-bit
-    user: root
+    user: root # Required for accessing host log files
     volumes:
-      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
-      - /var/lib/docker/containers:/opt/docker-container-logs
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - /var/lib/docker/containers:/opt/docker-container-logs:ro
     environment:
       - AXIOM_HOSTNAME=axiom
-    ports:
-      - "24224:24224"
-      - "24224:24224/udp"
 ```
 
 To start the Fluent Bit container using the Docker Compose configuration you've set up, execute the `docker-compose up -d` command. 
