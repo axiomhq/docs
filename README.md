@@ -5,7 +5,7 @@ The documentation is based on the [Mintlify](https://mintlify.com/) framework.
 ## Setup
 
 1. Install the latest LTS version of [Node.js](https://nodejs.org/en/download/package-manager).
-2. Install [Vale](https://vale.sh/docs/vale-cli/installation/).
+2. Install [Vale](https://vale.sh/vale-cli/installation/).
 3. Clone this repo.
 4. Go to the root folder in your terminal, and run the following to install Node dependencies:
 
