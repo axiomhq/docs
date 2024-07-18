@@ -1,0 +1,128 @@
+---
+title: "Send data from AWS S3 to Axiom"
+description: "Efficiently send log data from AWS S3 to Axiom via Lambda function"
+sidebarTitle: AWS S3
+tags:
+    [‘documentation’, ‘axiom documentation’, ‘AWS’, ‘s3’, ‘lambda’]
+---
+
+This page explains how to set up an AWS Lambda function to send logs from an S3 bucket to Axiom. The Lambda function triggers when a new log file is uploaded to an S3 bucket, processes the log data, and sends it to Axiom.
+
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/).
+- [Create a dataset in Axiom](/reference/datasets) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete datasets.
+- Create an AWS account with permissions to create and manage S3 buckets, Lambda functions, and IAM roles. For more information, see the [AWS documentation.](https://docs.aws.amazon.com/lambda/latest/dg/with-s3-example.html)
+
+## Package the requests module
+
+Before creating the Lambda function, package the requests module so it can be used in the function:
+
+1. Create a new directory.
+2. Install the requests module into the current directory using pip.
+3. Zip the contents of the directory.
+4. Add your Lambda function file to the zip file.
+
+## Create AWS Lambda function
+
+Create a Lambda function with Python runtime and upload the packaged zip file containing the requests module and your function code below:
+
+```py
+import os
+import json
+import boto3
+import requests
+import csv
+import io
+import ndjson
+
+def lambda_handler(event, context):
+    # Extract the bucket name and object key from the event
+    bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+    
+    try:
+        # Fetch the log file from S3
+        s3 = boto3.client('s3')
+        obj = s3.get_object(Bucket=bucket, Key=key)
+    except Exception as e:
+        print(f"Error fetching from S3: {str(e)}")
+        raise e
+    
+    # Read the log data from the S3 object
+    log_data = obj['Body'].read().decode('utf-8')
+    
+    # Determine the file format and parse accordingly
+    file_extension = os.path.splitext(key)[1].lower()
+    
+    if file_extension == '.csv':
+        csv_data = csv.DictReader(io.StringIO(log_data))
+        json_logs = list(csv_data)
+    elif file_extension == '.txt' or file_extension == '.log':
+        log_lines = log_data.strip().split("\n")
+        json_logs = [{'message': line} for line in log_lines]
+    elif file_extension == '.ndjson' or file_extension == '.jsonl':
+        json_logs = ndjson.loads(log_data)
+    else:
+        print(f"Unsupported file format: {file_extension}")
+        return
+    
+    # Prepare Axiom API request
+    dataset_name = os.environ['DATASET_NAME']
+    axiom_api_url = f"https://api.axiom.co/v1/datasets/{dataset_name}/ingest"
+    api_token = os.environ['API_TOKEN']
+    axiom_headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Content-Type": "application/json"
+    }
+    
+    # Send logs to Axiom
+    for log in json_logs:
+        try:
+            response = requests.post(axiom_api_url, headers=axiom_headers, json=log)
+            if response.status_code != 200:
+                print(f"Failed to send log to Axiom: {response.text}")
+        except Exception as e:
+            print(f"Error sending to Axiom: {str(e)}. Log: {log}")
+    
+    print(f"Processed {len(json_logs)} log entries")
+```
+
+In the environment variables section of the Lambda function configuration, add the following environment variables:
+
+- `DATASET_NAME` is the name of the Axiom dataset where you want to send data.
+- `API_TOKEN` is the Axiom API token you have generated. For added security, store the API token in an environment variable
+
+<CallOut kind="info">
+This example uses Python for the Lambda function. To use another language, change the code above accordingly.
+</CallOut>
+
+## Configure S3 to trigger Lambda
+
+In the Amazon S3 console, select the bucket where your log files are stored. Go to the properties tab, find the event notifications section, and create an event notification. Select All object create events as the event type and choose the Lambda function you created earlier as the destination. For more information, see the [AWS documentation](https://docs.aws.amazon.com/lambda/latest/dg/with-s3-example.html).
+
+## Upload a test log file
+
+Ensure the log file you upload to the S3 bucket is in the correct format, such as JSON or newline-delimited JSON (NDJSON) or CSV. Here’s an example:
+
+```json
+[
+   {
+     "_time":"2021-02-04T03:11:23.222Z",
+     "data":{"key1":"value1","key2":"value2"}
+   },
+   {
+     "data":{"key3":"value3"},
+     "attributes":{"key4":"value4"}
+   },
+   {
+     "tags": {
+       "server": "aws",
+       "source": "wordpress"
+     }
+   }
+ ]
+```
+
+After uploading a test log file to your S3 bucket, the Lambda function automatically processes the log data and sends it to Axiom. In Axiom, go to the Datasets tab and select the dataset you specified in the Lambda function. You now see your logs from your IoT devices in Axiom.
