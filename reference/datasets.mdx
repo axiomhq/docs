@@ -10,9 +10,37 @@ This reference article explains how to manage datasets in Axiom, including creat
 
 ## What datasets are
 
-In Axiom, an individual piece of data is an event, and a dataset is a collection of similar events. Datasets contain incoming event data.
+Axiom’s datastore is tuned for the efficient collection, storage, and analysis of timestamped event data. An individual piece of data is an event, and a dataset is a collection of related events. Datasets contain incoming event data.
 
-Dataset names are 1 to 128 characters in length. They only contain ASCII alphanumeric characters and the hyphen (`-`) character.
+## Best practices for organizing datasets
+
+Use datasets to organize your data ready for querying based on the event schema. Common ways to separate include environment and service.
+
+### Separate by environment
+
+If you work with data sourced from different environments, separate them into different datasets. For example, use one dataset for events from production and another dataset for events from your development environment.
+
+You might be tempted to use a single `environment` attribute instead, but this risks causing confusion when results show up side-by-side in query results. Although some organizations choose to collect events from all environments in one dataset, they’ll often rely on applying an `environment` filter to all queries, which becomes a chore and is error-prone for newcomers.
+
+### Separate by service
+
+Another common practice is to separate datasets by service. This approach allows for easier access control management.
+
+For example, you might separate engineering services with datasets like `kubernetes`, `billing`, or `vpn`, or include events from your wider company collectors like `product-analytics`, `security-logs`, or `marketing-attribution`.
+
+This separation enables teams to focus on their relevant data and simplifies querying within a specific domain. It also works well with Axiom’s role-based access control feature as you can restrict access to sensitive datasets to those who need it.
+
+<Note>
+While separating by service is beneficial, avoid over-segmentation. Creating a dataset for every microservice or function can lead to unnecessary complexity and management overhead. Instead, group related services or functions into logical datasets that align with your organizational structure or major system components.
+</Note>
+
+### Avoid the “kitchen sink”
+
+While it might seem convenient to send all events to a single dataset, this “kitchen sink” approach is generally not advisable for several reasons:
+- Field count explosion: As you add more event types to a single dataset, the number of fields grows rapidly. This can make it harder to understand the structure of your data and impacts query performance.
+- Query inefficiency: With a large, mixed dataset, queries often require multiple filters to isolate the relevant data. This is tedious, but without those filters, queries take longer to execute since they scan through more irrelevant data.
+- Schema conflicts: Different event types may have conflicting field names or data types, leading to unnecessary type coercion at query time.
+- Access management: With all data in one dataset, it becomes challenging to provide granular access controls. You might end up giving users access to more data than they need.
 
 ## Create dataset
 
@@ -21,6 +49,8 @@ To create a dataset, follow these steps:
 1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
 2. Click **New dataset**.
 3. Name the dataset, and then click **Add**.
+
+Dataset names are 1 to 128 characters in length. They only contain ASCII alphanumeric characters and the hyphen (`-`) character.
 
 ## Import data
 
