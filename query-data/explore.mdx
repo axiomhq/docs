@@ -1,33 +1,111 @@
 ---
 title: 'Explore data with Axiom'
-description: 'Learn how to filter, manipulate, extend, and summarize your data without having to worry about query speed or indexes.'
+description: 'Learn how to filter, manipulate, extend, and summarize your data.'
 sidebarTitle: Explore Data
 tags:
     ['axiom documentation', 'documentation', 'axiom', 'dashboards', 'monitors', 'notifiers', 'slack', 'data explorer', 'apl', 'count', 'operator']
 ---
 
-The Explore tab provides you with a robust computation and processing power to get deeper insights into your data. It enables you to filter, manipulate, extend, and summarize your data whenever you want, without having to worry about query speed or indexes.
+The Explore tab provides you with robust computation and processing power to get deeper insights into your data. It enables you to filter, manipulate, extend, and summarize your data.
 
 ## Use the Explore tab
 
-Go to the **Explore** tab.
+Go to the **Explore** tab and choose one of the following options:
 
-Start performing queries on your dataset. A simple query has been performed on the ingested data as shown below.
+- [Create a query with the visual query builder](#create-a-query-using-the-visual-query-builder).
+- [Create a query using Axiom Processing Language (APL)](#create-a-query-using-apl).
 
-- The first line is the name of the dataset you want to query. In this case, the name of the dataset is `http-logs`.
-- The second line selects the fields to insert and embed into the new computed columns using the `project` operator.
+You can easily switch between these two methods at any point when creating the query.
 
-## Explore tab overview
+## Create a query using the visual query builder
 
-The Explore tab’s query language is the Axiom Processing Language (APL), a data processing language that supports filtering, extending, and summarizing data. For more information, see [Introduction to APL](/apl/introduction).
+1. In the top left, click **Builder**.
+2. From the list, select the dataset that you want to query.
+3. Optional: In the **Where** section, create filters to narrow down the query results.
+4. Optional: In the **Summarize** section, select a way to visualize the query results.
+5. Optional: In the **More** section, specify additional options such as sorting the results or limiting the number of displayed events.
+6. Select the time range.
+7. Click **Run**.
 
-The Explore tab has a rich query engine featuring the intuitive Axiom Processing Language and powerful ingestion and storage capabilities optimized for low latency ingestion and super-fast query performance.
+See below for more information about each of these steps.
 
-### Axiom Processing Language
+### Add filters
 
-Below are some APL commands to get you familiarized as to what APL queries look like in the Explore tab.
+Use the **Where** section to filter the results to specific events. For example, to filter for events that originate in a specific geolocation like France.
 
-In these queries below, the pipe symbol `|` separates the operations as they flow from left to right, and top to bottom.
+To add a filter:
+
+1. Click **+** in the **Where** section.
+2. Select the field where you want to filter for values. For example, `geo.country`.
+3. Select the logical operator of the filter. These are different for each field type. For example, you can use **starts-with** for string fields and **>=** for number fields. In this example, select `==` for an exact match.
+4. Specify the value for which you want to filter. In this example, enter `France`.
+
+When you run the query, the results only show events matching the criteria you specified for the filter.
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20where%20%5B'geo.country'%5D%20%3D~%20'France'%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230m%22%7D%7D)
+
+### Add multiple filters
+
+You can add multiple filters and combine them with AND/OR operators. For example, to filter for events that originate in France or Germany.
+
+To add and combine multiple filters:
+
+1. Add a filter for France as explained in [Add filters](#add-filters).
+2. Add a filter for Germany as explained in [Add filters](#add-filters).
+3. Click **and** that appears between the two filters, and then select **or**.
+
+The query results display events that originate in France or Germany.
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20where%20(%5B'geo.country'%5D%20%3D~%20'France'%20or%20%5B'geo.country'%5D%20%3D~%20'Germany')%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230m%22%7D%7D)
+
+<Note>
+    You can add groups of filters using the **New Group** element.
+    Axiom supports AND/OR operators at the top level and one level deep.
+</Note>
+
+### Add visualizations
+
+Axiom provides powerful visualizations that display the output of aggregate functions across your dataset. The **Summarize** section provides you with several ways to visualize the query results. For example, the `count` visualization displays the number of events matching your query over time. Some visualizations require an argument such as a field or other parameters.
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20count()%20by%20bin_auto(_time)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230m%22%7D%7D)
+
+For more information about visualizations, see [Visualize data](/query-data/visualizations).
+
+### Segment data
+
+When visualizing data, segment data into specific groups to see more clearly how the data behaves. For example, to see how many events originate in each geolocation, select the `count` visualization and group by `geo.country`.
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20count()%20by%20bin_auto(_time)%2C%20%5B'geo.country'%5D%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230m%22%7D%7D)
+
+### More options
+
+In the **More** section, specify the following additional options:
+
+- By default, Axiom automatically chooses the best ordering for the query results. To specify the sorting order manually, click **Sort by**, and then select the field according to which you want to sort the results.
+- To limit the number of events the query returns, click **Limit**, and then specify the maximum number of returned events.
+- Specify whether to display or hide open intervals.
+
+### Select time range
+
+When you select the time range of a query, you specify the time interval where you want to look for events.
+
+To select the time range, choose one of the following options:
+
+- Use the **Quick range** items to quickly select popular time ranges.
+- Use the **Custom start/end date** fields to select specific times.
+
+### Special fields
+
+- `_time` - the timestamp of the event. This is automatically set to system time if it’s missing from the event.
+- `_sysTime` - the system time related to when the event was ingested.
+
+`_time` and `_sysTime` can be used interchangeably for the majority of cases however, if your events do set a `_time` explicitly, the `_sysTime` can be useful to know if events are being ingested in case of clock skews on your event-producing systems.
+
+## Create a query using APL
+
+APL is a data processing language that supports filtering, extending, and summarizing data. For more information, see [Introduction to APL](/apl/introduction).
+
+Some APL queries are explained below. The pipe symbol `|` separates the operations as they flow from left to right, and top to bottom.
 
 APL is case-sensitive for everything: dataset names, field names, operators, functions, etc.
 
@@ -35,23 +113,35 @@ Use double forward slashes (`//`) for comments.
 
 ### APL count operator
 
-The below query returns the number of events from the `http-logs` dataset.
+The below query returns the number of events from the `sample-http-logs` dataset.
+
+```kusto
+['sample-http-logs']
+| summarize count()
+```
 
 ### APL limit operator
 
-The `limit` operator returns a random subset of rows from a dataset up to the specified number of rows. This query returns a thousand rows from `http-logs` randomly chosen by APL.
+The `limit` operator returns a random subset of rows from a dataset up to the specified number of rows. This query returns a thousand rows from `sample-http-logs` randomly chosen by APL.
+
+```kusto
+['sample-http-logs']
+| limit 1000
+```
 
 ### APL summarize operator
 
-The `summarize` operator produces a table that aggregates the content of the dataset. This query returns a chart of the `avg(req_duration_ms)`, and a table of `geo.city` and `avg(req_duration_ms)` of the `http-logs` dataset from the time range of 2 days and time interval of 4 hours.
+The `summarize` operator produces a table that aggregates the content of the dataset. This query returns a chart of the `avg(req_duration_ms)`, and a table of `geo.city` and `avg(req_duration_ms)` of the `sample-http-logs` dataset from the time range of 2 days and time interval of 4 hours.
 
-### Axiom Processing Language resources
-
-For more resources on APL commands, operators, functions, see [Introduction to APL](/apl/introduction) and the guide on [entity names and identifier naming rules](/apl/entities/entity-names).
+```kusto
+['sample-http-logs']
+| where _time > ago(2d)
+| summarize avg(req_duration_ms) by _time=bin(_time, 4h), ['geo.city']
+```
 
 ## Query results
 
-The results view adapts to the query that has been run and so it adds and removes components as necessary to give you the best experience. The components that it can present are explained below.
+The results view adapts to the query. This means that it adds and removes components as necessary to give you the best experience. The components that it can display are explained below.
 
 ### Toolbar
 
@@ -59,25 +149,25 @@ The toolbar is always visible and gives details on the currently running or last
 
 ### Charts
 
-The charts component displays all the visualizations that you have added to the query. Hovering over charts gives extra detail on each result set.
+The charts component displays all the visualizations that you add to the query. Hold the pointer over charts to get extra detail on each result set.
 
-On time series charts, hovering over a specific time shows the same marker on similar charts for easy comparisons.
+On time series charts, holding the pointer over a specific time shows the same marker on similar charts for easy comparisons.
 
 ### Totals table
 
-The totals table is the totals from each of the aggregate functions that have run for the visualizations you have requested.
+The totals table is the totals from each of the aggregate functions for the visualizations you specify.
 
-If the query included group-by clauses, there is a row for each group that’s part of the results. Hovering over a group row highlights the group’s data on time series charts.
+If the query includes group-by clauses, there is a row for each group. Hold the pointer over a group row to highlight the group’s data on time series charts. Select the checkboxes on the left to display data only for the selected rows.
 
 ### Matches
 
-If no visualizations are added to the query, then the matches table lists the raw query results (events).
+If you don’t add visualizations to the query, the matches table lists the raw query results.
 
 ### Event timeline
 
-When you run a query on a dataset without specifying a visualization, Axiom displays an event timeline about the distribution of events across the selected time range. In the event timeline, each bar represents the number of events matched within that specific time interval. Hovering your cursor over a bar reveals a blue line marking the total events and shows when those events occurred in that particular time range.
+When you run a query on a dataset without specifying a visualization, Axiom displays an event timeline about the distribution of events across the selected time range. In the event timeline, each bar represents the number of events matched within that specific time interval. Holding the pointer over a bar reveals a blue line marking the total events and shows when those events occurred in that particular time range.
 
-Click and drag your mouse over the event timeline to focus on the time range. When you do this, the time range for your data automatically updates to match what you selected. And if you change the time range in the **Quick Range** tab, the histogram updates too.
+Drag the pointer over the event timeline to focus on the time range. The time range of your query automatically updates to match what you selected.
 
 ### Table and chart options
 
@@ -89,3 +179,7 @@ To configure view options, click <img src="/doc-assets/icons/options.svg" classN
 - Show raw
 
 To select the fields displayed in the table, click <img src="/doc-assets/icons/brackets-curly.svg" className="inline-icon" alt="Fields list icon" />, and then click the fields in the list that you want to display.
+
+### Compare time periods
+
+When you select a time series visualization, you can use the **Compare period** menu to select a historical time against which to compare the results of your time range. For example, to compare the last hour’s average response time to the same time yesterday, select `1 hr` in the time range menu, and then select `-1 day` from the **Compare period** menu. The dotted line represents results from the base date, and the totals table includes the comparative totals.
