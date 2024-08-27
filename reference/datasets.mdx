@@ -1,0 +1,119 @@
+---
+title: 'Manage datasets'
+description: 'Learn how to manage datasets in Axiom.'
+sidebarTitle: Datasets
+tags:
+    ['axiom documentation', 'documentation', 'axiom', 'dataset']
+---
+
+This reference article explains how to manage datasets in Axiom, including creating new datasets, importing data, and deleting datasets.
+
+## What datasets are
+
+Axiom’s datastore is tuned for the efficient collection, storage, and analysis of timestamped event data. An individual piece of data is an event, and a dataset is a collection of related events. Datasets contain incoming event data.
+
+## Best practices for organizing datasets
+
+Use datasets to organize your data ready for querying based on the event schema. Common ways to separate include environment and service.
+
+### Separate by environment
+
+If you work with data sourced from different environments, separate them into different datasets. For example, use one dataset for events from production and another dataset for events from your development environment.
+
+You might be tempted to use a single `environment` attribute instead, but this risks causing confusion when results show up side-by-side in query results. Although some organizations choose to collect events from all environments in one dataset, they’ll often rely on applying an `environment` filter to all queries, which becomes a chore and is error-prone for newcomers.
+
+### Separate by service
+
+Another common practice is to separate datasets by service. This approach allows for easier access control management.
+
+For example, you might separate engineering services with datasets like `kubernetes`, `billing`, or `vpn`, or include events from your wider company collectors like `product-analytics`, `security-logs`, or `marketing-attribution`.
+
+This separation enables teams to focus on their relevant data and simplifies querying within a specific domain. It also works well with Axiom’s role-based access control feature as you can restrict access to sensitive datasets to those who need it.
+
+<Note>
+While separating by service is beneficial, avoid over-segmentation. Creating a dataset for every microservice or function can lead to unnecessary complexity and management overhead. Instead, group related services or functions into logical datasets that align with your organizational structure or major system components.
+</Note>
+
+### Avoid the “kitchen sink”
+
+While it might seem convenient to send all events to a single dataset, this “kitchen sink” approach is generally not advisable for several reasons:
+- Field count explosion: As you add more event types to a single dataset, the number of fields grows rapidly. This can make it harder to understand the structure of your data and impacts query performance.
+- Query inefficiency: With a large, mixed dataset, queries often require multiple filters to isolate the relevant data. This is tedious, but without those filters, queries take longer to execute since they scan through more irrelevant data.
+- Schema conflicts: Different event types may have conflicting field names or data types, leading to unnecessary type coercion at query time.
+- Access management: With all data in one dataset, it becomes challenging to provide granular access controls. You might end up giving users access to more data than they need.
+
+Don’t create multiple Axiom organizations to separate your data. For example, don’t use a different Axiom org for each deployment. If you’re on the Personal plan, this might go against [Axiom’s fair use policy](https://axiom.co/terms). Instead, separate data by creating a different dataset for each deployment within the same Axiom org.
+
+## Create dataset
+
+To create a dataset, follow these steps:
+
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+2. Click **New dataset**.
+3. Name the dataset, and then click **Add**.
+
+Dataset names are 1 to 128 characters in length. They only contain ASCII alphanumeric characters and the hyphen (`-`) character.
+
+## Import data
+
+You can import data to your dataset in one of the following formats:
+
+- Newline delimited JSON (NDJSON)
+- Arrays of JSON objects
+- CSV
+
+To import data to a dataset, follow these steps:
+
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+2. In the list, click the dataset where you want to import data.
+3. Click <img src="/doc-assets/icons/import.svg" className="inline-icon" alt="Import icon" /> **Import**.
+4. Optional: Specify the timestamp field. This is only necessary if your data contains a timestamp field and it’s different from `_time`.
+5. Upload the file, and then click **Import**.
+
+## Trim dataset
+
+Trimming a dataset deletes all data in the dataset before a date you specify. This can be useful if your dataset contains too many fields or takes up too much storage space, and you want to reduce its size to ensure you stay within the [allowed limits](/reference/field-restrictions).
+
+<Warning>
+Trimming a dataset deletes all data before the specified date.
+</Warning>
+
+To trim a dataset, follow these steps:
+
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+2. In the list, click the dataset that you want to trim.
+3. Click <img src="/doc-assets/icons/trim.svg" className="inline-icon" alt="Trim dataset icon" /> **Trim dataset**.
+4. Specify the date before which you want to delete data.
+5. Enter the name of the dataset, and then click **Trim**.
+
+## Vacuum fields
+
+The data schema of your dataset is defined on read. Axiom continuously creates and updates the data structures during the data ingestion process. At the same time, Axiom only retains data for the [retention period defined by your pricing plan](/reference/field-restrictions). This means that the data schema can contain fields that you ingested into the dataset in the past, but these fields are no longer present in the data currently associated with the dataset. This can be an issue if the number of fields in the dataset exceeds the [allowed limits](/reference/field-restrictions).
+
+In this case, vacuuming fields in a dataset can help you reduce the number of fields associated with a dataset and stay within the allowed limits. Vacuuming fields resets the number of fields associated with a dataset to the fields that occur in events within your retention period. Technically, it wipes the data schema and rebuilds it from the data you currently have in the dataset, which is partly defined by the retention period. For example, you have ingested 500 fields over the last year and 50 fields in the last 95 days, which is your retention period. In this case, before vacuuming, your data schema contains 500 fields. After vacuuming, the dataset only contains 50 fields.
+
+Vacuuming fields doesn’t delete any events from your dataset. To delete events, [trim the dataset](#trim-dataset). You can use trimming and vacuuming in combination. For example, if you accidentally ingested events with fields you didn’t want to send to Axiom, and these events are within your retention period, vacuuming alone doesn’t solve your problem. In this case, first trim the dataset to delete the events with the unintended fields, and then vacuum the fields to rebuild the data schema.
+
+<Note>
+You can only vacuum fields once per day for each dataset.
+</Note>
+
+To vacuum fields, follow these steps:
+
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+2. In the list, click the dataset where you want to vacuum fields.
+3. Click <img src="/doc-assets/icons/vacuum.svg" className="inline-icon" alt="Vacuum fields icon" /> **Vacuum fields**.
+4. Select the checkbox, and then click **Vacuum**.
+
+## Delete dataset
+
+<Warning>
+Deleting a dataset deletes all data contained in the dataset.
+</Warning>
+
+To delete a dataset, follow these steps:
+
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+2. In the list, click the dataset that you want to delete.
+3. Click <img src="/doc-assets/icons/import.svg" className="inline-icon" alt="Delete dataset icon" /> **Delete dataset**.
+4. Enter the name of the dataset, and then click **Delete**.
