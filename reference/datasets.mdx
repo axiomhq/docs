@@ -12,6 +12,12 @@ This reference article explains how to manage datasets in Axiom, including creat
 
 Axiom’s datastore is tuned for the efficient collection, storage, and analysis of timestamped event data. An individual piece of data is an event, and a dataset is a collection of related events. Datasets contain incoming event data.
 
+## Ensure OpenTelemetry traces aren't split across datasets
+
+In order for the trace viewer and other OpenTelemetry features to work, it's important that all spans for a single trace are in the same dataset. See [Send OpenTelemetry data to Axiom](/send-data/opentelemetry) for more information.
+
+If you want to spans for a specific service, you can filter on the `service.name` field.
+
 ## Best practices for organizing datasets
 
 Use datasets to organize your data ready for querying based on the event schema. Common ways to separate include environment and service.
@@ -21,6 +27,19 @@ Use datasets to organize your data ready for querying based on the event schema.
 If you work with data sourced from different environments, separate them into different datasets. For example, use one dataset for events from production and another dataset for events from your development environment.
 
 You might be tempted to use a single `environment` attribute instead, but this risks causing confusion when results show up side-by-side in query results. Although some organizations choose to collect events from all environments in one dataset, they’ll often rely on applying an `environment` filter to all queries, which becomes a chore and is error-prone for newcomers.
+
+### Separate by signal type
+
+For example, for a typical distributed application, you could split your data up as follows:
+
+- One dataset with traces for all services
+- One dataset with application logs for all services
+- One dataset with frontend web vitals
+- One dataset with infrastructure logs
+- One dataset with security logs
+- One dataset with CI logs
+
+If you are looking for some data, you probably know its signal type. But for a distributed system you might not necessarily know in advance which service is responsible for the data you want to query. This approach makes it easy to find the data that you are looking for.
 
 ### Separate by service
 
