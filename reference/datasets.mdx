@@ -12,15 +12,9 @@ This reference article explains how to manage datasets in Axiom, including creat
 
 Axiom’s datastore is tuned for the efficient collection, storage, and analysis of timestamped event data. An individual piece of data is an event, and a dataset is a collection of related events. Datasets contain incoming event data.
 
-## Ensure OpenTelemetry traces aren't split across datasets
-
-In order for the trace viewer and other OpenTelemetry features to work, it's important that all spans for a single trace are in the same dataset. See [Send OpenTelemetry data to Axiom](/send-data/opentelemetry) for more information.
-
-If you want to spans for a specific service, you can filter on the `service.name` field.
-
 ## Best practices for organizing datasets
 
-Use datasets to organize your data ready for querying based on the event schema. Common ways to separate include environment and service.
+Use datasets to organize your data ready for querying based on the event schema. Common ways to separate include environment, signal type, and service.
 
 ### Separate by environment
 
@@ -30,16 +24,16 @@ You might be tempted to use a single `environment` attribute instead, but this r
 
 ### Separate by signal type
 
-For example, for a typical distributed application, you could split your data up as follows:
+If you work with distributed applications, consider splitting your data into different datasets. For example:
 
-- One dataset with traces for all services
-- One dataset with application logs for all services
-- One dataset with frontend web vitals
-- One dataset with infrastructure logs
-- One dataset with security logs
-- One dataset with CI logs
+- A dataset with traces for all services
+- A dataset with application logs for all services
+- A dataset with frontend web vitals
+- A dataset with infrastructure logs
+- A dataset with security logs
+- A dataset with CI logs
 
-If you are looking for some data, you probably know its signal type. But for a distributed system you might not necessarily know in advance which service is responsible for the data you want to query. This approach makes it easy to find the data that you are looking for.
+If you look for a specific event in a distributed system, you are likely to know its signal type but not the related service. By splitting data into different datasets using the approach above, you can find data easily.
 
 ### Separate by service
 
@@ -51,6 +45,8 @@ This separation enables teams to focus on their relevant data and simplifies que
 
 <Note>
 While separating by service is beneficial, avoid over-segmentation. Creating a dataset for every microservice or function can lead to unnecessary complexity and management overhead. Instead, group related services or functions into logical datasets that align with your organizational structure or major system components.
+
+When you work with OpenTelemetry trace data, keep all spans of a given trace in the same dataset. To investigate spans for different services, don’t send them to different datasets. Instead, keep the spans in the same dataset and filter on the `service.name` field. For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
 </Note>
 
 ### Avoid the “kitchen sink”
