@@ -1,0 +1,128 @@
+---
+title: 'Pagination in Axiom API'
+description: 'Learn how to use pagination with the Axiom API.'
+sidebarTitle: Pagination
+tags:
+    ['axiom documentation', 'documentation', 'axiom', 'axiom api', 'rest api', 'rest', 'pagination', 'cursor', 'query']
+---
+
+# Pagination
+
+Specific Axiom API endpoints support pagination. This allows you to efficiently retrieve responses in manageable chunks.
+
+The following endpoints are supported:
+- [Run Query](/restapi/endpoints/queryApl)
+- [Run Query (Legacy)](/restapi/endpoints/queryDataset)
+
+## Pagination mechanism
+
+Axiom uses cursor-based pagination for these endpoints. The parameters and mechanism differ slightly between the new and legacy endpoints:
+
+### Run Query (new)
+
+For the new Run Query endpoint, you need to include the following:
+
+<ParamField query="includeCursor" type="boolean">
+  Set to `true` to enable cursor-based pagination.
+</ParamField>
+
+The `limit` for this endpoint should be included in your APL query string.
+
+### Run Query (Legacy)
+
+For the Legacy Run Query endpoint, use the following parameters:
+
+<ParamField query="limit" type="integer">
+  Optional. A limit on the number of objects to return. Default is **TBD**, minimum is **TBD**, maximum is **TBD**.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Optional. A cursor for use in pagination. Use the cursor string returned in previous responses to fetch the next or previous page of results.
+</ParamField>
+
+Results are returned in chronological order, which can be either ascending or descending based on your query configuration.
+
+## List response format
+
+<ResponseField name="status" type="object">
+  Contains metadata about the response, including pagination information.
+</ResponseField>
+
+<ResponseField name="status.minCursor" type="string">
+  Cursor for the first item in the current page.
+</ResponseField>
+
+<ResponseField name="status.maxCursor" type="string">
+  Cursor for the last item in the current page.
+</ResponseField>
+
+<ResponseField name="status.rowsMatched" type="integer">
+  Total number of rows matching the query.
+</ResponseField>
+
+<ResponseField name="matches" type="array">
+  Contains the list of returned objects.
+</ResponseField>
+
+## Using cursors
+
+For queries with `_time DESC` ordering:
+- Use `minCursor` from the response as the `cursor` in your next request to get the next page.
+- You’ve reached the end when your provided `cursor` matches the `minCursor` in the response.
+
+For queries with `_time ASC` ordering:
+- Use `maxCursor` from the response as the `cursor` in your next request to get the next page.
+- You’ve reached the end when your provided `cursor` matches the `maxCursor` in the response.
+
+## Example
+
+### Run Query
+
+Here’s how you might fetch events using the new Run Query endpoint:
+
+```http
+POST /datasets/_apl
+Content-Type: application/json
+
+{
+  "apl": "dataset | where field == 'value' | sort by _time desc | limit 100",
+  "includeCursor": true
+}
+```
+
+
+### Run Query (Legacy)
+Here’s how you might fetch events using the Legacy Run Query endpoint:
+
+```http
+POST /datasets/{dataset_id}/query
+Content-Type: application/json
+
+{
+  "startTime": "2024-01-01T00:00:00.000Z",
+  "endTime": "2024-01-31T23:59:59.999Z",
+  "limit": 100,
+  "order": [{ "field": "_time", "desc": true }]
+}
+```
+
+Both endpoints will receive a response like this:
+
+```json
+{
+  "status": {
+    "rowsMatched": 2500,
+    "minCursor": "0d3wo7v7e1oii-075a8c41710018b9-0000ecc5",
+    "maxCursor": "0d3wo7v7e1oii-075a8c41710018b9-0000faa3"
+  },
+  "matches": [
+    // ... events ...
+  ]
+}
+```
+
+To get the next page, use the appropriate cursor value in your next request as demonstrated in the "Using cursors" section above.
+
+## Important notes
+
+- While the pagination mechanism is similar for both endpoints, remember to use includeCursor for the new Run Query endpoint and limit/cursor parameters for the Legacy Run Query endpoint.
