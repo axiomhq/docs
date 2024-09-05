@@ -6,31 +6,29 @@ tags:
     ['axiom documentation', 'documentation', 'axiom', 'axiom api', 'rest api', 'rest', 'pagination', 'cursor', 'query']
 ---
 
-# Pagination
+Pagination allows you to retrieve responses in manageable chunks.
 
-Specific Axiom API endpoints support pagination. This allows you to efficiently retrieve responses in manageable chunks.
-
-The following endpoints are supported:
+You can use pagination for the following endpoints:
 - [Run Query](/restapi/endpoints/queryApl)
 - [Run Query (Legacy)](/restapi/endpoints/queryDataset)
 
 ## Pagination mechanism
 
-Axiom uses cursor-based pagination for these endpoints. The parameters and mechanism differ slightly between the new and legacy endpoints:
+Axiom uses cursor-based pagination for these endpoints. The parameters and mechanisms differ between the current and legacy endpoints.
 
-### Run Query (new)
+### Run Query
 
-For the new Run Query endpoint, you need to include the following:
+For the Run Query endpoint, add the `includeCursor` parameter to your API request and set its value to true.
 
 <ParamField query="includeCursor" type="boolean">
   Set to `true` to enable cursor-based pagination.
 </ParamField>
 
-The `limit` for this endpoint should be included in your APL query string.
+Include the [`limit` operator](/apl/tabular-operators/limit-operator) in the APL query of your API request. The argument of this operator determines the number of events to display per page.
 
 ### Run Query (Legacy)
 
-For the Legacy Run Query endpoint, use the following parameters:
+For the legacy Run Query endpoint, add the `cursor` and `limit` parameters to your API request.
 
 <ParamField query="limit" type="integer">
   Optional. A limit on the number of objects to return. Default is **TBD**, minimum is **TBD**, maximum is **TBD**.
@@ -40,12 +38,12 @@ For the Legacy Run Query endpoint, use the following parameters:
   Optional. A cursor for use in pagination. Use the cursor string returned in previous responses to fetch the next or previous page of results.
 </ParamField>
 
-Results are returned in chronological order, which can be either ascending or descending based on your query configuration.
+Axiom returns results in chronological order. Specify ascending or descending order in your API query.
 
 ## List response format
 
 <ResponseField name="status" type="object">
-  Contains metadata about the response, including pagination information.
+  Contains metadata about the response including pagination information.
 </ResponseField>
 
 <ResponseField name="status.minCursor" type="string">
@@ -64,49 +62,41 @@ Results are returned in chronological order, which can be either ascending or de
   Contains the list of returned objects.
 </ResponseField>
 
-## Using cursors
+## Go to next page
 
-For queries with `_time DESC` ordering:
-- Use `minCursor` from the response as the `cursor` in your next request to get the next page.
-- You’ve reached the end when your provided `cursor` matches the `minCursor` in the response.
+For queries with descending order (`_time DESC`), use `minCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `minCursor` in the response.
 
-For queries with `_time ASC` ordering:
-- Use `maxCursor` from the response as the `cursor` in your next request to get the next page.
-- You’ve reached the end when your provided `cursor` matches the `maxCursor` in the response.
+For queries with ascending order (`_time ASC`), use `maxCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `maxCursor` in the response.
 
-## Example
+## Examples
 
-### Run Query
+### Example request Run Query
 
-Here’s how you might fetch events using the new Run Query endpoint:
-
-```http
-POST /datasets/_apl
-Content-Type: application/json
-
-{
-  "apl": "dataset | where field == 'value' | sort by _time desc | limit 100",
-  "includeCursor": true
-}
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
+-H 'Authorization: Bearer API_TOKEN' \
+-H 'Content-Type: application/json' \
+-d '{
+    "apl": "dataset | where field == 'value' | sort by _time desc | limit 100",
+    "includeCursor": true
+  }'
 ```
 
+### Example request Run Query (Legacy)
 
-### Run Query (Legacy)
-Here’s how you might fetch events using the Legacy Run Query endpoint:
-
-```http
-POST /datasets/{dataset_id}/query
-Content-Type: application/json
-
-{
-  "startTime": "2024-01-01T00:00:00.000Z",
-  "endTime": "2024-01-31T23:59:59.999Z",
-  "limit": 100,
-  "order": [{ "field": "_time", "desc": true }]
-}
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_id}/query' \
+-H 'Authorization: Bearer API_TOKEN' \
+-H 'Content-Type: application/json' \
+-d '{
+    "startTime": "2024-01-01T00:00:00.000Z",
+    "endTime": "2024-01-31T23:59:59.999Z",
+    "limit": 100,
+    "order": [{ "field": "_time", "desc": true }]
+  }'
 ```
 
-Both endpoints will receive a response like this:
+### Example response
 
 ```json
 {
@@ -121,8 +111,35 @@ Both endpoints will receive a response like this:
 }
 ```
 
-To get the next page, use the appropriate cursor value in your next request as demonstrated in the "Using cursors" section above.
+### Example request to go to next page
 
-## Important notes
+To go to the next page, use the appropriate cursor value in your next request. For more information, see [Go to next page](#go-to-next-page).
 
-- While the pagination mechanism is similar for both endpoints, remember to use includeCursor for the new Run Query endpoint and limit/cursor parameters for the Legacy Run Query endpoint.
+
+Example request to go to next page for Run Query:
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl' \
+-H 'Authorization: Bearer API_TOKEN' \
+-H 'Content-Type: application/json' \
+-d '{
+    "apl": "dataset | where field == 'value' | sort by _time desc | limit 100",
+    "includeCursor": true,
+    "cursor": "0d3wo7v7e1oii-075a8c41710018b9-0000ecc5"
+  }'
+```
+
+Example request to go to next page Run Query (Legacy):
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_id}/query' \
+-H 'Authorization: Bearer API_TOKEN' \
+-H 'Content-Type: application/json' \
+-d '{
+    "startTime": "2024-01-01T00:00:00.000Z",
+    "endTime": "2024-01-31T23:59:59.999Z",
+    "limit": 100,
+    "order": [{ "field": "_time", "desc": true }],
+    "cursor": "0d3wo7v7e1oii-075a8c41710018b9-0000ecc5"
+  }'
+```
