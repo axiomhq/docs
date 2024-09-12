@@ -1,0 +1,138 @@
+---
+title: 'Pagination in Axiom API'
+description: 'Learn how to use pagination with the Axiom API.'
+sidebarTitle: Pagination
+tags:
+    ['axiom documentation', 'documentation', 'axiom', 'axiom api', 'rest api', 'rest', 'pagination', 'cursor', 'query']
+---
+
+Pagination allows you to retrieve responses in manageable chunks.
+
+You can use pagination for the following endpoints:
+- [Run Query](/restapi/endpoints/queryApl)
+- [Run Query (Legacy)](/restapi/endpoints/queryDataset)
+
+## Pagination mechanism
+
+Axiom uses cursor-based pagination for these endpoints. The parameters and mechanisms differ between the current and legacy endpoints.
+
+### Run Query
+
+To use pagination with the Run Query endpoint:
+- Include the [`limit` operator](/apl/tabular-operators/limit-operator) in the APL query of your API request. The argument of this operator determines the number of events to display per page.
+- Use `sort by _time asc` or `sort by _time desc` in the APL query. This returns the results in ascending or descending chronological order. For more information, see [sort operator](/apl/tabular-operators/sort-operator).
+
+### Run Query (Legacy)
+
+To use pagination with the legacy Run Query endpoint:
+- Add the `limit` parameter to the body of your API request. The value of this parameter determines the number of events to display per page.
+- Add the `order` parameter to the body of your API request. In the value of this parameter, order the results by time in either ascending or descending chronological order. For example, `[{ "field": "_time", "desc": true }]`. For more information, see [order operator](/apl/tabular-operators/order-operator).
+
+## Response format
+
+<ResponseField name="status" type="object">
+  Contains metadata about the response including pagination information.
+</ResponseField>
+
+<ResponseField name="status.minCursor" type="string">
+  Cursor for the first item in the current page.
+</ResponseField>
+
+<ResponseField name="status.maxCursor" type="string">
+  Cursor for the last item in the current page.
+</ResponseField>
+
+<ResponseField name="status.rowsMatched" type="integer">
+  Total number of rows matching the query.
+</ResponseField>
+
+<ResponseField name="matches" type="array">
+  Contains the list of returned objects.
+</ResponseField>
+
+## Page through the result set
+
+To page through the result set, add the `cursor` parameter to the body of your API request.
+
+<ParamField query="cursor" type="string">
+  Optional. A cursor for use in pagination. Use the cursor string returned in previous responses to fetch the next or previous page of results.
+</ParamField>
+
+The `minCursor` and `maxCursor` fields in the response are boundaries that help you page through the result set.
+
+For queries with descending order (`_time DESC`), use `minCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `minCursor` in the response.
+
+For queries with ascending order (`_time ASC`), use `maxCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `maxCursor` in the response.
+
+## Examples
+
+### Example request Run Query
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
+-H 'Authorization: Bearer API_TOKEN' \
+-H 'Content-Type: application/json' \
+-d '{
+    "apl": "dataset | sort by _time desc | limit 100"
+  }'
+```
+
+### Example request Run Query (Legacy)
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_id}/query' \
+-H 'Authorization: Bearer API_TOKEN' \
+-H 'Content-Type: application/json' \
+-d '{
+    "startTime": "2024-01-01T00:00:00.000Z",
+    "endTime": "2024-01-31T23:59:59.999Z",
+    "limit": 100,
+    "order": [{ "field": "_time", "desc": true }]
+  }'
+```
+
+### Example response
+
+```json
+{
+  "status": {
+    "rowsMatched": 2500,
+    "minCursor": "0d3wo7v7e1oii-075a8c41710018b9-0000ecc5",
+    "maxCursor": "0d3wo7v7e1oii-075a8c41710018b9-0000faa3"
+  },
+  "matches": [
+    // ... events ...
+  ]
+}
+```
+
+### Example request to page through the result set
+
+To page through the result set, use the appropriate cursor value in your next request. For more information, see [Page through the result set](#page-through-the-result-set).
+
+Example request to go to next page for Run Query:
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl' \
+-H 'Authorization: Bearer API_TOKEN' \
+-H 'Content-Type: application/json' \
+-d '{
+    "apl": "dataset | sort by _time desc | limit 100",
+    "cursor": "0d3wo7v7e1oii-075a8c41710018b9-0000ecc5"
+  }'
+```
+
+Example request to go to next page for Run Query (Legacy):
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_id}/query' \
+-H 'Authorization: Bearer API_TOKEN' \
+-H 'Content-Type: application/json' \
+-d '{
+    "startTime": "2024-01-01T00:00:00.000Z",
+    "endTime": "2024-01-31T23:59:59.999Z",
+    "limit": 100,
+    "order": [{ "field": "_time", "desc": true }],
+    "cursor": "0d3wo7v7e1oii-075a8c41710018b9-0000ecc5"
+  }'
+```
