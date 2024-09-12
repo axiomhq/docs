@@ -1,0 +1,61 @@
+---
+title: 'Map fields'
+description: 'Learn about the purpose of map fields, and how to ingest and query them.'
+sidebarTitle: Map Fields
+tags: ['axiom documentation', 'documentation', 'axiom', 'map fields', 'object fields', 'data types']
+---
+
+TODO: is this the right location for this page? i could also see it after the "Virtual Fields" page (Understanding Data => Query => Map Fields)
+
+Map fields are a special type of field that hold a collection of nested key-value pairs within a single field. They are useful for storing and manipulating structured data, such as JSON objects or XML elements.
+
+## Why
+
+The purpose of map fields is allow storing additional attributes without adding more fields, particularly in situations where the shape of your data is unpredictable, such as additional attributes added by OpenTelemetry instrumentation. This can be useful to prevent you from reaching the field limit of a dataset, and to improve query performance.
+
+## `attributes.custom` in Tracing Datasets
+
+If you are ingesting tracing data using the [OTLP/HTTP endpoint for traces and logs](/send-data/opentelemetry), you may have noticed that some attributes are moved into the `attributes.custom` map field.
+
+Any instrumentation library can add arbitrary attributes to spans, and in many cases a single piece of auto-instrumentation may add dozens or even hundreds of attributes. For a large system with a wide range of instrumentation, this may add up to thousands of attributes. 
+
+In order to keep the dimensionality of your dataset under control, Axiom preserves all attributes that are described in the [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/general/trace/), and puts everything else into the `attributes.custom` map field.
+
+## Querying map fields
+
+To access a field in APL, you might do something like:
+
+```kusto
+['otel-demo-traces']
+| where ['attributes.http.url'] == 'http://opentelemetry-demo-frontendproxy:8080/api/cart'
+```
+[Run in playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7b%22apl%22%3a%22%5b%27otel-demo-traces%27%5d%5cn%7c%20where%20%5b%27attributes.http.url%27%5d%20%3d%3d%20%27http%3a%2f%2fopentelemetry-demo-frontendproxy%3a8080%2fapi%2fcart%27%22%2c%22queryOptions%22%3a%7b%22quickRange%22%3a%2230d%22%7d%7d)
+
+To access `http.protocol` inside the `attributes.custom` map field, the syntax is `['<map_field_name>']['<index_into_map_field>']` instead:
+
+```kusto
+['otel-demo-traces']
+| where ['attributes.custom']['http.protocol'] == 'HTTP/1.1'
+```
+[Run in playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7b%22apl%22%3a%22%5b%27otel-demo-traces%27%5d%5cn%7c%20where%20%5b%27attributes.custom%27%5d%5b%27http.protocol%27%5d%20%3d%3d%20%27HTTP%2f1.1%27%22%2c%22queryOptions%22%3a%7b%22quickRange%22%3a%2230d%22%7d%7d)
+
+## Ingesting map fields
+
+TODO: mhr3 suggested not to tell customers about X-Axiom-Object-Fields, need to make a decision about that
+
+If you would like to manually create a map field in order to prevent unexpected json payload shape from creating new fields in your dataset, you can use the `X-Axiom-Object-Fields` header. See an example request below:
+
+```
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/$DATASET_NAME/ingest' \
+  -H 'Authorization: $API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -H 'X-Axiom-Object-Fields: object' \
+  -d '[
+  {
+    "normal": { "foo": { "bar": "baz" }, { "biz": "qux" } },
+    "object": { "foo": { "bar": "baz" }, { "biz": "qux" } },
+  }
+]'
+```
+
+This will create the fields `normal.foo.bar`, `normal.foo.biz`, and `object`.
