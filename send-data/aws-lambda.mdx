@@ -11,91 +11,151 @@ Use Axiom Lambda Extension to send logs and platform events of your Lambda funct
 With the Axiom Lambda extension, you can forget about the extra configuration of CloudWatch and subscription filters.
 
 import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import Replacement from "/snippets/standard-replacement.mdx"
 
 <Prerequisites />
 {/* list separator */}
 - [Create an account on AWS Cloud](https://signin.aws.amazon.com/signup?request_type=register).
 
+## Setup
+
+1. [Install the Axiom Lambda extension](#installation).
+1. Ensure everything works properly in Axiom.
+1. [Turn off the permissions for CloudWatch](#turn-off-cloudwatch-logging).
+
+The last step is important because after you install the Axiom Lambda extension, the Lambda service still sends logs to CloudWatch Logs. You need to manually turn off CloudWatch logging.
+
 ## Installation
 
-You can install and configure the Axiom Lambda Extension using one of these methods:
+To install the Axiom Lambda Extension, choose one of the following methods:
 
-* By using [AWS CLI](https://github.com/axiomhq/axiom-lambda-extension#quickstart);
-* By using [Terraform](https://github.com/axiomhq/axiom-lambda-extension#terraform-example);
-* Via the AWS Lambda function UI.
+- [AWS CLI](#install-with-aws-cli)
+- [Terraform](#install-with-terraform)
+- [AWS Lambda function UI](#install-with-aws-lambda-function-ui)
 
-### Configure the Axiom Lambda Extension using AWS CLI
+### Install with AWS CLI
 
-To set up the extension via the AWS CLI, follow the instructions below:
-
-- Add the extension as a layer with the AWS CLI:
+Add the extension as a layer with the AWS CLI:
 
 ```bash
 aws lambda update-function-configuration --function-name my-function \
-    --layers arn:aws:lambda:<AWS_REGION>:694952825951:layer:axiom-extension-<ARCH>:<VERSION>
+    --layers arn:aws:lambda:AWS_REGION:694952825951:layer:axiom-extension-ARCH:VERSION
 ```
 
-### Add a Lambda function layer
+- Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
+- Replace `ARCH` with the system architecture type. For example, `arm64`.
+- Replace `VERSION` with the latest version number specified on the [Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
 
-To configure the extension via the AWS Lambda function UI, follow the instructions below:
+You have installed the Axiom Lambda Extension. Go to the Axiom UI and ensure your dataset receives events properly.
 
-Lambda layers contain dependencies that you can use with your Lambda functions.
+### Install with Terraform
 
-1. Navigate to your AWS Lambda development environment -> the **Layers** section and click **Add a layer**:
+Choose one of the following to install the Axiom Lambda Extension with Terraform:
 
-<Frame caption="Add new layer">
-  <img src="/doc-assets/shots/add-new-layer.png" alt="Add new layer" />
-</Frame>
+- Use plain Terraform code. For example:
 
-2. On the **Choose a layer** page, check the **Specify an ARN** box and specify your **ARN** (Amazon Resource Name) as shown in the example below:
+    ```tf
+    resource "aws_lambda_function" "test_lambda" {
+      filename      = "lambda_function_payload.zip"
+      function_name = "lambda_function_name"
+      role          = aws_iam_role.iam_for_lambda.arn
+      handler       = "index.test"
+      runtime       = "nodejs14.x"
 
-```bash
+      ephemeral_storage {
+        size = 10240 # Min 512 MB and the Max 10240 MB
+      }
 
-arn:aws:lambda:<AWS_REGION>:694952825951:layer:axiom-extension-<ARCH>:<VERSION>
+      environment {
+        variables = {
+          AXIOM_TOKEN   = "API_TOKEN"
+          AXIOM_DATASET = "DATASET_NAME"
+        }
+      }
 
-```
+      layers = [
+        "arn:aws:lambda:AWS_REGION:694952825951:layer:axiom-extension-ARCH:VERSION"
+      ]
+    }
+    ```
 
-* `AWS_REGION`: Specify the AWS Region to send the request to. For more detail, refer to the **All Lambda Layers** table in the [Axiom Lambda Extension Readme](https://github.com/axiomhq/axiom-lambda-extension#quickstart).
-* `ARCH`: Specify the system architecture type. For more detail, refer to the **All Lambda Layers** table in the [Axiom Lambda Extension Readme](https://github.com/axiomhq/axiom-lambda-extension#quickstart).
-* `VERSION`: Specify the **latest** version number mentioned on the [Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `3`.
+    - Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
+    - Replace `ARCH` with the system architecture type. For example, `arm64`.
+    - Replace `VERSION` with the latest version number specified on the [Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
+    {/* list separator */}
+    <Replacement />
 
-3. Click **Verify**: Several fields with additional information will appear under the ARN line.
+- Use the [AWS Lambda Terraform module](https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest). For example:
 
-4. Click **Add**: A new layer is now added to your Lambda function.
+    ```tf
+    module "lambda_function" {
+      source = "terraform-aws-modules/lambda/aws"
 
-### Add environment variables
+      function_name = "my-lambda1"
+      description   = "My awesome lambda function"
+      handler       = "index.lambda_handler"
+      runtime       = "python3.8"
 
-Add your dataset name and an API token to the list of environment variables:
+      source_path = "../src/lambda-function1"
 
-1. In your AWS Lambda function UI, navigate to **Configuration** -> **Environment variables** and click **Edit**:
+      layers = [
+        "arn:aws:lambda:AWS_REGION:694952825951:layer:axiom-extension-ARCH:VERSION"
+      ]
 
-<Frame caption="Add environment variables">
-  <img src="/doc-assets/shots/add-env-vars.png" alt="Add environment variables" />
-</Frame>
+      environment_variables = {
+        AXIOM_TOKEN   = "API_TOKEN"
+        AXIOM_DATASET = "DATASET_NAME"
+      }
+    }
+    ```
 
-2. On the **Edit environment variables** page, click **Add environment variable** to specify your dataset name and an API token:
+    - Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
+    - Replace `ARCH` with the system architecture type. For example, `arm64`.
+    - Replace `VERSION` with the latest version number specified on the [Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
+    {/* list separator */}
+    <Replacement />
 
-<Frame caption="Added environment variables">
-  <img src="/doc-assets/shots/added-env-vars.png" alt="Added environment variables" />
-</Frame>
+You have installed the Axiom Lambda Extension. Go to the Axiom UI and ensure your dataset receives events properly.
 
+### Install with AWS Lambda function UI
+
+First, add a layer to your Lambda function:
+
+1. In the AWS Lambda function UI, go to the **Layers** section, and then click **Add a layer**.
+1. Select **Specify an ARN** and enter your **ARN** (Amazon Resource Name) in the following way:
+
+    ```bash
+    arn:aws:lambda:AWS_REGION:694952825951:layer:axiom-extension-ARCH:VERSION
+    ```
+
+    - Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
+    - Replace `ARCH` with the system architecture type. For example, `arm64`.
+    - Replace `VERSION` with the latest version number specified on the [Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
+
+1. Click **Verify**.
+1. Click **Add**.
+
+Second, add the Axiom dataset name and API token to the list of environment variables:
+
+1. In the AWS Lambda function UI, go to **Configuration > Environment variables**, and then click **Edit**.
+1. Click **Add environment variable** and enter the Axiom dataset name API token.
 3. Click **Save** to add the variables.
 
-Now when the Axiom Lambda extension is hooked up, navigate back to the Axiom UI and see the logs coming directly from your Lambda function!
+You have installed the Axiom Lambda Extension. Go to the Axiom UI and ensure your dataset receives events properly.
 
-## Disable CloudWatch logging
+## Turn off CloudWatch logging
 
-After the Axiom Lambda extension is installed, the Lambda service will still send logs to CloudWatch Logs since AWS automatically creates an access role for this by default.
-We recommend that you install the Axiom Lambda extension first, then make sure it is working properly in Axiom, and after that remove the access role for CloudWatch.
+After you install the Axiom Lambda extension, the Lambda service still sends logs to CloudWatch Logs. You need to manually turn off CloudWatch logging.
 
-To disable CloudWatch logging, deny the Lambda function access to CloudWatch by editing the permissions:
+To turn off CloudWatch logging, deny the Lambda function access to CloudWatch by editing the permissions:
 
-1. In your AWS Lambda function UI, navigate to **Configuration** -> **Permissions**;
+1. In the AWS Lambda function UI, go to **Configuration > Permissions**.
+1. In the **Execution role** section, click the role related to CloudWatch Logs.
+1. In the **Permissions** tab, select the role and click **Remove** to deny access to CloudWatch Logs.
 
-2. In the **Execution role** section, click the role related to CloudWatch Logs;
+## Troubleshooting
 
-3. On the opened **Permissions** tab, select the role and click **Remove** to deny access to CloudWatch Logs.
+- Ensure the Axiom API token has permission to ingest data into the dataset.
+- Check the function logs on the AWS console. The Axiom Lambda Extension logs any errors with setup or ingest.
 
-<Frame caption="Disable CloudWatch logging">
-  <img src="/doc-assets/shots/disable-cw-logs.png" alt="Disable CloudWatch logging" />
-</Frame>
+For testing purposes, set the `PANIC_ON_API_ERR` environment variable to `true`. This means that the Axiom Lambda Extension crashes if it can’t connect to Axiom.
