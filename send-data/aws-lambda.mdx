@@ -52,74 +52,80 @@ You have installed the Axiom Lambda Extension. Go to the Axiom UI and ensure you
 
 Choose one of the following to install the Axiom Lambda Extension with Terraform:
 
-- Use plain Terraform code. For example:
+- Use plain Terraform code
 
-    ```tf
-    resource "aws_lambda_function" "test_lambda" {
-      filename      = "lambda_function_payload.zip"
-      function_name = "lambda_function_name"
-      role          = aws_iam_role.iam_for_lambda.arn
-      handler       = "index.test"
-      runtime       = "nodejs14.x"
+<Accordion title="Example with plain Terraform code">
+```tf
+resource "aws_lambda_function" "test_lambda" {
+  filename      = "lambda_function_payload.zip"
+  function_name = "lambda_function_name"
+  role          = aws_iam_role.iam_for_lambda.arn
+  handler       = "index.test"
+  runtime       = "nodejs14.x"
 
-      ephemeral_storage {
-        size = 10240 # Min 512 MB and the Max 10240 MB
-      }
+  ephemeral_storage {
+    size = 10240 # Min 512 MB and the Max 10240 MB
+  }
 
-      environment {
-        variables = {
-          AXIOM_TOKEN   = "API_TOKEN"
-          AXIOM_DATASET = "DATASET_NAME"
-        }
-      }
-
-      layers = [
-        "arn:aws:lambda:AWS_REGION:694952825951:layer:axiom-extension-ARCH:VERSION"
-      ]
+  environment {
+    variables = {
+      AXIOM_TOKEN   = "API_TOKEN"
+      AXIOM_DATASET = "DATASET_NAME"
     }
-    ```
+  }
 
-    - Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
-    - Replace `ARCH` with the system architecture type. For example, `arm64`.
-    - Replace `VERSION` with the latest version number specified on the [Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
-    {/* list separator */}
-    <Replacement />
+  layers = [
+    "arn:aws:lambda:AWS_REGION:694952825951:layer:axiom-extension-ARCH:VERSION"
+  ]
+}
+```
 
-- Use the [AWS Lambda Terraform module](https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest). For example:
+- Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
+- Replace `ARCH` with the system architecture type. For example, `arm64`.
+- Replace `VERSION` with the latest version number specified on the [Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
+{/* list separator */}
+<Replacement />
+</Accordion>
 
-    ```tf
-    module "lambda_function" {
-      source = "terraform-aws-modules/lambda/aws"
+- Use the [AWS Lambda Terraform module](https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest)
 
-      function_name = "my-lambda1"
-      description   = "My awesome lambda function"
-      handler       = "index.lambda_handler"
-      runtime       = "python3.8"
+<Accordion title="Example with AWS Lambda Terraform module">
+```tf
+module "lambda_function" {
+  source = "terraform-aws-modules/lambda/aws"
 
-      source_path = "../src/lambda-function1"
+  function_name = "my-lambda1"
+  description   = "My awesome lambda function"
+  handler       = "index.lambda_handler"
+  runtime       = "python3.8"
 
-      layers = [
-        "arn:aws:lambda:AWS_REGION:694952825951:layer:axiom-extension-ARCH:VERSION"
-      ]
+  source_path = "../src/lambda-function1"
 
-      environment_variables = {
-        AXIOM_TOKEN   = "API_TOKEN"
-        AXIOM_DATASET = "DATASET_NAME"
-      }
-    }
-    ```
+  layers = [
+    "arn:aws:lambda:AWS_REGION:694952825951:layer:axiom-extension-ARCH:VERSION"
+  ]
 
-    - Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
-    - Replace `ARCH` with the system architecture type. For example, `arm64`.
-    - Replace `VERSION` with the latest version number specified on the [Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
-    {/* list separator */}
-    <Replacement />
+  environment_variables = {
+    AXIOM_TOKEN   = "API_TOKEN"
+    AXIOM_DATASET = "DATASET_NAME"
+  }
+}
+```
+
+- Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
+- Replace `ARCH` with the system architecture type. For example, `arm64`.
+- Replace `VERSION` with the latest version number specified on the [Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
+{/* list separator */}
+<Replacement />
+</Accordion>
 
 You have installed the Axiom Lambda Extension. Go to the Axiom UI and ensure your dataset receives events properly.
 
 ### Install with AWS Lambda function UI
 
-First, add a layer to your Lambda function:
+<Steps>
+<Step>
+Add a layer to your Lambda function:
 
 1. In the AWS Lambda function UI, go to the **Layers** section, and then click **Add a layer**.
 1. Select **Specify an ARN** and enter your **ARN** (Amazon Resource Name) in the following way:
@@ -134,12 +140,15 @@ First, add a layer to your Lambda function:
 
 1. Click **Verify**.
 1. Click **Add**.
+</Step>
+<Step>
+  Add the Axiom dataset name and API token to the list of environment variables:
 
-Second, add the Axiom dataset name and API token to the list of environment variables:
-
-1. In the AWS Lambda function UI, go to **Configuration > Environment variables**, and then click **Edit**.
-1. Click **Add environment variable** and enter the Axiom dataset name API token.
-3. Click **Save** to add the variables.
+  1. In the AWS Lambda function UI, go to **Configuration > Environment variables**, and then click **Edit**.
+  1. Click **Add environment variable** and enter the Axiom dataset name API token.
+  3. Click **Save** to add the variables.
+</Step>
+</Steps>
 
 You have installed the Axiom Lambda Extension. Go to the Axiom UI and ensure your dataset receives events properly.
 
@@ -151,7 +160,7 @@ To turn off CloudWatch logging, deny the Lambda function access to CloudWatch by
 
 1. In the AWS Lambda function UI, go to **Configuration > Permissions**.
 1. In the **Execution role** section, click the role related to CloudWatch Logs.
-1. In the **Permissions** tab, select the role and click **Remove** to deny access to CloudWatch Logs.
+1. In the **Permissions** tab, select the role, and then click **Remove**.
 
 ## Troubleshooting
 
