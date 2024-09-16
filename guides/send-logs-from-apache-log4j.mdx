@@ -6,158 +6,149 @@ tags:
     ['guides', 'apache', 'log4j']
 ---
 
-Log4j is a Java logging framework developed by the Apache Software Foundation and widely used in the Java community. This guide covers how to get started with Log4j, configure it to forward log messages to Fluentd, and send logs to Axiom.
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import Replacement from "/snippets/standard-replacement.mdx"
 
-## Prerequisites
+Log4j is a Java logging framework developed by the Apache Software Foundation and widely used in the Java community. This page covers how to get started with Log4j, configure it to forward log messages to Fluentd, and send logs to Axiom.
 
-Before beginning, ensure you have the following:
-
+<Prerequisites />
+{/* list separator */}
 - [JDK 11](https://www.oracle.com/java/technologies/java-se-glance.html) or later
 - [Maven installed](https://maven.apache.org/download.cgi)
 - [FluentD](https://www.fluentd.org/download)
 - [Docker](https://docs.docker.com/get-docker/) (for running Fluentd)
-- [Create an Axiom account](https://app.axiom.co/).
-- [Create a dataset](https://axiom.co/docs/reference/settings#data) where you want to send data.
-- [Create an API token in Axiom with permissions to ingest and query data](https://axiom.co/docs/reference/tokens).
 
-## Get started with Log4j
+## Configure Log4j
 
-Log4j is a flexible and powerful logging framework for Java applications. To use Log4j in your project, you need to add the necessary dependencies to your `pom.xml` file. The dependencies required for Log4j include `log4j-core`, `log4j-api`, and `log4j-slf4j2-impl` for logging capability, and `jackson-databind` for JSON support.
+Log4j is a flexible and powerful logging framework for Java applications. To use Log4j in your project, add the necessary dependencies to your `pom.xml` file. The dependencies required for Log4j include `log4j-core`, `log4j-api`, and `log4j-slf4j2-impl` for logging capability, and `jackson-databind` for JSON support.
 
-First, create a new Maven project:
+1. Create a new Maven project:
 
-```bash
-mvn archetype:generate -DgroupId=com.example -DartifactId=log4j-axiom-test -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+    ```bash
+    mvn archetype:generate -DgroupId=com.example -DartifactId=log4j-axiom-test -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
 
-cd log4j-axiom-test
-```
+    cd log4j-axiom-test
+    ```
 
-Open the `pom.xml` file and replace its contents with the following:
+1. Open the `pom.xml` file and replace its contents with the following:
 
-```xml
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.example</groupId>
-  <artifactId>log4j-axiom-test</artifactId>
-  <packaging>jar</packaging>
-  <version>1.0-SNAPSHOT</version>
-  <name>log4j-axiom-test</name>
-  <url>http://maven.apache.org</url>
+    ```xml
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+      <modelVersion>4.0.0</modelVersion>
+      <groupId>com.example</groupId>
+      <artifactId>log4j-axiom-test</artifactId>
+      <packaging>jar</packaging>
+      <version>1.0-SNAPSHOT</version>
+      <name>log4j-axiom-test</name>
+      <url>http://maven.apache.org</url>
 
-  <properties>
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
-    <log4j.version>2.19.0</log4j.version>
-  </properties>
+      <properties>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <log4j.version>2.19.0</log4j.version>
+      </properties>
 
-  <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.12</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-api</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j2-impl</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <version>2.13.0</version>
-    </dependency>
-  </dependencies>
+      <dependencies>
+        <dependency>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+          <version>4.12</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+          <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-api</artifactId>
+          <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-slf4j2-impl</artifactId>
+          <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+          <version>2.13.0</version>
+        </dependency>
+      </dependencies>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.example.App</mainClass>
-                </transformer>
-              </transformers>
-              <createDependencyReducedPom>false</createDependencyReducedPom>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-</project>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.2.4</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <transformers>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                      <mainClass>com.example.App</mainClass>
+                    </transformer>
+                  </transformers>
+                  <createDependencyReducedPom>false</createDependencyReducedPom>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </project>
+    ```
 
-```
+    This `pom.xml` file includes the necessary Log4j dependencies and configures the Maven Shade plugin to create an executable JAR file.
 
-This `pom.xml` file includes the necessary Log4j dependencies and configures the Maven Shade plugin to create an executable JAR file.
+1. Create a new file named `log4j2.xml` in your root directory and add the following content:
 
-## Configure the log4j2.xml file
+    ```xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <Configuration status="WARN">
+      <Appenders>
+        <Socket name="Socket" host="127.0.0.1" port="24224" protocol="TCP">
+          <JsonLayout complete="false" compact="true" eventEol="true" properties="true" includeTimeMillis="true"/>
+        </Socket>
+        <Console name="Console" target="SYSTEM_OUT">
+          <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+      </Appenders>
+      <Loggers>
+        <Root level="info">
+          <AppenderRef ref="Socket"/>
+          <AppenderRef ref="Console"/>
+        </Root>
+      </Loggers>
+    </Configuration>
+    ```
 
-Log4j uses an XML configuration file to define its behavior. Create a new file named `log4j2.xml` in the root of your directory and add the following content:
+    This configuration sets up two appenders:
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN">
-  <Appenders>
-    <Socket name="Socket" host="127.0.0.1" port="24224" protocol="TCP">
-      <JsonLayout complete="false" compact="true" eventEol="true" properties="true" includeTimeMillis="true"/>
-    </Socket>
-    <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-    </Console>
-  </Appenders>
-  <Loggers>
-    <Root level="info">
-      <AppenderRef ref="Socket"/>
-      <AppenderRef ref="Console"/>
-    </Root>
-  </Loggers>
-</Configuration>
-```
+    - A Socket appender that sends logs to Fluentd, running on `localhost:24224`. Is uses JSON format for the log messages, which makes it easier to parse and analyze the logs later in Axiom.
+    - A Console appender that prints logs to the standard output,
 
-This configuration sets up two appenders:
+## Set log level
 
-1. A Socket appender that sends logs to Fluentd (running on localhost:24224)
-2. A Console appender that prints logs to the standard output
+Log4j supports various log levels, allowing you to control the verbosity of your logs. The main log levels, in order of increasing severity, are the following:
 
-The Socket appender uses JSON format for the log messages, which makes it easier to parse and analyze the logs later in Axiom.
+- `TRACE`: Fine-grained information for debugging.
+- `DEBUG`: General debugging information.
+- `INFO`: Informational messages.
+- `WARN`: Indications of potential problems.
+- `ERROR`: Error events that might still allow the app to continue running.
+- `FATAL`: Severe error events that might lead the app to cancel.
 
-## Get started with log levels
+In the configuration above, the root logger level is set to INFO which means it logs messages at INFO level and above (WARN, ERROR, and FATAL).
 
-Log4j supports various log levels, allowing you to control the verbosity of your logs. The main log levels, in order of increasing severity, are:
-
-- `TRACE`: Fine-grained information for debugging
-- `DEBUG`: General debugging information
-- `INFO`: Informational messages
-- `WARN`: Indications of potential problems
-- `ERROR`: Error events that might still allow the app to continue running
-- `FATAL`: Severe error events that might lead the app to cancel
-
-In this configuration, the root logger level is set to INFO, which means it logs messages at INFO level and above (WARN, ERROR, and FATAL).
-
-## Create the Java class
-
-Create a simple Java class to demonstrate these log levels. Create a new file named `App.java` in the `src/main/java/com/example` directory:
+To set the log level, create a simple Java class to demonstrate these log levels. Create a new file named `App.java` in the `src/main/java/com/example` directory with the following content:
 
 ```java
 package com.example;
@@ -326,7 +317,7 @@ public class App {
 }
 ```
 
-This class demonstrates the use of different log levels and also shows how to add context to your logs using ThreadContext.
+This class demonstrates the use of different log levels and also shows how to add context to your logs using `ThreadContext`.
 
 ## Forward log messages to Fluentd
 
@@ -361,8 +352,8 @@ To configure Fluentd, create a configuration file. Create a new file named `flue
 
 <match **>
   @type http
-  endpoint https://api.axiom.co/v1/datasets/YOUR_AXIOM_DATASET/ingest
-  headers {"Authorization":"Bearer YOUR_AXIOM_API_TOKEN"}
+  endpoint https://api.axiom.co/v1/datasets/DATASET_NAME/ingest
+  headers {"Authorization":"Bearer API_TOKEN"}
   json_array true
   <buffer>
     @type memory
@@ -376,13 +367,13 @@ To configure Fluentd, create a configuration file. Create a new file named `flue
 </match>
 ```
 
+<Replacement />
+
 This configuration does the following:
 
-1. Sets up a forward input plugin to receive logs from Log4j
-2. Adds a `java.log4j` tag to all logs
-3. Forwards the logs to Axiom using the HTTP output plugin
-
-Make sure to replace `YOUR_AXIOM_API_TOKEN` and `YOUR_AXIOM_DATASET` with your actual Axiom API token and dataset.
+1. Set up a forward input plugin to receive logs from Log4j.
+1. Add a `java.log4j` tag to all logs.
+1. Forward the logs to Axiom using the HTTP output plugin.
 
 ### Create the Dockerfile
 
@@ -429,34 +420,34 @@ EXPOSE 24224
 CMD ["/usr/src/app/start.sh"]
 ```
 
-This Dockerfile:
+This Dockerfile does the following:
 
-1. Builds the Java app
-2. Sets up a runtime environment with Java and Fluentd
-3. Copies the necessary files and configurations
-4. Creates a startup script to run both Fluentd and the Java app
+1. Build the Java app.
+1. Set up a runtime environment with Java and Fluentd.
+1. Copy the necessary files and configurations.
+1. Create a startup script to run both Fluentd and the Java app.
 
-### Building and running the Dockerfile
+### Build and run the Dockerfile
 
-To build the Docker image, run the following command in your project root directory:
+1. To build the Docker image, run the following command in your project root directory:
 
-```bash
-docker build -t log4j-axiom-test .
-```
+    ```bash
+    docker build -t log4j-axiom-test .
+    ```
 
-Once the build is complete, you can run the container with:
+1. Run the container with the following:
 
-```bash
-docker run -p 24224:24224 log4j-axiom-test
-```
+    ```bash
+    docker run -p 24224:24224 log4j-axiom-test
+    ```
 
 This command starts the container, running both Fluentd and your Java app.
 
 ## View logs in Axiom
 
-Now that your app is running and sending logs to Axiom, you can view them in the Axiom dashboard. Log in to your Axiom account and navigate to the dataset you specified in the Fluentd configuration.
+Now that your app is running and sending logs to Axiom, you can view them in the Axiom dashboard. Log in to your Axiom account and go to the dataset you specified in the Fluentd configuration.
 
-Logs should appear in real-time, with various log levels and the context information added.
+Logs appear in real-time, with various log levels and the context information added.
 
 ## Logging in Log4j best practices
 
@@ -467,7 +458,3 @@ Logs should appear in real-time, with various log levels and the context informa
 - Use parameterized logging: Instead of string concatenation, use Log4j’s support for parameterized messages to improve performance.
 - Configure appenders appropriately: Use asynchronous appenders for better performance in high-throughput scenarios.
 - Regularly review and maintain your logs: Periodically check your logging configuration and the logs themselves to ensure they’re providing value.
-
-## Summary
-
-This comprehensive guide covers how to set up Log4j in a Java app, configure it to send logs to Fluentd, and forward those logs to Axiom for observability and querying. It also discusses log levels, best practices, and how to use Docker to simplify deployment.
