@@ -1,31 +1,25 @@
 ---
-title: 'OpenTelemetry using Java'
-description: 'This guide explains how to configure a Java app using the Java OpenTelemetry SDK to send telemetry data to Axiom.'
+title: 'Send data from Java app using OpenTelemetry'
+description: 'This page explains how to configure a Java app using the Java OpenTelemetry SDK to send telemetry data to Axiom.'
 sidebarTitle: Java Using OTel
 tags:
     ['guides', 'java']
 ---
 
-OpenTelemetry provides a unified approach to collecting telemetry data from your Java applications. This guide demonstrates how to configure OpenTelemetry in a Java app to send telemetry data to Axiom using the OpenTelemetry SDK.
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import Replacement from "/snippets/standard-replacement.mdx"
 
-## Prerequisites
+OpenTelemetry provides a unified approach to collecting telemetry data from your Java applications. This page demonstrates how to configure OpenTelemetry in a Java app to send telemetry data to Axiom using the OpenTelemetry SDK.
 
-To configure OpenTelemetry in a Java app for sending telemetry data to Axiom, certain prerequisites are necessary. These include:
+<Prerequisites />
+{/* list separator */}
+- [Install JDK 11](https://www.oracle.com/java/technologies/java-se-glance.html) or later
+- [Install Maven](https://maven.apache.org/download.cgi)
+- Use your own app written in Java or the provided `DiceRollerApp.java` sample.
 
-- Java: Java Development Kit (JDK) version 11 or newer.
-- Java app: Use your own app written in Java, or you can start with the provided `DiceRollerApp.java` sample.
-- Maven: Use Maven as the build tool in this guide.
-- Create an Axiom account.
-- Create a dataset in Axiom where the data is sent.
-- Create an API token in Axiom with permissions to create, read, update, and delete datasets.
+## Create project
 
-## Project Setup
-
-To create a Java project from the terminal using Maven, follow these steps:
-
-- First, make sure Maven is installed on your system. You can check by running `mvn -v` in your terminal.
-
-- To create a new Java project, use the Maven archetype command:
+To create a Java project, run the Maven archetype command in the terminal:
 
 ```bash
 mvn archetype:generate -DgroupId=com.example -DartifactId=MyProject -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
@@ -33,11 +27,11 @@ mvn archetype:generate -DgroupId=com.example -DartifactId=MyProject -DarchetypeA
 
 This command creates a new project in a directory named `MyProject` with a standard directory structure.
 
-## Core app (`DiceRollerApp.java`)
+## Create core app
 
-`DiceRollerApp.java` is the core of the app. It simulates rolling a dice and demonstrates the usage of OpenTelemetry for tracing. The app includes two methods: one for a simple dice roll and another that demonstrates the usage of span links to establish relationships between spans across different traces.
+`DiceRollerApp.java` is the core of the sample app. It simulates rolling a dice and demonstrates the usage of OpenTelemetry for tracing. The app includes two methods: one for a simple dice roll and another that demonstrates the usage of span links to establish relationships between spans across different traces.
 
-Create this file in the `src/main/java/com/example` directory:
+Create the `DiceRollerApp.java` in the `src/main/java/com/example` directory with the following content:
 
 ```java
 package com.example;
@@ -91,11 +85,11 @@ public class DiceRollerApp {
 }
 ```
 
-## OpenTelemetry configuration (`OtelConfiguration.java`)
+## Configure OpenTelemetry
 
 `OtelConfiguration.java` sets up the OpenTelemetry SDK and configures the exporter to send data to Axiom. It initializes the tracer provider, sets up the Axiom exporter, and configures the resource attributes.
 
-Create this file in the `src/main/java/com/example` directory:
+Create the `OtelConfiguration.java` file in the `src/main/java/com/example` directory with the following content:
 
 ```java
 package com.example;
@@ -115,8 +109,8 @@ public class OtelConfiguration {
     private static final String SERVICE_NAME = "YOUR_SERVICE_NAME";
     private static final String SERVICE_VERSION = "YOUR_SERVICE_VERSION";
     private static final String OTLP_ENDPOINT = "https://api.axiom.co/v1/traces";
-    private static final String BEARER_TOKEN = "Bearer YOUR_AXIOM_API_TOKEN";
-    private static final String AXIOM_DATASET = "YOUR_AXIOM_DATASET_NAME";
+    private static final String BEARER_TOKEN = "Bearer API_TOKEN";
+    private static final String AXIOM_DATASET = "DATASET_NAME";
 
     public static OpenTelemetry initializeOpenTelemetry() {
         Resource resource = Resource.getDefault()
@@ -149,13 +143,13 @@ public class OtelConfiguration {
 }
 ```
 
-Make sure to replace `YOUR_AXIOM_API_TOKEN` with your actual Axiom API token and `YOUR_AXIOM_DATASET_NAME` with your Axiom dataset name.
+<Replacement />
 
-## Project configuration (`pom.xml`)
+## Configure project
 
 The `pom.xml` file defines the project structure and dependencies for Maven. It includes the necessary OpenTelemetry libraries and configures the build process.
 
-Update the `pom.xml` file in the root of your project directory:
+Update the `pom.xml` file in the root of your project directory with the following content:
 
 ```xml
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -246,55 +240,48 @@ Update the `pom.xml` file in the root of your project directory:
 </project>
 ```
 
-## Running the instrumented app
+## Run the instrumented app
 
 To run your Java app with OpenTelemetry instrumentation, follow these steps:
 
 1. Clean the project and download dependencies:
 
-```bash
-mvn clean
-```
+    ```bash
+    mvn clean
+    ```
 
-2. Compile the code:
+1. Compile the code:
 
-```bash
-mvn compile
-```
+    ```bash
+    mvn compile
+    ```
 
-3. Package the app:
+1. Package the app:
 
-```bash
-mvn package
-```
+    ```bash
+    mvn package
+    ```
 
-4. Run the app:
+1. Run the app:
 
-```bash
-java -jar target/axiom-otel-java-1.0-SNAPSHOT.jar
-```
+    ```bash
+    java -jar target/axiom-otel-java-1.0-SNAPSHOT.jar
+    ```
 
-The app executes the `rollDice()` and `rollDiceWithLink()` methods, generating telemetry data that’s sent to Axiom.
+The app executes the `rollDice()` and `rollDiceWithLink()` methods, generates telemetry data, and sends the data to Axiom.
 
-## Observe the telemetry data in Axiom
+## Observe telemetry data in Axiom
 
-As the app runs, traces are collected and exported to Axiom. Monitor and analyze the app’s performance and behavior in the Axiom dashboard.
+As the app runs, it sends traces to Axiom. To view the traces:
 
-To view your traces:
+1. In Axiom, click the **Stream** tab.
+1. Click your dataset.
 
-1. Log in to your Axiom account.
-2. Navigate to the dataset you specified in the `OtelConfiguration.java` file.
-3. Use the query interface to search and filter your traces
+Axiom provides a dynamic dashboard for visualizing and analyzing your OpenTelemetry traces. This dashboard offers insights into the performance and behavior of your app. To view the dashboard:
 
-## Dynamic OpenTelemetry traces dashboard
-
-Axiom provides a dynamic dashboard for visualizing and analyzing your OpenTelemetry traces. This dashboard offers insights into the performance and behavior of your app.
-
-To access the dashboard:
-
-1. In your Axiom account, go to the dashboards section.
-2. Look for the OpenTelemetry traces dashboard or create a new one.
-3. Customize the dashboard to show the event data and visualizations most relevant to the app.
+1. In Axiom, click the **Dashboards** tab.
+1. Look for the OpenTelemetry traces dashboard or create a new one.
+1. Customize the dashboard to show the event data and visualizations most relevant to the app.
 
 ## Send data from an existing Java project
 
@@ -302,223 +289,208 @@ To access the dashboard:
 
 Manual instrumentation gives fine-grained control over which parts of the app are traced and what information is included in the traces. It requires adding OpenTelemetry-specific code to the app.
 
-1. Set up OpenTelemetry:  
+1. Set up OpenTelemetry. Create a configuration class to initialize OpenTelemetry with necessary settings, exporters, and span processors.
 
-Create a configuration class to initialize OpenTelemetry with necessary settings, exporters, and span processors.
+    ```java
+    // OtelConfiguration.java
+    package com.example;
 
-```java
-// OtelConfiguration.java
-package com.example;
+    import io.opentelemetry.api.OpenTelemetry;
+    import io.opentelemetry.api.trace.Tracer;
+    import io.opentelemetry.context.Scope;
+    import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
+    import io.opentelemetry.sdk.OpenTelemetrySdk;
+    import io.opentelemetry.sdk.trace.SdkTracerProvider;
+    import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
-import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
+    public class OtelConfiguration {
+        public static OpenTelemetry initializeOpenTelemetry() {
+            OtlpGrpcSpanExporter spanExporter = OtlpGrpcSpanExporter.builder()
+                .setEndpoint("https://api.axiom.co/v1/traces")
+                .addHeader("Authorization", "Bearer API_TOKEN")
+                .addHeader("X-Axiom-Dataset", "DATASET_NAME")
+                .build();
 
-public class OtelConfiguration {
-    public static OpenTelemetry initializeOpenTelemetry() {
-        OtlpGrpcSpanExporter spanExporter = OtlpGrpcSpanExporter.builder()
-            .setEndpoint("https://api.axiom.co/v1/traces")
-            .addHeader("Authorization", "Bearer YOUR_AXIOM_API_TOKEN")
-            .addHeader("X-Axiom-Dataset", "YOUR_AXIOM_DATASET_NAME")
-            .build();
+            SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
+                .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
+                .build();
 
-        SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
-            .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
-            .build();
-
-        return OpenTelemetrySdk.builder()
-            .setTracerProvider(tracerProvider)
-            .buildAndRegisterGlobal();
-    }
-}
-```
-
-2. Create spans 
-
-Spans represent units of work in the app. They have a start time and duration and can be nested.
-
-```java
-// DiceRollerApp.java
-package com.example;
-
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
-
-public class DiceRollerApp {
-    private static final Tracer tracer;
-
-    static {
-        OpenTelemetry openTelemetry = OtelConfiguration.initializeOpenTelemetry();
-        tracer = openTelemetry.getTracer("com.example.DiceRollerApp");
-    }
-
-    public static void main(String[] args) {
-        try (Scope scope = tracer.spanBuilder("Main").startScopedSpan()) {
-            rollDice();
+            return OpenTelemetrySdk.builder()
+                .setTracerProvider(tracerProvider)
+                .buildAndRegisterGlobal();
         }
     }
+    ```
 
+1. Create spans. Spans represent units of work in the app. They have a start time and duration and can be nested.
+
+    ```java
+    // DiceRollerApp.java
+    package com.example;
+
+    import io.opentelemetry.api.OpenTelemetry;
+    import io.opentelemetry.api.trace.Span;
+    import io.opentelemetry.api.trace.Tracer;
+    import io.opentelemetry.context.Scope;
+
+    public class DiceRollerApp {
+        private static final Tracer tracer;
+
+        static {
+            OpenTelemetry openTelemetry = OtelConfiguration.initializeOpenTelemetry();
+            tracer = openTelemetry.getTracer("com.example.DiceRollerApp");
+        }
+
+        public static void main(String[] args) {
+            try (Scope scope = tracer.spanBuilder("Main").startScopedSpan()) {
+                rollDice();
+            }
+        }
+
+        private static void rollDice() {
+            Span span = tracer.spanBuilder("rollDice").startSpan();
+            try (Scope scope = span.makeCurrent()) {
+                // Simulate dice roll
+                int result = new Random().nextInt(6) + 1;
+                System.out.println("Rolled a dice: " + result);
+            } finally {
+                span.end();
+            }
+        }
+    }
+    ```
+
+    Custom spans are manually managed to provide detailed insights into specific functions or methods within the app.
+
+1. Annotate spans. Spans can be annotated with attributes and events to provide more context about the operation being performed.
+
+    ```java
     private static void rollDice() {
         Span span = tracer.spanBuilder("rollDice").startSpan();
         try (Scope scope = span.makeCurrent()) {
-            // Simulate dice roll
-            int result = new Random().nextInt(6) + 1;
-            System.out.println("Rolled a dice: " + result);
+            int roll = 1 + new Random().nextInt(6);
+            span.setAttribute("roll.value", roll);
+            span.addEvent("Dice rolled");
+            System.out.println("Rolled a dice: " + roll);
         } finally {
             span.end();
         }
     }
-}
-```
+    ```
 
-Custom spans are manually managed to provide detailed insights into specific functions or methods within the app.
+1. Creating span links. Span links allow association of spans that aren’t in a parent-child relationship.
 
-3. Annotate spans
-
-Spans can be annotated with attributes and events to provide more context about the operation being performed.
-
-```java
-private static void rollDice() {
-    Span span = tracer.spanBuilder("rollDice").startSpan();
-    try (Scope scope = span.makeCurrent()) {
-        int roll = 1 + new Random().nextInt(6);
-        span.setAttribute("roll.value", roll);
-        span.addEvent("Dice rolled");
-        System.out.println("Rolled a dice: " + roll);
-    } finally {
-        span.end();
-    }
-}
-```
-
-4. Creating span links
-
-Span links allow association of spans that aren’t in a parent-child relationship.
-
-```java
-private static void rollDiceWithLink() {
-    Span parentSpan = tracer.spanBuilder("rollWithLink").startSpan();
-    try (Scope parentScope = parentSpan.makeCurrent()) {
-        Span childSpan = tracer.spanBuilder("rolldice")
-                .addLink(parentSpan.getSpanContext())
-                .startSpan();
-        try (Scope childScope = childSpan.makeCurrent()) {
-            int roll = 1 + new Random().nextInt(6);
-            System.out.println("Dice roll result (with link): " + roll);
+    ```java
+    private static void rollDiceWithLink() {
+        Span parentSpan = tracer.spanBuilder("rollWithLink").startSpan();
+        try (Scope parentScope = parentSpan.makeCurrent()) {
+            Span childSpan = tracer.spanBuilder("rolldice")
+                    .addLink(parentSpan.getSpanContext())
+                    .startSpan();
+            try (Scope childScope = childSpan.makeCurrent()) {
+                int roll = 1 + new Random().nextInt(6);
+                System.out.println("Dice roll result (with link): " + roll);
+            } finally {
+                childSpan.end();
+            }
         } finally {
-            childSpan.end();
+            parentSpan.end();
         }
-    } finally {
-        parentSpan.end();
     }
-}
-```
+    ```
 
 ### Automatic instrumentation
 
 Automatic instrumentation simplifies adding telemetry to a Java app by automatically capturing data from supported libraries and frameworks.
 
-1. Set up dependencies: 
+1. Set up dependencies. Ensure all necessary OpenTelemetry libraries are included in your Maven `pom.xml`.
 
-Ensure all necessary OpenTelemetry libraries are included in your Maven `pom.xml`.
+    ```xml
+    <!-- pom.xml snippet -->
+    <dependencies>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <version>{opentelemetry_version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+            <version>{opentelemetry_version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-instrumentation-httpclient</artifactId>
+            <version>{instrumentation_version}</version>
+        </dependency>
+    </dependencies>
+    ```
 
-```xml
-<!-- pom.xml snippet -->
-<dependencies>
-    <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-api</artifactId>
-        <version>{opentelemetry_version}</version>
-    </dependency>
-    <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-sdk</artifactId>
-        <version>{opentelemetry_version}</version>
-    </dependency>
-    <dependency>
-        <groupId>io.opentelemetry.instrumentation</groupId>
-        <artifactId>opentelemetry-instrumentation-httpclient</artifactId>
-        <version>{instrumentation_version}</version>
-    </dependency>
-</dependencies>
+    Dependencies include the OpenTelemetry SDK and instrumentation libraries that automatically capture data from common Java libraries.
 
-```
+1. Auto-instrument the app. Implement an initialization class to configure the OpenTelemetry SDK along with auto-instrumentation for frameworks used by the app.
 
-Dependencies include the OpenTelemetry SDK and instrumentation libraries that automatically capture data from common Java libraries.
+    ```java
+    // AutoInstrumentationSetup.java
+    package com.example;
 
-2. Auto-instrument the app:
+    import io.opentelemetry.instrumentation.httpclient.HttpClientInstrumentation;
+    import io.opentelemetry.api.OpenTelemetry;
 
-Implement an initialization class to configure the OpenTelemetry SDK along with auto-instrumentation for frameworks used by the app.
-
-```java
-// AutoInstrumentationSetup.java
-package com.example;
-
-import io.opentelemetry.instrumentation.httpclient.HttpClientInstrumentation;
-import io.opentelemetry.api.OpenTelemetry;
-
-public class AutoInstrumentationSetup {
-    public static void setup() {
-        OpenTelemetry openTelemetry = OtelConfiguration.initializeOpenTelemetry();
-        HttpClientInstrumentation.instrument(openTelemetry);
+    public class AutoInstrumentationSetup {
+        public static void setup() {
+            OpenTelemetry openTelemetry = OtelConfiguration.initializeOpenTelemetry();
+            HttpClientInstrumentation.instrument(openTelemetry);
+        }
     }
-}
-```
+    ```
 
-Auto-instrumentation is initialized early in the app lifecycle to ensure all relevant activities are automatically captured.
+    Auto-instrumentation is initialized early in the app lifecycle to ensure all relevant activities are automatically captured.
 
-2. Integrate and run: 
+1. Integrate and run:
 
-The auto-instrumentation setup is called as your app starts:
+    ```java
+    // Main.java
+    package com.example;
 
-```java
-// Main.java
-package com.example;
-
-public class Main {
-    public static void main(String[] args) {
-        AutoInstrumentationSetup.setup();  // Initialize OpenTelemetry auto-instrumentation
-        DiceRollerApp.main(args);          // Start the application logic
+    public class Main {
+        public static void main(String[] args) {
+            AutoInstrumentationSetup.setup();  // Initialize OpenTelemetry auto-instrumentation
+            DiceRollerApp.main(args);          // Start the application logic
+        }
     }
-}
-```
+    ```
 
 ## Reference
 
 ### List of OpenTelemetry trace fields
 
-| Field Category                        | Field Name                                    | Description |
+| Field category                        | Field name                                    | Description |
 |---------------------------------------|-----------------------------------------------|-------------|
-|  General Trace Information            |                                               |             |
+|  General trace information            |                                               |             |
 |                                       | _rowId                                        | Unique identifier for each row in the trace data. |
 |                                       | _sysTime                                      | System timestamp when the trace data was recorded. |
 |                                       | _time                                         | Timestamp when the actual event being traced occurred. |
 |                                       | trace_id                                      | Unique identifier for the entire trace. |
 |                                       | span_id                                       | Unique identifier for the span within the trace. |
 |                                       | parent_span_id                                | Unique identifier for the parent span within the trace. |
-|  Operational Details                  |                                               |             |
+|  Operational details                  |                                               |             |
 |                                       | duration                                      | Time taken for the operation, typically in microseconds or milliseconds. |
-|                                       | kind                                          | Type of span (for example., server, internal). |
+|                                       | kind                                          | Type of span. For example, `server`, `internal`. |
 |                                       | name                                          | Name of the span, often a high-level title for the operation. |
-|  Scope and Instrumentation            |                                               |             |
-|                                       | scope.name                                    | Instrumentation scope, typically the Java package or app component, for example., `com.example.DiceRollerApp`. |
-|  Service Attributes                  |                                               |             |
-|                                       | service.name                                  | Name of the service generating the trace, for example., `axiom-java-otel`. |
-|                                       | service.version                               | Version of the service generating the trace, for example., `0.1.0`. |
-|  Telemetry SDK Attributes            |                                               |             |
-|                                       | telemetry.sdk.language                        | Programming language of the SDK used for telemetry, typically 'java'. |
-|                                       | telemetry.sdk.name                            | Name of the telemetry SDK, for exmaple., `opentelemetry`. |
-|                                       | telemetry.sdk.version                         | Version of the telemetry SDK used in the tracing setup, for example., `1.18.0`. |
+|  Scope and instrumentation            |                                               |             |
+|                                       | scope.name                                    | Instrumentation scope, typically the Java package or app component. For example, `com.example.DiceRollerApp`. |
+|  Service attributes                  |                                               |             |
+|                                       | service.name                                  | Name of the service generating the trace. For example, `axiom-java-otel`. |
+|                                       | service.version                               | Version of the service generating the trace. For example, `0.1.0`. |
+|  Telemetry SDK attributes            |                                               |             |
+|                                       | telemetry.sdk.language                        | Programming language of the SDK used for telemetry, typically `java`. |
+|                                       | telemetry.sdk.name                            | Name of the telemetry SDK. For example, `opentelemetry`. |
+|                                       | telemetry.sdk.version                         | Version of the telemetry SDK used in the tracing setup. For example, `1.18.0`. |
 
 ### List of imported libraries
 
-The Java implementation of OpenTelemetry uses the following key libraries:
+The Java implementation of OpenTelemetry uses the following key libraries.
 
 `io.opentelemetry:opentelemetry-api`
 
@@ -538,7 +510,7 @@ This extension package provides auto-configuration capabilities for the OpenTele
 
 `io.opentelemetry:opentelemetry-sdk-trace`
 
-This package is part of the OpenTelemetry SDK and focuses specifically on tracing capability. It includes important classes like `SdkTracerProvider` and `BatchSpanProcessor`. The `SdkTracerProvider` is responsible for creating and managing tracers, while the `BatchSpanProcessor` efficiently processes and exports spans in batches, similar to its Node.js counterpart. This batching mechanism helps in optimizing the performance of trace data export in OpenTelemetry-instrumented Java applications.
+This package is part of the OpenTelemetry SDK and focuses specifically on tracing capability. It includes important classes like `SdkTracerProvider` and `BatchSpanProcessor`. The `SdkTracerProvider` is responsible for creating and managing tracers, while the `BatchSpanProcessor` efficiently processes and exports spans in batches, similar to its Node.js counterpart. This batching mechanism helps optimize the performance of trace data export in OpenTelemetry-instrumented Java applications.
 
 `io.opentelemetry:opentelemetry-sdk-common`
 
