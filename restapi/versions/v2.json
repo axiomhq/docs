@@ -411,6 +411,77 @@
         "x-codegen-request-body-name": "payload"
       }
     },
+    "/datasets/_apl/delete": {
+      "post": {
+        "tags": [
+          "query"
+        ],
+        "description": "Delete blocks that have non-zero matches for an APL query.",
+        "operationId": "datasetAPLDeletionQuery",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AplDeletionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "AplDeletionResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplDeletionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "AplQueryError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplQueryError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "AplQueryError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplQueryError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "AplQueryError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplQueryError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "data|delete"
+            ]
+          }
+        ],
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true,
+        "x-codegen-request-body-name": "payload"
+      }
+    },
     "/datasets/{id}": {
       "get": {
         "tags": [
@@ -701,7 +772,7 @@
         "security": [
           {
             "Auth": [
-              "datasets|update"
+              "trim|update"
             ]
           }
         ],
@@ -1230,7 +1301,7 @@
         "security": [
           {
             "Auth": [
-              "query/*|read"
+              "query|read"
             ]
           },
           {
@@ -1240,6 +1311,245 @@
         "x-axiom-not-suspended": true,
         "x-axiom-preview": true,
         "x-codegen-request-body-name": "payload"
+      }
+    },
+    "/slack/auth": {
+      "get": {
+        "tags": [
+          "Slack"
+        ],
+        "description": "Authenticate the user",
+        "operationId": "handleSlackAuth",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "description": "Slack state to authenticate",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {}
+          },
+          "400": {
+            "description": "Unsuccessful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
+        "x-axiom-preview": true
+      }
+    },
+    "/slack/auth/callback": {
+      "get": {
+        "tags": [
+          "Slack"
+        ],
+        "description": "Handle OAuth callback from Slack",
+        "operationId": "handleOAuthCallback",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "description": "OAuth authorization code from Slack",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "description": "OAuth state parameter for CSRF protection",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {}
+          },
+          "303": {
+            "description": "Redirect to login",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {}
+          },
+          "400": {
+            "description": "Invalid request or authentication failed",
+            "content": {}
+          }
+        },
+        "security": [],
+        "x-axiom-preview": true
+      }
+    },
+    "/slack/axiomLogin/callback": {
+      "get": {
+        "tags": [
+          "Slack"
+        ],
+        "description": "Authenticate the user against Axiom",
+        "operationId": "handleAxiomLogin",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "description": "Slack state to authenticate",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "description": "Login server code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {}
+          },
+          "400": {
+            "description": "Unsuccessful response",
+            "content": {}
+          }
+        },
+        "security": [],
+        "x-axiom-preview": true
+      }
+    },
+    "/slack/events": {
+      "post": {
+        "tags": [
+          "Slack"
+        ],
+        "description": "Post Slack events",
+        "operationId": "postSlackEvent",
+        "parameters": [
+          {
+            "name": "X-Slack-Signature",
+            "in": "header",
+            "description": "Slack request signature for verifying the request.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Slack-Request-Timestamp",
+            "in": "header",
+            "description": "Slack request timestamp for verifying the request.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlackEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Event received",
+            "content": {}
+          },
+          "400": {
+            "description": "Invalid event data",
+            "content": {}
+          }
+        },
+        "security": [],
+        "x-axiom-preview": true,
+        "x-codegen-request-body-name": "event"
+      }
+    },
+    "/slack/handleSlashCommand": {
+      "post": {
+        "tags": [
+          "Slack"
+        ],
+        "description": "Redirect user to Slack for authentication",
+        "operationId": "handleSlashCommand",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "response_type": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-axiom-preview": true
+      }
+    },
+    "/slack/interactiveEndpoint": {
+      "post": {
+        "tags": [
+          "Slack"
+        ],
+        "description": "Post Slack interactive endpoint",
+        "operationId": "postSlackInteractiveEndpoint",
+        "responses": {
+          "200": {
+            "description": "Event received",
+            "content": {}
+          }
+        },
+        "security": [],
+        "x-axiom-preview": true
       }
     },
     "/tokens": {
@@ -1750,9 +2060,6 @@
         }
       },
       "AggInfo": {
-        "required": [
-          "name"
-        ],
         "type": "object",
         "properties": {
           "args": {
@@ -1884,6 +2191,73 @@
           "type": "AnnotationID"
         }
       },
+      "AplDeletionRequest": {
+        "required": [
+          "apl",
+          "commit"
+        ],
+        "type": "object",
+        "properties": {
+          "Modules": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Modules is an optional set of module names => module sources that will be available to this query"
+          },
+          "apl": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "boolean"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string",
+            "description": "start and end time for the query, these must be specified as RFC3339 strings\nor using relative time expressions (e.g. now-1h, now-1d, now-1w, etc)"
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            },
+            "description": "Variables is an optional set of additional variables that are inserted into the APL"
+          }
+        }
+      },
+      "AplDeletionResponse": {
+        "required": [
+          "rowsDeleted",
+          "rowsMatched"
+        ],
+        "type": "object",
+        "properties": {
+          "blocksMatched": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "firstMatchedEvent": {
+            "type": "string",
+            "description": "these are timestamps"
+          },
+          "lastMatchedEvent": {
+            "type": "string"
+          },
+          "rowsDeleted": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "rowsMatched": {
+            "type": "integer",
+            "format": "uint64"
+          }
+        }
+      },
       "AplQueryError": {
         "type": "object",
         "properties": {
@@ -1981,10 +2355,6 @@
         }
       },
       "BucketInfo": {
-        "required": [
-          "field",
-          "size"
-        ],
         "title": "BucketInfo captures information about how a grouped query is sorted into buckets.",
         "type": "object",
         "properties": {
@@ -2175,10 +2545,6 @@
         }
       },
       "FieldInfo": {
-        "required": [
-          "name",
-          "type"
-        ],
         "title": "FieldInfo captures information about a field used in the tabular result format. See Table.",
         "type": "object",
         "properties": {
@@ -2257,6 +2623,18 @@
           "columnName": {
             "type": "string"
           },
+          "compareDays": {
+            "maximum": 7,
+            "type": "number",
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
           "description": {
             "type": "string"
           },
@@ -2294,7 +2672,8 @@
               "Below",
               "BelowOrEqual",
               "Above",
-              "AboveOrEqual"
+              "AboveOrEqual",
+              "AboveOrBelow"
             ]
           },
           "rangeMinutes": {
@@ -2305,16 +2684,34 @@
           "resolvable": {
             "type": "boolean"
           },
+          "secondDelay": {
+            "maximum": 86400,
+            "type": "number",
+            "format": "int64"
+          },
           "threshold": {
             "type": "number",
-            "format": "double"
+            "format": "double",
+            "x-omitempty": false
+          },
+          "tolerance": {
+            "maximum": 100,
+            "type": "number"
+          },
+          "triggerAfterNPositiveResults": {
+            "type": "number",
+            "format": "int64"
+          },
+          "triggerFromNRuns": {
+            "type": "number",
+            "format": "int64"
           },
           "type": {
             "type": "string",
             "enum": [
               "Threshold",
               "MatchEvent",
-              "FieldAnomalyDetection"
+              "AnomalyDetection"
             ]
           }
         }
@@ -2373,6 +2770,15 @@
         ],
         "type": "object",
         "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "createdBy": {
+            "type": "string",
+            "readOnly": true
+          },
           "disabledUntil": {
             "type": "string"
           },
@@ -2457,11 +2863,6 @@
         }
       },
       "RangeInfo": {
-        "required": [
-          "field",
-          "start",
-          "end"
-        ],
         "title": "RangeInfo specifies the window a query was restricted to.",
         "type": "object",
         "properties": {
@@ -2508,10 +2909,77 @@
           }
         }
       },
-      "SourceInfo": {
+      "SlackEvent": {
         "required": [
-          "name"
+          "api_app_id",
+          "event",
+          "event_id",
+          "event_time",
+          "team_id",
+          "token",
+          "type"
         ],
+        "type": "object",
+        "properties": {
+          "api_app_id": {
+            "type": "string",
+            "description": "ID of the Slack app that the event is for"
+          },
+          "event": {
+            "required": [
+              "channel",
+              "ts",
+              "type",
+              "user"
+            ],
+            "type": "object",
+            "properties": {
+              "channel": {
+                "type": "string",
+                "description": "Channel ID where the event occurred"
+              },
+              "text": {
+                "type": "string",
+                "description": "Text content of the event"
+              },
+              "ts": {
+                "type": "string",
+                "description": "Timestamp of when the event occurred"
+              },
+              "type": {
+                "type": "string",
+                "description": "Type of the event"
+              },
+              "user": {
+                "type": "string",
+                "description": "ID of the user who triggered the event"
+              }
+            }
+          },
+          "event_id": {
+            "type": "string",
+            "description": "Unique identifier for the event"
+          },
+          "event_time": {
+            "type": "integer",
+            "description": "Timestamp of when the event was dispatched",
+            "format": "int64"
+          },
+          "team_id": {
+            "type": "string",
+            "description": "ID of the team where the event originated"
+          },
+          "token": {
+            "type": "string",
+            "description": "Verification token to validate the event is from Slack"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of the event callback"
+          }
+        }
+      },
+      "SourceInfo": {
         "title": "SourceInfo specifies the provenance of a results Table.",
         "type": "object",
         "properties": {
@@ -2566,13 +3034,6 @@
         }
       },
       "Table": {
-        "required": [
-          "name",
-          "sources",
-          "fields",
-          "order",
-          "groups"
-        ],
         "title": "Table defines the schema for query results.",
         "type": "object",
         "properties": {
@@ -2765,6 +3226,17 @@
         "additionalProperties": {
           "type": "object",
           "properties": {
+            "data": {
+              "type": "array",
+              "description": "Data Management capability",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "delete"
+                ]
+              },
+              "x-omitempty": true
+            },
             "ingest": {
               "type": "array",
               "description": "Ingest capability",
@@ -2797,6 +3269,28 @@
                   "read",
                   "update",
                   "delete"
+                ]
+              },
+              "x-omitempty": true
+            },
+            "trim": {
+              "type": "array",
+              "description": "Data Trimming capability",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "update"
+                ]
+              },
+              "x-omitempty": true
+            },
+            "vacuum": {
+              "type": "array",
+              "description": "Field Vacuuming capability",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "update"
                 ]
               },
               "x-omitempty": true
@@ -2845,6 +3339,17 @@
                 "read",
                 "update",
                 "delete"
+              ]
+            },
+            "x-omitempty": true
+          },
+          "auditLog": {
+            "type": "array",
+            "description": "Audit Log capability",
+            "items": {
+              "type": "string",
+              "enum": [
+                "read"
               ]
             },
             "x-omitempty": true
