@@ -1,0 +1,153 @@
+---
+title: avgif
+description: 'This page explains how to use the avgif aggregation function in APL.'
+---
+
+## Introduction
+
+The `avgif` aggregation function in APL calculates the arithmetic mean (average) of numeric values that satisfy a specified condition. This function is particularly useful when you want to compute the average of a subset of data that meets certain criteria. For example, you can use `avgif` to calculate the average response time of successful requests or the average value of transactions that exceed a certain threshold.
+
+You should use the `avgif` function in situations where you need to filter data before performing the aggregation. This makes it useful for scenarios like conditional performance analysis, selective trend monitoring, or analyzing specific segments of your data.
+
+## Related aggregations
+
+The `avgif` function is part of a family of conditional aggregations in APL. Here's how it compares to other similar functions:
+
+- **`avg`**: Use when you want to compute the average across all records without applying any conditions. `avgif` is more specialized, allowing you to include a condition.
+- **`sumif`**: Use this function if you need the total sum of values that meet a certain condition, rather than the average.
+- **`countif`**: Use this when you want to count the number of records that satisfy a condition.
+- **`minif`/`maxif`**: These functions return the minimum or maximum values that meet a condition, useful when you are looking for boundary values within filtered data.
+
+## For users of other query languages
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, there is no direct equivalent to the `avgif` function. However, you can achieve the same result by combining filtering and the `avg` function.
+
+<CodeGroup>
+```sql Splunk example
+index=web_logs response_time>100 | stats avg(response_time)
+```
+
+```kusto APL equivalent
+web_logs
+| summarize avgif(response_time, response_time > 100)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the functionality of `avgif` can be replicated using the `AVG()` function with a `CASE` statement or a `WHERE` clause.
+
+<CodeGroup>
+```sql SQL example
+SELECT AVG(CASE WHEN response_time > 100 THEN response_time END)
+FROM web_logs;
+```
+
+```kusto APL equivalent
+web_logs
+| summarize avgif(response_time, response_time > 100)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize avgif(Expression, Predicate)
+```
+
+### Parameters
+
+- **Expression**: The numeric expression to aggregate.
+- **Predicate**: A boolean expression that filters the data. Only records for which this predicate evaluates to `true` are considered.
+
+### Returns
+
+The `avgif` function returns a numeric value representing the average of the selected expression for records that meet the condition specified by the predicate.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, you can use the `avgif` function to calculate the average response time for requests that took longer than a specific threshold.
+
+**Query**
+
+```kusto
+requests
+| summarize avgif(response_time, response_time > 500) by bin(timestamp, 1m)
+```
+
+**Output**
+
+| timestamp           | avg_response_time |
+|---------------------|-------------------|
+| 2024-09-26 10:00:00 | 700.2             |
+| 2024-09-26 10:01:00 | 650.4             |
+| 2024-09-26 10:02:00 | 715.6             |
+
+This query calculates the average response time for requests that took more than 500 milliseconds, grouped by one-minute intervals.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In OpenTelemetry trace analysis, you can calculate the average span duration for spans that were longer than a certain threshold, helping you analyze performance bottlenecks.
+
+**Query**
+
+```kusto
+traces
+| summarize avgif(span_duration, span_duration > 100) by bin(timestamp, 5m)
+```
+
+**Output**
+
+| timestamp           | avg_span_duration |
+|---------------------|-------------------|
+| 2024-09-26 10:00:00 | 135.3             |
+| 2024-09-26 10:05:00 | 150.8             |
+| 2024-09-26 10:10:00 | 120.5             |
+
+This query calculates the average span duration for spans that exceed 100 milliseconds, grouped into five-minute windows.
+
+</Tab>
+<Tab title="Security logs">
+
+In security monitoring, you might want to calculate the average number of failed login attempts where the user’s account was flagged as suspicious.
+
+**Query**
+
+```kusto
+security_logs
+| summarize avgif(failed_attempts, is_suspicious == true) by bin(timestamp, 10m)
+```
+
+**Output**
+
+| timestamp           | avg_failed_attempts |
+|---------------------|---------------------|
+| 2024-09-26 10:00:00 | 4.7                 |
+| 2024-09-26 10:10:00 | 5.2                 |
+| 2024-09-26 10:20:00 | 6.1                 |
+
+This query computes the average number of failed login attempts for users flagged as suspicious within 10-minute intervals.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- **`avg`**: Computes the arithmetic mean of all values without applying conditions.
+- **`sumif`**: Calculates the sum of values that meet a specified condition.
+- **`countif`**: Counts the number of records that satisfy a condition.
+- **`minif`**: Finds the minimum value among records that meet a condition.
+- **`maxif`**: Finds the maximum value among records that meet a condition.

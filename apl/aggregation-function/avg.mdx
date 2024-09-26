@@ -1,0 +1,154 @@
+---
+title: avg
+description: 'This page explains how to use the avg aggregation function in APL.'
+---
+
+## Introduction
+
+The `avg` aggregation function in APL computes the arithmetic mean (average) of a set of numeric values. This aggregation is useful when you need to find the central tendency or typical value in your data. You can use the `avg` function in scenarios such as analyzing performance metrics, calculating average response times, and summarizing numerical data across large datasets.
+
+The `avg` function becomes particularly helpful when you want to condense a large number of values into a single number that represents the "middle" of the data. For instance, in log analysis, it can be used to find the average number of requests per minute, or in security monitoring, to calculate the average number of failed login attempts within a given time window.
+
+## Related aggregations
+
+The `avg` aggregation is one of several functions that summarize data. Here’s how it compares to other related functions:
+
+- `sum`: Use when you want the total of all values instead of the average.
+- `min`/`max`: Use these when you’re interested in the smallest or largest values in a dataset instead of the central tendency.
+- `count`: Use when you need the number of items in a dataset, which can be useful when you want to calculate the average by dividing `sum` by `count` manually.
+- `percentile`: Use when you need to know the value below which a given percentage of data falls. It’s useful for understanding data distribution but doesn’t directly provide the central tendency like `avg`.
+
+## For users of other query languages
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk’s Search Processing Language (SPL), the `avg` function works similarly to how it does in APL. You would use it in the `stats` or `timechart` commands to calculate the average of a field over a set of events or over time.
+
+<CodeGroup>
+```sql Splunk example
+index=web_logs | stats avg(response_time) as avgResponseTime
+```
+
+```kusto APL equivalent
+web_logs
+| summarize avg(response_time) by bin(timestamp, 1m)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the `avg` function works similarly to how it does in APL. Both languages use the function to calculate the arithmetic mean of a set of numeric values.
+
+<CodeGroup>
+```sql SQL example
+SELECT AVG(response_time)
+FROM web_logs
+GROUP BY DATE_TRUNC('minute', timestamp);
+```
+
+```kusto APL equivalent
+web_logs
+| summarize avg(response_time) by bin(timestamp, 1m)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize avg(Expression) 
+```
+
+### Parameters
+
+- **Expression**: The numeric expression to aggregate. This can be a field or a more complex expression.
+
+### Returns
+
+The `avg` function returns a single numeric value representing the arithmetic mean of the specified field or expression across all records.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, you can use the `avg` function to calculate the average number of requests received by a server every minute.
+
+**Query**
+
+```kusto
+requests
+| summarize avg(requests_per_minute) by bin(timestamp, 1m)
+```
+
+**Output**
+
+| timestamp           | avg_requests_per_minute |
+|---------------------|-------------------------|
+| 2024-09-26 10:00:00 | 35.2                    |
+| 2024-09-26 10:01:00 | 40.7                    |
+| 2024-09-26 10:02:00 | 37.1                    |
+
+This query calculates the average number of requests received per minute and displays it in a tabular format grouped by timestamp.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+When working with OpenTelemetry traces, you might want to compute the average duration of spans to measure overall system performance.
+
+**Query**
+
+```kusto
+traces
+| summarize avg(span_duration) by bin(timestamp, 5m)
+```
+
+**Output**
+
+| timestamp           | avg_span_duration |
+|---------------------|-------------------|
+| 2024-09-26 10:00:00 | 120.3             |
+| 2024-09-26 10:05:00 | 110.8             |
+| 2024-09-26 10:10:00 | 115.7             |
+
+This query calculates the average span duration every five minutes from OpenTelemetry traces.
+
+</Tab>
+<Tab title="Security logs">
+
+In security logs, you might use the `avg` function to find the average number of failed login attempts within certain time windows, which can help in anomaly detection.
+
+**Query**
+
+```kusto
+security_logs
+| where event_type == "failed_login"
+| summarize avg(failed_attempts) by bin(timestamp, 10m)
+```
+
+**Output**
+
+| timestamp           | avg_failed_attempts |
+|---------------------|---------------------|
+| 2024-09-26 10:00:00 | 5.3                 |
+| 2024-09-26 10:10:00 | 4.1                 |
+| 2024-09-26 10:20:00 | 6.7                 |
+
+This query calculates the average number of failed login attempts every ten minutes, allowing you to monitor security activity patterns.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- **`sum`**: Computes the total sum of numeric values.
+- **`min`**: Returns the smallest value in a set of values.
+- **`max`**: Returns the largest value in a set of values.
+- **`count`**: Counts the number of items in a dataset.
+- **`percentile`**: Returns the value below which a specified percentage of the data falls.
