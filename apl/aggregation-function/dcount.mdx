@@ -1,0 +1,151 @@
+---
+title: dcount
+description: 'This page explains how to use the dcount aggregation function in APL.'
+---
+
+## Introduction
+
+The `dcount` aggregation function in APL is used to return the approximate count of distinct values in a specific column. It’s particularly useful when working with large datasets, as it uses algorithms to estimate distinct counts more efficiently than exact counting methods. The function is commonly applied in scenarios like tracking the number of unique users, counting distinct IP addresses, or monitoring unique events.
+
+Use `dcount` when you need an approximate count of distinct values for scalability and performance, especially in high-volume data analysis.
+
+## Related aggregations
+
+- **`count`**: Use `count` when you want the total number of rows in a dataset, regardless of distinctness.
+- **`countif`**: Use this when you want to count rows that meet a specific condition, rather than distinct values.
+- **`dcountif`**: Use `dcountif` to return the approximate count of distinct values only for rows that meet a specific condition.
+- **`sum`**: Although it calculates sums, this is often compared with `dcount` in cases where summing distinct values is relevant.
+- **`approx_set`**: Use this when you need a set of distinct values, rather than a count, particularly useful for further set operations.
+
+## For users of other query languages
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the closest equivalent to `dcount` is the `dc()` function, which returns the distinct count of values for a given field.
+
+<CodeGroup>
+```sql Splunk example
+index=web_logs | stats dc(user_id)
+```
+
+```kusto APL equivalent
+web_logs
+| summarize dcount(user_id)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the `COUNT(DISTINCT)` function provides an exact distinct count, which can be used similarly to `dcount`, but `dcount` is optimized for large datasets by providing an approximate count.
+
+<CodeGroup>
+```sql SQL example
+SELECT COUNT(DISTINCT user_id) FROM web_logs;
+```
+
+```kusto APL equivalent
+web_logs
+| summarize dcount(user_id)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize dcount(column_name [, accuracy])
+```
+
+### Parameters
+
+- `column_name`: The column whose distinct values you want to count.
+- `accuracy`: Optional. An integer that defines the accuracy level. Higher values lead to more precise results but may require more resources.
+
+### Returns
+
+The `dcount` function returns an integer representing the approximate count of distinct values in the specified column.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, you can use `dcount` to count the number of distinct users in a log file over a specified time period.
+
+**Query**
+
+```kusto
+log_entries
+| summarize dcount(user_id) by bin(timestamp, 1h)
+```
+
+**Output**
+
+| timestamp           | dcount_user_id |
+|---------------------|----------------|
+| 2024-09-26 10:00:00 | 120            |
+| 2024-09-26 11:00:00 | 150            |
+| 2024-09-26 12:00:00 | 130            |
+
+This query returns the approximate distinct count of `user_id`s per hour.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+For OpenTelemetry traces, `dcount` can be used to identify the number of distinct services that are sending telemetry data.
+
+**Query**
+
+```kusto
+traces
+| summarize dcount(service_name) by bin(timestamp, 30m)
+```
+
+**Output**
+
+| timestamp           | dcount_service_name |
+|---------------------|---------------------|
+| 2024-09-26 10:00:00 | 15                  |
+| 2024-09-26 10:30:00 | 18                  |
+| 2024-09-26 11:00:00 | 20                  |
+
+This query returns the approximate number of distinct services reporting traces in 30-minute intervals.
+
+</Tab>
+<Tab title="Security logs">
+
+In security logs, you might want to track the distinct number of IP addresses that have attempted to access your system over time.
+
+**Query**
+
+```kusto
+security_logs
+| summarize dcount(ip_address) by bin(timestamp, 1d)
+```
+
+**Output**
+
+| timestamp           | dcount_ip_address |
+|---------------------|-------------------|
+| 2024-09-25 00:00:00 | 350               |
+| 2024-09-26 00:00:00 | 400               |
+| 2024-09-27 00:00:00 | 390               |
+
+This query gives an approximate distinct count of `ip_address` values attempting access each day.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- **`count`**: Counts all rows in a dataset or group without distinguishing between distinct values.
+- **`countif`**: Counts rows where a specified condition evaluates to true.
+- **`dcountif`**: Counts distinct values only where a specified condition is true.
+- **`sum`**: Calculates the sum of values in a numeric column.
+- **`approx_set`**: Returns a set of distinct values in a column for further operations.

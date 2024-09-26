@@ -1,0 +1,148 @@
+---
+title: dcountif
+description: 'This page explains how to use the dcountif aggregation function in APL.'
+---
+
+## Introduction
+
+The `dcountif` aggregation function in APL returns the approximate count of distinct values in a column, but only for rows that meet a specified condition. It’s a powerful tool when you need to filter data before counting unique values, offering a scalable way to work with large datasets where an exact count would be too resource-intensive.
+
+You should use `dcountif` in scenarios where you are interested in counting distinct values under specific conditions, such as tracking unique user interactions based on event types, counting distinct IP addresses for security monitoring, or analyzing unique error types in logs.
+
+## Related aggregations
+
+- **`dcount`**: Use `dcount` when you need to count distinct values across all rows without filtering based on a condition.
+- **`countif`**: Use this when you want to count rows that meet a condition, but without considering distinctness.
+- **`count`**: Use `count` to get the total number of rows, without considering distinct values or filtering conditions.
+- **`sumif`**: This is used to sum values conditionally, similar to `dcountif`, but for numeric data aggregation.
+- **`approx_set`**: Use when you want a set of distinct values (rather than a count), particularly for additional set-based operations.
+
+## For users of other query languages
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the equivalent function to `dcountif` would be combining the `dc()` function with a conditional filtering operation using `where`.
+
+<CodeGroup>
+```sql Splunk example
+index=web_logs | where status=200 | stats dc(user_id)
+```
+
+```kusto APL equivalent
+web_logs
+| summarize dcountif(user_id, status == 200)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, `COUNT(DISTINCT)` with a `WHERE` clause is similar to `dcountif`, but it provides an exact count rather than an approximate one.
+
+<CodeGroup>
+```sql SQL example
+SELECT COUNT(DISTINCT user_id) 
+FROM web_logs
+WHERE status = 200;
+```
+
+```kusto APL equivalent
+web_logs
+| summarize dcountif(user_id, status == 200)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize dcountif(column_name, predicate [, accuracy])
+```
+
+### Parameters
+
+- `column_name`: The column whose distinct values you want to count.
+- `predicate`: A condition that must be true for the row to be included in the count.
+- `accuracy`: Optional. An integer value that specifies the desired accuracy. Higher accuracy requires more resources but improves precision.
+
+### Returns
+
+The function returns an integer representing the approximate count of distinct values in the specified column, for rows that meet the condition.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, you can use `dcountif` to count how many distinct users accessed a service successfully (e.g., HTTP status 200).
+
+**Query**
+
+```kusto
+log_entries
+| summarize dcountif(user_id, status == 200)
+```
+
+**Output**
+
+| dcount_user_id |
+|----------------|
+| 400            |
+
+This query returns the approximate count of distinct `user_id`s who accessed the service successfully.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+For OpenTelemetry traces, you can count how many distinct services have reported a specific error type.
+
+**Query**
+
+```kusto
+traces
+| summarize dcountif(service_name, error_code == "500")
+```
+
+**Output**
+
+| dcount_service_name |
+|---------------------|
+| 25                  |
+
+This query gives the approximate number of distinct `service_name`s that have reported an internal server error (HTTP 500).
+
+</Tab>
+<Tab title="Security logs">
+
+In security log analysis, `dcountif` can be used to count distinct IP addresses that have attempted failed logins.
+
+**Query**
+
+```kusto
+security_logs
+| summarize dcountif(ip_address, login_status == "failed")
+```
+
+**Output**
+
+| dcount_ip_address |
+|-------------------|
+| 180               |
+
+This query returns the approximate distinct count of IP addresses that have failed to log in.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- **`dcount`**: Use this to count distinct values without applying a filter condition.
+- **`countif`**: Counts rows that satisfy a condition, without considering distinct values.
+- **`count`**: Counts the total number of rows in a dataset.
+- **`sumif`**: Sums numeric values only for rows that meet a condition.
+- **`approx_set`**: Returns a set of distinct values, useful for subsequent set-based operations.

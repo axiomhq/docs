@@ -1,0 +1,159 @@
+---
+title: histogram
+description: 'This page explains how to use the histogram aggregation function in APL.'
+---
+
+## Introduction
+
+The `histogram` aggregation function in APL allows you to group numerical data into bins or ranges, providing a quick way to visualize the distribution of values within a dataset. Each bin represents a range of values, and the aggregation counts the number of occurrences within each bin. This is especially useful for understanding how data is spread across various ranges, such as tracking the frequency of response times, error codes, or resource usage.
+
+You can use `histogram` when analyzing continuous data that can be naturally divided into intervals or when you want to detect patterns and trends, such as in performance metrics or time-based events.
+
+## Related aggregations
+
+- **`summarize`**: Use this for more general aggregations (like sums, averages, or counts), where you don’t need to group data into bins.
+- **`bin()`**: While not an aggregation, `bin()` can be used alongside `summarize` to manually group data into intervals. Use this if you need more control over the bin size or alignment.
+- **`make-series`**: Generates time series data, which can be useful when dealing with continuous data over time, similar to `histogram`, but for time-based binning.
+- **`percentiles()`**: Use to get a distribution of values into percentiles, which is useful for a more granular understanding of distribution compared to histogram bins.
+- **`tostring()`**: Converts values into strings, which can be helpful when creating textual groupings for categorical data rather than numerical bins.
+
+## For users of other query languages
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the equivalent to APL’s `histogram` function can be achieved using the `bin` command combined with a count aggregation.
+
+<CodeGroup>
+```sql Splunk example
+index=logs | bin span=10ms duration | stats count by duration
+```
+
+```kusto APL equivalent
+logs
+| summarize count() by histogram(duration, 10ms)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, achieving the effect of `histogram` involves manually defining ranges using `CASE` statements or range-based filtering with `GROUP BY`.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE 
+        WHEN value BETWEEN 0 AND 10 THEN '0-10'
+        WHEN value BETWEEN 11 AND 20 THEN '11-20'
+       END AS range, COUNT(*)
+FROM table_name
+GROUP BY range;
+```
+
+```kusto APL equivalent
+table_name
+| summarize count() by histogram(value, 10)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize count() by histogram(column, bin_size)
+```
+
+### Parameters
+
+- `column`: The numeric column whose values you want to group into bins.
+- `bin_size`: The size of each bin or range. The value must be a constant and should be appropriate for the data being grouped.
+
+### Returns
+
+The function returns a table where each row represents a bin with the corresponding count of values that fall within that bin.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, the `histogram` function helps you understand the distribution of response times in logs by grouping them into defined intervals.
+
+**Query**
+
+```kusto
+log_entries
+| summarize count() by histogram(response_time, 100)
+```
+
+**Output**
+
+| response_time | count_ |
+|---------------|--------|
+| 0             | 200    |
+| 100           | 340    |
+| 200           | 120    |
+| 300           | 90     |
+
+This query groups the `response_time` into 100 ms intervals and counts the occurrences in each bin, helping identify how frequently different response times occur.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+For OpenTelemetry traces, you can use `histogram` to track the distribution of service latencies in specific intervals.
+
+**Query**
+
+```kusto
+traces
+| summarize count() by histogram(latency, 50)
+```
+
+**Output**
+
+| latency | count_ |
+|---------|--------|
+| 0       | 45     |
+| 50      | 102    |
+| 100     | 80     |
+| 150     | 23     |
+
+This query groups `latency` into 50 ms bins, giving you a clear view of how service latency is distributed across your traces.
+
+</Tab>
+<Tab title="Security logs">
+
+In security logs, the `histogram` function can be useful for analyzing login attempts by grouping them into hourly intervals.
+
+**Query**
+
+```kusto
+security_logs
+| summarize count() by histogram(login_time, 1h)
+```
+
+**Output**
+
+| login_time | count_ |
+|------------|--------|
+| 00:00      | 130    |
+| 01:00      | 95     |
+| 02:00      | 87     |
+| 03:00      | 100    |
+
+This query counts login attempts by hour, helping you identify patterns in login behavior over time.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- **`summarize`**: Performs aggregation without binning the data into intervals.
+- **`bin()`**: Manually bins data into specified intervals, often used alongside `summarize`.
+- **`make-series`**: Bins data over time for time series analysis.
+- **`percentiles()`**: Divides data into percentiles, providing a more precise breakdown compared to bins.
+- **`count()`**: Basic aggregation function to count the total number of rows in a dataset.
