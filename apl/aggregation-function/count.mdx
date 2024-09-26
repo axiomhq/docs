@@ -1,0 +1,151 @@
+---
+title: count
+description: 'This page explains how to use the count aggregation function in APL.'
+---
+
+## Introduction
+
+The `count` aggregation function in APL counts the number of rows in a dataset or a subset of a dataset. It’s one of the most basic and frequently used aggregation functions, helping you quickly understand the size of your dataset or how many records match specific criteria.
+
+The `count` function is useful in a wide range of scenarios, such as counting the number of log entries, transactions, events, or security incidents in a given time period. Use it when you need to quantify the occurrence of events or records in your data.
+
+## Related aggregations
+
+The `count` function is often used alongside other aggregation functions. Here’s how it compares:
+
+- **`countif`**: Use when you want to count only the rows that satisfy a certain condition. `count` counts all rows, while `countif` is conditional.
+- **`dcount`**: Use this function if you want to count distinct values in a column. `dcount` provides a count of unique items, whereas `count` tallies every row.
+- **`sum`**: Use when you want to compute the sum of values in a column rather than counting rows. It’s ideal for aggregating numeric fields.
+- **`avg`**: Use when you want to calculate the average of numeric values in a column, whereas `count` simply returns the number of rows.
+
+## For users of other query languages
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `count` function is equivalent to APL's `count`. It is used in similar contexts to return the number of events or records in a dataset.
+
+<CodeGroup>
+```sql Splunk example
+index=web_logs | stats count
+```
+
+```kusto APL equivalent
+web_logs
+| summarize count()
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the `COUNT()` function is the equivalent of APL’s `count`. Both return the number of rows in the result set.
+
+<CodeGroup>
+```sql SQL example
+SELECT COUNT(*) FROM web_logs;
+```
+
+```kusto APL equivalent
+web_logs
+| summarize count()
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize count()
+```
+
+### Parameters
+
+The `count` function takes no parameters. It simply returns the number of rows in the dataset or the grouped subset.
+
+### Returns
+
+The `count` function returns an integer representing the total number of rows in the input dataset or within each group if used with a `by` clause.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, you can use the `count` function to determine how many log entries are present within specific time intervals.
+
+**Query**
+
+```kusto
+web_logs
+| summarize count() by bin(timestamp, 1h)
+```
+
+**Output**
+
+| timestamp           | count |
+|---------------------|-------|
+| 2024-09-26 10:00:00 | 2345  |
+| 2024-09-26 11:00:00 | 1987  |
+| 2024-09-26 12:00:00 | 2201  |
+
+This query counts the number of log entries in one-hour intervals.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In OpenTelemetry trace analysis, you can use `count` to see how many traces occurred over a certain period, helping identify traffic patterns.
+
+**Query**
+
+```kusto
+traces
+| summarize count() by bin(timestamp, 5m)
+```
+
+**Output**
+
+| timestamp           | count |
+|---------------------|-------|
+| 2024-09-26 10:00:00 | 520   |
+| 2024-09-26 10:05:00 | 478   |
+| 2024-09-26 10:10:00 | 503   |
+
+This query counts the number of traces generated in five-minute intervals.
+
+</Tab>
+<Tab title="Security logs">
+
+In security monitoring, you can use the `count` function to see how many security events occurred during different time windows.
+
+**Query**
+
+```kusto
+security_logs
+| summarize count() by bin(timestamp, 1d)
+```
+
+**Output**
+
+| timestamp           | count |
+|---------------------|-------|
+| 2024-09-25 00:00:00 | 85    |
+| 2024-09-26 00:00:00 | 92    |
+| 2024-09-27 00:00:00 | 103   |
+
+This query counts the number of security events that occurred daily.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- **`countif`**: Returns the number of rows that satisfy a specific condition.
+- **`dcount`**: Returns the count of distinct values in a column.
+- **`sum`**: Computes the sum of values in a numeric column.
+- **`avg`**: Calculates the average of numeric values in a column.
+- **`min`**: Returns the minimum value in a column.
