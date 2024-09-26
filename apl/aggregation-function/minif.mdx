@@ -1,0 +1,177 @@
+---
+title: minif
+description: 'This documentation page explains how to use the minif aggregation function in APL.'
+---
+
+## Introduction
+
+The `minif` aggregation function allows you to calculate the minimum value of a given expression only when a specified condition holds true. It’s particularly useful when you need to filter rows within an aggregation to focus on specific subsets of data based on criteria. This feature is essential for scenarios where you need the minimum value of an expression only under specific conditions, without having to perform a post-aggregation filtering.
+
+Key use cases:
+- Analyze telemetry data to get the minimum response time for only successful requests.
+- Find the minimum value in security logs but limited to a particular severity level.
+- Explore operational logs, like finding the minimum CPU usage during a specific time window or under certain conditions.
+
+## Related aggregations
+
+The `minif` aggregation is similar to the standard `min` aggregation. The key difference is the inclusion of a conditional filter. While `min` returns the overall minimum value in a dataset, `minif` refines the result by applying a condition to determine which rows should be considered.
+
+- Use `minif` when you only care about the minimum value under specific conditions. For example, you want to find the minimum duration of HTTP requests that resulted in a 200 status code.
+- Use `min` when you want the minimum value across the entire dataset, without filtering.
+
+| Aggregation type | Description                                  | Example |
+|------------------|----------------------------------------------|---------|
+| `min`            | Minimum value without any condition          | `min(duration)` |
+| `minif`          | Minimum value only when a condition is true  | `minif(duration, status_code == 200)` |
+
+## For users of other query languages
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk Search Processing Language (SPL), the equivalent concept to `minif` can be achieved using a combination of `stats min()` and `where`. In SPL, you typically filter the data first and then apply the aggregation. APL simplifies this by embedding the condition directly within the `minif` function, so filtering and aggregation are done in a single step.
+
+<CodeGroup>
+```sql Splunk example
+| stats min(duration) as min_duration where status_code = 200
+```
+
+```kusto APL equivalent
+summarize minif(duration, status_code == 200)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you often use `MIN` in conjunction with a `CASE` statement or filter your dataset before aggregating. `minif` in APL provides a more concise way to achieve the same result by allowing you to apply a condition directly within the aggregation function, rather than writing additional subqueries or `WHERE` clauses.
+
+<CodeGroup>
+```sql SQL example
+SELECT MIN(CASE WHEN status_code = 200 THEN duration END) AS min_duration FROM logs
+```
+
+```kusto APL equivalent
+summarize minif(duration, status_code == 200)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize minif(Expression, Predicate)
+```
+
+### Parameters
+
+- **Expression**: The value you want to aggregate. For example, a column like `duration`, `response_time`, or `value`.
+- **Predicate**: A Boolean condition that determines which rows should be considered. For example, `status_code == 200`, `severity == 'Critical'`.
+
+### Returns
+
+The `minif` aggregation returns the minimum value of `Expression` for rows that meet the `Predicate`. If no rows satisfy the condition, the function returns `null`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, you often want to find the minimum value of a certain field, like response time, but only for successful requests.
+
+### Query
+
+```kusto
+let logs = datatable(status_code:int, response_time:long)
+[
+    200, 350,
+    500, 400,
+    200, 150,
+    404, 250
+];
+logs
+| summarize minif(response_time, status_code == 200) 
+```
+
+### Output
+
+| min_response_time |
+|-------------------|
+| 150               |
+
+This query finds the minimum response time only for logs where the `status_code` is 200.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+When analyzing OpenTelemetry traces, you might want to find the minimum latency for a specific span kind, such as server spans.
+
+### Query
+
+```kusto
+let traces = datatable(span_kind:string, latency:long)
+[
+    "client", 120,
+    "server", 80,
+    "server", 150,
+    "client", 200
+];
+traces
+| summarize minif(latency, span_kind == "server")
+```
+
+### Output
+
+| min_latency |
+|-------------|
+| 80          |
+
+This query finds the minimum latency for `server` spans.
+
+</Tab>
+<Tab title="Security logs">
+
+Security analysts often need to filter security logs by severity. The example below finds the minimum timestamp of critical security events.
+
+### Query
+
+```kusto
+let security_logs = datatable(severity:string, timestamp:datetime)
+[
+    "Critical", datetime(2023-09-10 12:00:00),
+    "Warning", datetime(2023-09-10 12:10:00),
+    "Critical", datetime(2023-09-10 11:30:00),
+    "Info", datetime(2023-09-10 13:00:00)
+];
+security_logs
+| summarize minif(timestamp, severity == "Critical")
+```
+
+### Output
+
+| min_timestamp            |
+|--------------------------|
+| 2023-09-10 11:30:00      |
+
+This query finds the earliest (`minimum`) timestamp for security logs marked as `Critical`.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- **`min`**: Returns the minimum value of an expression across all rows, without any conditions.
+- **`maxif`**: Returns the maximum value of an expression when a specified condition is true.
+- **`countif`**: Counts the number of rows that meet a specific condition.
+- **`sumif`**: Sums the values of an expression only when a specified condition is true.
+- **`avgif`**: Computes the average of an expression when a condition is true.
+
+These aggregations are part of APL’s robust set of functions that help users perform conditional aggregation and filtering within queries.
+
+## Conclusion
+
+This documentation gives you an overview of the `minif` function, providing a breakdown of its use, syntax, and relevant examples for different contexts like log analysis and telemetry traces. With its conditional logic, `minif` allows you to zero in on important subsets of data quickly, improving query efficiency and clarity.
