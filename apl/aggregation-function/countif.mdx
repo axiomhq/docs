@@ -1,0 +1,152 @@
+---
+title: countif
+description: 'This page explains how to use the countif aggregation function in APL.'
+---
+
+## Introduction
+
+The `countif` aggregation function in APL allows you to count rows that meet a specific condition. Unlike the `count` function, which counts all rows in a dataset, `countif` returns a count only for rows where a specified condition evaluates to true. This is particularly useful when analyzing data that contains various conditions, and you want to focus on specific subsets, such as counting error events, user activity above a threshold, or security incidents matching a certain criterion.
+
+You can use the `countif` function whenever you need conditional counts, whether in log analysis, performance monitoring, or security investigations.
+
+## Related aggregations
+
+The `countif` function works similarly to other aggregation functions but with distinct uses:
+
+- **`count`**: Use `count` when you want to count all rows without any conditions. It provides the total number of rows in a dataset or group.
+- **`dcountif`**: Use this when you want to count distinct values in a column but only for rows where a condition is met.
+- **`sumif`**: Similar to `countif`, but instead of counting rows, it sums the values in a numeric column where the condition is true.
+- **`avgif`**: Use when you need to compute the average of a numeric column but only for rows that meet a specific condition.
+- **`minif`**: Returns the minimum value of a column where the condition is true, as opposed to counting rows.
+
+## For users of other query languages
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `countif` function has a similar equivalent when used with `stats` or `eval` to filter rows before counting them.
+
+<CodeGroup>
+```sql Splunk example
+index=web_logs status="200" | stats count
+```
+
+```kusto APL equivalent
+web_logs
+| summarize countif(status == "200")
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the equivalent of `countif` can be achieved using the `COUNT()` function with a conditional expression inside a `CASE` statement or using the `FILTER` clause (depending on SQL dialect).
+
+<CodeGroup>
+```sql SQL example
+SELECT COUNT(CASE WHEN status = '200' THEN 1 END) FROM web_logs;
+```
+
+```kusto APL equivalent
+web_logs
+| summarize countif(status == "200")
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize countif(condition)
+```
+
+### Parameters
+
+- `condition`: A boolean expression that specifies the condition for counting rows. Only rows where the expression evaluates to `true` are included in the count.
+
+### Returns
+
+The `countif` function returns an integer that represents the number of rows for which the specified condition holds true.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, you can use the `countif` function to count the number of error logs based on their severity level.
+
+**Query**
+
+```kusto
+log_entries
+| summarize countif(severity == "Error") by bin(timestamp, 1h)
+```
+
+**Output**
+
+| timestamp           | count |
+|---------------------|-------|
+| 2024-09-26 10:00:00 | 150   |
+| 2024-09-26 11:00:00 | 180   |
+| 2024-09-26 12:00:00 | 170   |
+
+This query counts the number of log entries with a severity level of "Error" in hourly intervals.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In OpenTelemetry trace analysis, you can count traces where the response time exceeds a threshold, helping to identify performance issues.
+
+**Query**
+
+```kusto
+traces
+| summarize countif(duration > 2000) by bin(timestamp, 10m)
+```
+
+**Output**
+
+| timestamp           | count |
+|---------------------|-------|
+| 2024-09-26 10:00:00 | 25    |
+| 2024-09-26 10:10:00 | 30    |
+| 2024-09-26 10:20:00 | 28    |
+
+This query counts the number of traces where the `duration` exceeds 2000ms in ten-minute intervals.
+
+</Tab>
+<Tab title="Security logs">
+
+In security log analysis, you can use `countif` to count suspicious login attempts that failed multiple times.
+
+**Query**
+
+```kusto
+security_logs
+| summarize countif(action == "failed_login" and attempts > 3) by bin(timestamp, 1d)
+```
+
+**Output**
+
+| timestamp           | count |
+|---------------------|-------|
+| 2024-09-25 00:00:00 | 12    |
+| 2024-09-26 00:00:00 | 18    |
+| 2024-09-27 00:00:00 | 15    |
+
+This query counts the number of failed login attempts with more than three retries per day.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- **`count`**: Counts all rows in the dataset or a group without any conditions.
+- **`dcountif`**: Counts distinct values in a column where a condition is true.
+- **`sumif`**: Sums the values in a numeric column where the specified condition is true.
+- **`avgif`**: Returns the average of a numeric column based on a condition.
+- **`minif`**: Returns the minimum value in a column where the condition is true.
