@@ -5,18 +5,7 @@ description: 'This page explains how to use the avgif aggregation function in AP
 
 ## Introduction
 
-The `avgif` aggregation function in APL calculates the arithmetic mean (average) of numeric values that satisfy a specified condition. This function is particularly useful when you want to compute the average of a subset of data that meets certain criteria. For example, you can use `avgif` to calculate the average response time of successful requests or the average value of transactions that exceed a certain threshold.
-
-You should use the `avgif` function in situations where you need to filter data before performing the aggregation. This makes it useful for scenarios like conditional performance analysis, selective trend monitoring, or analyzing specific segments of your data.
-
-## Related aggregations
-
-The `avgif` function is part of a family of conditional aggregations in APL. Here’s how it compares to other similar functions:
-
-- **`avg`**: Use when you want to compute the average across all records without applying any conditions. `avgif` is more specialized, allowing you to include a condition.
-- **`sumif`**: Use this function if you need the total sum of values that meet a certain condition, rather than the average.
-- **`countif`**: Use this when you want to count the number of records that satisfy a condition.
-- **`minif`/`maxif`**: These functions return the minimum or maximum values that meet a condition, useful when you are looking for boundary values within filtered data.
+The `avgif` aggregation function in APL allows you to calculate the average value of a field, but only for records that satisfy a given condition. This function is particularly useful when you need to perform a filtered aggregation, such as finding the average response time for requests that returned a specific status code or filtering by geographic regions. The `avgif` function is highly valuable in scenarios like log analysis, performance monitoring, and anomaly detection, where focusing on subsets of data can provide more accurate insights.
 
 ## For users of other query languages
 
@@ -25,33 +14,34 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, there is no direct equivalent to the `avgif` function. However, you can achieve the same result by combining filtering and the `avg` function.
+In Splunk, you achieve similar functionality using the combination of a `stats` function with conditional filtering. In APL, `avgif` provides this filtering inline as part of the aggregation function, which can simplify your queries.
 
 <CodeGroup>
 ```sql Splunk example
-index=web_logs response_time>100 | stats avg(response_time)
+| stats avg(req_duration_ms) by id where status = "200"
 ```
 
 ```kusto APL equivalent
-web_logs
-| summarize avgif(response_time, response_time > 100)
+['sample-http-logs'] 
+| summarize avgif(req_duration_ms, status == "200") by id
 ```
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, the functionality of `avgif` can be replicated using the `AVG()` function with a `CASE` statement or a `WHERE` clause.
+In ANSI SQL, you can use a `CASE` statement inside an `AVG()` function to achieve similar behavior. APL simplifies this with `avgif`, allowing you to specify the condition directly.
 
 <CodeGroup>
 ```sql SQL example
-SELECT AVG(CASE WHEN response_time > 100 THEN response_time END)
-FROM web_logs;
+SELECT id, AVG(CASE WHEN status = '200' THEN req_duration_ms ELSE NULL END) 
+FROM sample_http_logs 
+GROUP BY id
 ```
 
 ```kusto APL equivalent
-web_logs
-| summarize avgif(response_time, response_time > 100)
+['sample-http-logs'] 
+| summarize avgif(req_duration_ms, status == "200") by id
 ```
 </CodeGroup>
 
@@ -63,93 +53,100 @@ web_logs
 ### Syntax
 
 ```kusto
-summarize avgif(Expression, Predicate)
+summarize avgif(expr, predicate) by grouping_field
 ```
 
 ### Parameters
 
-- **Expression**: The numeric expression to aggregate.
-- **Predicate**: A Boolean expression that filters the data. Only records for which this predicate evaluates to `true` are considered.
+- **`expr`**: The field for which you want to calculate the average.
+- **`predicate`**: A boolean condition that filters which records are included in the calculation.
+- **`grouping_field`**: (Optional) A field by which you want to group the results.
 
 ### Returns
 
-The `avgif` function returns a numeric value representing the average of the selected expression for records that meet the condition specified by the predicate.
+The function returns the average of the values from the `expr` field for the records that satisfy the `predicate`. If no records match the condition, the result is `null`.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-In log analysis, you can use the `avgif` function to calculate the average response time for requests that took longer than a specific threshold.
+In this example, you calculate the average request duration for HTTP status 200 in different cities.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| summarize avgif(req_duration_ms, req_duration_ms > 0.1) by bin(_time, 1m)
+['sample-http-logs'] 
+| summarize avgif(req_duration_ms, status == "200") by ['geo.city']
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20avgif%28req_duration_ms%2C%20status%20%3D%3D%20%22200%22%29%20by%20%5B%27geo.city%27%5D%22%7D)
 
 **Output**
 
-| timestamp           | avg_response_time |
-|---------------------|-------------------|
-| 2024-09-26 10:00:00 | 700.2             |
-| 2024-09-26 10:01:00 | 650.4             |
-| 2024-09-26 10:02:00 | 715.6             |
+| geo.city   | avg_req_duration_ms |
+|------------|---------------------|
+| New York   | 325                 |
+| London     | 400                 |
+| Tokyo      | 275                 |
 
-This query calculates the average response time for requests that took more than 0.1 milliseconds, grouped by one-minute intervals.
+This query calculates the average request duration (`req_duration_ms`) for HTTP requests that returned a status of 200 (`status == "200"`), grouped by the city where the request originated (`geo.city`).
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-In OpenTelemetry trace analysis, you can calculate the average span duration for spans that were longer than a certain threshold, helping you analyze performance bottlenecks.
+In this example, you calculate the average span duration for traces that ended with HTTP status 500.
 
 **Query**
 
 ```kusto
-traces
-| summarize avgif(span_duration, span_duration > 100) by bin(timestamp, 5m)
+['otel-demo-traces'] 
+| summarize avgif(duration, status == "500") by ['service.name']
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20summarize%20avgif%28duration%2C%20status%20%3D%3D%20%22500%22%29%20by%20%5B%27service.name%27%5D%22%7D)
 
 **Output**
 
-| timestamp           | avg_span_duration |
-|---------------------|-------------------|
-| 2024-09-26 10:00:00 | 135.3             |
-| 2024-09-26 10:05:00 | 150.8             |
-| 2024-09-26 10:10:00 | 120.5             |
+| service.name          | avg_duration |
+|-----------------------|--------------|
+| checkoutservice       | 500ms        |
+| frontend              | 600ms        |
+| cartservice           | 475ms        |
 
-This query calculates the average span duration for spans that exceed 100 milliseconds, grouped into five-minute windows.
+This query calculates the average span duration (`duration`) for traces where the status code is 500 (`status == "500"`), grouped by the service name (`service.name`).
 
 </Tab>
 <Tab title="Security logs">
 
-In security monitoring, you might want to calculate the average number of failed login attempts where the user’s account was flagged as suspicious.
+In this example, you calculate the average request duration for failed HTTP requests (status code 400 or higher) by country.
 
 **Query**
 
 ```kusto
-security_logs
-| summarize avgif(failed_attempts, is_suspicious == true) by bin(timestamp, 10m)
+['sample-http-logs'] 
+| summarize avgif(req_duration_ms, toint(status) >= 400) by ['geo.country']
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20avgif%28req_duration_ms%2C%20toint%28status%29%20%3E%3D%20400%29%20by%20%5B%27geo.country%27%5D%22%7D)
 
 **Output**
 
-| timestamp           | avg_failed_attempts |
-|---------------------|---------------------|
-| 2024-09-26 10:00:00 | 4.7                 |
-| 2024-09-26 10:10:00 | 5.2                 |
-| 2024-09-26 10:20:00 | 6.1                 |
+| geo.country   | avg_req_duration_ms |
+|---------------|---------------------|
+| USA           | 450                 |
+| Canada        | 500                 |
+| Germany       | 425                 |
 
-This query computes the average number of failed login attempts for users flagged as suspicious within 10-minute intervals.
+This query calculates the average request duration (`req_duration_ms`) for failed HTTP requests (`status >= 400`), grouped by the country of origin (`geo.country`).
 
 </Tab>
 </Tabs>
 
 ## List of related aggregations
 
-- **`avg`**: Computes the arithmetic mean of all values without applying conditions.
-- **`sumif`**: Calculates the sum of values that meet a specified condition.
-- **`countif`**: Counts the number of records that satisfy a condition.
-- **`minif`**: Finds the minimum value among records that meet a condition.
-- **`maxif`**: Finds the maximum value among records that meet a condition.
+- **`minif`**: Returns the minimum value of an expression, filtered by a predicate. Use when you want to find the smallest value for a subset of data.
+- **`maxif`**: Returns the maximum value of an expression, filtered by a predicate. Use when you are looking for the largest value within specific conditions.
+- **`countif`**: Counts the number of records that match a condition. Use when you want to know how many records meet a specific criterion.
+- **`sumif`**: Sums the values of a field that match a given condition. Ideal for calculating the total of a subset of data.
+- **`percentileif`**: Computes the percentile of a field for values that meet a condition. Use when you need to find a specific percentile for filtered data.

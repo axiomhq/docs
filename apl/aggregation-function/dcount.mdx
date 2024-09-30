@@ -5,17 +5,9 @@ description: 'This page explains how to use the dcount aggregation function in A
 
 ## Introduction
 
-The `dcount` aggregation function in APL is used to return the approximate count of distinct values in a specific column. It’s particularly useful when working with large datasets, as it uses algorithms to estimate distinct counts more efficiently than exact counting methods. The function is commonly applied in scenarios like tracking the number of unique users, counting distinct IP addresses, or monitoring unique events.
+The `dcount` aggregation function in Axiom Processing Language (APL) counts the distinct values in a column. This function is essential when you need to know the number of unique values, such as counting distinct users, unique requests, or distinct error codes in log files. 
 
-Use `dcount` when you need an approximate count of distinct values for scalability and performance, especially in high-volume data analysis.
-
-## Related aggregations
-
-- **`count`**: Use `count` when you want the total number of rows in a dataset, regardless of distinctness.
-- **`countif`**: Use this when you want to count rows that meet a specific condition, rather than distinct values.
-- **`dcountif`**: Use `dcountif` to return the approximate count of distinct values only for rows that meet a specific condition.
-- **`sum`**: Although it calculates sums, this is often compared with `dcount` in cases where summing distinct values is relevant.
-- **`approx_set`**: Use this when you need a set of distinct values, rather than a count, particularly useful for further set operations.
+Use `dcount` for analyzing datasets where it’s important to identify the number of distinct occurrences, such as unique IP addresses in security logs, unique user IDs in application logs, or unique trace IDs in OpenTelemetry traces.
 
 ## For users of other query languages
 
@@ -24,32 +16,34 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, the closest equivalent to `dcount` is the `dc()` function, which returns the distinct count of values for a given field.
+In Splunk SPL, you can count distinct values using the `dc` function within the `stats` command. In APL, the `dcount` function offers similar functionality.
 
 <CodeGroup>
 ```sql Splunk example
-index=web_logs | stats dc(user_id)
+| stats dc(user_id) AS distinct_users
 ```
 
 ```kusto APL equivalent
-web_logs
-| summarize dcount(user_id)
+['sample-http-logs']
+| summarize dcount(id)
 ```
 </CodeGroup>
 
 </Accordion>
+
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, the `COUNT(DISTINCT)` function provides an exact distinct count, which can be used similarly to `dcount`, but `dcount` is optimized for large datasets by providing an approximate count.
+In ANSI SQL, distinct counting is typically done using `COUNT` with the `DISTINCT` keyword. In APL, `dcount` provides a direct and efficient way to count distinct values.
 
 <CodeGroup>
 ```sql SQL example
-SELECT COUNT(DISTINCT user_id) FROM web_logs;
+SELECT COUNT(DISTINCT user_id) AS distinct_users
+FROM sample_http_logs
 ```
 
 ```kusto APL equivalent
-web_logs
-| summarize dcount(user_id)
+['sample-http-logs']
+| summarize dcount(id)
 ```
 </CodeGroup>
 
@@ -61,93 +55,96 @@ web_logs
 ### Syntax
 
 ```kusto
-summarize dcount(column_name [, accuracy])
+dcount(column_name)
 ```
 
 ### Parameters
 
-- `column_name`: The column whose distinct values you want to count.
-- `accuracy`: Optional. An integer that defines the accuracy level. Higher values lead to more precise results but may require more resources.
+- **column_name**: The name of the column for which you want to count distinct values.
 
 ### Returns
 
-The `dcount` function returns an integer representing the approximate count of distinct values in the specified column.
+The function returns the count of distinct values found in the specified column.
 
 ## Use case examples
 
 <Tabs>
+
 <Tab title="Log analysis">
 
-In log analysis, you can use `dcount` to count the number of distinct users in a log file over a specified time period.
+In log analysis, you can count how many distinct users accessed the service.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize dcount(id) by bin(_time, 1m)
+| summarize dcount(id)
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20dcount(id)%22%7D)
 
 **Output**
 
-| timestamp           | dcount_id |
-|---------------------|-----------------|
-| 2024-09-26 10:00:00 | 4322            |
-| 2024-09-26 10:01:00 | 4201            |
-| 2024-09-26 10:02:00 | 4287            |
+| distinct_users |
+|----------------|
+| 45             |
 
-This query returns the distinct count of user IDs per minute.
+This query counts the distinct values in the `id` field, representing the number of unique users who accessed the system.
 
 </Tab>
+
 <Tab title="OpenTelemetry traces">
 
-For OpenTelemetry traces, `dcount` can be used to identify the number of distinct services that are sending telemetry data.
+In OpenTelemetry traces, you can count how many unique trace IDs are recorded.
 
 **Query**
 
 ```kusto
-traces
-| summarize dcount(service_name) by bin(timestamp, 30m)
+['otel-demo-traces']
+| summarize dcount(trace_id)
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20dcount(trace_id)%22%7D)
 
 **Output**
 
-| timestamp           | dcount_service_name |
-|---------------------|---------------------|
-| 2024-09-26 10:00:00 | 15                  |
-| 2024-09-26 10:30:00 | 18                  |
-| 2024-09-26 11:00:00 | 20                  |
+| distinct_traces |
+|-----------------|
+| 321             |
 
-This query returns the approximate number of distinct services reporting traces in 30-minute intervals.
+This query counts the distinct trace IDs in the dataset, helping you determine how many unique traces are being captured.
 
 </Tab>
+
 <Tab title="Security logs">
 
-In security logs, you might want to track the distinct number of IP addresses that have attempted to access your system over time.
+In security logs, you can count how many distinct IP addresses were logged.
 
 **Query**
 
 ```kusto
-security_logs
-| summarize dcount(ip_address) by bin(timestamp, 1d)
+['sample-http-logs']
+| summarize dcount(['geo.city'])
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20dcount(%5B'geo.city'%5D)%22%7D)
 
 **Output**
 
-| timestamp           | dcount_ip_address |
-|---------------------|-------------------|
-| 2024-09-25 00:00:00 | 350               |
-| 2024-09-26 00:00:00 | 400               |
-| 2024-09-27 00:00:00 | 390               |
+| distinct_cities |
+|-----------------|
+| 35              |
 
-This query gives an approximate distinct count of `ip_address` values attempting access each day.
+This query counts the number of distinct cities recorded in the logs, which helps analyze the geographic distribution of traffic.
 
 </Tab>
+
 </Tabs>
 
 ## List of related aggregations
 
-- **`count`**: Counts all rows in a dataset or group without distinguishing between distinct values.
-- **`countif`**: Counts rows where a specified condition evaluates to true.
-- **`dcountif`**: Counts distinct values only where a specified condition is true.
-- **`sum`**: Calculates the sum of values in a numeric column.
-- **`approx_set`**: Returns a set of distinct values in a column for further operations.
+- **`count`**: Counts the total number of records in the dataset, including duplicates. Use it when you need to know the overall number of records.
+- **`countif`**: Counts records that match a specific condition. Use `countif` when you want to count records based on a filter or condition.
+- **`dcountif`**: Counts the distinct values in a column but only for records that meet a condition. It’s useful when you need a filtered distinct count.
+- **`sum`**: Sums the values in a column. Use this when you need to add up values rather than counting distinct occurrences.
+- **`avg`**: Calculates the average value for a column. Use this when you want to find the average of a specific numeric field.

@@ -5,18 +5,13 @@ description: 'This page explains how to use the avg aggregation function in APL.
 
 ## Introduction
 
-The `avg` aggregation function in APL computes the arithmetic mean (average) of a set of numeric values. This aggregation is useful when you need to find the central tendency or typical value in your data. You can use the `avg` function in scenarios such as analyzing performance metrics, calculating average response times, and summarizing numerical data across large datasets.
+The `avg` aggregation in APL calculates the average value of a numeric field across a set of records. You can use this aggregation when you need to determine the mean value of numerical data, such as request durations, response times, or other performance metrics. It is useful in scenarios such as performance analysis, trend identification, and general statistical analysis.
 
-The `avg` function becomes particularly helpful when you want to condense a large number of values into a single number that represents the "middle" of the data. For instance, in log analysis, it can be used to find the average number of requests per minute, or in security monitoring, to calculate the average number of failed login attempts within a given time window.
+When to use it:
 
-## Related aggregations
-
-The `avg` aggregation is one of several functions that summarize data. Here’s how it compares to other related functions:
-
-- `sum`: Use when you want the total of all values instead of the average.
-- `min`/`max`: Use these when you’re interested in the smallest or largest values in a dataset instead of the central tendency.
-- `count`: Use when you need the number of items in a dataset, which can be useful when you want to calculate the average by dividing `sum` by `count` manually.
-- `percentile`: Use when you need to know the value below which a given percentage of data falls. It’s useful for understanding data distribution but doesn’t directly provide the central tendency like `avg`.
+- When you want to analyze the average of numeric values over a specific time range or set of data.
+- For comparing trends, like average request duration or latency across HTTP requests.
+- To provide insight into system or user performance, such as the average duration of transactions in a service.
 
 ## For users of other query languages
 
@@ -25,34 +20,34 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk’s Search Processing Language (SPL), the `avg` function works similarly to how it does in APL. You would use it in the `stats` or `timechart` commands to calculate the average of a field over a set of events or over time.
+In Splunk SPL, the `avg` function works similarly, but the syntax differs slightly. Here’s how to write the equivalent query in APL.
 
 <CodeGroup>
 ```sql Splunk example
-index=web_logs | stats avg(response_time) as avgResponseTime
+| stats avg(req_duration_ms) by status
 ```
 
 ```kusto APL equivalent
-web_logs
-| summarize avg(response_time) by bin(timestamp, 1m)
+['sample-http-logs']
+| summarize avg(req_duration_ms) by status
 ```
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, the `avg` function works similarly to how it does in APL. Both languages use the function to calculate the arithmetic mean of a set of numeric values.
+In ANSI SQL, the `avg` aggregation is used similarly, but APL has a different syntax for structuring the query.
 
 <CodeGroup>
 ```sql SQL example
-SELECT AVG(response_time)
-FROM web_logs
-GROUP BY DATE_TRUNC('minute', timestamp);
+SELECT status, AVG(req_duration_ms)
+FROM sample_http_logs
+GROUP BY status
 ```
 
 ```kusto APL equivalent
-web_logs
-| summarize avg(response_time) by bin(timestamp, 1m)
+['sample-http-logs']
+| summarize avg(req_duration_ms) by status
 ```
 </CodeGroup>
 
@@ -64,93 +59,96 @@ web_logs
 ### Syntax
 
 ```kusto
-summarize avg(Expression) 
+summarize avg(ColumnName) [by GroupingColumn]
 ```
 
 ### Parameters
 
-- **Expression**: The numeric expression to aggregate. This can be a field or a more complex expression.
+- **ColumnName**: The numeric field you want to calculate the average of.
+- **GroupingColumn** (optional): A column to group the results by. If not specified, the average is calculated over all records.
 
 ### Returns
 
-The `avg` function returns a single numeric value representing the arithmetic mean of the specified field or expression across all records.
+- A table with the average value for the specified field, optionally grouped by another column.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-In log analysis, you can use the `avg` function to calculate the average number of requests received by a server every minute.
+This example calculates the average request duration for HTTP requests, grouped by status.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize avg(req_duration_ms) by bin(_time, 1m)
+| summarize avg(req_duration_ms) by status
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20avg(req_duration_ms)%20by%20status%22%7D)
 
 **Output**
 
-| timestamp           | avg_requests_per_minute |
-|---------------------|-------------------------|
-| 2024-09-26 10:00:00 | 35.2                    |
-| 2024-09-26 10:01:00 | 40.7                    |
-| 2024-09-26 10:02:00 | 37.1                    |
+| status | avg_req_duration_ms |
+|--------|---------------------|
+| 200    | 350.4               |
+| 404    | 150.2               |
 
-This query calculates the average number of requests received per minute and displays it in a tabular format grouped by timestamp.
+This query calculates the average request duration (in milliseconds) for each HTTP status code.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-When working with OpenTelemetry traces, you might want to compute the average duration of spans to measure overall system performance.
+This example calculates the average span duration for each service to analyze performance across services.
 
 **Query**
 
 ```kusto
-traces
-| summarize avg(span_duration) by bin(timestamp, 5m)
+['otel-demo-traces']
+| summarize avg(duration) by ['service.name']
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%5Cn%7C%20summarize%20avg(duration)%20by%20%5B'service.name'%5D%22%7D)
 
 **Output**
 
-| timestamp           | avg_span_duration |
-|---------------------|-------------------|
-| 2024-09-26 10:00:00 | 120.3             |
-| 2024-09-26 10:05:00 | 110.8             |
-| 2024-09-26 10:10:00 | 115.7             |
+| service.name          | avg_duration |
+|-----------------------|--------------|
+| frontend              | 500ms        |
+| cartservice           | 250ms        |
 
-This query calculates the average span duration every five minutes from OpenTelemetry traces.
+This query calculates the average duration of spans for each service.
 
 </Tab>
 <Tab title="Security logs">
 
-In security logs, you might use the `avg` function to find the average number of failed login attempts within certain time windows, which can help in anomaly detection.
+In security logs, you can calculate the average request duration by country to analyze regional performance trends.
 
 **Query**
 
 ```kusto
-security_logs
-| where event_type == "failed_login"
-| summarize avg(failed_attempts) by bin(timestamp, 10m)
+['sample-http-logs']
+| summarize avg(req_duration_ms) by ['geo.country']
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20avg(req_duration_ms)%20by%20%5B'geo.country'%5D%22%7D)
 
 **Output**
 
-| timestamp           | avg_failed_attempts |
-|---------------------|---------------------|
-| 2024-09-26 10:00:00 | 5.3                 |
-| 2024-09-26 10:10:00 | 4.1                 |
-| 2024-09-26 10:20:00 | 6.7                 |
+| geo.country | avg_req_duration_ms |
+|-------------|---------------------|
+| US          | 400.5               |
+| DE          | 250.3               |
 
-This query calculates the average number of failed login attempts every ten minutes, allowing you to monitor security activity patterns.
+This query calculates the average request duration for each country from where the requests originated.
 
 </Tab>
 </Tabs>
 
 ## List of related aggregations
 
-- **`sum`**: Computes the total sum of numeric values.
-- **`min`**: Returns the smallest value in a set of values.
-- **`max`**: Returns the largest value in a set of values.
-- **`count`**: Counts the number of items in a dataset.
-- **`percentile`**: Returns the value below which a specified percentage of the data falls.
+- **`sum`**: Use `sum` to calculate the total of a numeric field. This is useful when you want the total of values rather than their average.
+- **`count`**: The `count` function returns the total number of records. It’s useful when you want to count occurrences rather than averaging numerical values.
+- **`min`**: The `min` function returns the minimum value of a numeric field. Use this when you’re interested in the smallest value in your dataset.
+- **`max`**: The `max` function returns the maximum value of a numeric field. This is useful for finding the largest value in the data.
+- **`stdev`**: This function calculates the standard deviation of a numeric field, providing insight into how spread out the data is around the mean.

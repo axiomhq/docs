@@ -5,17 +5,9 @@ description: 'This page explains how to use the dcountif aggregation function in
 
 ## Introduction
 
-The `dcountif` aggregation function in APL returns the approximate count of distinct values in a column, but only for rows that meet a specified condition. It’s a powerful tool when you need to filter data before counting unique values, offering a scalable way to work with large datasets where an exact count would be too resource-intensive.
+The `dcountif` aggregation function in Axiom Processing Language (APL) counts the distinct values in a column that meet a specific condition. This is useful when you want to filter records and count only the unique occurrences that satisfy a given criterion. 
 
-You should use `dcountif` in scenarios where you are interested in counting distinct values under specific conditions, such as tracking unique user interactions based on event types, counting distinct IP addresses for security monitoring, or analyzing unique error types in logs.
-
-## Related aggregations
-
-- **`dcount`**: Use `dcount` when you need to count distinct values across all rows without filtering based on a condition.
-- **`countif`**: Use this when you want to count rows that meet a condition, but without considering distinctness.
-- **`count`**: Use `count` to get the total number of rows, without considering distinct values or filtering conditions.
-- **`sumif`**: This is used to sum values conditionally, similar to `dcountif`, but for numeric data aggregation.
-- **`approx_set`**: Use when you want a set of distinct values (rather than a count), particularly for additional set-based operations.
+Use `dcountif` in scenarios where you need a distinct count but only for a subset of the data, such as counting unique users from a specific region, unique error codes for specific HTTP statuses, or distinct traces that match a particular service type.
 
 ## For users of other query languages
 
@@ -24,34 +16,34 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, the equivalent function to `dcountif` would be combining the `dc()` function with a conditional filtering operation using `where`.
+In Splunk SPL, counting distinct values conditionally is typically achieved using a combination of `eval` and `dc` in the `stats` function. APL simplifies this with the `dcountif` function, which handles both filtering and distinct counting in a single step.
 
 <CodeGroup>
 ```sql Splunk example
-index=web_logs | where status=200 | stats dc(user_id)
+| stats dc(eval(status="200")) AS distinct_successful_users
 ```
 
 ```kusto APL equivalent
-web_logs
-| summarize dcountif(user_id, status == 200)
+['sample-http-logs']
+| summarize dcountif(id, status == '200')
 ```
 </CodeGroup>
 
 </Accordion>
+
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, `COUNT(DISTINCT)` with a `WHERE` clause is similar to `dcountif`, but it provides an exact count rather than an approximate one.
+In ANSI SQL, conditional distinct counting can be done using a combination of `COUNT(DISTINCT)` and `CASE`. APL's `dcountif` function provides a more concise and readable way to handle conditional distinct counting.
 
 <CodeGroup>
 ```sql SQL example
-SELECT COUNT(DISTINCT user_id) 
-FROM web_logs
-WHERE status = 200;
+SELECT COUNT(DISTINCT CASE WHEN status = '200' THEN user_id END) AS distinct_successful_users
+FROM sample_http_logs
 ```
 
 ```kusto APL equivalent
-web_logs
-| summarize dcountif(user_id, status == 200)
+['sample-http-logs']
+| summarize dcountif(id, status == '200')
 ```
 </CodeGroup>
 
@@ -63,88 +55,97 @@ web_logs
 ### Syntax
 
 ```kusto
-summarize dcountif(column_name, predicate [, accuracy])
+dcountif(column_name, condition)
 ```
 
 ### Parameters
 
-- `column_name`: The column whose distinct values you want to count.
-- `predicate`: A condition that must be true for the row to be included in the count.
-- `accuracy`: Optional. An integer value that specifies the desired accuracy. Higher accuracy requires more resources but improves precision.
+- **column_name**: The name of the column for which you want to count distinct values.
+- **condition**: A boolean expression that filters the records. Only records that meet the condition will be included in the distinct count.
 
 ### Returns
 
-The function returns an integer representing the approximate count of distinct values in the specified column, for rows that meet the condition.
+The function returns the count of distinct values that meet the specified condition.
 
 ## Use case examples
 
 <Tabs>
+
 <Tab title="Log analysis">
 
-In log analysis, you can use `dcountif` to count how many distinct users accessed a service successfully (for example, HTTP status 200).
+In log analysis, you might want to count how many distinct users accessed the service and received a successful response (HTTP status 200).
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize dcountif(id, status == "200")
+| summarize dcountif(id, status == '200')
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20dcountif(id%2C%20status%20%3D%3D%20'200')%22%7D)
 
 **Output**
 
-| dcount_id |
-|----------------|
-| 400            |
+| distinct_successful_users |
+|---------------------------|
+| 50                        |
 
-This query returns the approximate count of distinct user IDs who accessed the service successfully.
+This query counts the distinct users (`id` field) who received a successful HTTP response (status 200), helping you understand how many unique users had successful requests.
 
 </Tab>
+
 <Tab title="OpenTelemetry traces">
 
-For OpenTelemetry traces, you can count how many distinct services have reported a specific error type.
+In OpenTelemetry traces, you might want to count how many unique trace IDs are recorded for a specific service, such as `frontend`.
 
 **Query**
 
 ```kusto
-traces
-| summarize dcountif(service_name, error_code == "500")
+['otel-demo-traces']
+| summarize dcountif(trace_id, ['service.name'] == 'frontend')
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20dcountif(trace_id%2C%20%5B'service.name'%5D%20%3D%3D%20'frontend')%22%7D)
 
 **Output**
 
-| dcount_service_name |
-|---------------------|
-| 25                  |
+| distinct_frontend_traces |
+|--------------------------|
+| 123                      |
 
-This query gives the approximate number of distinct `service_name`s that have reported an internal server error (HTTP 500).
+This query counts the number of distinct trace IDs that belong to the `frontend` service, providing insight into the volume of unique traces for that service.
 
 </Tab>
+
 <Tab title="Security logs">
 
-In security log analysis, `dcountif` can be used to count distinct IP addresses that have attempted failed logins.
+In security logs, you might want to count how many unique IP addresses were logged for requests that resulted in a 403 status (forbidden access).
 
 **Query**
 
 ```kusto
-security_logs
-| summarize dcountif(ip_address, login_status == "failed")
+['sample-http-logs']
+| summarize dcountif(['geo.city'], status == '403')
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20dcountif(%5B'geo.city'%5D%2C%20status%20%3D%3D%20'403')%22%7D)
 
 **Output**
 
-| dcount_ip_address |
-|-------------------|
-| 180               |
+| distinct_cities_forbidden |
+|---------------------------|
+| 20                        |
 
-This query returns the approximate distinct count of IP addresses that have failed to log in.
+This query counts the number of distinct cities (`geo.city` field) where requests resulted in a `403` status, helping you identify potential unauthorized access attempts from different regions.
 
 </Tab>
+
 </Tabs>
 
 ## List of related aggregations
 
-- **`dcount`**: Use this to count distinct values without applying a filter condition.
-- **`countif`**: Counts rows that satisfy a condition, without considering distinct values.
-- **`count`**: Counts the total number of rows in a dataset.
-- **`sumif`**: Sums numeric values only for rows that meet a condition.
-- **`approx_set`**: Returns a set of distinct values, useful for subsequent set-based operations.
+- **`dcount`**: Counts distinct values without applying any condition. Use this when you need to count unique values across the entire dataset.
+- **`countif`**: Counts records that match a specific condition, without focusing on distinct values. Use this when you need to count records based on a filter.
+- **`dcountif`**: Use this function to get a distinct count for records that meet a condition. It combines both filtering and distinct counting.
+- **`sumif`**: Sums values in a column for records that meet a condition. This is useful when you need to sum data points after filtering.
+- **`avgif`**: Calculates the average value of a column for records that match a condition. Use this when you need to find the average based on a filter.

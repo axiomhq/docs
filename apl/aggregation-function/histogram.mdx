@@ -5,17 +5,9 @@ description: 'This page explains how to use the histogram aggregation function i
 
 ## Introduction
 
-The `histogram` aggregation function in APL allows you to group numerical data into bins or ranges, providing a quick way to visualize the distribution of values within a dataset. Each bin represents a range of values, and the aggregation counts the number of occurrences within each bin. This is especially useful for understanding how data is spread across various ranges, such as tracking the frequency of response times, error codes, or resource usage.
+The `histogram` aggregation in APL allows you to create a histogram that groups numeric values into intervals or "bins." This is useful for visualizing the distribution of data, such as the frequency of response times, request durations, or other continuous numerical fields. You can use it to analyze patterns and trends in datasets like logs, traces, or metrics. It is especially helpful when you need to summarize a large volume of data into a digestible form, providing insights on the distribution of values.
 
-You can use `histogram` when analyzing continuous data that can be naturally divided into intervals or when you want to detect patterns and trends, such as in performance metrics or time-based events.
-
-## Related aggregations
-
-- **`summarize`**: Use this for more general aggregations (like sums, averages, or counts), where you don’t need to group data into bins.
-- **`bin()`**: While not an aggregation, `bin()` can be used alongside `summarize` to manually group data into intervals. Use this if you need more control over the bin size or alignment.
-- **`make-series`**: Generates time series data, which can be useful when dealing with continuous data over time, similar to `histogram`, but for time-based binning.
-- **`percentiles()`**: Use to get a distribution of values into percentiles, which is useful for a more granular understanding of distribution compared to histogram bins.
-- **`tostring()`**: Converts values into strings, which can be helpful when creating textual groupings for categorical data rather than numerical bins.
+The `histogram` aggregation is ideal for identifying peaks, valleys, and outliers in your data. For example, you can analyze the distribution of request durations in web server logs or span durations in OpenTelemetry traces to understand performance bottlenecks.
 
 ## For users of other query languages
 
@@ -24,38 +16,40 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, the equivalent to APL’s `histogram` function can be achieved using the `bin` command combined with a count aggregation.
+In Splunk SPL, a similar operation to APL's `histogram` is the `timechart` or `histogram` command, which groups events into time buckets. However, in APL, the `histogram` function focuses on numeric values, allowing you to control the bin size and boundaries more precisely.
 
 <CodeGroup>
-```sql Splunk example
-index=logs | bin span=10ms duration | stats count by duration
+
+```splunk Splunk example
+| stats count by duration | timechart span=10 count
 ```
 
 ```kusto APL equivalent
-logs
-| summarize count() by histogram(duration, 10ms)
+['sample-http-logs']
+| summarize count() by histogram(req_duration_ms, 10)
 ```
+
 </CodeGroup>
 
 </Accordion>
+
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, achieving the effect of `histogram` involves manually defining ranges using `CASE` statements or range-based filtering with `GROUP BY`.
+In ANSI SQL, you can use the `GROUP BY` clause combined with range calculations to achieve a similar result to APL’s `histogram`. However, APL’s `histogram` function simplifies the process by automatically calculating bin intervals.
 
 <CodeGroup>
+
 ```sql SQL example
-SELECT CASE 
-        WHEN value BETWEEN 0 AND 10 THEN '0-10'
-        WHEN value BETWEEN 11 AND 20 THEN '11-20'
-       END AS range, COUNT(*)
-FROM table_name
-GROUP BY range;
+SELECT COUNT(*), FLOOR(req_duration_ms/10)*10 as duration_bin
+FROM sample_http_logs
+GROUP BY duration_bin
 ```
 
 ```kusto APL equivalent
-table_name
-| summarize count() by histogram(value, 10)
+['sample-http-logs']
+| summarize count() by histogram(req_duration_ms, 10)
 ```
+
 </CodeGroup>
 
 </Accordion>
@@ -66,24 +60,24 @@ table_name
 ### Syntax
 
 ```kusto
-summarize count() by histogram(column, bin_size)
+histogram(numeric_field, bin_size)
 ```
 
 ### Parameters
 
-- `column`: The numeric column whose values you want to group into bins.
-- `bin_size`: The size of each bin or range. The value must be a constant and should be appropriate for the data being grouped.
+- `numeric_field`: The numeric field you want to create a histogram for. This can be a field like request duration or span duration.
+- `bin_size`: The size of each bin, or interval, into which the numeric values will be grouped.
 
 ### Returns
 
-The function returns a table where each row represents a bin with the corresponding count of values that fall within that bin.
+The `histogram` aggregation returns a table where each row represents a bin, along with the number of occurrences (counts) that fall within each bin.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-In log analysis, the `histogram` function helps you understand the distribution of response times in logs by grouping them into defined intervals.
+You can use the `histogram` aggregation to analyze the distribution of request durations in web server logs.
 
 **Query**
 
@@ -92,70 +86,74 @@ In log analysis, the `histogram` function helps you understand the distribution 
 | summarize histogram(req_duration_ms, 100) by bin_auto(_time)
 ```
 
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20histogram(req_duration_ms%2C%20100)%20by%20bin_auto(_time)%22%7D)
+
 **Output**
 
-| req_duration_ms | count |
-|---------------|--------|
-| 0             | 200    |
-| 100           | 340    |
-| 200           | 120    |
-| 300           | 90     |
+| req_duration_ms_bin | count |
+|---------------------|-------|
+| 0                   | 50    |
+| 100                 | 200   |
+| 200                 | 120   |
 
-This query groups the `req_duration_ms` into 100 ms intervals and counts the occurrences in each bin, helping identify how frequently different response times occur.
+This query creates a histogram that groups request durations into bins of 100 milliseconds and shows the count of requests in each bin. It helps you visualize how frequently requests fall within certain duration ranges.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-For OpenTelemetry traces, you can use `histogram` to track the distribution of service latencies in specific intervals.
+In OpenTelemetry traces, you can use the `histogram` aggregation to analyze the distribution of span durations.
 
 **Query**
 
 ```kusto
-traces
-| summarize count() by histogram(latency, 50)
+['otel-demo-traces']
+| summarize histogram(duration, 100) by bin_auto(_time)
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20histogram(duration%2C%20100)%20by%20bin_auto(_time)%22%7D)
 
 **Output**
 
-| latency | count_ |
-|---------|--------|
-| 0       | 45     |
-| 50      | 102    |
-| 100     | 80     |
-| 150     | 23     |
+| duration_bin | count |
+|--------------|-------|
+| 0.1s         | 30    |
+| 0.2s         | 120   |
+| 0.3s         | 50    |
 
-This query groups `latency` into 50 ms bins, giving you a clear view of how service latency is distributed across your traces.
+This query groups the span durations into 100ms intervals, making it easier to spot latency issues in your traces.
 
 </Tab>
 <Tab title="Security logs">
 
-In security logs, the `histogram` function can be useful for analyzing login attempts by grouping them into hourly intervals.
+In security logs, the `histogram` aggregation helps you understand the frequency distribution of request durations to detect anomalies or attacks.
 
 **Query**
 
 ```kusto
-security_logs
-| summarize count() by histogram(login_time, 1h)
+['sample-http-logs']
+| where status == '200'
+| summarize histogram(req_duration_ms, 50) by bin_auto(_time)
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20%3D%3D%20'200'%20%7C%20summarize%20histogram(req_duration_ms%2C%2050)%20by%20bin_auto(_time)%22%7D)
 
 **Output**
 
-| login_time | count_ |
-|------------|--------|
-| 00:00      | 130    |
-| 01:00      | 95     |
-| 02:00      | 87     |
-| 03:00      | 100    |
+| req_duration_ms_bin | count |
+|---------------------|-------|
+| 0                   | 150    |
+| 50                  | 400    |
+| 100                 | 100    |
 
-This query counts login attempts by hour, helping you identify patterns in login behavior over time.
+This query analyzes the request durations for HTTP 200 (Success) responses, helping you identify patterns in security-related events.
 
 </Tab>
 </Tabs>
 
 ## List of related aggregations
 
-- **`summarize`**: Performs aggregation without binning the data into intervals.
-- **`bin()`**: Manually bins data into specified intervals, often used alongside `summarize`.
-- **`make-series`**: Bins data over time for time series analysis.
-- **`percentiles()`**: Divides data into percentiles, providing a more precise breakdown compared to bins.
-- **`count()`**: Basic aggregation function to count the total number of rows in a dataset.
+- **`percentile`**: Use `percentile` when you need to find the specific value below which a percentage of observations fall, which can provide more precise distribution analysis.
+- **`avg`**: Use `avg` for calculating the average value of a numeric field, useful when you are more interested in the central tendency rather than distribution.
+- **`sum`**: The `sum` function adds up the total values in a numeric field, helpful for determining overall totals.
+- **`count`**: Use `count` when you need a simple tally of rows or events, often in conjunction with `histogram` for more basic summarization.
+- **`minmax`**: Provides both the minimum and maximum values in a dataset, which complements `histogram` by showing the range of the data.
