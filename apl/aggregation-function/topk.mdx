@@ -23,8 +23,7 @@ In Splunk SPL, the equivalent of the `topk` function is the `top` command. The `
 
 ```kusto APL equivalent
 ['sample-http-logs'] 
-| summarize count() by status, method 
-| topk(5, count_)
+| summarize topk(status, 5) by method 
 ```
 </CodeGroup>
 
@@ -44,8 +43,7 @@ LIMIT 5;
 
 ```kusto APL equivalent
 ['sample-http-logs'] 
-| summarize count() by status 
-| topk(5, count_)
+| summarize topk(status, 5)
 ```
 </CodeGroup>
 
@@ -57,18 +55,17 @@ LIMIT 5;
 ### Syntax
 
 ```kusto
-topk(k, value, [ties])
+topk(field, k)
 ```
 
 ### Parameters
 
+- **`field`**: The field or expression to rank the results by.
 - **`k`**: The number of top results to return.
-- **`value`**: The field or expression to rank the results by.
-- **`ties`** *(optional)*: Specifies whether to include ties for the last place. Default is `false`.
 
 ### Returns
 
-A subset of the original dataset with the top *k* values based on the specified field. If `ties` is `true`, records with the same ranking at the boundary of the result set are included.
+A subset of the original dataset with the top *k* values based on the specified field.
 
 ## Use case examples
 
@@ -81,11 +78,10 @@ When analyzing HTTP logs, you can use the `topk` function to find the top 5 most
 
 ```kusto
 ['sample-http-logs'] 
-| summarize count() by status 
-| topk(5, count_)
+| summarize topk(status, 5)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20count%28%29%20by%20status%20%7C%20topk%285%2C%20count_%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%20%7C%20summarize%20topk(status%2C%205)%22%7D)
 
 **Output**
 
@@ -133,11 +129,10 @@ You can use `topk` in security log analysis to find the top 5 cities generating 
 
 ```kusto
 ['sample-http-logs'] 
-| summarize count() by ['geo.city'] 
-| topk(5, count_)
+| summarize topk(['geo.city'], 5)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20count%28%29%20by%20%5B%27geo.city%27%5D%20%7C%20topk%285%2C%20count_%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%20%7C%20summarize%20topk(%5B'geo.city'%5D%2C%205)%22%7D)
 
 **Output**
 
