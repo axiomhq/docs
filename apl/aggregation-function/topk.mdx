@@ -1,0 +1,163 @@
+---
+title: topk
+description: 'This page explains how to use the topk aggregation function in APL.'
+---
+
+The `topk` aggregation in Axiom Processing Language (APL) allows you to identify the top *k* results based on a specified field. This is especially useful when you want to quickly analyze large datasets and extract the most significant values, such as the top-performing queries, most frequent errors, or highest latency requests. 
+
+Use `topk` when you need to find the most common or relevant entries in datasets, especially in log analysis, telemetry data, and monitoring systems. This aggregation helps you focus on the most important data points, filtering out the noise.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the equivalent of the `topk` function is the `top` command. The `topk` function in APL behaves similarly by returning the top *k* values of a specified field, but its syntax is unique to APL. The `topk` function can be combined with other APL functions for greater flexibility.
+
+<CodeGroup>
+```sql Splunk example
+| top limit=5 status by method
+```
+
+```kusto APL equivalent
+['sample-http-logs'] 
+| summarize count() by status, method 
+| topk(5, count_)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, identifying the top *k* rows often involves using the `ORDER BY` and `LIMIT` clauses. While the logic remains similar, APL’s `topk` simplifies this process by directly returning the top *k* values of a field in an aggregation.
+
+<CodeGroup>
+```sql SQL example
+SELECT status, COUNT(*)
+FROM sample_http_logs
+GROUP BY status
+ORDER BY COUNT(*) DESC
+LIMIT 5;
+```
+
+```kusto APL equivalent
+['sample-http-logs'] 
+| summarize count() by status 
+| topk(5, count_)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+topk(k, value, [ties])
+```
+
+### Parameters
+
+- **`k`**: The number of top results to return.
+- **`value`**: The field or expression to rank the results by.
+- **`ties`** *(optional)*: Specifies whether to include ties for the last place. Default is `false`.
+
+### Returns
+
+A subset of the original dataset with the top *k* values based on the specified field. If `ties` is `true`, records with the same ranking at the boundary of the result set are included.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+When analyzing HTTP logs, you can use the `topk` function to find the top 5 most frequent HTTP status codes.
+
+**Query**
+
+```kusto
+['sample-http-logs'] 
+| summarize count() by status 
+| topk(5, count_)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20count%28%29%20by%20status%20%7C%20topk%285%2C%20count_%29%22%7D)
+
+**Output**
+
+| status | count_ |
+|--------|--------|
+| 200    | 1500   |
+| 404    | 400    |
+| 500    | 200    |
+| 301    | 150    |
+| 302    | 100    |
+
+This query groups the logs by HTTP status and returns the 5 most frequent statuses.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In OpenTelemetry traces, you can use `topk` to find the top 3 services with the longest average span durations.
+
+**Query**
+
+```kusto
+['otel-demo-traces'] 
+| summarize avg(duration) by ['service.name'] 
+| topk(3, avg_duration)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20summarize%20avg%28duration%29%20by%20%5B%27service.name%27%5D%20%7C%20topk%283%2C%20avg_duration%29%22%7D)
+
+**Output**
+
+| service.name       | avg_duration |
+|--------------------|--------------|
+| checkoutservice    | 2.1s         |
+| productcatalogservice | 1.9s     |
+| cartservice        | 1.7s         |
+
+This query shows the services with the longest average span durations.
+
+</Tab>
+<Tab title="Security logs">
+
+You can use `topk` in security log analysis to find the top 5 cities generating the most HTTP requests.
+
+**Query**
+
+```kusto
+['sample-http-logs'] 
+| summarize count() by ['geo.city'] 
+| topk(5, count_)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20count%28%29%20by%20%5B%27geo.city%27%5D%20%7C%20topk%285%2C%20count_%29%22%7D)
+
+**Output**
+
+| geo.city | count_ |
+|----------|--------|
+| New York | 500    |
+| London   | 400    |
+| Paris    | 350    |
+| Tokyo    | 300    |
+| Berlin   | 250    |
+
+This query returns the top 5 cities based on the number of HTTP requests.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- **`top`**: Returns the top values based on a field without requiring a specific number of results (`k`), making it useful when you're unsure how many top values to retrieve.
+- **`sort`**: Orders the dataset based on one or more fields, which is useful if you need a complete ordered list rather than the top *k* values.
+- **`summarize`**: Groups the dataset based on a field and applies an aggregation function like `count` or `sum`, but doesn't limit the results to the top *k*.
+- **`extend`**: Adds calculated fields to your dataset, which can be useful in combination with `topk` to create custom rankings.
+- **`count`**: Aggregates the dataset by counting occurrences, often used in conjunction with `topk` to find the most common values.
