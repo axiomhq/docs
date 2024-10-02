@@ -5,7 +5,11 @@ description: 'This page explains how to use the topk aggregation function in APL
 
 The `topk` aggregation in Axiom Processing Language (APL) allows you to identify the top *k* results based on a specified field. This is especially useful when you want to quickly analyze large datasets and extract the most significant values, such as the top-performing queries, most frequent errors, or highest latency requests. 
 
-Use `topk` when you need to find the most common or relevant entries in datasets, especially in log analysis, telemetry data, and monitoring systems. This aggregation helps you focus on the most important data points, filtering out the noise.
+Use `topk` to find the most common or relevant entries in datasets, especially in log analysis, telemetry data, and monitoring systems. This aggregation helps you focus on the most important data points, filtering out the noise.
+
+<Note>
+The `topk` aggregation in APL is estimated. The estimation comes with the benefit of speed at the expense of accuracy. This means that `topk` is fast and light on resources even on a large or high-cardinality dataset, but it doesn’t provide the most accurate results.
+</Note>
 
 ## For users of other query languages
 
@@ -14,7 +18,9 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, the equivalent of the `topk` function is the `top` command. The `topk` function in APL behaves similarly by returning the top *k* values of a specified field, but its syntax is unique to APL. The `topk` function can be combined with other APL functions for greater flexibility.
+In Splunk SPL, the equivalent of the `topk` function is the `top` command. The `topk` function in APL behaves similarly by returning the top *k* values of a specified field, but its syntax is unique to APL.
+
+The main difference between SPL’s `top` and APL’s `topk` is that `topk` is estimated. This means that APL’s `topk` is faster, less resource intenstive, but less accurate than SPL’s `top`.
 
 <CodeGroup>
 ```sql Splunk example
@@ -31,6 +37,8 @@ In Splunk SPL, the equivalent of the `topk` function is the `top` command. The `
 <Accordion title="ANSI SQL users">
 
 In ANSI SQL, identifying the top *k* rows often involves using the `ORDER BY` and `LIMIT` clauses. While the logic remains similar, APL’s `topk` simplifies this process by directly returning the top *k* values of a field in an aggregation.
+
+The main difference between SQL’s solution and APL’s `topk` is that `topk` is estimated. This means that APL’s `topk` is faster, less resource intenstive, but less accurate than SQL’s combination of `ORDER BY` and `LIMIT` clauses.
 
 <CodeGroup>
 ```sql SQL example
@@ -98,27 +106,28 @@ This query groups the logs by HTTP status and returns the 5 most frequent status
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-In OpenTelemetry traces, you can use `topk` to find the top 3 services with the longest average span durations.
+In OpenTelemetry traces, you can use `topk` to find the top five status codes by service.
 
 **Query**
 
 ```kusto
-['otel-demo-traces'] 
-| summarize avg(duration) by ['service.name'] 
-| topk(3, avg_duration)
+['otel-demo-traces']
+| summarize topk(['attributes.http.status_code'], 5) by ['service.name']
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20summarize%20avg%28duration%29%20by%20%5B%27service.name%27%5D%20%7C%20topk%283%2C%20avg_duration%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20topk(%5B'attributes.http.status_code'%5D%2C%205)%20by%20%5B'service.name'%5D%22%7D)
 
 **Output**
 
-| service.name       | avg_duration |
-|--------------------|--------------|
-| checkoutservice    | 2.1s         |
-| productcatalogservice | 1.9s     |
-| cartservice        | 1.7s         |
+| service.name  | attributes.http.status_code | _count     |
+|---------------|-----------------------------|------------|
+| frontendproxy | 200                         | 34,862,088 |
+|               | 203                         | 3,095,223  |
+|               | 404                         | 154,417    |
+|               | 500                         | 153,823    |
+|               | 504                         | 3,497      |
 
-This query shows the services with the longest average span durations.
+This query shows the top five status codes by service.
 
 </Tab>
 <Tab title="Security logs">
