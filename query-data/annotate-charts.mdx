@@ -1,7 +1,7 @@
 ---
-title: 'Annotate charts'
-description: 'This guide explains how to use annotations to add context to your charts.'
-sidebarTitle: Annotate Charts
+title: 'Annotate dashboard elements'
+description: 'This page explains how to use annotations to add context to your dashboard elements.'
+sidebarTitle: Annotate
 tags:
     ['axiom documentation', 'documentation', 'axiom', 'annotation', 'span', 'trace']
 ---
@@ -15,69 +15,12 @@ Annotating charts lets you add context to your charts. For example, use annotati
 
 This adds context to the trends displayed in your charts and makes it easier to investigate issues in your app or system.
 
-<Tip>
-Deployment causes more form submission errors
+import Prerequisites from "/snippets/minimal-prerequisites.mdx"
 
-The example below demonstrates how annotations help you troubleshoot issues in your app or system. Your monitor alerts you about rising form submission errors. You explore this trend and when it started. Right before form submission errors started rising, you see an annotation about a deployment of a new feature to the form. You make the hypothesis that the deployment is the reason for the error and decide to investigate the code changes it introduced.
-</Tip>
-
-## Prerequisites
-
-- [Create an Axiom account](https://app.axiom.co/).
-- [Create a dataset](/reference/datasets) with the name `my-dataset`.
-- [Create an advanced API token in Axiom with permissions to update dashboards](/reference/tokens).
+<Prerequisites />
+{/* list separator */}
+- [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete annotations.
 - [Send data to your Axiom dataset](/send-data/ingest).
-
-## Create an annotation
-
-Use the following API request to create an annotation:
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v2/annotations' \
-  -H 'Authorization: Bearer API_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "time": "2024-03-18T08:39:28.382Z",
-    "type": "deploy",
-    "datasets": ["my-dataset"],
-    "title": "Production deployment",
-    "description": "Deploy new feature to the sales form",
-    "url": "https://example.com"
-  }'
-```
-
-In the code above, replace `API_TOKEN` with your Axiom API token.
-
-## Create a monitor
-
-In this example, you set up a monitor that alerts you when the number of form submission errors rises. For more information on creating a monitor, see [Monitoring and Notifiers](/monitor-data/monitors).
-
-## Explore trends
-
-Suppose your monitor sends you a notification about rising form submission errors.
-
-You decide to investigate and run a query to display the number of form submission errors over time. Ensure you select a time range that includes the annotation.
-
-You get a chart similar to the example below displaying form submission errors and annotations about the time of important events such as deployments.
-
-<Frame caption="Example histogram with annotation">
-  <img src="/doc-assets/shots/annotation-chart-example.png" alt="Example histogram with annotation" />
-</Frame>
-
-## Inspect issue
-
-1. From the chart, you see that the number of errors started to rise after the deployment of a new feature to the sales form. This correlation allows you to form the hypothesis that the errors might be caused by the deployment.
-2. You decide to investigate the deployment by clicking on the link associated with the annotation. The link takes you to the GitHub pull request.
-3. You inspect the code changes in depth and discover the cause of the errors.
-4. You quickly fix the issue in another deployment.
-
-## Show and hide annotations on dashboards
-
-To show and hide annotations on a dashboard, follow these steps:
-
-1. Go to the dashboard where you see annotations. For example, the prebuilt Vercel dashboard automatically shows annotations about deployments.
-2. Click <img src="/doc-assets/icons/toggle-annotations.svg" className="inline-icon" alt="Toggle annotations icon" /> **Toggle annotations**.
-3. Select the datasets whose annotations you want to display on the charts.
 
 ## Create annotations
 
@@ -295,3 +238,58 @@ Annotations are represented as objects with the following fields:
 - `type` is the type of the event marked by the annotation. For example, production deployment.
 - `url` is the URL relevant for the event marked by the annotation. For example, link to GitHub pull request.
 - Optional: `endTime` is an ISO timestamp value that specifies the end time of the annotation.
+
+## Show and hide annotations on dashboards
+
+To show and hide annotations on a dashboard, follow these steps:
+
+1. Go to the dashboard where you see annotations. For example, the prebuilt Vercel dashboard automatically shows annotations about deployments.
+1. Click <img src="/doc-assets/icons/toggle-annotations.svg" className="inline-icon" alt="Toggle annotations icon" /> **Toggle annotations**.
+1. Select the datasets whose annotations you want to display on the charts.
+
+## Example use case
+
+The example below demonstrates how annotations help you troubleshoot issues in your app or system. Your monitor alerts you about rising form submission errors. You explore this trend and when it started. Right before form submission errors started rising, you see an annotation about a deployment of a new feature to the form. You make the hypothesis that the deployment is the reason for the error and decide to investigate the code changes it introduced.
+
+### Create annotation
+
+Use the following API request to create an annotation:
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v2/annotations' \
+  -H 'Authorization: Bearer API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "time": "2024-03-18T08:39:28.382Z",
+    "type": "deploy",
+    "datasets": ["my-dataset"],
+    "title": "Production deployment",
+    "description": "Deploy new feature to the sales form",
+    "url": "https://example.com"
+  }'
+```
+
+In the code above, replace `API_TOKEN` with your Axiom API token.
+
+### Create a monitor
+
+In this example, you set up a monitor that alerts you when the number of form submission errors rises. For more information on creating a monitor, see [Monitoring and Notifiers](/monitor-data/monitors).
+
+### Explore trends
+
+Suppose your monitor sends you a notification about rising form submission errors.
+
+You decide to investigate and run a query to display the number of form submission errors over time. Ensure you select a time range that includes the annotation.
+
+You get a chart similar to the example below displaying form submission errors and annotations about the time of important events such as deployments.
+
+<Frame caption="Example histogram with annotation">
+  <img src="/doc-assets/shots/annotation-chart-example.png" alt="Example histogram with annotation" />
+</Frame>
+
+### Inspect issue
+
+1. From the chart, you see that the number of errors started to rise after the deployment of a new feature to the sales form. This correlation allows you to form the hypothesis that the errors might be caused by the deployment.
+1. You decide to investigate the deployment by clicking on the link associated with the annotation. The link takes you to the GitHub pull request.
+1. You inspect the code changes in depth and discover the cause of the errors.
+1. You quickly fix the issue in another deployment.
