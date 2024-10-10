@@ -8,6 +8,7 @@ tags:
 
 import Prerequisites from "/snippets/standard-prerequisites.mdx"
 import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
+import Replacement from "/snippets/standard-replacement.mdx"
 
 Axiom CloudWatch Forwarder is a set of easy-to-use AWS CloudFormation stacks designed to forward logs from Amazon CloudWatch to Axiom. It includes a Lambda function to handle the forwarding and stacks to create Amazon CloudWatch log group subscription filters for both existing and future log groups.
 
@@ -28,34 +29,42 @@ Axiom CloudWatch Forwarder includes templates for the following CloudFormation s
 {/* list separator */}
 - [Create an account on AWS Cloud](https://signin.aws.amazon.com/signup?request_type=register).
 
-## Setup
+## Installation
 
-There are 2 ways to set up Axiom CloudWatch Forwarder:
+To install the Axiom CloudWatch Forwarder, choose one of the following:
 
-### Cloudformation: Launch the stacks
+- [Cloudformation stacks](#install-with-cloudformation-stacks)
+- [Terraform module](#install-with-terraform-module)
+
+### Install with Cloudformation stacks
 
 1. [Launch the Forwarder stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-forwarder&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-forwarder-v1.1.1-cloudformation-stack.yaml). Copy the Forwarder Lambda ARN because it’s referenced in the Subscriber stack.
 1. [Launch the Subscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-subscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-subscriber-v1.1.1-cloudformation-stack.yaml).
 1. [Launch the Listener stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-listener&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-listener-v1.1.1-cloudformation-stack.yaml).
 
-### Terraform: Use the Terraform module
+### Install with Terraform module
 
+<Steps>
+<Step>
 
-1. Create the needed modules in your Terraform file:
-
-
-This creates a Forwarder and it requires dataset name and token.
+Create a new module for the Forwarder in your Terraform file in the following way:
 
 ```hcl
 module "forwarder" {
   source           = "axiomhq/axiom-cloudwatch-forwarder/aws//modules/forwarder"
-  axiom_dataset    = "DATASET_NAME" // or you can use Axiom's provider to create a dataset
-  axiom_token      = "xaat-****"
+  axiom_dataset    = "DATASET_NAME"
+  axiom_token      = "API_TOKEN"
   prefix           = "axiom-cloudwatch-forwarder"
 }
 ```
 
-In order for the Forwarder to work, you need to create a Subscriber. The Subscriber requires the Forwarder Lambda ARN.
+<Replacement />
+Alternatively, use Axiom’s provider to create a dataset.
+
+</Step>
+<Step>
+
+Create a new module for the Subscriber in your Terraform file in the following way:
 
 ``` hcl
 module "subscriber" {
@@ -66,7 +75,10 @@ module "subscriber" {
 }
 ```
 
-A Listener will automatically subscribe the Forwarder to new log groups with the given prefix. It requires the Forwarder Lambda ARN and the log groups prefix.
+</Step>
+<Step>
+
+Create a new module for the Listener in your Terraform file in the following way:
 
 ```hcl
 module "listener" {
@@ -77,18 +89,27 @@ module "listener" {
 }
 ```
 
-2. In your terminal, go to the folder of your main Terraform file, and then run the command terraform init.
-3. Now you can run `terraform plan` to check the changes and `terraform apply`.
-4. To remove subscriptions from the Forwarder, use the **Unsubscriber** module.
+</Step>
+<Step>
+In your terminal, go to the folder of your main Terraform file, and then run `terraform init`.
+</Step>
+<Step>
+Run `terraform plan` to check the changes, and then run `terraform apply`.
+</Step>
+<Step>
+To remove subscriptions from the Forwarder, use the Unsubscriber module.
 
 ```hcl
 module "unsubscriber" {
   source           = "axiomhq/axiom-cloudwatch-forwarder/aws//modules/unsubscriber"
   prefix           = "axiom-cloudwatch-forwarder"
-  log_groups_prefix    = "/aws/lambda/"
   forwarder_lambda_arn = module.forwarder.lambda_arn
+  log_groups_prefix    = "/aws/lambda/"
 }
 ```
+
+</Step>
+</Steps>
 
 ## Filter Amazon CloudWatch log groups
 
