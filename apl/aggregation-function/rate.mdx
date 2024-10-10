@@ -1,0 +1,148 @@
+---
+title: rate
+description: 'This page explains how to use the rate aggregation function in APL.'
+---
+
+The `rate` aggregation function in APL (Axiom Processing Language) helps you calculate the rate of change over a specific time interval. This is especially useful for scenarios where you need to monitor how frequently an event occurs or how a value changes over time. For example, you can use the `rate` function to track request rates in web logs or changes in metrics like CPU usage or memory consumption.
+
+The `rate` function is useful for analyzing trends in time series data and identifying unusual spikes or drops in activity. It can help you understand patterns in logs, metrics, and traces over specific intervals, such as per minute, per second, or per hour.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the equivalent of the `rate` function can be achieved using the `timechart` command with a `per_second` option or by calculating the difference between successive values over time. In APL, the `rate` function simplifies this process by directly calculating the rate over a specified time interval.
+
+<CodeGroup>
+```splunk
+| timechart per_second count by status
+```
+
+```kusto
+['sample-http-logs']
+| summarize rate=count() by status, bin(_time, 1s)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, calculating rates typically involves using window functions like `LAG` or `LEAD` to calculate the difference between successive rows in a time series. In APL, the `rate` function abstracts this complexity by allowing you to directly compute the rate over time without needing window functions.
+
+<CodeGroup>
+```sql
+SELECT status, COUNT(*) / TIMESTAMPDIFF(SECOND, MIN(_time), MAX(_time)) AS rate
+FROM http_logs
+GROUP BY status;
+```
+
+```kusto
+['sample-http-logs']
+| summarize rate=count() by status, bin(_time, 1s)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+rate(field, timeInterval)
+```
+
+### Parameters
+
+- `field`: The numeric field that you want to calculate the rate for.
+- `timeInterval`: The time interval (e.g., 1s, 1m, 1h) over which to calculate the rate.
+
+### Returns
+
+Returns the rate of change or occurrence of the specified `field` over the specified `timeInterval`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In this example, the `rate` aggregation calculates the rate of HTTP requests per second grouped by status.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize rate=count() by status, bin(_time, 1s)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20rate%3Dcount%28%29%20by%20status%2C%20bin%28_time%2C%201s%29%22%7D)
+
+**Output**
+
+| status | rate  | _time              |
+|--------|-------|--------------------|
+| 200    | 15    | 2024-01-01 12:00:00|
+| 404    | 3     | 2024-01-01 12:00:00|
+
+This query counts the number of requests per status code and calculates the rate of requests per second.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+This example calculates the rate of traces received per second for different services.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| summarize rate=count() by ['service.name'], bin(_time, 1s)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20summarize%20rate%3Dcount%28%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201s%29%22%7D)
+
+**Output**
+
+| service.name         | rate  | _time              |
+|----------------------|-------|--------------------|
+| frontend             | 10    | 2024-01-01 12:00:00|
+| checkoutservice      | 5     | 2024-01-01 12:00:00|
+
+This query calculates the rate of traces per second for each service.
+
+</Tab>
+<Tab title="Security logs">
+
+In this example, the `rate` aggregation calculates the rate of security events by HTTP status.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize rate=count() by status, bin(_time, 1s)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20rate%3Dcount%28%29%20by%20status%2C%20bin%28_time%2C%201s%29%22%7D)
+
+**Output**
+
+| status | rate  | _time              |
+|--------|-------|--------------------|
+| 401    | 8     | 2024-01-01 12:00:00|
+| 403    | 2     | 2024-01-01 12:00:00|
+
+This query calculates the rate of different security-related status codes over time.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- [**count**](/apl/aggregation-function/count): Returns the total number of records. Use `count` when you want an absolute total instead of a rate over time.
+- [**sum**](/apl/aggregation-function/sum): Returns the sum of values in a field. Use `sum` when you want to aggregate the total value, not its rate of change.
+- [**avg**](/apl/aggregation-function/avg): Returns the average value of a field. Use `avg` when you want to know the mean value rather than how it changes over time.
+- [**max**](/apl/aggregation-function/max): Returns the maximum value of a field. Use `max` when you need to find the peak value instead of how often or quickly something occurs.
+- [**min**](/apl/aggregation-function/min): Returns the minimum value of a field. Use `min` when you're looking for the lowest value rather than a rate.
