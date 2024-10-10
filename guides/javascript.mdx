@@ -1,23 +1,30 @@
 ---
 title: 'Send data from JavaScript app to Axiom'
-description: 'This guide explains how to send data from a JavaScript app to Axiom.'
+description: 'This page explains how to send data from a JavaScript app to Axiom.'
 sidebarTitle: JavaScript
-github: "https://github.com/axiomhq/axiom-js"
 ---
 
-## Quickstart
+To send data from a JavaScript app to Axiom, use the Axiom JavaScript SDK.
 
-Install using `npm install`:
+<Note>
+The Axiom JavaScript SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-js).
+</Note>
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+<Prerequisites />
+
+## Install SDK
+
+To install the SDK, run the following:
 
 ```shell
 npm install @axiomhq/js
 ```
 
-If you use the [Axiom CLI](https://github.com/axiomhq/cli), run `eval $(axiom config export -f)` to configure your environment variables.
+If you use the [Axiom CLI](/reference/cli), run `eval $(axiom config export -f)` to configure your environment variables. Otherwise, [create an API token](/reference/tokens) and export it as `AXIOM_TOKEN`.
 
-Otherwise create a new token in [the Axiom settings](https://app.axiom.co/api-tokens) and export it as `AXIOM_TOKEN`.
-
-You can also configure the client using options passed to the constructor of the Client:
+You can also configure the client using options passed to the constructor of the client:
 
 ```ts
 import { Axiom } from '@axiomhq/js';
@@ -27,28 +34,31 @@ const axiom = new Axiom({
 });
 ```
 
-You can then ingest data like this:
+## Send data
+
+The following example sends data to Axiom:
 
 ```ts
-axiom.ingest('my-dataset', [{ foo: 'bar' }]);
+axiom.ingest('DATASET_NAME', [{ foo: 'bar' }]);
 await axiom.flush();
 ```
 
-> **Note** that the client is automatically batching events in the background, in most cases you'll only want to call `flush()` before your application exits.
+The client automatically batches events in the background. In most cases, you only want to call `flush()` before your application exits.
 
-And query data like this:
+## Query data
+
+The following example queries data from Axiom:
 
 ```ts
-const res = await axiom.query(`['my-dataset'] | where foo == 'bar' | limit 100`);
+const res = await axiom.query(`['DATASET_NAME'] | where foo == 'bar' | limit 100`);
 console.log(res);
 ```
 
-For further examples, head over to the [examples](../../examples/js) directory.
+For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-js/tree/main/examples).
 
+## Capture errors
 
-## Capture Errors
-
-To capture errors, you can pass a method `onError` to the client:
+To capture errors, pass a method `onError` to the client:
 
 ```ts
 let client = new Axiom({
@@ -59,37 +69,29 @@ let client = new Axiom({
   }
 });
 ```
-by default `onError` is set to `console.error`.
 
+By default, `onError` is set to `console.error`.
 
-## Annotations
+## Create annotations
 
-Starting from `v1.0.0` the SDK supports the [Annotations API](https://axiom.co/docs/restapi/endpoints/createAnnotation). You can create annotations like this:
+The following example creates an annotation:
 
 ```ts
-// import the annotations module
 import { annotations } from '@axiomhq/js';
-// create a client
+
 const client = new annotations.Service({ token: process.env.AXIOM_TOKEN });
-```
 
-Then create an annotation like this:
-
-```ts
 await annotations.create({
   type: 'deployment',
-  datasets: ['dataset_name'],
+  datasets: ['DATASET_NAME'],
   title: 'New deployment',
-  description: 'Deployed version 1.0.0 with fixes for ...',
+  description: 'Deployed version 1.0.0',
 })
 ```
 
-## Logging from Node.js
+## Log from Node.js
 
-While axiom-js works on both the backend and the browsers, We provide transports for some of the popular loggers:
+While the Axiom JavaScript client works on both the backend and the browsers, Axiom provides transports for some of the popular loggers:
 
-- [Pino](./pino): A Pino transport which sends logs to Axiom.
-- [Winston](./winston): A Winston transport which sends logs to Axiom
-
-
-For further examples, head over to the [examples](https://github.com/axiomhq/axiom-js/tree/main/examples) directory.
+- [Pino](/guides/pino)
+- [Winston](/guides/winston)
