@@ -47,7 +47,7 @@ To install the Axiom CloudWatch Forwarder, choose one of the following:
 <Steps>
 <Step>
 
-Create a new module for the Forwarder in your Terraform file in the following way:
+Create a new Forwarder module in your Terraform file in the following way:
 
 ```hcl
 module "forwarder" {
@@ -65,7 +65,7 @@ Alternatively, create a dataset with the [Axiom Terraform provider](/docs/apps/t
 </Step>
 <Step>
 
-Create a new module for the Subscriber in your Terraform file in the following way:
+Create a new Subscriber module in your Terraform file in the following way:
 
 ``` hcl
 module "subscriber" {
@@ -79,7 +79,7 @@ module "subscriber" {
 </Step>
 <Step>
 
-Create a new module for the Listener in your Terraform file in the following way:
+Create a new Listener module in your Terraform file in the following way:
 
 ```hcl
 module "listener" {
@@ -98,19 +98,6 @@ In your terminal, go to the folder of your main Terraform file, and then run `te
 Run `terraform plan` to check the changes, and then run `terraform apply`.
 </Step>
 </Steps>
-
-## Turn off log forwarding
-
-To turn off log forwarding to Axiom, remove subscriptions from the Forwarder with the Unsubscriber module.
-
-```hcl
-module "unsubscriber" {
-  source           = "axiomhq/axiom-cloudwatch-forwarder/aws//modules/unsubscriber"
-  prefix           = "axiom-cloudwatch-forwarder"
-  forwarder_lambda_arn = module.forwarder.lambda_arn
-  log_groups_prefix    = "/aws/lambda/"
-}
-```
 
 ## Filter Amazon CloudWatch log groups
 
@@ -148,3 +135,14 @@ The optional Listener stack does the following:
 To remove subscription filters for one or more log groups, [launch the Unsubscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-subscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-unsubscriber-v1.1.1-cloudformation-stack.yaml).
 
 The log group filtering works the same way as the Subscriber stack. You can filter the log groups by a combination of names, prefix, and regular expression filters.
+
+Alternatively, to turn off log forwarding to Axiom, create a new Unsubscriber module in your Terraform file in the following way:
+
+```hcl
+module "unsubscriber" {
+  source           = "axiomhq/axiom-cloudwatch-forwarder/aws//modules/unsubscriber"
+  prefix           = "axiom-cloudwatch-forwarder"
+  forwarder_lambda_arn = module.forwarder.lambda_arn
+  log_groups_prefix    = "/aws/lambda/"
+}
+```
