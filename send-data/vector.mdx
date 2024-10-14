@@ -18,7 +18,16 @@ Follow the [quickstart guide in the Vector documentation](https://vector.dev/doc
 
 ## timestamp field
 
-Logs and metrics sent via vector should use `@timestamp` as the timestamp field like: `{"@timestamp":"2022-04-14T21:30:30.658Z..."}`, not `_time`. Axiom accepts many date strings and timestamps without knowing the format in advance, including Unix Epoch, RFC3339, and ISO 8601.
+Before Vector version v0.43.0 the Axiom sink was based on an Elasticsearch endpoint. This constrained us to Elasticsearch wire
+semantics. If you are using Vector version v0.42.0 or earlier, then the following semantics are applicable:
+
+> Logs and metrics sent via Vector should use `@timestamp` as the timestamp field like: `{"@timestamp":"2022-04-14T21:30:30.658Z..."}`, not `_time`. Axiom accepts many date strings and timestamps without knowing the format in advance, including Unix Epoch, RFC3339, and ISO 8601.
+
+As and from Vector version v0.43.0 the Vector Axiom sink is based integrated against the native Axiom ingest endpoint.
+
+> This means the Vector Axiom sink is no longer constrained by Elasticsearch semantics, and the `_time` field can be used with its usual behaviour.
+
+See below for migration example.
 
 ## Configuration
 
@@ -267,3 +276,64 @@ token = "your_api_token"  # replace with your Axiom API token
 ```
 
 Check out the [advanced configuration on Batch, Buffer configuration, and Encoding on Vector Documentation](https://vector.dev/docs/reference/configuration/sinks/axiom/)
+
+## Migrate from pre v0.43.0 Vector new newer Vector version
+
+As timestamp field handling changes, we need to address any pinning of
+the timestamp field in our user defined vector remap logic so that we
+now use the `_time` field:
+
+```vrl
+# file: example.vrl
+
+# We set _time to an explicit, rather than allow axiom to default to `now`
+. = set!(value: ., path: ["_time"],  data: .timestamp)
+
+# We remove the original value, as it is effectively a duplicate
+del(.timestamp)
+```
+
+And a sample vector configuration file:
+
+```toml
+# ... rest of your config file
+
+[transforms.migrate]
+type = "remap"
+inputs = [ "k8s"]
+file= 'example.vrl' # as above
+
+[sinks.debug]
+type = "axiom"
+inputs = [ "migrate" ]
+dataset = "my-axiom-dataset" # no change
+token = "your-token" # no change
+
+[sinks.debug.encoding]
+codec = "json"
+```
+
+## Use zstd compression with Vector and Axiom
+
+The changes to the Vector Axiom Sink enable the `zstd` compression
+algorithm by default, however an explicit algorithm can be set if
+appropriate for your use case:
+
+```toml
+# ... rest of your config file
+
+[transforms.migrate]
+type = "remap"
+inputs = [ "k8s"]
+file= 'example.vrl' # as above
+
+[sinks.debug]
+type = "axiom"
+compression = "gzip" # Typically does not compress as well as zstd!
+inputs = [ "migrate" ]
+dataset = "my-axiom-dataset" # no change
+token = "your-token" # no change
+
+[sinks.debug.encoding]
+codec = "json"
+```
