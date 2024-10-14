@@ -18,7 +18,7 @@ Follow the [quickstart guide in the Vector documentation](https://vector.dev/doc
 
 ## timestamp field
 
-Before Vector version v0.42.0 the Axiom sink was based on an Elasticsearch endpoint. This constrained us to Elasticsearch wire
+Before Vector version v0.42.0 the Axiom sink was based on an Elasticsearch endpoint, which constrained it to Elasticsearch wire
 semantics. If you are using Vector version v0.41.1 or earlier, then the following semantics are applicable:
 
 > Logs and metrics sent via Vector should use `@timestamp` as the timestamp field like: `{"@timestamp":"2022-04-14T21:30:30.658Z..."}`, not `_time`. Axiom accepts many date strings and timestamps without knowing the format in advance, including Unix Epoch, RFC3339, and ISO 8601.
@@ -74,6 +74,7 @@ type = "remap"
 inputs = ["VECTOR_SOURCE_ID"]
 source = '''
   . = del(.FIELD_TO_REMOVE)
+'''
 
 [sinks.SINK_ID]
 type = "axiom"
@@ -163,7 +164,6 @@ To send AWS S3 logs using the Axiom sink, create a configuration file, for examp
 type = "aws_s3"
 bucket = "my-bucket"  # replace with your bucket name
 region = "us-west-2"  # replace with the AWS region of your bucket
-
 
 [sinks.axiom]
 type = "axiom"
@@ -277,11 +277,10 @@ token = "your_api_token"  # replace with your Axiom API token
 
 Check out the [advanced configuration on Batch, Buffer configuration, and Encoding on Vector Documentation](https://vector.dev/docs/reference/configuration/sinks/axiom/)
 
-## Migrate from pre v0.42.0 Vector new newer Vector version
+## Migrate from legacy ( v0.41.1 and earlier ) Vector to a more recent version
 
-As timestamp field handling changes, we need to address any pinning of
-the timestamp field in our user defined vector remap logic so that we
-now use the `_time` field:
+As timestamp field handling changed, it may be necessary
+to change any references to remap logic to use the `_time` field instead, and remove the now redundant `timestamp` field:
 
 ```vrl
 # file: example.vrl
@@ -313,7 +312,7 @@ token = "your-token" # no change
 codec = "json"
 ```
 
-## Use zstd compression with Vector and Axiom
+## Use `zstd` compression with Vector and Axiom
 
 The changes to the Vector Axiom Sink enable the `zstd` compression
 algorithm by default, however an explicit algorithm can be set if
