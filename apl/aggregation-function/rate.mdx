@@ -69,6 +69,20 @@ Specify the time interval in the query in the following way:
 - `| summarize rate(field) by bin(_time, 1h)` calculates the rate value of the field over a one-hour time window.
 - `| summarize rate(field) by bin_auto(_time)` calculates the rate value of the field bucketed by an automatic time window computed by `bin_auto()`.
 
+<Tip>
+
+Use two `summarize` statements to visualize the average rate over one minute per hour. For example:
+
+```kusto
+['sample-http-logs']
+| summarize respBodyRate = rate(resp_body_size_bytes) by bin(_time, 1m)
+| summarize avg(respBodyRate) by bin(_time, 1h)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20respBodyRate%20%3D%20rate(resp_body_size_bytes)%20by%20bin(_time%2C%201m)%20%7C%20summarize%20avg(respBodyRate)%20by%20bin(_time%2C%201h)%22%2C%20%22queryOptions%22%3A%7B%22quickRange%22%3A%226h%22%7D%7D)
+
+</Tip>
+
 ## Use case examples
 
 <Tabs>
@@ -83,7 +97,7 @@ In this example, the `rate` aggregation calculates the rate of HTTP response siz
 | summarize rate(resp_body_size_bytes) by bin(_time, 1s)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20rate%3Dcount%28%29%20by%20status%2C%20bin%28_time%2C%201s%29%22%7D) TODO update link
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20rate(resp_body_size_bytes)%20by%20bin(_time%2C%201s)%22%7D)
 
 **Output**
 
@@ -106,7 +120,7 @@ This example calculates the rate of span duration per second.
 | summarize rate(toint(duration)) by bin(_time, 1s)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20summarize%20rate%3Dcount%28%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201s%29%22%7D) TODO update link
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20rate(toint(duration))%20by%20bin(_time%2C%201s)%22%7D)
 
 **Output**
 
@@ -129,7 +143,7 @@ In this example, the `rate` aggregation calculates the rate of HTTP request dura
 | summarize rate(req_duration_ms) by bin(_time, 1s)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20rate%3Dcount%28%29%20by%20status%2C%20bin%28_time%2C%201s%29%22%7D) TODO update link
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20rate(req_duration_ms)%20by%20bin(_time%2C%201s)%22%7D)
 
 **Output**
 
@@ -138,7 +152,7 @@ In this example, the `rate` aggregation calculates the rate of HTTP request dura
 | 240.668 ms     | 2024-01-01 12:00:00|
 | 264.17 ms      | 2024-01-01 12:00:01|
 
-This query calculates the rate of HTTP request duration per second
+This query calculates the rate of HTTP request duration per second.
 
 </Tab>
 </Tabs>
