@@ -1,60 +1,156 @@
 ---
-title: 'extend-valid'
-description: 'Creates calculated columns that are used to filter out rows. If valid it then appends them to the result set.'
-tags:
-    ['axiom documentation', 'documentation', 'axiom', 'tabular operators', 'extend-valid']
+title: extend-valid
+description: 'This page explains how to use the extend-valid operator in APL.'
 ---
 
-Creates calculated columns that are used to filter out rows. If valid it then appends them to the
-result set.
+## Introduction
 
-This is a shorthand operator to create a field while also doing basic checking on the validity
-of the field. In many cases, additional checks are required and it is recommended in those cases
-a combination of an [extend](/apl/tabular-operators/extend-operator) and a [where](/apl/tabular-operators/where-operator) operator are used. The
-basic checks that are preformed are dependent on the type of the expression. Checks are as follows:
+The `extend-valid` operator in Axiom Processing Language (APL) allows you to extend a set of columns with new calculated values, where these calculations are based on conditions of validity for each row. It’s particularly useful when working with datasets that contain missing or invalid data, as it enables you to calculate and assign values only when certain conditions are met. This operator helps you keep your data clean by applying calculations to valid data points, and leaving invalid or missing values untouched.
 
- * [Dictionaries](../data-types/scalar-data-types#the-dynamic-data-type). The valid is checked to ensure it is not [null](../data-types/null-values) and has at least one entry in
-   the dictionary.
- * [Arrays](../data-types/scalar-data-types#the-dynamic-data-type). Arrays should not be [null](../data-types/null-values) and should have at least one value.
- * [Strings](../data-types/scalar-data-types#the-string-data-type). Strings should not be empty and have at least one character in them.
- * [Other types](/apl/data-types/scalar-data-types). The same logic as tobool and a check for true
+This is a shorthand operator to create a field while also doing basic checking on the validity of the field. In many cases, additional checks are required and it is recommended in those cases a combination of an [extend](/apl/tabular-operators/extend-operator) and a [where](/apl/tabular-operators/where-operator) operator are used. The basic checks that Axiom preform depend on the type of the expression:
 
-Some situations you'd want to not use **extend-valid** for including checking to see if a map has a
-particular key in it. Cases where an empty array is valid. Where returning and empty string could
-be a useful result. Or when a value of a number being 0 should be included in the new field.
+- Dictionary: Check if the dictionary is not null and has at least one entry.
+- Array: Check if the arrat is not null and has at least one value.
+- String: Check is the string is not empty and has at least one character.
+- Other types: The same logic as `tobool` and a check for true.
+
+You can use `extend-valid` to perform conditional transformations on large datasets, especially in scenarios where data quality varies or when dealing with complex log or telemetry data.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, similar functionality is achieved using the `eval` function, but with the `if` command to handle conditional logic for valid or invalid data. In APL, `extend-valid` is more specialized for handling valid data points directly, allowing you to extend columns based on conditions.
+
+<CodeGroup>
+```sql Splunk example
+| eval new_field = if(isnotnull(field), field + 1, null())
+```
+
+```kusto APL equivalent
+['sample-http-logs'] 
+| extend-valid new_field = req_duration_ms + 100
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, similar functionality is often achieved using the `CASE WHEN` expression within a `SELECT` statement to handle conditional logic for fields. In APL, `extend-valid` directly extends a column conditionally, based on the validity of the data.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE WHEN req_duration_ms IS NOT NULL THEN req_duration_ms + 100 ELSE NULL END AS new_field FROM sample_http_logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs'] 
+| extend-valid new_field = req_duration_ms + 100
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
 
 ### Syntax
 
 ```kusto
-| extend-valid alias1 = expression1, alias2 = expression2, alias3 = ...
+| extend-valid ColumnName1 = Expression1, ColumnName2 = Expression2, ColumnName3 = ...
 ```
 
-### Arguments
+### Parameters
 
-| **name**                | **type**       | **description**                                |
-| ----------------------- | -------------- | ---------------------------------------------- |
-| Alias                   | **string**     | The name of the column to add or update.       |
-| Expression              | **expression** | A calculation over the columns of the dataset. |
+- **ColumnName**: The name of the existing column that you want to extend.
+- **Expression**: The expression to evaluate and apply for valid rows.
 
 ### Returns
 
-Rows in **dataset** for which **Expression** is valid with:
+The operator returns a table where the specified columns are extended with new values based on the given expression for valid rows. The original value remains unchanged.
 
-- Column names noted by extend that already exist in the input are removed and appended as their new calculated values.
-- Column names noted by extend that do not exist in the input are appended as their new calculated values.
+## Use case examples
 
-### Examples
+<Tabs>
+<Tab title="Log analysis">
 
-```kusto
-['http-logs']
-// if content_type is "" this will filter the row
-| extend-valid upper_ct = toupper(content_type)
-```
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend-valid%20upper_ct%20%3D%20toupper%28content_type%29%22%7D)
+In this use case, you analyze HTTP logs to calculate request duration for valid entries.
+
+**Query**
 
 ```kusto
-['http-logs']
-// if extract us unable to find the regex, this will filter the row
-| extend-valid extension = extract('/([a-z]*)', 1, content_type)
+['sample-http-logs']
+| extend-valid adjusted_duration = req_duration_ms + 100 if isnotnull(req_duration_ms)
 ```
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend-valid%20extension%20%3D%20extract%28%27%2F%28%5Ba-z%5D%2A%29%27%2C%201%2C%20content_type%29%22%7D)
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend-valid%20adjusted_duration%20%3D%20req_duration_ms%20%2B%20100%20if%20isnotnull(req_duration_ms)%22%7D)
+
+**Output**
+
+| _time               | req_duration_ms | adjusted_duration |
+|---------------------|-----------------|-------------------|
+| 2023-10-01 12:00:00 | 250             | 350               |
+| 2023-10-01 12:01:00 | NULL            | NULL              |
+| 2023-10-01 12:02:00 | 300             | 400               |
+
+In this query, the `extend-valid` operator calculates the `adjusted_duration` by adding 100 to `req_duration_ms` when it’s valid (not null). If the original value is null, the result remains null.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In this use case, you calculate extended span duration for valid entries in OpenTelemetry traces.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend-valid extended_duration = duration + time(0.01s) if isnotnull(duration)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend-valid%20extended_duration%20%3D%20duration%20%2B%20time(0.01s)%20if%20isnotnull(duration)%22%7D)
+
+**Output**
+
+| _time               | duration       | extended_duration |
+|---------------------|----------------|-------------------|
+| 2023-10-01 12:00:00 | 00:00:01.500   | 00:00:01.510      |
+| 2023-10-01 12:01:00 | NULL           | NULL              |
+| 2023-10-01 12:02:00 | 00:00:02.000   | 00:00:02.010      |
+
+This query extends the duration of each trace by 10 milliseconds only if the original duration is valid.
+
+</Tab>
+<Tab title="Security logs">
+
+In this use case, you create an adjusted timestamp for log entries where the original timestamp is valid.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend-valid adjusted_time = _time + 1d if isnotnull(_time)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend-valid%20adjusted_time%20%3D%20_time%20%2B%201d%20if%20isnotnull(_time)%22%7D)
+
+**Output**
+
+| _time               | adjusted_time       |
+|---------------------|---------------------|
+| 2023-10-01 12:00:00 | 2023-10-02 12:00:00 |
+| NULL                | NULL                |
+| 2023-10-01 12:02:00 | 2023-10-02 12:02:00 |
+
+Here, the query extends `_time` by 1 day for valid timestamps.
+
+</Tab>
+</Tabs>
+
+## List of related operators
+
+- [**`extend`**](/apl/tabular-operators/extend-operator): Use `extend` to add calculated columns unconditionally, without validating data.
+- [**`project`**](/apl/tabular-operators/project-operator): Use `project` to select and rename columns, without performing conditional extensions.
+- [**`summarize`**](/apl/tabular-operators/summarize-operator): Use `summarize` for aggregation, often used before extending columns with further calculations.
