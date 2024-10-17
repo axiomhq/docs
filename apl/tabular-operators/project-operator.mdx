@@ -1,58 +1,160 @@
 ---
-title: 'project'
-description: 'Learn how to select the fields to insert, rename, include, or drop and embeds new computed columns.'
-tags: 
-    ['axiom documentation', 'documentation', 'axiom', 'tabular operators', 'project']
+title: project
+description: 'This page explains how to use the project operator in APL.'
 ---
 
-Selects the fields to insert, rename, include, or drop and embeds new computed columns.
+# project operator
+
+## Introduction
+
+The `project` operator in Axiom Processing Language (APL) is used to select specific columns from a dataset, potentially renaming them or applying calculations on the fly. With `project`, you can control which columns are returned by the query, allowing you to focus on only the data you need.
+
+This operator is useful when you want to refine your query results by reducing the number of columns, renaming them, or deriving new columns based on existing data. It’s a powerful tool for filtering out unnecessary fields and performing light transformations on your dataset.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the equivalent of the `project` operator is typically the `table` or `fields` command. While SPL’s `table` focuses on selecting columns, `fields` controls both selection and exclusion, similar to `project` in APL.
+
+<CodeGroup>
+```sql Splunk example
+| table _time, status, uri
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| project _time, status, uri
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the `SELECT` statement serves a similar role to the `project` operator in APL. SQL users will recognize that `project` behaves like selecting columns from a table, with the ability to rename or transform columns inline.
+
+<CodeGroup>
+```sql SQL example
+SELECT _time, status, uri FROM sample_http_logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| project _time, status, uri
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
 
 ## Syntax
 
 ```kusto
-| project ColumnName [= Expression] [, ...]
+| project FieldName [= Expression] [, ...]
 ```
+
+Or
 
 ```kusto
 | project FieldName, FieldName, FieldName, ...
 ```
 
-or
+Or
 
 ```kusto
 | project [FieldName, FieldName[,] = Expression [, ...]
 ```
 
-## Arguments
+### Parameters
 
-| **name**              | **type**     | **description**                                                                                                                                              |
-| --------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Field Name(Column Name) | **string**     | Name of a Field (column) to appear in the output. If there is no Expression, then Field Name is compulsory and a column of that name must appear in the input |
-| Expression            | **expression** |  Optional scalar expression referencing the input columns.                                                 |
+- `FieldName`: The names of the columns in the order you want them to appear in the result set. If there is no Expression, then FieldName is compulsory and a column of that name must appear in the input.
+- `Expression`: Optional scalar expression referencing the input columns.
 
-## Returns
+### Returns
 
-A table that has the field named 'arguments' and as many rows as the input table.
+The `project` operator returns a dataset containing only the specified columns.
 
-## Examples
+## Use case examples
 
-```kusto
-['http-logs']
-| project ['geo.country'] = ['id']
-```
+<Tabs>
+<Tab title="Log analysis">
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20%5B%27geo.country%27%5D%20%3D%20%5B%27id%27%5D%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+In this example, you’ll extract the timestamp, HTTP status code, and request URI from the sample HTTP logs.
+
+**Query**
 
 ```kusto
-['http-logs']
-| project ['geo.country'] = ['id'], method = ['geo.city']
+['sample-http-logs']
+| project _time, status, uri
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20%5B%27geo.country%27%5D%20%3D%20%5B%27id%27%5D%2C%20method%20%3D%20%5B%27geo.city%27%5D%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20project%20_time%2C%20status%2C%20uri%22%7D)
+
+**Output**
+
+| _time               | status | uri                |
+|---------------------|--------|--------------------|
+| 2024-10-17 12:00:00 | 200    | /api/v1/getData     |
+| 2024-10-17 12:01:00 | 404    | /api/v1/getUser     |
+
+The query returns only the timestamp, HTTP status code, and request URI, reducing unnecessary columns from the dataset.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In this example, you’ll extract trace information such as the service name, span ID, and duration from OpenTelemetry traces.
+
+**Query**
 
 ```kusto
-['http-logs']
-| project ['geo.city'], content_type, ['geo.country'], ['id'], is_tls
+['otel-demo-traces']
+| project ['service.name'], span_id, duration
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20%5B%27geo.city%27%5D%2C%20content_type%2C%20%5B%27geo.country%27%5D%2C%20%5B%27id%27%5D%2C%20is_tls%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20project%20%5B'service.name'%5D%2C%20span_id%2C%20duration%22%7D)
+
+**Output**
+
+| service.name         | span_id          | duration |
+|----------------------|------------------|----------|
+| frontend             | span-1234abcd    | 00:00:02 |
+| cartservice          | span-5678efgh    | 00:00:05 |
+
+The query isolates relevant tracing data, such as the service name, span ID, and duration of spans.
+
+</Tab>
+<Tab title="Security logs">
+
+In this example, you’ll focus on security log entries by projecting only the timestamp, user ID, and HTTP status from the sample HTTP logs.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| project _time, id, status
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20project%20_time%2C%20id%2C%20status%22%7D)
+
+**Output**
+
+| _time               | id    | status |
+|---------------------|-------|--------|
+| 2024-10-17 12:00:00 | user1 | 200    |
+| 2024-10-17 12:01:00 | user2 | 403    |
+
+The query extracts only the timestamp, user ID, and HTTP status for analysis of access control in security logs.
+
+</Tab>
+</Tabs>
+
+## List of related operators
+
+- [**`extend`**](/apl/tabular-operators/extend-operator): Use `extend` to add new columns or calculate values without removing any existing columns.
+- [**`summarize`**](/apl/tabular-operators/summarize-operator): Use `summarize` to aggregate data across groups of rows, which is useful when you’re calculating totals or averages.
+- [**`where`**](/apl/tabular-operators/where-operator): Use `where` to filter rows based on conditions, often paired with `project` to refine your dataset further.

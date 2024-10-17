@@ -1,46 +1,157 @@
 ---
-title: 'project-keep'
-description: 'Learn how to select specified fields from the input to keep in the output.'
-tags: 
-    ['axiom documentation', 'documentation', 'axiom', 'tabular operators', 'project-keep']
+title: project-keep
+description: 'This page explains how to use the project-keep operator function in APL.'
 ---
 
-Selects specified fields from the input to keep in the output.
+## Introduction
 
-The order of the fields in the result is determined by their original order in the dataset. Only the fields that are specified as arguments are kept. The other fields are excluded from the result. See [project](/apl/tabular-operators/project-operator) for more detail.
+The `project-keep` operator in APL is a powerful tool for column selection. It allows you to explicitly keep specific columns from a dataset, discarding any others not listed in the operator's parameters. This is useful when you only need to work with a subset of fields in your query results and want to reduce clutter or improve performance by eliminating unnecessary columns. 
 
-## Syntax
+You can use `project-keep` when you need to focus on particular data points, such as in log analysis, security event monitoring, or extracting key fields from traces.
 
-```kusto
-| project-keep FieldName1, FieldName2, ...
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `table` command performs a similar task to APL’s `project-keep`. It selects only the columns you specify and excludes any others.
+
+<CodeGroup>
+```splunk Splunk example
+index=main | table _time, status, uri
 ```
 
-## Arguments
+```kusto APL equivalent
+['sample-http-logs'] 
+| project-keep _time, status, uri
+```
+</CodeGroup>
 
-| **name**  | **type** | **description**                                    |
-| --------- | -------- | -------------------------------------------------- |
-| Field Name | **string** | The name of the field to be kept in the output. |
+</Accordion>
+<Accordion title="ANSI SQL users">
 
-## Returns
+In ANSI SQL, the `SELECT` statement combined with column names performs a task similar to `project-keep` in APL. Both allow you to specify which columns to retrieve from the dataset.
 
-A table with fields that are named as arguments. Contains the same number of rows as the input table.
-
-## Examples
-
-```kusto
-['http-logs']
-| project-keep  ['geo.city'], ['geo.country'], method
+<CodeGroup>
+```sql SQL example
+SELECT _time, status, uri FROM sample_http_logs
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project-keep%20%20%5B%27geo.city%27%5D%2C%20%5B%27geo.country%27%5D%2C%20method%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+```kusto APL equivalent
+['sample-http-logs'] 
+| project-keep _time, status, uri
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+| project-keep ColumnName1, ColumnName2, ...
+```
+
+### Parameters
+
+- `ColumnName`: The column you want to keep in the result set.
+
+### Returns
+
+`project-keep` returns a dataset with only the specified columns. All other columns are removed from the output.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+For log analysis, you might want to keep only the columns that are relevant to investigating HTTP requests.
+
+**Query**
+
+```kusto
+['sample-http-logs'] 
+| project-keep _time, status, uri, method, req_duration_ms
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20project-keep%20_time%2C%20status%2C%20uri%2C%20method%2C%20req_duration_ms%22%7D)
+
+**Output**
+
+| _time               | status | uri                 | method | req_duration_ms |
+|---------------------|--------|---------------------|--------|-----------------|
+| 2024-10-17 10:00:00 | 200    | /index.html         | GET    | 120             |
+| 2024-10-17 10:01:00 | 404    | /non-existent.html   | GET    | 50              |
+| 2024-10-17 10:02:00 | 500    | /server-error        | POST   | 300             |
+
+This query filters the dataset to show only the request timestamp, status, URI, method, and duration, which can help you analyze server performance or errors.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+For OpenTelemetry trace analysis, you may want to focus on key tracing details such as service names and trace IDs.
+
+**Query**
+
+```kusto
+['otel-demo-traces'] 
+| project-keep _time, trace_id, span_id, ['service.name'], duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20project-keep%20_time%2C%20trace_id%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration%22%7D)
+
+**Output**
+
+| _time               | trace_id     | span_id     | service.name   | duration |
+|---------------------|--------------|-------------|----------------|----------|
+| 2024-10-17 10:03:00 | abc123       | xyz789      | frontend       | 500ms    |
+| 2024-10-17 10:04:00 | def456       | mno345      | checkoutservice| 250ms    |
+
+This query extracts specific tracing information, such as trace and span IDs, the name of the service, and the span’s duration.
+
+</Tab>
+<Tab title="Security logs">
+
+In security log analysis, focusing on essential fields like user ID and HTTP status can help track suspicious activity.
+
+**Query**
+
+```kusto
+['sample-http-logs'] 
+| project-keep _time, id, status, uri, ['geo.city'], ['geo.country']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20project-keep%20_time%2C%20id%2C%20status%2C%20uri%2C%20%5B%27geo.city%27%5D%2C%20%5B%27geo.country%27%5D%22%7D)
+
+**Output**
+
+| _time               | id        | status | uri           | geo.city    | geo.country |
+|---------------------|-----------|--------|---------------|-------------|-------------|
+| 2024-10-17 10:05:00 | user123   | 403    | /admin        | New York    | USA         |
+| 2024-10-17 10:06:00 | user456   | 200    | /login        | San Francisco| USA         |
+
+This query narrows down the data to track HTTP status codes by users, helping identify potential unauthorized access attempts.
+
+</Tab>
+</Tabs>
+
+## List of related operators
+
+- [**`project`**](/apl/tabular-operators/project-operator): Use `project` to explicitly specify the columns you want in your result, while also allowing transformations or calculations on those columns.
+- [**`extend`**](/apl/tabular-operators/extend-operator): Use `extend` to add new columns or modify existing ones without dropping any columns.
+- [**`summarize`**](/apl/tabular-operators/summarize-operator): Use `summarize` when you need to perform aggregation operations on your dataset, grouping data as necessary.
 
 ## Wildcard
 
-Wildcard refers to a special character or a set of characters that can be used to substitute for any other character(s) in a search pattern. The use of wildcards in Axiom allows you to create more flexible queries and perform more powerful searches.
+Wildcard refers to a special character or a set of characters that can be used to substitute for any other character in a search pattern. Use wildcards to create more flexible queries and perform more powerful searches.
 
-- In Axiom, the syntax for wildcard can either be `data*` or `['data.fo']*`
+The syntax for wildcard can either be `data*` or `['data.fo']*`.
 
-Here’s how you can use wildcards in `project-keep` 
+Here’s how you can use wildcards in `project-keep`:
 
 ```kusto
 ['sample-http-logs']
