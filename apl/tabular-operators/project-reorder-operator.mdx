@@ -52,16 +52,17 @@ SELECT columnA, columnB, columnC FROM dataset;
 ### Syntax
 
 ```kusto
-| project-reorder column1, column2, ..., columnN
+| project-reorder column1 [asc | desc | granny-asc | granny-desc], column2 [asc | desc | granny-asc | granny-desc], ...
 ```
 
 ### Parameters
 
-- `column1, column2, ..., columnN`: The names of the columns in the order you want them to appear in the result set.
+- `column1, column2, ...`: The names of the columns in the order you want them to appear in the result set.
+- `[asc | desc | granny-asc | granny-desc]`: Optional: Specifies the sort order for the reordered fields. `asc` or `desc` order fields by field name in ascending or descending manner. `granny-asc` or `granny-desc` order by ascending or descending while secondarily sorting by the next numeric value. For example, `b50` comes before `b9` when you use `granny-asc`.
 
 ### Returns
 
-The reordered dataset with columns displayed in the specified order.
+A table with the specified fields reordered as requested followed by any unspecified fields in their original order. `project-reorder` doesn‘t rename or remove fields from the dataset. All fields that existed in the dataset appear in the results table.
 
 ## Use case examples
 
@@ -136,6 +137,50 @@ This query reorders the fields to focus on the HTTP status, request method, and 
 
 </Tab>
 </Tabs>
+
+## Wildcard
+
+Wildcard refers to a special character or a set of characters that can be used to substitute for any other character in a search pattern. Use wildcards to create more flexible queries and perform more powerful searches.
+
+The syntax for wildcard can either be `data*` or `['data.fo']*`.
+
+Here’s how you can use wildcards in `project-reorder`:
+
+Reorder all fields in ascending order:
+
+```kusto
+['sample-http-logs'] 
+| project-reorder * asc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project-reorder%20%2A%20asc%22%7D)
+
+Reorder specific fields to the beginning:
+
+```kusto
+['sample-http-logs'] 
+| project-reorder method, status, uri
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project-reorder%20method%2C%20status%2C%20uri%22%7D)
+
+Reorder fields using wildcards and sort in descending order:
+
+```kusto
+['github-push-event'] 
+| project-reorder repo*, num_commits, push_id, ref, size, ['id'], size_large desc 
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27github-push-event%27%5D%5Cn%7C%20project-reorder%20repo%2A%2C%20num_commits%2C%20push_id%2C%20ref%2C%20size%2C%20%5B%27id%27%5D%2C%20size_large%20desc%22%7D)
+
+Reorder specific fields and keep others in original order:
+
+```kusto
+['otel-demo-traces']
+| project-reorder trace_id, *, span_id // orders the trace_id then everything else, then span_id fields 
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27otel-demo-traces%27%5D%5Cn%7C%20project-reorder%20trace_id%2C%20%2A%2C%20span_id%22%7D)
 
 ## List of related operators
 
