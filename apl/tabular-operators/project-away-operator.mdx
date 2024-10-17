@@ -1,46 +1,151 @@
 ---
-title: 'project-away'
-description: 'Learn how to select specified fields from the input to exclude from the output.'
-tags: 
-    ['axiom documentation', 'documentation', 'axiom', 'tabular operators', 'project-away']
+title: project-away
+description: 'This page explains how to use the project-away operator function in APL.'
 ---
 
-Selects specified fields from the input to exclude from the output.
+## Introduction
 
-## Syntax
+The `project-away` operator in APL is used to exclude specific columns from the output of a query. This operator is useful when you want to return a subset of columns from a dataset, without needing to manually specify every column you want to keep. Instead, you specify the columns you want to remove, and the operator returns all remaining columns.
 
-```kusto
-| project-away FieldName1, FieldName2, ...
+You can use `project-away` in scenarios where your dataset contains irrelevant or sensitive fields that you do not want in the results. It simplifies queries, especially when dealing with wide datasets, by allowing you to filter out columns without having to explicitly list every column to include.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you use the `fields` command to remove columns from your results. In APL, the `project-away` operator provides a similar functionality, removing specified columns while returning the remaining ones.
+
+<CodeGroup>
+```splunk Splunk example
+... | fields - status, uri, method
 ```
 
-The order of the fields in the result is determined by their original order in the dataset. Only the fields that are specified as `arguments` are dropped. The other fields are included in the result. See [project](/apl/tabular-operators/project-operator) for more detail.
+```kusto APL equivalent
+['sample-http-logs'] 
+| project-away status, uri, method
+```
+</CodeGroup>
 
-## Arguments
+</Accordion>
+<Accordion title="ANSI SQL users">
 
-| **name**  | **type** | **description**                                         |
-| --------- | -------- | ------------------------------------------------------- |
-| Field Name | **string** | The name of the field to be removed from the output. |
+In SQL, you typically use the `SELECT` statement to explicitly include columns. In contrast, APL’s `project-away` operator allows you to exclude columns, offering a more concise approach when you want to keep many columns but remove a few.
 
-## Returns
-
-A table with fields that are not named as arguments. Contains the same number of rows as the input table.
-
-## Examples
-
-```kusto
-['http-logs']
-| project-away ['geo.city'], ['geo.country'], method
+<CodeGroup>
+```sql SQL example
+SELECT _time, req_duration_ms, id, geo.city, geo.country
+FROM sample_http_logs;
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project-away%20%5B%27geo.city%27%5D%2C%20%5B%27geo.country%27%5D%2C%20method%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+```kusto APL equivalent
+['sample-http-logs'] 
+| project-away status, uri, method
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+| project-away ColumnName1, ColumnName2, ...
+```
+
+### Parameters
+
+- `ColumnName`: The column you want to exclude from the result set.
+
+### Returns
+
+The `project-away` operator returns the input dataset excluding the specified columns.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, you might want to exclude unnecessary columns to focus on the relevant fields, such as timestamp, request duration, and user information.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| project-away status, uri, method
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20project-away%20status%2C%20uri%2C%20method%22%7D)
+
+**Output**
+
+| _time               | req_duration_ms | id  | geo.city | geo.country |
+|---------------------|-----------------|-----|----------|-------------|
+| 2023-10-17 10:23:00 | 120             | u1  | Seattle  | USA         |
+| 2023-10-17 10:24:00 | 135             | u2  | Berlin   | Germany     |
+
+The query removes the `status`, `uri`, and `method` columns from the output, keeping the focus on the key fields.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+When analyzing OpenTelemetry traces, you can remove fields that aren't necessary for specific trace evaluations, such as span IDs and statuses.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| project-away span_id, status_code
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20project-away%20span_id%2C%20status_code%22%7D)
+
+**Output**
+
+| _time               | duration | trace_id | service.name      | kind   |
+|---------------------|----------|----------|-------------------|--------|
+| 2023-10-17 11:01:00 | 00:00:03 | t1       | frontend          | server |
+| 2023-10-17 11:02:00 | 00:00:02 | t2       | checkoutservice   | client |
+
+The query removes the `span_id` and `status_code` fields, focusing on key service information.
+
+</Tab>
+<Tab title="Security logs">
+
+In security log analysis, excluding unnecessary columns such as the HTTP method or URI can help focus on user behavior patterns and request durations.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| project-away method, uri
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20project-away%20method%2C%20uri%22%7D)
+
+**Output**
+
+| _time               | req_duration_ms | id  | status | geo.city | geo.country |
+|---------------------|-----------------|-----|--------|----------|-------------|
+| 2023-10-17 10:25:00 | 95              | u3  | 200    | London   | UK          |
+| 2023-10-17 10:26:00 | 180             | u4  | 404    | Paris    | France      |
+
+The query excludes the `method` and `uri` columns, keeping information like status and geographical details.
+
+</Tab>
+</Tabs>
 
 ## Wildcard
 
-Wildcard refers to a special character or a set of characters that can be used to substitute for any other character(s) in a search pattern. The use of wildcards in Axiom allows you to create more flexible queries and perform more powerful searches.
+Wildcard refers to a special character or a set of characters that can be used to substitute for any other character in a search pattern. Use wildcards to create more flexible queries and perform more powerful searches.
 
-- In Axiom, the syntax for wildcard can either be `data*` or `['data.fo']*`
+The syntax for wildcard can either be `data*` or `['data.fo']*`.
 
-Here’s how you can use wildcards in `project-away` 
+Here’s how you can use wildcards in `project-away`:
 
 ```kusto
 ['sample-http-logs']
@@ -55,3 +160,9 @@ Here’s how you can use wildcards in `project-away`
 ```
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27github-push-event%27%5D%5Cn%7C%20project-away%20push%2A%2C%20repo%2A%2C%20%5B%27commits%27%5D%2A%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+
+## List of related operators
+
+- [**`project`**](/apl/tabular-operators/project-operator): The `project` operator lets you select specific columns to include, rather than excluding them.
+- [**`extend`**](/apl/tabular-operators/extend-operator): The `extend` operator is used to add new columns, whereas `project-away` is for removing columns.
+- [**`summarize`**](/apl/tabular-operators/summarize-operator): While `project-away` removes columns, `summarize` is useful for aggregating data across multiple fields.
