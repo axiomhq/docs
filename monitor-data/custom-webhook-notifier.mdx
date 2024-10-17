@@ -1,0 +1,55 @@
+---
+title: 'Custom webhook notifier'
+description: 'This page explains how to create and configure a custom webhook notifier.'
+sidebarTitle: Custom Webhook
+tags:
+    ['axiom documentation', 'documentation', 'axiom', 'dashboards', 'monitors', 'notifiers', 'slack', 'email', 'pagerduty', 'webhook', 'opsgenie', 'discord', 'discord webhook']
+---
+
+To create a custom webhook notifier, follow these steps:
+
+1. Click the **Monitors** tab on the top of the page, and then click **Manage notifiers** on the right.
+1. Click **New notifier** on the top right.
+1. Name your notifier.
+1. Click **Custom webhook**.
+1. TODO
+1. Click **Create**.
+
+### Custom webhook
+
+Create customizable webhook notifiers to connect to internal or external services.
+
+The webhook URL receives an HTTP/HTTPS POST request with a content type of `application/json` together with any other headers you specify.
+
+Use the following variables to define the content of your webhook:
+
+- `.Action` has value `Open` when the notification corresponds to a match monitor matching or a threshold monitor triggering, and has value `Closed` when the notification corresponds to a threshold monitor resolving.
+- `.MonitorID` is the unique identifier for the monitor associated with the notification.
+- `.Body` is the message body associated with the notification. When the notification corresponds to a match monitor, this is the matching event data. When the notification corresponds to a threshold monitor, this provides information about the value that gave rise to the monitor triggering or resolving.
+- `.Description` is the description of the monitor associated with the notification.
+- `.QueryEndTime` is the end time applied in the monitor query that gave rise to the notification.
+- `.QueryStartTime` is the start time applied in the monitor query that gave rise to the notification.
+- `.Timestamp` is the time the notification was generated.
+- `.Title` is the name of the monitor associated with the notification.
+- `.Value` is the value that gave rise to the monitor triggering or resolving when the notification corresponds to a threshold monitor.
+
+Use the Go template syntax to interact with these variables when defining a custom body for your webhook.
+
+A sample webhook body is shown below. This applies the default template shown on creating a custom webhook to a sample notification generated from a threshold monitor triggering.
+
+```json
+{
+  "action": "Open",
+  "event": {
+    "monitorID": "CabI3w142069etTgd0",
+    "body": "Current value of 57347 is above or equal to the threshold value of 0",
+    "description": "",
+    "queryEndTime": "2024-06-28 14:55:57.631364493 +0000 UTC",
+    "queryStartTime": "2024-06-28 14:45:57.631364493 +0000 UTC",
+    "timestamp": "2024-06-28 14:55:57 +0000 UTC",
+    "title": "Axiom Monitor Test Triggered",
+    "value": 57347,
+    "matchedEvent": null
+  }
+}
+```
