@@ -1,0 +1,63 @@
+---
+title: 'project-reorder'
+description: 'This page explains how to reorder specified fields in the output.'
+tags: 
+    ['axiom documentation', 'documentation', 'axiom', 'tabular operators', 'project-reorder']
+---
+
+Reorders specified fields in the output while keeping the original order of unspecified fields.
+
+## Syntax
+
+```kusto
+| project-reorder FieldName1OrWildcard[*] [asc|desc|granny-asc|granny-desc], FieldName2OrWildcard[*], FieldName3OrWildcard  [direction], ...
+```
+
+## Arguments
+
+| **name**              | **type**     | **description**                                      |
+| --------------------- | ------------ | ------------------------------------------------------ |
+| Field Name            | **string**     | The name of the field to be reordered in the output. |
+| [direction]           | **string** |  Optional. Specifies the sort order for the reordered fields. Can be one of: `asc`, `desc`, `granny-asc`, or `granny-desc`. `asc` or `desc` orders fields by field name in ascending or descending manner, respectively. `granny-asc` or `granny-desc` orders by ascending or descending, respectively, while secondarily sorting by the next numeric value. For example, `b50` comes before `b9` when granny-asc is specified.|
+
+## Returns
+
+A table with the specified fields reordered as requested, followed by any unspecified fields in their original order. `project-reorder` doesn‘t rename or remove fields from the dataset, therefore, all fields that existed in the dataset, appear in the result table.
+
+## Examples
+
+Reorder all fields in ascending order:
+
+```kusto
+['sample-http-logs'] 
+| project-reorder * asc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project-reorder%20%2A%20asc%22%7D)
+
+Reorder specific fields to the beginning:
+
+```kusto
+['sample-http-logs'] 
+| project-reorder method, status, uri
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project-reorder%20method%2C%20status%2C%20uri%22%7D)
+
+Reorder fields using wildcards and sort in descending order:
+
+```kusto
+['github-push-event'] 
+| project-reorder repo*, num_commits, push_id, ref, size, ['id'], size_large desc 
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27github-push-event%27%5D%5Cn%7C%20project-reorder%20repo%2A%2C%20num_commits%2C%20push_id%2C%20ref%2C%20size%2C%20%5B%27id%27%5D%2C%20size_large%20desc%22%7D)
+
+Reorder specific fields and keep others in original order:
+
+```kusto
+['otel-demo-traces']
+| project-reorder trace_id, *, span_id // orders the trace_id then everything else, then span_id fields 
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27otel-demo-traces%27%5D%5Cn%7C%20project-reorder%20trace_id%2C%20%2A%2C%20span_id%22%7D)
