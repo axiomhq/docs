@@ -9,7 +9,7 @@ const generateList = async () => {
   // unfortunately the integration group has other stuff than sending data
   // so we need to filter it out.
   groups.push({
-    group: "Apps & Integraitons",
+    group: "Apps & Integrations",
     pages: [
       "apps/cloudflare-logpush",
       "apps/netlify",
@@ -61,6 +61,7 @@ const parsePageInfo = async (path, group) => {
 
 const main = async () => {
   const ingestOptions = await generateList();
+  console.log("------");
   console.log(
     `found ${ingestOptions.length} ingest options categorized as follows:`,
   );
@@ -77,6 +78,15 @@ const main = async () => {
     console.log(`\t${key}: ${stats[key]} options`);
   }
 
+  console.log("------");
+  // print popular items
+  const popularItems = ingestOptions.filter((opt) => opt.isPopular);
+  console.log(`popular items (${popularItems.length}):`);
+  popularItems
+    .sort((a, b) => a.popularityOrder - b.popularityOrder)
+    .map((opt) => {
+      console.log(`\t${opt.popularityOrder}. ${opt.name}`);
+    });
   console.log("------");
   console.log("writing result to file...");
   await writeFile(
