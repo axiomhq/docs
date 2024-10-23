@@ -123,29 +123,27 @@ In this query, the `extract` function pulls the first part of the service namesp
 </Tab>
 <Tab title="Security logs">
 
-In this use case, you extract the extension from the `content_type` field for valid log entries.
+In this use case, you extract the first letter of the city names from the `geo.city` field for valid log entries.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend-valid extension = extract('/([a-z]*)', 1, content_type)
+| extend-valid city_first_letter = extract('^([A-Za-z])', 1, ['geo.city'])
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend-valid%20extension%20%3D%20extract%28%27%2F%28%5Ba-z%5D%2A%29%27%2C%201%2C%20content_type%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend-valid%20city_first_letter%20%3D%20extract('%5E(%5BA-Za-z%5D)'%2C%201%2C%20%5B'geo.city'%5D)%22%7D)
 
 **Output**
 
-| _time               | content_type | extension |
+| _time               | geo.city | city_first_letter |
 |---------------------|--------------|-----------|
-| 2023-10-01 12:00:00 | text/html     | html       |
+| 2023-10-01 12:00:00 | New York     | N       |
 | 2023-10-01 12:01:00 | NULL         | NULL      |
-| 2023-10-01 12:02:00 | image/gif       | gif    |
-| 2023-10-01 12:03:00 | application/octet-stream       | octet    |
-| 2023-10-01 12:03:00 | image/123      | NULL    |
+| 2023-10-01 12:02:00 | London       | L    |
+| 2023-10-01 12:03:00 | 1Paris       | NULL    |
 
-
-In this query, the `extract` function retrieves the extension from the `content_type` field for valid log entries. If the `content_type` field is null or starts with a non-alphabetical character, no extension is extracted, and the result remains null.
+In this query, the `extract` function retrieves the first letter of the city names from the `geo.city` field for valid entries. If the `geo.city` field is null or starts with a non-alphabetical character, no city name is extracted, and the result remains null.
 
 </Tab>
 </Tabs>
