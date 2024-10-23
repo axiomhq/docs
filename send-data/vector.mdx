@@ -20,9 +20,11 @@ Vector is a lightweight and ultra-fast tool for building observability pipelines
 
 Follow the [quickstart guide in the Vector documentation](https://vector.dev/docs/setup/quickstart/) to install Vector, and to configure sources and sinks.
 
-## timestamp field
+<Warning>
+If you use Vector version v0.41.1 or earlier, use the `@timestamp` field instead of `_time` to specify the timestamp of the events. For more information, see [Timestamp in legacy Vector versions](#timestamp-in-legacy-vector-versions).
 
-Logs and metrics sent via vector should use `@timestamp` as the timestamp field like: `{"@timestamp":"2022-04-14T21:30:30.658Z..."}`, not `_time`. Axiom accepts many date strings and timestamps without knowing the format in advance, including Unix Epoch, RFC3339, and ISO 8601.
+If you upgrade from Vector version v0.41.1 or earlier to a newer version, update your configuration. For more information, see [Upgrade from legacy Vector version](#upgrade-from-legacy-vector-version).
+</Warning>
 
 ## Configuration
 
@@ -69,6 +71,7 @@ type = "remap"
 inputs = ["VECTOR_SOURCE_ID"]
 source = '''
   . = del(.FIELD_TO_REMOVE)
+'''
 
 [sinks.SINK_ID]
 type = "axiom"
@@ -158,7 +161,6 @@ To send AWS S3 logs using the Axiom sink, create a configuration file, for examp
 type = "aws_s3"
 bucket = "my-bucket"  # replace with your bucket name
 region = "us-west-2"  # replace with the AWS region of your bucket
-
 
 [sinks.axiom]
 type = "axiom"
@@ -271,3 +273,68 @@ token = "your_api_token"  # replace with your Axiom API token
 ```
 
 Check out the [advanced configuration on Batch, Buffer configuration, and Encoding on Vector Documentation](https://vector.dev/docs/reference/configuration/sinks/axiom/)
+
+## Timestamp in legacy Vector versions
+
+If you use Vector version v0.41.1 or earlier, use the `@timestamp` field instead of `_time` to specify the timestamp in the event data you send to Axiom. For example: `{"@timestamp":"2022-04-14T21:30:30.658Z..."}`. For more information, see [Requirements of the timestamp field](/reference/field-restrictions#requirements-of-the-timestamp-field). In the case of Vector version v0.41.1 or earlier, the requirements explained on the page apply to the `@timestamp` field, not to `_time`.
+
+If you use Vector version v0.42.0 or newer, use the `_time` field as usual for other collectors.
+
+### Upgrade from legacy Vector version
+
+If you upgrade from Vector version v0.41.1 or earlier to a newer version, change all references from the `timestamp` field to the `_time` field and remap the logic.
+
+Example `vrl` file:
+
+```vrl example.vrl
+# Set time explicitly rather than allowing Axiom to default to the current time
+. = set!(value: ., path: ["_time"],  data: .timestamp)
+
+# Remove the original value as it is effectively a duplicate
+del(.timestamp)
+```
+
+Example Vector configuration file:
+
+```toml
+# ...
+
+[transforms.migrate]
+type = "remap"
+inputs = [ "k8s"]
+file= 'example.vrl' # See above
+
+[sinks.debug]
+type = "axiom"
+inputs = [ "migrate" ]
+dataset = "my-axiom-dataset" # No change
+token = "your-token" # No change
+
+[sinks.debug.encoding]
+codec = "json"
+```
+
+### Set compression algorithm
+
+Upgrading to Vector version v0.42.0 or newer automatically enables the `zstd` compression algorithm by default.
+
+To set another compression algorithm, use the example below:
+
+```toml
+# ...
+
+[transforms.migrate]
+type = "remap"
+inputs = [ "k8s"]
+file= 'example.vrl' # See above
+
+[sinks.debug]
+type = "axiom"
+compression = "gzip" # Set the compression algorithm
+inputs = [ "migrate" ]
+dataset = "my-axiom-dataset" # No change
+token = "your-token" # No change
+
+[sinks.debug.encoding]
+codec = "json"
+```
