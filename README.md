@@ -54,14 +54,6 @@ Run the following in your terminal to check the style of all files in the curren
 vale .
 ```
 
-## Generate ingest-options json file
-
-Run the following in your terminal to generate the ingest-options.json file:
-
-```
-npm run generate-ingest-options
-```
-
 ## Contribute
 
 We value your input and invite you to help us make the Axiom documentation even better. Here’s how you can get involved:
