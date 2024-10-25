@@ -10,18 +10,23 @@ isPopular: true
 popularityOrder: 3
 ---
 
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import Replacement from "/snippets/standard-replacement.mdx"
+
 <Frame caption="Vector">
   <img src="/doc-assets/shots/vector-axiom.png" alt="Vector" />
 </Frame>
 
 Vector is a lightweight and ultra-fast tool for building observability pipelines. It has a built-in support for shipping logs to Axiom through the [`axiom` sink](https://vector.dev/docs/reference/configuration/sinks/axiom/).
 
+<Prerequisites />
+
 ## Installation
 
 Follow the [quickstart guide in the Vector documentation](https://vector.dev/docs/setup/quickstart/) to install Vector, and to configure sources and sinks.
 
 <Warning>
-If you use Vector version v0.41.1 or earlier, use the `@timestamp` field instead of `_time` to specify the timestamp of the events. For more information, see [Timestamp in legacy Vector versions](#timestamp-in-legacy-vector-versions).
+If you use Vector version v0.41.1 (released on September 11, 2024) or earlier, use the `@timestamp` field instead of `_time` to specify the timestamp of the events. For more information, see [Timestamp in legacy Vector versions](#timestamp-in-legacy-vector-versions).
 
 If you upgrade from Vector version v0.41.1 or earlier to a newer version, update your configuration. For more information, see [Upgrade from legacy Vector version](#upgrade-from-legacy-vector-version).
 </Warning>
@@ -44,16 +49,16 @@ The example below configures Vector to read and collect logs from files and send
     [sinks.SINK_ID]
     type = "axiom"
     inputs = ["VECTOR_SOURCE_ID"]
-    token = "AXIOM_API_TOKEN"
-    dataset = "AXIOM_DATASET"
+    token = "API_TOKEN"
+    dataset = "DATASET_NAME"
     ```
 
 4. In the code above, replace the following:
     - Replace `VECTOR_SOURCE_ID` with the Vector source ID.
     - Replace `PATH_TO_LOGS` with the path to the log files. For example, `/var/log/**/*.log`.
     - Replace `SINK_ID` with the sink ID.
-    - Replace `AXIOM_API_TOKEN` with the Axiom API token you have generated.
-    - Replace `AXIOM_DATASET` with the name of the Axiom dataset where you want to send data.
+    {/* list separator */}
+    <Replacement />
 
 5. Run Vector to send logs to Axiom.
 
@@ -76,11 +81,13 @@ source = '''
 [sinks.SINK_ID]
 type = "axiom"
 inputs = ["filter_json_fields"]
-token = "AXIOM_API_TOKEN"
-dataset = "AXIOM_DATASET"
+token = "API_TOKEN"
+dataset = "DATASET_NAME"
 ```
 
-Replace `FIELD_TO_REMOVE` with the field you want to remove.
+- Replace `FIELD_TO_REMOVE` with the field you want to remove.
+{/* list separator */}
+<Replacement />
 
 <Note>
 Any changes to Vector’s `file` method can make the code example above outdated. If this happens, please refer to the [official Vector documentation on the `file` method](https://vector.dev/docs/reference/configuration/sources/file/), and we kindly ask you to inform us of the issue using the feedback tool at the bottom of this page.
@@ -112,17 +119,11 @@ timezone = "local"
 [sinks.axiom]
 type = "axiom"
 inputs = ["my_source_id"]
-token = "xaat-1234"
-dataset = "vector-dev"
+token = "API_TOKEN"
+dataset = "DATASET_NAME"
 ```
 
-DATASET is the name of your dataset. When logs are sent from your vector, it’s stored in a dataset in Axiom.
-
-[See creating a dataset for more](/reference/datasets)
-
-TOKEN is used to ingest or query data to your dataset. API token can be generated from settings on Axiom dashboard.
-
-[See creating an API token for more](/reference/tokens)
+<Replacement />
 
 ## Send Docker logs to Axiom
 
@@ -138,13 +139,13 @@ docker_host = "unix:///var/run/docker.sock"
 [sinks.axiom]
 type = "axiom"
 inputs = ["docker_logs"]
-dataset = "your_dataset_name"  # replace with the name of your Axiom dataset
-token = "your_api_token"  # replace with your Axiom API token
+dataset = "DATASET_NAME"
+token = "API_TOKEN"
 ```
 
-Replace `your_dataset_name` with the name of the [dataset](/reference/datasets) you want to send logs to in Axiom, and `your_api_token` with your [Axiom API token](/reference/tokens).
+<Replacement />
 
-- Run Vector: Start Vector with the configuration file you just created:
+Run Vector: Start Vector with the configuration file you just created:
 
 ```bash
 vector --config /path/to/vector.toml
@@ -165,9 +166,11 @@ region = "us-west-2"  # replace with the AWS region of your bucket
 [sinks.axiom]
 type = "axiom"
 inputs = ["my_s3_source"]
-dataset = "your_dataset_name"  # replace with the name of your Axiom dataset
-token = "your_api_token"  # replace with your Axiom API token
+dataset = "DATASET_NAME"
+token = "API_TOKEN"
 ```
+
+<Replacement />
 
 Finally, run Vector with the configuration file using `vector --config ./vector.toml`. This starts Vector and begins reading logs from the specified S3 bucket and sending them to the specified Axiom dataset.
 
@@ -186,9 +189,11 @@ auto_offset_reset = "earliest" # start reading from the beginning
 [sinks.axiom]
 type = "axiom"
 inputs = ["my_kafka_source"]  # connect the Axiom sink to your Kafka source
-dataset = "your_dataset_name"  # replace with the name of your Axiom dataset
-token = "your_api_token"  # replace with your Axiom API token
+dataset = "DATASET_NAME"  # replace with the name of your Axiom dataset
+token = "API_TOKEN"  # replace with your Axiom API token
 ```
+
+<Replacement />
 
 Finally, you can start Vector with your configuration file: `vector --config /path/to/your/vector.toml`
 
@@ -230,9 +235,11 @@ endpoints = ["http://localhost/metrics"] # the endpoint where NGINX metrics are 
 [sinks.axiom]
 type = "axiom" # must be: axiom
 inputs = ["nginx_metrics"] # use the metrics from the NGINX source
-dataset = "your_dataset_name"  # replace with the name of your Axiom dataset
-token = "your_api_token"  # replace with your Axiom API token
+dataset = "DATASET_NAME"  # replace with the name of your Axiom dataset
+token = "API_TOKEN"  # replace with your Axiom API token
 ```
+
+<Replacement />
 
 Finally, you can start Vector with your configuration file: `vector --config /path/to/your/vector.toml`
 
@@ -250,9 +257,11 @@ mode="tcp"
 [sinks.axiom]
 type="axiom"
 inputs = [ "my_source_id" ] # required
-dataset="your_dataset_name" # replace with the name of your Axiom dataset
-token="your_api_token" # replace with your Axiom API token
+dataset="DATASET_NAME" # replace with the name of your Axiom dataset
+token="API_TOKEN" # replace with your Axiom API token
 ```
+
+<Replacement />
 
 ## Send Prometheus metrics to Axiom
 
@@ -268,17 +277,19 @@ endpoints = ["http://localhost:9090/metrics"]  # replace with your Prometheus en
 [sinks.axiom]
 type = "axiom"  # Axiom type
 inputs = ["my_prometheus_source"]  # connect the Axiom sink to your Prometheus source
-dataset = "your_prometheus_dataset"  # replace with the name of your Axiom dataset
-token = "your_api_token"  # replace with your Axiom API token
+dataset = "DATASET_NAME"  # replace with the name of your Axiom dataset
+token = "API_TOKEN"  # replace with your Axiom API token
 ```
+
+<Replacement />
 
 Check out the [advanced configuration on Batch, Buffer configuration, and Encoding on Vector Documentation](https://vector.dev/docs/reference/configuration/sinks/axiom/)
 
 ## Timestamp in legacy Vector versions
 
-If you use Vector version v0.41.1 or earlier, use the `@timestamp` field instead of `_time` to specify the timestamp in the event data you send to Axiom. For example: `{"@timestamp":"2022-04-14T21:30:30.658Z..."}`. For more information, see [Requirements of the timestamp field](/reference/field-restrictions#requirements-of-the-timestamp-field). In the case of Vector version v0.41.1 or earlier, the requirements explained on the page apply to the `@timestamp` field, not to `_time`.
+If you use Vector version v0.41.1 (released on September 11, 2024) or earlier, use the `@timestamp` field instead of `_time` to specify the timestamp in the event data you send to Axiom. For example: `{"@timestamp":"2022-04-14T21:30:30.658Z..."}`. For more information, see [Requirements of the timestamp field](/reference/field-restrictions#requirements-of-the-timestamp-field). In the case of Vector version v0.41.1 or earlier, the requirements explained on the page apply to the `@timestamp` field, not to `_time`.
 
-If you use Vector version v0.42.0 or newer, use the `_time` field as usual for other collectors.
+If you use Vector version v0.42.0 (released on October 21, 2024) or newer, use the `_time` field as usual for other collectors.
 
 ### Upgrade from legacy Vector version
 
@@ -307,8 +318,8 @@ file= 'example.vrl' # See above
 [sinks.debug]
 type = "axiom"
 inputs = [ "migrate" ]
-dataset = "my-axiom-dataset" # No change
-token = "your-token" # No change
+dataset = "DATASET_NAME" # No change
+token = "API_TOKEN" # No change
 
 [sinks.debug.encoding]
 codec = "json"
@@ -332,8 +343,8 @@ file= 'example.vrl' # See above
 type = "axiom"
 compression = "gzip" # Set the compression algorithm
 inputs = [ "migrate" ]
-dataset = "my-axiom-dataset" # No change
-token = "your-token" # No change
+dataset = "DATASET_NAME" # No change
+token = "API_TOKEN" # No change
 
 [sinks.debug.encoding]
 codec = "json"
