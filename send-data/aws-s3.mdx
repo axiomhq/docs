@@ -1,9 +1,10 @@
 ---
 title: "Send data from AWS S3 to Axiom"
 description: "Efficiently send log data from AWS S3 to Axiom via Lambda function"
+overview: 'Object storage service offering scalability and data availability'
 sidebarTitle: AWS S3
-tags:
-    [‘documentation’, ‘axiom documentation’, ‘AWS’, ‘s3’, ‘lambda’]
+tags: ['aws', 'documentation', 'axiom documentation', 'AWS', 's3', 'lambda']
+logoId: 'awsbucket'
 ---
 
 import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
@@ -43,7 +44,7 @@ def lambda_handler(event, context):
     # Extract the bucket name and object key from the event
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = event['Records'][0]['s3']['object']['key']
-    
+
     try:
         # Fetch the log file from S3
         s3 = boto3.client('s3')
@@ -51,13 +52,13 @@ def lambda_handler(event, context):
     except Exception as e:
         print(f"Error fetching from S3: {str(e)}")
         raise e
-    
+
     # Read the log data from the S3 object
     log_data = obj['Body'].read().decode('utf-8')
-    
+
     # Determine the file format and parse accordingly
     file_extension = os.path.splitext(key)[1].lower()
-    
+
     if file_extension == '.csv':
         csv_data = csv.DictReader(io.StringIO(log_data))
         json_logs = list(csv_data)
@@ -69,7 +70,7 @@ def lambda_handler(event, context):
     else:
         print(f"Unsupported file format: {file_extension}")
         return
-    
+
     # Prepare Axiom API request
     dataset_name = os.environ['DATASET_NAME']
     axiom_api_url = f"https://api.axiom.co/v1/datasets/{dataset_name}/ingest"
@@ -78,7 +79,7 @@ def lambda_handler(event, context):
         "Authorization": f"Bearer {api_token}",
         "Content-Type": "application/json"
     }
-    
+
     # Send logs to Axiom
     for log in json_logs:
         try:
@@ -87,7 +88,7 @@ def lambda_handler(event, context):
                 print(f"Failed to send log to Axiom: {response.text}")
         except Exception as e:
             print(f"Error sending to Axiom: {str(e)}. Log: {log}")
-    
+
     print(f"Processed {len(json_logs)} log entries")
 ```
 
