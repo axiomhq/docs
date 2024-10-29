@@ -1,16 +1,19 @@
 ---
 title: "Send data from AWS IoT to Axiom"
 description: "This page explains how to route device log data from AWS IoT Core to Axiom using AWS IoT and Lambda functions"
+overview: 'Platform for connecting IoT devices to the cloud'
 sidebarTitle: AWS IoT
-tags:
-    ['documentation', 'axiom documentation', 'AWS', 'IoT Rules', 'MQTT']
+tags: ['aws', 'documentation', 'axiom documentation', 'AWS', 'IoT Rules', 'MQTT']
+logoId: 'awsIotCore'
 ---
 
-## Prerequisites
+import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
 
-- [Create an Axiom account](https://app.axiom.co/).
-- [Create a dataset in Axiom](/reference/datasets) where you send your data.
-- [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete datasets.
+<AwsDisclaimer />
+
+<Prerequisites />
+{/* list separator */}
 - Create an AWS account with permissions to create and manage IoT rules, Lambda functions, and IAM roles.
 
 ## Create AWS Lambda function
@@ -25,29 +28,29 @@ import requests  # Import the requests module to make HTTP requests
 def lambda_handler(event, context):
     # Retrieve the dataset name from the environment variable
     dataset_name = os.environ['DATASET_NAME']
-    
+
     # Construct the Axiom API URL using the dataset name
     axiom_api_url = f"https://api.axiom.co/v1/datasets/{dataset_name}/ingest"
-    
+
     # Retrieve the Axiom API token from the environment variable
     api_token = os.environ['API_TOKEN']
-    
+
     # Define the headers for the HTTP request to Axiom
     headers = {
         "Authorization": f"Bearer {api_token}",  # Set the Authorization header with the token
         "Content-Type": "application/json",  # Specify the content type as JSON
         "X-Axiom-Dataset": dataset_name  # Include the dataset name in the headers
     }
-    
+
     # Create the payload for the HTTP request
     payload = {
         "tags": {"source": "aws-iot"},  # Add a tag to indicate the source of the data
         "events": [{"timestamp": event['timestamp'], "attributes": event}]  # Include the event data
     }
-    
+
     # Send a POST request to the Axiom API with the headers and payload
     response = requests.post(axiom_api_url, headers=headers, data=json.dumps(payload))
-    
+
     # Return the status code and a confirmation message
     return {
         'statusCode': response.status_code,  # Return the HTTP status code from the Axiom API response
@@ -67,7 +70,7 @@ This example uses Python for the Lambda function. To use another language, chang
 
 Create an IoT rule with an SQL statement similar to the example below that matches the MQTT messages. For more information, see the [AWS documentation](https://docs.aws.amazon.com/iot/latest/developerguide/iot-create-rule.html).
 
-```sql 
+```sql
 SELECT * FROM 'iot/topic'
 ```
 
