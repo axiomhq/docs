@@ -1,46 +1,77 @@
 ---
-title: 'Send data from Syslog to Axiom'
-description: 'Learn how to monitor syslog events on your devices and send them directly into Axiom'
+title: 'Send data from syslog to Axiom'
+description: 'This page explains how to send data from a syslog logging system to Axiom.'
+overview: 'Standard protocol for message logging'
 sidebarTitle: Syslog
 tags:
-  ['axiom documentation', 'documentation', 'axiom', 'guide', 'syslog', 'syslog logs', 'tcp', 'udp', 'docker']
+  ['syslog', 'axiom documentation', 'documentation', 'axiom', 'guide', 'syslog logs', 'tcp', 'udp', 'docker']
+logoId: 'syslog'
+darkLogoId: 'syslogLight'
 ---
 
-Logs are generated on all Network devices, Axiom Syslog Proxy ships logs to Axiom, acting as a Syslog server.
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import Replacement from "/snippets/standard-replacement.mdx"
 
-With Syslog logging system, you can monitor events on your devices and send them directly into Axiom, this also helps you retain your data logs.
+The Axiom Syslog Proxy acts as a syslog server to send data to Axiom.
 
-The UDP log messages are sent on `UDP` port `514` to the Syslog server.
+<Note>
+    The Axiom Syslog Proxy is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-syslog-proxy).
+</Note>
 
-The TCP log messages are sent on `TCP` port `601` to the Syslog server.
+## Syslog limitations and recommended alternatives
 
-## Installation
+Syslog is an outdated protocol from the 1980s. Some of the limitations are the following:
 
-### Download the pre-compiled and archived binary manually
+- Lack of error reporting and feedback mechanisms when issues occur.
+- Inability to gracefully terminate the connection. This can result in missing data.
 
-Binary releases are available on [GitHub Releases](https://github.com/axiomhq/axiom-syslog-proxy/releases/latest).
+<Note>
+For a more reliable and modern logging experience, consider using tools like [Vector](https://vector.dev/) to receive syslog messages and [forward them to Axiom](/send-data/vector). This approach bypasses many of syslog’s limitations.
+</Note>
 
-### Install using [Homebrew](https://brew.sh)
+<Prerequisites />
+
+Other requirements:
+
+- **Message size limit:** Axiom currently enforces a 64KB per-message size limit. This is in line with RFC5425 guidelines. Any message exceeding the limit causes the connection to close because Axiom doesn’t support ingesting truncated messages.
+- **TLS requirement:** Axiom only supports syslog over TLS, specifically following RFC5425. Configure your syslog client accordingly.
+- **Port requirements:** UDP log messages are sent on UDP port `514` to the Syslog server. TCP log messages are sent on TCP port `601` to the Syslog server.
+
+Ensure your messages conform to the size limit and TLS requirements. If the connection is frequently re-established and messages are rejected, the issue can be the size of the messages or other formatting issues.
+
+## Install Axiom Syslog Proxy
+
+To install the Axiom Syslog Proxy, choose one of the following options:
+- [Install using a pre-compiled binary file](#install-using-pre-compiled-binary-file)
+- [Install using Homebrew](#install-using-homebrew)
+- [Install using Go command](#install-using-go-command)
+- [Install from the GitHub source](#install-from-github-source)
+- [Install using a Docker image](#install-using-docker-image)
+
+### Install using pre-compiled binary file
+
+To install the Axiom Syslog Proxy using a pre-compiled binary file, download one of the [releases in GitHub](https://github.com/axiomhq/axiom-syslog-proxy/releases/latest).
+
+### Install using Homebrew
+
+Run the following to install the Axiom Syslog Proxy using Homebrew:
 
 ```shell
 brew tap axiomhq/tap
 brew install axiom-syslog-proxy
 ```
 
-To update:
+### Install using Go command
 
-```shell
-brew update
-brew upgrade axiom-syslog-proxy
-```
-
-### Install using `go get`
+Run the following to install the Axiom Syslog Proxy using `go get`:
 
 ```shell
 go get -u github.com/axiomhq/axiom-syslog-proxy/cmd/axiom-syslog-proxy
 ```
 
-### Install from source
+### Install from GitHub source
+
+Run the following to install the Axiom Syslog Proxy from the GitHub source:
 
 ```shell
 git clone https://github.com/axiomhq/axiom-syslog-proxy.git
@@ -48,32 +79,47 @@ cd axiom-syslog-proxy
 make install
 ```
 
-### Run the Docker image
+### Install using Docker image
 
-Docker images are available on [DockerHub](https://hub.docker.com/r/axiomhq/axiom-syslog-proxy/tags)
+To install the Axiom Syslog Proxy using a Docker image, use a [Docker image from DockerHub](https://hub.docker.com/r/axiomhq/axiom-syslog-proxy/tags)
 
-## Usage
+## Configure Axiom Syslog Proxy
 
-1. Set the following environment variables to connect to Axiom:
+Set the following environment variables to connect to Axiom:
 
-* `AXIOM_TOKEN`: Personal access or API token with permissions to ingest.
-* `AXIOM_ORG_ID`: Organization identifier
-* `AXIOM_DATASET`: Dataset where to send logs
+- `AXIOM_TOKEN` is the Axiom API token you have generated.
+- `AXIOM_DATASET` is the name of the Axiom dataset where you want to send data.
 
-2. Run it: `./axiom-syslog-proxy` or using Docker:
+## Run Axiom Syslog Proxy
+
+To run Axiom Syslog Proxy, run the following in your terminal.
+
+```shell
+./axiom-syslog-proxy
+```
+
+If you use Docker, run the following:
 
 ```shell
 docker run -p601:601/tcp -p514:514/udp  \
-  -e=AXIOM_TOKEN=<YOUR_AXIOM_TOKEN>     \
-  -e=AXIOM_DATASET=<YOUR_AXIOM_DATASET> \
+  -e=AXIOM_TOKEN=API_TOKEN     \
+  -e=AXIOM_DATASET=DATASET_NAME \
   axiomhq/axiom-syslog-proxy
 ```
 
-3. Test it:
+<Replacement />
 
-```shell
-echo -n "tcp message" | nc -w1 localhost 601
-echo -n "udp message" | nc -u -w1 localhost 514
-```
+## Test configuration
 
-For more information on Axiom Syslog Proxy and how you can propose bug fix, report issues and submit PRs, see the [GitHub repository](https://github.com/axiomhq/axiom-syslog-proxy).
+To test that the Axiom Syslog Proxy configuration:
+
+1. Run the following in your terminal to send two messages:
+
+    ```shell
+    echo -n "tcp message" | nc -w1 localhost 601
+    echo -n "udp message" | nc -u -w1 localhost 514
+    ```
+
+1. In Axiom, click the **Stream** tab.
+1. Click your dataset.
+1. Check whether Axiom displays the messages you have sent.
