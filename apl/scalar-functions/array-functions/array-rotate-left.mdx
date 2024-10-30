@@ -1,0 +1,147 @@
+---
+title: array_rotate_left
+description: 'This page explains how to use the array_rotate_left function in APL.'
+---
+
+## Introduction
+
+The `array_rotate_left` function in Axiom Processing Language (APL) rotates the elements of an array to the left by a specified number of positions. It’s useful when you want to reorder elements in a fixed-length array, shifting elements to the left while moving the leftmost elements to the end. For instance, this function can help analyze sequences where relative order matters but the starting position doesn’t, such as rotating network logs, error codes, or numeric arrays in data for pattern identification.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In APL, `array_rotate_left` allows for direct rotation within the array. Splunk SPL does not have a direct equivalent, so you may need to combine multiple SPL functions to achieve a similar rotation effect.
+
+<CodeGroup>
+```sql Splunk example
+| eval rotated_array = mvindex(array, 1) . "," . mvindex(array, 0)
+```
+
+```kusto APL equivalent
+print rotated_array = array_rotate_left(dynamic([1,2,3,4]), 1)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL lacks a direct equivalent for array rotation within arrays. A similar transformation can be achieved using array functions if available or by restructuring the array through custom logic.
+
+<CodeGroup>
+```sql SQL example
+SELECT array_column[2], array_column[3], array_column[0], array_column[1] FROM table
+```
+
+```kusto APL equivalent
+print rotated_array = array_rotate_left(dynamic([1,2,3,4]), 2)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+array_rotate_left(array, positions)
+```
+
+### Parameters
+
+- `array`: The array to be rotated. Use a dynamic data type.
+- `positions`: An integer specifying the number of positions to rotate the array to the left.
+
+### Returns
+
+A new array where the elements have been rotated to the left by the specified number of positions.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Rotate specific fields in log data to reorganize sequences of request logs for analytical purposes.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend rotated_sequence = array_rotate_left(dynamic([_time, req_duration_ms, status]), 1)
+| project rotated_sequence
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20rotated_sequence%20%3D%20array_rotate_left%28dynamic%28%5B_time%2C%20req_duration_ms%2C%20status%5D%29%2C%201%29%20%7C%20project%20rotated_sequence%22%7D)
+
+**Output**
+
+| rotated_sequence       |
+|------------------------|
+| [value1, value2, ...]  |
+| [value1, value2, ...]  |
+
+This query rotates the array to analyze fields in shifted order, which may reveal different patterns in HTTP request sequences.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Analyze traces by rotating the field order for visualization or pattern matching.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend rotated_trace = array_rotate_left(dynamic([trace_id, span_id, duration]), 1)
+| project rotated_trace
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20rotated_trace%20%3D%20array_rotate_left%28dynamic%28%5Btrace_id%2C%20span_id%2C%20duration%5D%29%2C%201%29%20%7C%20project%20rotated_trace%22%7D)
+
+**Output**
+
+| rotated_trace          |
+|------------------------|
+| [value1, value2, ...]  |
+| [value1, value2, ...]  |
+
+This example rotates trace-related fields, which can help to identify variations in trace data when visualized differently.
+
+</Tab>
+<Tab title="Security logs">
+
+Reorder sequences in security logs for comparing log entries with shifted fields.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend rotated_security_info = array_rotate_left(dynamic([id, method, status]), 2)
+| project rotated_security_info
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20rotated_security_info%20%3D%20array_rotate_left%28dynamic%28%5Bid%2C%20method%2C%20status%5D%29%2C%202%29%20%7C%20project%20rotated_security_info%22%7D)
+
+**Output**
+
+| rotated_security_info   |
+|-------------------------|
+| [value1, value2, ...]   |
+| [value1, value2, ...]   |
+
+This query rotates key security-related fields, making it easier to compare reordered fields for certain types of security analysis.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [**`array_rotate_right`**](/apl/array-functions/array_rotate_right-function): Rotates array elements to the right by a specified number of positions.
+- [**`array_length`**](/apl/array-functions/array_length-function): Returns the length of an array, useful for validating array sizes before applying rotations.
+- [**`array_slice`**](/apl/array-functions/array_slice-function): Extracts a subset of an array, useful for isolating elements before rotating them.
+- [**`array_concat`**](/apl/array-functions/array_concat-function): Concatenates arrays, allowing further manipulation post-rotation if needed.
+- [**`array_reverse`**](/apl/array-functions/array_reverse-function): Reverses the order of array elements, which can sometimes substitute rotation for specific use cases.

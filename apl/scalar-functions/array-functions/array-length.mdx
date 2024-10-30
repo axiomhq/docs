@@ -1,0 +1,152 @@
+---
+title: array_length
+description: 'This page explains how to use the array_length function in APL.'
+---
+
+## Introduction
+
+The `array_length` function in APL (Axiom Processing Language) returns the length of an array. You can use this function to analyze and filter data by array size, such as identifying log entries with specific numbers of entries or events with multiple tags. This function is useful for analyzing structured data fields that contain arrays, such as lists of error codes, tags, or IP addresses.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you might use the `mvcount` function to determine the length of a multivalue field. In APL, `array_length` serves the same purpose by returning the size of an array within a column.
+
+<CodeGroup>
+```sql Splunk example
+| eval array_size = mvcount(array_field)
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend array_size = array_length(array_field)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would use functions such as `CARDINALITY` or `ARRAY_LENGTH` (in databases that support arrays) to get the length of an array. In APL, the `array_length` function is straightforward and works directly with array fields in any dataset.
+
+<CodeGroup>
+```sql SQL example
+SELECT CARDINALITY(array_field) AS array_size
+FROM sample_table
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend array_size = array_length(array_field)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+array_length(array_expression)
+```
+
+### Parameters
+
+- **`array_expression`**: An expression representing the array to measure.
+
+### Returns
+
+The function returns an integer representing the number of elements in the specified array.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+When analyzing HTTP request logs, `array_length` can determine the number of tags or error codes associated with each request.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend error_codes = dynamic(['404', '500'])
+| extend num_errors = array_length(error_codes)
+| project _time, id, status, uri, num_errors
+| where num_errors > 1
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20error_codes%20%3D%20dynamic(%5B'404'%2C%20'500'%5D)%20%7C%20extend%20num_errors%20%3D%20array_length(error_codes)%20%7C%20project%20_time%2C%20id%2C%20status%2C%20uri%2C%20num_errors%20%7C%20where%20num_errors%20%3E%201%22%7D)
+
+**Output**
+
+| _time               | id     | status | uri                    | num_errors |
+|---------------------|--------|--------|------------------------|------------|
+| 2024-10-28T12:00:00 | user_1 | 404    | /home                  | 2          |
+
+This query finds HTTP requests that returned multiple error codes. `array_length` measures the `error_codes` array length, allowing analysis based on the number of errors.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In OpenTelemetry traces, `array_length` can reveal spans with multiple associated attributes, such as specific tags or metadata.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend tags = dynamic(['api', 'critical', 'frontend'])
+| extend tag_count = array_length(tags)
+| project _time, trace_id, span_id, ['service.name'], tag_count
+| where tag_count > 2
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20tags%20%3D%20dynamic(%5B'api'%2C%20'critical'%2C%20'frontend'%5D)%20%7C%20extend%20tag_count%20%3D%20array_length(tags)%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20%5B'service.name'%5D%2C%20tag_count%20%7C%20where%20tag_count%20%3E%202%22%7D)
+
+**Output**
+
+| _time               | trace_id      | span_id       | service.name       | tag_count |
+|---------------------|---------------|---------------|--------------------|-----------|
+| 2024-10-28T12:30:00 | trace_abc123  | span_001      | frontend           | 3         |
+
+This query finds spans associated with at least three tags, helping identify specific traces with multiple classification tags.
+
+</Tab>
+<Tab title="Security logs">
+
+In security logs, `array_length` identifies entries with multiple IP addresses in the same event, useful for detecting suspicious activities involving multiple hosts.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend ip_addresses = dynamic(['192.168.1.1', '10.0.0.1'])
+| extend ip_count = array_length(ip_addresses)
+| project _time, id, status, uri, ip_count
+| where ip_count > 1
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20ip_addresses%20%3D%20dynamic(%5B'192.168.1.1'%2C%20'10.0.0.1'%5D)%20%7C%20extend%20ip_count%20%3D%20array_length(ip_addresses)%20%7C%20project%20_time%2C%20id%2C%20status%2C%20uri%2C%20ip_count%20%7C%20where%20ip_count%20%3E%201%22%7D)
+
+**Output**
+
+| _time               | id     | status | uri                    | ip_count |
+|---------------------|--------|--------|------------------------|----------|
+| 2024-10-28T14:00:00 | user_2 | 200    | /dashboard             | 2        |
+
+This query detects security log entries with more than one IP address, which could indicate unusual activity from multiple sources within a single request.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [**`array_index_of`**](/apl/array-functions/array_index_of-function): Returns the index of a specified element in an array, useful for locating specific items within arrays.
+- [**`array_slice`**](/apl/array-functions/array_slice-function): Extracts a subset of elements from an array, allowing for targeted analysis on specific array elements.
+- [**`array_contains`**](/apl/array-functions/array_contains-function): Checks if an array contains a specified element, ideal for filtering logs with particular tags or keywords.
+- [**`mv-apply`**](/apl/array-functions/mv-apply-function): Expands array elements into separate rows, useful for analysis where each array element requires individual treatment.
+- [**`bag_keys`**](/apl/array-functions/bag_keys-function): Returns the set of keys in a dynamic object, which is helpful for discovering structure and content within nested fields.

@@ -1,0 +1,148 @@
+---
+title: array_iff
+description: 'This page explains how to use the array_iff function in APL.'
+---
+
+## Introduction
+
+The `array_iff` function in Axiom Processing Language (APL) allows you to create arrays based on a condition. It returns an array with elements from two specified arrays, choosing each element from the first array when a condition is met and from the second array otherwise. This function is useful for scenarios where you need to evaluate a series of conditions across multiple datasets, especially in log analysis, trace data, and other applications requiring conditional element selection within arrays.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, array manipulation based on conditions typically requires using conditional functions or eval expressions. APL’s `array_iff` function lets you directly select elements from one array or another based on a condition, offering more streamlined array manipulation.
+
+<CodeGroup>
+```sql Splunk example
+eval selected_array=if(condition, array1, array2)
+```
+
+```kusto APL equivalent
+array_iff(condition_array, array1, array2)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, conditionally selecting elements from arrays often requires complex `CASE` statements or functions. With APL’s `array_iff` function, you can directly compare arrays and conditionally populate them, simplifying array-based operations.
+
+<CodeGroup>
+```sql SQL example
+CASE WHEN condition THEN array1 ELSE array2 END
+```
+
+```kusto APL equivalent
+array_iff(condition_array, array1, array2)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+array_iff(condition_array, array1, array2)
+```
+
+### Parameters
+
+- `condition_array`: An array of boolean values, where each element determines whether to choose the corresponding element from `array1` or `array2`.
+- `array1`: The array to select elements from when the corresponding `condition_array` element is `true`.
+- `array2`: The array to select elements from when the corresponding `condition_array` element is `false`.
+
+### Returns
+
+An array where each element is selected from `array1` if the corresponding `condition_array` element is `true`, and from `array2` otherwise.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+The `array_iff` function can help filter log data conditionally, such as choosing specific durations based on HTTP status codes.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend duration_conditions = array_iff(status == '200', req_duration_ms, 0)
+| project _time, duration_conditions
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20duration_conditions%20%3D%20array_iff%28status%20%3D%3D%20200%2C%20req_duration_ms%2C%'200'%29%20%7C%20project%20_time%2C%20duration_conditions%22%7D)
+
+**Output**
+
+| _time              | duration_conditions |
+|--------------------|---------------------|
+| 2023-10-18T08:45Z | [120, 0, 0, 150]    |
+| 2023-10-18T09:10Z | [0, 0, 200]         |
+
+This example filters the `req_duration_ms` field to include only durations for requests with status `200`, replacing others with `0`.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+With OpenTelemetry trace data, you can use `array_iff` to filter spans based on the service type, such as selecting durations for `server` spans and setting others to zero.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend server_durations = array_iff(kind == 'server', duration, 0)
+| project _time, service.name, server_durations
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20server_durations%20%3D%20array_iff%28kind%20%3D%3D%20server%2C%20duration%2C%200%29%20%7C%20project%20_time%2C%20service.name%2C%20server_durations%22%7D)
+
+**Output**
+
+| _time              | service.name       | server_durations |
+|--------------------|--------------------|------------------|
+| 2023-10-18T08:50Z | frontend           | [30ms, 0ms]     |
+| 2023-10-18T09:20Z | cartservice        | [0ms, 50ms]     |
+
+In this example, `array_iff` selects durations only for `server` spans, setting non-server spans to `0`.
+
+</Tab>
+<Tab title="Security logs">
+
+In security logs, `array_iff` can be used to focus on specific cities in which HTTP requests originated, such as showing response durations for certain cities and excluding others.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend city_duration = array_iff(geo.city == 'New York', req_duration_ms, 0)
+| project _time, geo.city, city_duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20city_duration%20%3D%20array_iff%28geo.city%20%3D%3D%20New%20York%2C%20req_duration_ms%2C%200%29%20%7C%20project%20_time%2C%20geo.city%2C%20city_duration%22%7D)
+
+**Output**
+
+| _time              | geo.city      | city_duration    |
+|--------------------|---------------|------------------|
+| 2023-10-18T10:30Z | New York      | [100, 0, 250]    |
+| 2023-10-18T11:05Z | San Francisco | [0, 0, 0]        |
+
+This example filters the `req_duration_ms` array to show durations for requests from New York, with non-matching cities having `0` as duration.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [**`array_concat`**](/apl/array-functions/array_concat-function): Joins two arrays end-to-end, unlike `array_iff`, which conditionally selects elements from each array.
+- [**`array_length`**](/apl/array-functions/array_length-function): Returns the length of an array. Use this when you need the size of an array rather than selecting specific elements.
+- [**`array_index_of`**](/apl/array-functions/array_index_of-function): Finds the index of an element in an array, while `array_iff` selects based on conditions rather than element matching.
+- [**`mvexpand`**](/apl/array-functions/mvexpand-function): Expands an array into separate rows, useful for analyzing array contents independently from condition-based selections.
+- [**`case`**](/apl/array-functions/case-function): Creates conditional expressions for non-array values; use `array_iff` when conditional logic is applied within arrays.
