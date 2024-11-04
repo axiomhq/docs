@@ -1,0 +1,165 @@
+---
+title: Manage users via API
+sidebarTitle: "Users"
+description: "Learn how to manage Axiom users via API."
+tags: ['axiom documentation', 'documentation', 'axiom', 'axiom api', 'rest api', 'rest', 'authorization', 'headers', 'datasets', 'users', 'monitors', 'notifiers', 'response']
+---
+
+import Prerequisites from "/snippets/minimal-prerequisites.mdx"
+
+This page explains how to manage users programmatically via the API.
+
+<Prerequisites />
+{/* list separator */}
+- [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete users.
+- In the code samples below, replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+## Create users
+
+To create a user, send a POST request to the `users` endpoint. In the body of the request, specify the following:
+- `name`
+- `email`
+- `role`
+
+For example:
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v2/users' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer API_TOKEN' \
+-d '{
+    "name": "test_user",
+    "email": "example@abc.com",
+    "role": "admin"
+  }'
+```
+
+The example response contains the user ID that you can later use to access the user programmatically.
+
+```json
+{
+  "email": "example@abc.com",
+  "id": "abc123",
+  "name": "test_user",
+  "role": {
+    "id": "admin",
+    "name": "admin"
+  }
+}
+```
+
+For more information, see the [API reference](/restapi/endpoints/createUser).
+
+## Get information about users
+
+### Get information about all users
+
+To get information about all the users in your Axiom organization, send a GET request to the `users` endpoint. For example:
+
+```bash
+curl -X 'GET' 'https://api.axiom.co/v2/users' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer API_TOKEN'
+```
+
+The example response is a list of user objects. Each object contains a unique user ID that you can later use to access the user programmatically.
+
+```json
+[
+  {
+    "email": "example1@abc.com",
+    "id": "abc123",
+    "name": "test_user1",
+    "role": {
+      "id": "admin",
+      "name": "admin"
+    }
+  },
+  {
+    "email": "example2@abc.com",
+    "id": "abc321",
+    "name": "test_user2",
+    "role": {
+      "id": "admin",
+      "name": "admin"
+    }
+  }
+]
+```
+
+For more information, see the [API reference](/restapi/endpoints/getUsers).
+
+### Get information about specific user
+
+To get information about a specific user, send a GET request to the `users/ID` endpoint where `ID` is the unique ID of the user. For example:
+
+```bash
+curl -X 'GET' 'https://api.axiom.co/v2/users/abc123' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer API_TOKEN'
+```
+
+Example response:
+
+```json
+{
+  "email": "example@abc.com",
+  "id": "abc123",
+  "name": "test_user",
+  "role": {
+    "id": "admin",
+    "name": "admin"
+  }
+}
+```
+
+For more information, see the [API reference](/restapi/endpoints/getUser).
+
+## Update users
+
+To update the name of your own user, send a PUT request to the `users/ID` endpoint where `ID` is the unique ID of your user.
+
+<Warning>
+Using this endpoint, you can change the name of your own user. Authorize the request with a [personal access token (PAT)](/reference/tokens).
+
+You cannot change the names of other users, you cannot change properties other than your name, and you cannot use an API token to authorize the request.
+</Warning>
+
+In the body of the request, specify the new name in the `name` field. For example:
+
+```bash
+curl -X 'PUT' 'https://api.axiom.co/v2/users/abc123' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer PERSONAL_ACCESS_TOKEN' \
+-d '{
+    "name": "test_user2"
+  }'
+```
+
+Example response:
+
+```json
+{
+  "email": "example@abc.com",
+  "id": "abc123",
+  "name": "test_user2",
+  "role": {
+    "id": "admin",
+    "name": "admin"
+  }
+}
+```
+
+For more information, see the [API reference](/restapi/endpoints/updateUser).
+
+## Delete users
+
+To delete a user, send a DELETE request to the `users/ID` endpoint where `ID` is the unique ID of the user. For example:
+
+```bash
+curl -X 'DELETE' 'https://api.axiom.co/v2/users/abc123' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer API_TOKEN'
+```
+
+For more information, see the [API reference](/restapi/endpoints/deleteUser).
