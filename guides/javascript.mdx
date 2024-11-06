@@ -1,6 +1,103 @@
 ---
 title: 'Send data from JavaScript app to Axiom'
-description: 'This guide explains how to send data from a JavaScript app to Axiom.'
+description: 'This page explains how to send data from a JavaScript app to Axiom.'
+overview: 'High-level, interpreted programming language for web development'
 sidebarTitle: JavaScript
-url: "https://github.com/axiomhq/axiom-js"
+github: "https://github.com/axiomhq/axiom-js"
+tags: ['js', 'javascript', 'node', 'typescript', 'ts', 'node.js']
+logoId: 'javascript'
+isPopular: true
+popularityOrder: 8
 ---
+
+To send data from a JavaScript app to Axiom, use the Axiom JavaScript SDK.
+
+<Note>
+The Axiom JavaScript SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-js).
+</Note>
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+<Prerequisites />
+
+## Install SDK
+
+To install the SDK, run the following:
+
+```shell
+npm install @axiomhq/js
+```
+
+If you use the [Axiom CLI](/reference/cli), run `eval $(axiom config export -f)` to configure your environment variables. Otherwise, [create an API token](/reference/tokens) and export it as `AXIOM_TOKEN`.
+
+You can also configure the client using options passed to the constructor of the client:
+
+```ts
+import { Axiom } from '@axiomhq/js';
+
+const axiom = new Axiom({
+  token: process.env.AXIOM_TOKEN,
+});
+```
+
+## Send data
+
+The following example sends data to Axiom:
+
+```ts
+axiom.ingest('DATASET_NAME', [{ foo: 'bar' }]);
+await axiom.flush();
+```
+
+The client automatically batches events in the background. In most cases, you only want to call `flush()` before your application exits.
+
+## Query data
+
+The following example queries data from Axiom:
+
+```ts
+const res = await axiom.query(`['DATASET_NAME'] | where foo == 'bar' | limit 100`);
+console.log(res);
+```
+
+For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-js/tree/main/examples).
+
+## Capture errors
+
+To capture errors, pass a method `onError` to the client:
+
+```ts
+let client = new Axiom({
+  token: '',
+  ...,
+  onError: (err) => {
+    console.error('ERROR:', err);
+  }
+});
+```
+
+By default, `onError` is set to `console.error`.
+
+## Create annotations
+
+The following example creates an annotation:
+
+```ts
+import { annotations } from '@axiomhq/js';
+
+const client = new annotations.Service({ token: process.env.AXIOM_TOKEN });
+
+await annotations.create({
+  type: 'deployment',
+  datasets: ['DATASET_NAME'],
+  title: 'New deployment',
+  description: 'Deployed version 1.0.0',
+})
+```
+
+## Log from Node.js
+
+While the Axiom JavaScript client works on both the backend and the browsers, Axiom provides transports for some of the popular loggers:
+
+- [Pino](/guides/pino)
+- [Winston](/guides/winston)
