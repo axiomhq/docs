@@ -21,12 +21,14 @@ Axiom uses cursor-based pagination for these endpoints. The parameters and mecha
 To use pagination with the Run Query endpoint:
 - Include the [`limit` operator](/apl/tabular-operators/limit-operator) in the APL query of your API request. The argument of this operator determines the number of events to display per page.
 - Use `sort by _time asc` or `sort by _time desc` in the APL query. This returns the results in ascending or descending chronological order. For more information, see [sort operator](/apl/tabular-operators/sort-operator).
+- Specify `startTime` and `endTime` in the body of your API request.
 
 ### Run Query (Legacy)
 
 To use pagination with the legacy Run Query endpoint:
 - Add the `limit` parameter to the body of your API request. The value of this parameter determines the number of events to display per page.
 - Add the `order` parameter to the body of your API request. In the value of this parameter, order the results by time in either ascending or descending chronological order. For example, `[{ "field": "_time", "desc": true }]`. For more information, see [order operator](/apl/tabular-operators/order-operator).
+- Specify `startTime` and `endTime` in the body of your API request.
 
 ## Response format
 
@@ -64,6 +66,8 @@ For queries with descending order (`_time DESC`), use `minCursor` from the respo
 
 For queries with ascending order (`_time ASC`), use `maxCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `maxCursor` in the response.
 
+If the query returns fewer results than the specified limit, paging can stop.
+
 ## Examples
 
 ### Example request Run Query
@@ -73,7 +77,9 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
 -H 'Authorization: Bearer API_TOKEN' \
 -H 'Content-Type: application/json' \
 -d '{
-    "apl": "dataset | sort by _time desc | limit 100"
+    "apl": "dataset | sort by _time desc | limit 100",
+    "startTime": "2024-01-01T00:00:00.000Z",
+    "endTime": "2024-01-31T23:59:59.999Z"
   }'
 ```
 
@@ -118,6 +124,8 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl' \
 -H 'Content-Type: application/json' \
 -d '{
     "apl": "dataset | sort by _time desc | limit 100",
+    "startTime": "2024-01-01T00:00:00.000Z",
+    "endTime": "2024-01-31T23:59:59.999Z",
     "cursor": "0d3wo7v7e1oii-075a8c41710018b9-0000ecc5"
   }'
 ```
