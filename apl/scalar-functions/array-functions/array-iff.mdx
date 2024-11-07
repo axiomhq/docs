@@ -73,20 +73,21 @@ The `array_iff` function can help filter log data conditionally, such as choosin
 
 ```kusto
 ['sample-http-logs']
-| extend duration_conditions = array_iff(status == '200', req_duration_ms, 0)
-| project _time, duration_conditions
+| order by _time desc
+| limit 1000
+| summarize is_ok = make_list(status == '200'), request_duration = make_list(req_duration_ms)
+| project ok_request_duration = array_iff(is_ok, request_duration, 0)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20duration_conditions%20%3D%20array_iff%28status%20%3D%3D%20200%2C%20req_duration_ms%2C%'200'%29%20%7C%20project%20_time%2C%20duration_conditions%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20order%20by%20_time%20desc%20%7C%20limit%201000%20%7C%20summarize%20is_ok%20%3D%20make_list(status%20%3D%3D%20'200')%2C%20request_duration%20%3D%20make_list(req_duration_ms)%20%7C%20project%20ok_request_duration%20%3D%20array_iff(is_ok%2C%20request_duration%2C%200)%22%7D)
 
 **Output**
 
-| _time              | duration_conditions |
-|--------------------|---------------------|
-| 2023-10-18T08:45Z | [120, 0, 0, 150]    |
-| 2023-10-18T09:10Z | [0, 0, 200]         |
+| ok_request_duration |
+| --- |
+| [0.3150485097707766, 0, 0.21691408087847264, 0, 0.2757618582190533] |
 
-This example filters the `req_duration_ms` field to include only durations for requests with status `200`, replacing others with `0`.
+This example filters the `req_duration_ms` field to include only durations for the most recent 1,000 requests with status `200`, replacing others with `0`.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
