@@ -98,18 +98,19 @@ With OpenTelemetry trace data, you can use `array_iff` to filter spans based on 
 
 ```kusto
 ['otel-demo-traces']
-| extend server_durations = array_iff(kind == 'server', duration, 0)
-| project _time, service.name, server_durations
+| order by _time desc
+| limit 1000
+| summarize is_server = make_list(kind == 'server'), duration_list = make_list(duration)
+| project  server_durations = array_iff(is_server, duration_list, 0)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20server_durations%20%3D%20array_iff%28kind%20%3D%3D%20server%2C%20duration%2C%200%29%20%7C%20project%20_time%2C%20service.name%2C%20server_durations%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20order%20by%20_time%20desc%20%7C%20limit%201000%20%7C%20summarize%20is_server%20%3D%20make_list(kind%20%3D%3D%20'server')%2C%20duration_list%20%3D%20make_list(duration)%20%7C%20project%20%20server_durations%20%3D%20array_iff(is_server%2C%20duration_list%2C%200)%22%7D)
 
 **Output**
 
-| _time              | service.name       | server_durations |
-|--------------------|--------------------|------------------|
-| 2023-10-18T08:50Z | frontend           | [30ms, 0ms]     |
-| 2023-10-18T09:20Z | cartservice        | [0ms, 50ms]     |
+| server_durations |
+| --- |
+| ["45.632µs", "54.622µs", 0, "34.051µs"] |
 
 In this example, `array_iff` selects durations only for `server` spans, setting non-server spans to `0`.
 
