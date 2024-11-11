@@ -20,9 +20,9 @@ Once you have an API token, there are different ways to get your data into Axiom
 
 - Using the [Ingest API](#ingest-api)
 - Using [OpenTelemetry](/send-data/opentelemetry)
-- Using a [Data Shipper](#data-shippers) (Logstash, Filebeat, Metricbeat, Fluentd, etc.)
+- Using a [data shipper](#data-shippers) (Logstash, Filebeat, Metricbeat, Fluentd, etc.)
 - Using the [Elasticsearch Bulk API](/send-data/elasticsearch-bulk-api) that Axiom supports natively
-- Using [Endpoints](#endpoints)
+- Using [endpoints](#endpoints)
 
 To use dedicated apps that enrich your Axiom organization, go to [Apps](/apps/introduction) instead.
 
@@ -292,3 +292,10 @@ All events stored in Axiom must have a `_time` timestamp field. If the data you 
 </Note>
 
 If you include the `_time` field in the ingested data, ensure the `_time` field contains timestamps in a valid time format. Axiom accepts many date strings and timestamps without knowing the format in advance, including Unix Epoch, RFC3339, or ISO 8601.
+
+## Best practices for sending data to Axiom
+
+When sending data into Axiom, follow these best practices to optimize performance and reliability:
+- **Batch events:** Use a log forwarder, [collector](#data-shippers), or [Axiom‘s official SDKs](#client-libraries) to group multiple events into a single request before sending them to Axiom. This reduces the number of API calls and improves overall throughput. Avoid implementing batching within your app itself as this introduces additional complexity and requires careful management of buffers and error handling.
+- **Use compression:** Enable gzip, zstd compression for your requests to reduce bandwidth usage and potentially improve response time.
+- **Handle rate limiting and errors:** Use [Axiom‘s official libraries and SDKs](#client-libraries) which automatically implement best practices for handling rate limiting and errors. For advanced use cases or custom implementations, consider adding a fallback mechanism to store events locally or in cold storage if ingestion consistently fails after retries.
