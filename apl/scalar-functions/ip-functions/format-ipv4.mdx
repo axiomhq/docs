@@ -1,0 +1,156 @@
+---
+title: format_ipv4
+description: 'This page explains how to use the format_ipv4 function in APL.'
+---
+
+The `format_ipv4` function in APL converts a numeric representation of an IPv4 address into its standard dotted-decimal format. This function is particularly useful when working with logs or datasets where IP addresses are stored as integers, making them hard to interpret directly. 
+
+You can use `format_ipv4` to enhance log readability, enrich security logs, or convert raw telemetry data for analysis.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, IPv4 address conversion is typically not a built-in function. You may need to use custom scripts or calculations. APL simplifies this process with the `format_ipv4` function.
+
+<CodeGroup>
+```sql Splunk example
+No direct equivalent
+```
+
+```kusto APL equivalent
+datatable(ip: long)
+[
+    3232235776
+]
+| extend formatted_ip = format_ipv4(ip)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t have a built-in function for IPv4 formatting. You’d often use string manipulation or external utilities to achieve the same result. In APL, `format_ipv4` offers a straightforward solution.
+
+<CodeGroup>
+```sql SQL example
+-- No direct equivalent in SQL
+```
+
+```kusto APL equivalent
+datatable(ip: long)
+[
+    3232235776
+]
+| extend formatted_ip = format_ipv4(ip)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+format_ipv4(ip: long) -> string
+```
+
+### Parameters
+
+| Parameter | Type  | Description                                           |
+|-----------|-------|-------------------------------------------------------|
+| `ip`      | `long`| A numeric IPv4 address in network byte order.         |
+
+### Returns
+
+| Return type | Description                                |
+|-------------|--------------------------------------------|
+| `string`    | The IPv4 address in dotted-decimal format. |
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+When analyzing HTTP request logs, you can convert IP addresses stored as integers into a readable format to identify client locations or troubleshoot issues.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend formatted_ip = format_ipv4(3232235776)
+| project _time, formatted_ip, status, uri, method
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20formatted_ip%20%3D%20format_ipv4%283232235776%29%20%7C%20project%20_time%2C%20formatted_ip%2C%20status%2C%20uri%2C%20method%22%7D)
+
+**Output**
+
+| _time               | formatted_ip | status | uri                | method |
+|---------------------|--------------|--------|---------------------|--------|
+| 2024-11-14 10:00:00 | 192.168.1.0  | 200    | /api/products       | GET    |
+
+This query decodes raw IP addresses into a human-readable format for easier analysis.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In OpenTelemetry traces, converting numeric IP addresses in telemetry data helps correlate network events with specific service calls.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend formatted_ip = format_ipv4(3232235776)
+| project _time, trace_id, span_id, service.name, formatted_ip
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20formatted_ip%20%3D%20format_ipv4%283232235776%29%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20service.name%2C%20formatted_ip%22%7D)
+
+**Output**
+
+| _time               | trace_id  | span_id   | service.name         | formatted_ip |
+|---------------------|-----------|-----------|----------------------|--------------|
+| 2024-11-14 10:00:00 | abc123456 | span12345 | frontendproxy        | 192.168.1.0  |
+
+This query makes telemetry data easier to understand by converting numeric IPs into standard format.
+
+</Tab>
+<Tab title="Security logs">
+
+In security log analysis, converting numeric IP addresses helps you quickly identify the source of attacks or suspicious activity.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '401'
+| extend formatted_ip = format_ipv4(3232235776)
+| project _time, formatted_ip, geo.country, method
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27401%27%20%7C%20extend%20formatted_ip%20%3D%20format_ipv4%283232235776%29%20%7C%20project%20_time%2C%20formatted_ip%2C%20geo.country%2C%20method%22%7D)
+
+**Output**
+
+| _time               | formatted_ip | geo.country | method |
+|---------------------|--------------|-------------|--------|
+| 2024-11-14 10:00:00 | 192.168.1.0  | US          | POST   |
+
+This query highlights unauthorized access attempts by displaying their source IP addresses in a readable format.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [**format_ipv6**](/apl/network-functions/format_ipv6-function): Converts numeric IPv6 addresses into standard textual representation.
+- [**parse_ipv4**](/apl/network-functions/parse_ipv4-function): Converts a dotted-decimal IPv4 address into a numeric representation.
+- [**cidr_match**](/apl/network-functions/cidr_match-function): Checks whether an IP address falls within a CIDR range.
+- [**ip_version**](/apl/network-functions/ip_version-function): Determines the IP version (IPv4 or IPv6) of an address.
+- [**parse_ipv6**](/apl/network-functions/parse_ipv6-function): Converts textual IPv6 addresses into their numeric representation.
