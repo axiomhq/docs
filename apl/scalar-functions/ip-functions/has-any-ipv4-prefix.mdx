@@ -1,0 +1,159 @@
+---
+title: has_any_ipv4_prefix
+description: 'This page explains how to use the has_any_ipv4_prefix function in APL.'
+---
+
+The `has_any_ipv4_prefix` function in APL lets you determine if an IPv4 address starts with any prefix in a list of specified prefixes. This function is particularly useful for filtering, segmenting, and analyzing data involving IP addresses, such as log data, network traffic, or security events. By efficiently checking prefixes, you can identify IP ranges of interest for purposes like geolocation, access control, or anomaly detection.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, checking if an IP address matches a prefix requires custom search logic with pattern matching or conditional expressions. In APL, `has_any_ipv4_prefix` provides a direct and optimized way to perform this check.
+
+<CodeGroup>
+```sql Splunk example
+| eval is_in_range=if(match(ip, "10.*") OR match(ip, "192.168.*"), 1, 0)
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| where has_any_ipv4_prefix(uri, dynamic(['10.', '192.168.']))
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you need to use `LIKE` clauses combined with `OR` operators to check prefixes. In APL, the `has_any_ipv4_prefix` function simplifies this process by accepting a dynamic list of prefixes.
+
+<CodeGroup>
+```sql SQL example
+SELECT * FROM logs
+WHERE ip LIKE '10.%' OR ip LIKE '192.168.%';
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| where has_any_ipv4_prefix(uri, dynamic(['10.', '192.168.']))
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+has_any_ipv4_prefix(ip_column, prefixes)
+```
+
+### Parameters
+
+| Parameter   | Type          | Description                                      |
+|-------------|---------------|--------------------------------------------------|
+| `ip_column` | `string`      | The column containing the IPv4 address.          |
+| `prefixes`  | `dynamic`     | A list of IPv4 prefixes to check against.        |
+
+### Returns
+
+- Returns a boolean value:
+  - `true` if the IPv4 address matches any of the specified prefixes.
+  - `false` otherwise.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+### Explanation
+
+Identify all requests originating from private IP ranges (e.g., `10.0.0.0/8` and `192.168.0.0/16`).
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where has_any_ipv4_prefix(uri, dynamic(['10.', '192.168.']))
+| summarize count() by status
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20has_any_ipv4_prefix%28uri%2C%20dynamic%28%5B%2710.%27%2C%20%27192.168.%27%5D%29%29%20%7C%20summarize%20count%28%29%20by%20status%22%7D)
+
+**Output**
+
+| status | count |
+|--------|-------|
+| 200    | 150   |
+| 404    | 20    |
+
+The query filters requests based on private IP prefixes and summarizes the results by HTTP status.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+### Explanation
+
+Filter spans to find traces originating from specific IP ranges.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where has_any_ipv4_prefix(['service.name'], dynamic(['10.1.', '192.168.1.']))
+| summarize avg(duration) by ['service.name']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20has_any_ipv4_prefix%28%5B%27service.name%27%5D%2C%20dynamic%28%5B%2710.1.%27%2C%20%27192.168.1.%27%5D%29%29%20%7C%20summarize%20avg%28duration%29%20by%20%5B%27service.name%27%5D%22%7D)
+
+**Output**
+
+| service.name      | avg_duration |
+|-------------------|--------------|
+| cartservice       | 250ms        |
+| checkoutservice   | 300ms        |
+
+The query calculates the average duration of traces originating from the specified IP ranges.
+
+</Tab>
+<Tab title="Security logs">
+
+### Explanation
+
+Detect failed login attempts from specific IP ranges.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where has_any_ipv4_prefix(uri, dynamic(['172.16.', '192.168.']))
+| where status == '401'
+| summarize count() by geo.country
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20has_any_ipv4_prefix%28uri%2C%20dynamic%28%5B%27172.16.%27%2C%20%27192.168.%27%5D%29%29%20%7C%20where%20status%20%3D%3D%20%27401%27%20%7C%20summarize%20count%28%29%20by%20geo.country%22%7D)
+
+**Output**
+
+| geo.country | count |
+|-------------|-------|
+| US          | 30    |
+| DE          | 15    |
+
+The query identifies unauthorized access attempts originating from specific IP ranges and summarizes them by country.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [**has_ipv4_prefix**](/apl/string-functions/has_ipv4_prefix-function): Checks if an IPv4 address matches a single prefix.
+- [**startswith**](/apl/string-functions/startswith-function): Determines if a string starts with a specified substring.
+- [**in**](/apl/scalar-functions/in-function): Checks if a value exists within a specified list.
+- [**matches_regex**](/apl/string-functions/matches_regex-function): Matches strings against a regular expression.
+- [**ipv4_is_private**](/apl/network-functions/ipv4_is_private-function): Identifies if an IPv4 address is within private IP ranges.

@@ -1,0 +1,144 @@
+---
+title: has_any_ipv4
+description: 'This page explains how to use the has_any_ipv4 function in APL.'
+---
+
+The `has_any_ipv4` function in Axiom Processing Language (APL) allows you to check whether a specified column contains any IPv4 addresses from a given set of IPv4 addresses or CIDR ranges. This function is useful when analyzing logs, tracing OpenTelemetry data, or investigating security events to quickly filter records based on a predefined list of IP addresses or subnets.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk, you typically use the `cidrmatch` or similar functions for working with IP ranges. In APL, `has_any_ipv4` offers similar functionality by matching any IPv4 address in a column against multiple values or ranges.
+
+<CodeGroup>
+```sql Splunk example
+| where cidrmatch("192.168.1.0/24", ip_field)
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| where has_any_ipv4('ip_field', dynamic(['192.168.1.0/24']))
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+SQL does not natively support CIDR matching or IP address comparison out of the box. In APL, the `has_any_ipv4` function is designed to simplify these checks with concise syntax.
+
+<CodeGroup>
+```sql SQL example
+SELECT * FROM logs WHERE ip_field = '192.168.1.1' OR ip_field = '192.168.1.2';
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| where has_any_ipv4('ip_field', dynamic(['192.168.1.1', '192.168.1.2']))
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+has_any_ipv4(column, ip_list)
+```
+
+### Parameters
+
+| Parameter | Description                                  | Type           |
+|-----------|----------------------------------------------|----------------|
+| `column`  | The column to evaluate.                     | `string`       |
+| `ip_list` | A list of IPv4 addresses or CIDR ranges.    | `dynamic`      |
+
+### Returns
+
+A boolean value indicating whether the specified column contains any of the given IPv4 addresses or matches any of the CIDR ranges in `ip_list`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+When analyzing logs, you can use `has_any_ipv4` to filter requests from specific IPv4 addresses or subnets.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where has_any_ipv4('geo.city', dynamic(['192.168.1.1', '192.168.0.0/16']))
+| project _time, geo.city, uri, status
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20has_any_ipv4('geo.city'%2C%20dynamic(['192.168.1.1'%2C%20'192.168.0.0%2F16']))%20%7C%20project%20_time%2C%20geo.city%2C%20uri%2C%20status%22%7D)
+
+**Output**
+
+| _time               | geo.city       | uri                 | status |
+|---------------------|----------------|---------------------|--------|
+| 2024-11-14T10:00:00 | 192.168.1.1    | /example/path       | 200    |
+
+This query identifies log entries from specific IPs or subnets.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Filter OpenTelemetry spans to identify services communicating from specific IPv4 ranges.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where has_any_ipv4('service.name', dynamic(['10.0.0.1', '10.0.0.0/8']))
+| project _time, service.name, trace_id, kind
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20has_any_ipv4('service.name'%2C%20dynamic(['10.0.0.1'%2C%20'10.0.0.0%2F8']))%20%7C%20project%20_time%2C%20service.name%2C%20trace_id%2C%20kind%22%7D)
+
+**Output**
+
+| _time               | service.name      | trace_id      | kind    |
+|---------------------|-------------------|---------------|---------|
+| 2024-11-14T10:00:00 | frontend          | abc123        | server  |
+
+This query isolates spans originating from specific services in the network.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `has_any_ipv4` to track potentially malicious requests based on a predefined list of suspicious IP addresses.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where has_any_ipv4('geo.city', dynamic(['203.0.113.5', '198.51.100.0/24']))
+| project _time, id, method, uri, status
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20has_any_ipv4('geo.city'%2C%20dynamic(['203.0.113.5'%2C%20'198.51.100.0%2F24']))%20%7C%20project%20_time%2C%20id%2C%20method%2C%20uri%2C%20status%22%7D)
+
+**Output**
+
+| _time               | id     | method  | uri             | status |
+|---------------------|--------|---------|-----------------|--------|
+| 2024-11-14T10:00:00 | user42 | GET     | /admin/login    | 401    |
+
+This query focuses on identifying access attempts from potentially malicious IP ranges.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [**has_ipv4**](/apl/string-functions/has_ipv4-function): Checks if a single IPv4 address is present in a string column.
+- [**has_any_ipv6**](/apl/string-functions/has_any_ipv6-function): Matches any IPv6 address in a string column with a list of IPv6 addresses or ranges.
+- [**cidr_match**](/apl/string-functions/cidr_match-function): Checks if an IP address falls within a specific CIDR range.

@@ -1,0 +1,145 @@
+---
+title: has_ipv4
+description: 'This page explains how to use the has_ipv4 function in APL.'
+---
+
+The `has_ipv4` function in APL determines if a given string is a valid IPv4 address. You can use this function to validate and filter fields that contain IP address data, especially when working with logs, network traffic analysis, or security monitoring. It is particularly useful when parsing large datasets to ensure only well-formed IPv4 addresses are considered.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, validating IPv4 addresses typically involves using regular expressions. The `has_ipv4` function in APL simplifies this process with a dedicated, optimized function.
+
+<CodeGroup>
+```sql Splunk example
+| eval is_valid_ipv4=if(match(ip_field, "^\d{1,3}(\.\d{1,3}){3}$"), 1, 0)
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| where has_ipv4(uri)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, validating IPv4 addresses often requires complex CASE statements or pattern matching using the `LIKE` operator. APL’s `has_ipv4` function streamlines this by providing a straightforward, built-in function.
+
+<CodeGroup>
+```sql SQL example
+SELECT * FROM logs WHERE uri LIKE '%.%.%.%'
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| where has_ipv4(uri)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+has_ipv4(expression)
+```
+
+### Parameters
+
+| Parameter   | Description                                             | Type    |
+|-------------|---------------------------------------------------------|---------|
+| `expression` | The string expression to check for a valid IPv4 address. | string  |
+
+### Returns
+
+The function returns a boolean value: `true` if the `expression` contains a valid IPv4 address, and `false` otherwise.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+When analyzing HTTP logs, you can use `has_ipv4` to filter requests originating from valid IPv4 addresses.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where has_ipv4(uri)
+| project _time, uri, method, status
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20has_ipv4(uri)%20%7C%20project%20_time%2C%20uri%2C%20method%2C%20status%22%7D)
+
+**Output**
+
+| _time               | uri              | method | status |
+|---------------------|------------------|--------|--------|
+| 2024-11-14T10:15:00Z | 192.168.1.1/api | GET    | 200    |
+| 2024-11-14T10:17:00Z | 10.0.0.2/login  | POST   | 403    |
+
+This query filters requests from logs to include only entries with valid IPv4 addresses.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+For OpenTelemetry traces, use `has_ipv4` to identify spans involving services communicating over IPv4.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where has_ipv4(['service.name'])
+| project _time, ['service.name'], span_id, trace_id
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20has_ipv4(%5B%27service.name%27%5D)%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20span_id%2C%20trace_id%22%7D)
+
+**Output**
+
+| _time               | service.name | span_id          | trace_id           |
+|---------------------|--------------|------------------|--------------------|
+| 2024-11-14T10:00:00Z | frontend     | span12345        | trace67890         |
+
+This example identifies traces where the service name contains a valid IPv4 address.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `has_ipv4` to detect malicious traffic or unauthorized access attempts logged with IPv4 addresses.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where has_ipv4(geo.country)
+| project _time, geo.country, id, status
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20has_ipv4(geo.country)%20%7C%20project%20_time%2C%20geo.country%2C%20id%2C%20status%22%7D)
+
+**Output**
+
+| _time               | geo.country | id     | status |
+|---------------------|-------------|--------|--------|
+| 2024-11-14T11:00:00Z | 192.168.0.3 | user123 | 401    |
+
+This query helps monitor unauthorized access attempts using IPv4.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [**has_ipv6**](/apl/string-functions/has_ipv6-function): Use this function to validate IPv6 addresses.
+- [**isvalid**](/apl/string-functions/isvalid-function): Check the validity of various data types and formats.
+- [**extract**](/apl/string-functions/extract-function): Extract substrings using regular expressions.
+- [**parse_ipv4**](/apl/string-functions/parse_ipv4-function): Parse and retrieve components of an IPv4 address.
