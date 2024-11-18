@@ -49,27 +49,104 @@ Replace `FIELDNAME` with the actual name of the field.
 - Name: `_FIELDNAME_unit`
 - Type: string
 - Description: Specify the unit of measurement for another field’s value allowing for proper formatting and display.
-- APL query example: `extend _size_unit = "GB"`
+- APL query example: `extend _size_unit = "gbytes"`
 - Expected behavior: Format the value in the `size` field according to the unit specified in the `_size_unit` field.
 
-Replace `FIELDNAME` with the actual name of the field you want to format. For example, for a field named `size`, use `_size_unit = "GB"` to display its values in gigabytes in the query results.
+Replace `FIELDNAME` with the actual name of the field you want to format. For example, for a field named `size`, use `_size_unit = "gbytes"` to display its values in gigabytes in the query results.
 
 The supported units are the following:
-- For percentage, use units such as `percent (0-100)` or `percent (0.0-1.0)`.
-- For monetary values, use units such as `Dollars ($)`, `Pounds (£)`, `Euro (€)`, and `Bitcoin (฿)`.
-- For IEC and metric data sizes, use units like `bits(IEC)`, `bytes(IEC)`, `kibibytes`, `mebibytes`, `gibibytes`, `tebibytes`, `pebibytes`, and their metric equivalents.
-- For data transfer speeds, use units such as `packets/sec`, `bits/sec`, `bytes/sec`, `kilobytes/sec`, and up to `petabytes/sec` and `petabits/sec`.
-- For date and time fields, use `YYYY-MM-DD HH:mm:ss` format.
-- For time-related fields, use units such as `Hertz (1/s)`, `nanoseconds (ns)`, `microseconds (µs)`, `milliseconds (ms)`, `seconds (s)`, `minutes (m)`, `hours (h)`, and `days (d)`.
-- For performance metrics, use units such as `counts/sec (cps)`, `ops/sec (ops)`, `requests/sec (rps)`, `reads/sec (rps)`, `writes/sec (wps)`, `I/O ops/sec (iops)`, and their per-minute equivalents.
+
+**Percentage**
+| Unit name | APL sytax |
+| --- | --- |
+| percent (0-100) | percent100 |
+| percent (0.0-1.0) | percent |
+
+**Currency**
+| Unit name | APL sytax |
+| --- | --- |
+| Dollars ($) | curusd |
+| Pounds (£) | curgbp |
+| Euro (€) | cureur |
+| Bitcoin (฿) | curbtc |
+
+**Data (IEC)**
+| Unit name | APL sytax |
+| --- | --- |
+| bits(IEC) | bits |
+| bytes(IEC) | bytes |
+| kibibytes | kbytes |
+| mebibytes | mbytes |
+| gibibytes | gbytes |
+| tebibytes | tbytes |
+| pebibytes | pbytes |
+
+**Data (metric)**
+| Unit name | APL sytax |
+| --- | --- |
+| bits(Metric) | decbits |
+| bytes(Metric) | decbytes |
+| kilobytes | deckbytes |
+| megabytes | decmbytes |
+| gigabytes | decgbytes |
+| terabytes | dectbytes |
+| petabytes | decpbytes |
+
+**Data rate**
+| Unit name | APL sytax |
+| --- | --- |
+| packets/sec | pps |
+| bits/sec | bps |
+| bytes/sec | Bps |
+| kilobytes/sec | KBs |
+| kilobits/sec | Kbits |
+| megabytes/sec | MBs |
+| megabits/sec | Mbits |
+| gigabytes/sec | GBs |
+| gigabits/sec | Gbits |
+| terabytes/sec | TBs |
+| terabits/sec | Tbits |
+| petabytes/sec | PBs |
+| petabits/sec | Pbits |
+
+**Datetime**
+| Unit name | APL sytax |
+| --- | --- |
+| Hertz (1/s) | hertz |
+| nanoseconds (ns) | ns |
+| microseconds (µs) | µs |
+| milliseconds (ms) | ms |
+| seconds (s) | secs |
+| minutes (m) | mins |
+| hours (h) | hours |
+| days (d) | days |
+| ago | ago |
+
+**Throughput**
+| Unit name | APL sytax |
+| --- | --- |
+| counts/sec (cps) | cps |
+| ops/sec (ops) | ops |
+| requests/sec (rps) | reqps |
+| reads/sec (rps) | rps |
+| writes/sec (wps) | wps |
+| I/O ops/sec (iops) | iops |
+| counts/min (cpm) | cpm |
+| ops/min (opm) | opm |
+| requests/min (rps) | reqpm |
+| reads/min (rpm) | rpm |
+| writes/min (wpm) | wpm |
 
 ## Example
 
-The example APL query below adds a tooltip and a description to the values of the `status` field. Clicking one of the values in this field leads to a page about status codes.
+The example APL query below adds a tooltip and a description to the values of the `status` field. Clicking one of the values in this field leads to a page about status codes. The unit of the request duration field is changed to nanoseconds.
 
 ```apl
-['http-logs']
-| extend _status_tooltip = "The status of the HTTP request is the response code from the server. It shows if an HTTP request has been successfully completed."
-| extend _status_description = "This is the status of the HTTP request."
-| extend _status_url = "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status"
+['sample-http-logs']
+| extend _status_tooltip = 'The status of the HTTP request is the response code from the server. It shows if an HTTP request has been successfully completed.'
+| extend _status_description = 'This is the status of the HTTP request.'
+| extend _status_url = 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Status'
+| extend _req_duration_ms_unit = 'ns'
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20_status_tooltip%20%3D%20'The%20status%20of%20the%20HTTP%20request%20is%20the%20response%20code%20from%20the%20server.%20It%20shows%20if%20an%20HTTP%20request%20has%20been%20successfully%20completed.'%20%7C%20extend%20_status_description%20%3D%20'This%20is%20the%20status%20of%20the%20HTTP%20request.'%20%7C%20extend%20_status_url%20%3D%20'https%3A%2F%2Fdeveloper.mozilla.org%2Fen-US%2Fdocs%2FWeb%2FHTTP%2FStatus'%20%7C%20extend%20_req_duration_ms_unit%20%3D%20'ns'%22%7D)
