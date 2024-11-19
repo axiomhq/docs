@@ -62,10 +62,7 @@ has_ipv4(expression)
 
 The function returns a boolean value: `true` if the `expression` contains a valid IPv4 address, and `false` otherwise.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 When analyzing HTTP logs, you can use `has_ipv4` to filter requests originating from valid IPv4 addresses.
 
@@ -73,8 +70,7 @@ When analyzing HTTP logs, you can use `has_ipv4` to filter requests originating 
 
 ```kusto
 ['sample-http-logs']
-| where has_ipv4(uri)
-| project _time, uri, method, status
+| extend has_ipv4(uri)
 ```
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20has_ipv4(uri)%20%7C%20project%20_time%2C%20uri%2C%20method%2C%20status%22%7D)
@@ -87,55 +83,6 @@ When analyzing HTTP logs, you can use `has_ipv4` to filter requests originating 
 | 2024-11-14T10:17:00Z | 10.0.0.2/login  | POST   | 403    |
 
 This query filters requests from logs to include only entries with valid IPv4 addresses.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-For OpenTelemetry traces, use `has_ipv4` to identify spans involving services communicating over IPv4.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where has_ipv4(['service.name'])
-| project _time, ['service.name'], span_id, trace_id
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20has_ipv4(%5B%27service.name%27%5D)%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20span_id%2C%20trace_id%22%7D)
-
-**Output**
-
-| _time               | service.name | span_id          | trace_id           |
-|---------------------|--------------|------------------|--------------------|
-| 2024-11-14T10:00:00Z | frontend     | span12345        | trace67890         |
-
-This example identifies traces where the service name contains a valid IPv4 address.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `has_ipv4` to detect malicious traffic or unauthorized access attempts logged with IPv4 addresses.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where has_ipv4(geo.country)
-| project _time, geo.country, id, status
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20has_ipv4(geo.country)%20%7C%20project%20_time%2C%20geo.country%2C%20id%2C%20status%22%7D)
-
-**Output**
-
-| _time               | geo.country | id     | status |
-|---------------------|-------------|--------|--------|
-| 2024-11-14T11:00:00Z | 192.168.0.3 | user123 | 401    |
-
-This query helps monitor unauthorized access attempts using IPv4.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

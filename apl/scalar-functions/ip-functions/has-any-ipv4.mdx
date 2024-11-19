@@ -63,10 +63,7 @@ has_any_ipv4(column, ip_list)
 
 A boolean value indicating whether the specified column contains any of the given IPv4 addresses or matches any of the CIDR ranges in `ip_list`.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 When analyzing logs, you can use `has_any_ipv4` to filter requests from specific IPv4 addresses or subnets.
 
@@ -74,68 +71,18 @@ When analyzing logs, you can use `has_any_ipv4` to filter requests from specific
 
 ```kusto
 ['sample-http-logs']
-| where has_any_ipv4('geo.city', dynamic(['192.168.1.1', '192.168.0.0/16']))
-| project _time, geo.city, uri, status
+| extend has_ip = has_any_ipv4('192.168.1.1', dynamic(['192.168.1.1', '192.168.0.0/16']))
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20has_any_ipv4('geo.city'%2C%20dynamic(['192.168.1.1'%2C%20'192.168.0.0%2F16']))%20%7C%20project%20_time%2C%20geo.city%2C%20uri%2C%20status%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20has_ip%20%3D%20has_any_ipv4('192.168.1.1'%2C%20dynamic(%5B'192.168.1.1'%2C%20'192.168.0.0%2F16'%5D))%22%7D)
 
 **Output**
 
-| _time               | geo.city       | uri                 | status |
-|---------------------|----------------|---------------------|--------|
-| 2024-11-14T10:00:00 | 192.168.1.1    | /example/path       | 200    |
+| _time               | has_ip       | status |
+|---------------------|----------------|---------------------|
+| 2024-11-14T10:00:00 | true    | 200    |
 
 This query identifies log entries from specific IPs or subnets.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Filter OpenTelemetry spans to identify services communicating from specific IPv4 ranges.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where has_any_ipv4('service.name', dynamic(['10.0.0.1', '10.0.0.0/8']))
-| project _time, service.name, trace_id, kind
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20has_any_ipv4('service.name'%2C%20dynamic(['10.0.0.1'%2C%20'10.0.0.0%2F8']))%20%7C%20project%20_time%2C%20service.name%2C%20trace_id%2C%20kind%22%7D)
-
-**Output**
-
-| _time               | service.name      | trace_id      | kind    |
-|---------------------|-------------------|---------------|---------|
-| 2024-11-14T10:00:00 | frontend          | abc123        | server  |
-
-This query isolates spans originating from specific services in the network.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `has_any_ipv4` to track potentially malicious requests based on a predefined list of suspicious IP addresses.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where has_any_ipv4('geo.city', dynamic(['203.0.113.5', '198.51.100.0/24']))
-| project _time, id, method, uri, status
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20has_any_ipv4('geo.city'%2C%20dynamic(['203.0.113.5'%2C%20'198.51.100.0%2F24']))%20%7C%20project%20_time%2C%20id%2C%20method%2C%20uri%2C%20status%22%7D)
-
-**Output**
-
-| _time               | id     | method  | uri             | status |
-|---------------------|--------|---------|-----------------|--------|
-| 2024-11-14T10:00:00 | user42 | GET     | /admin/login    | 401    |
-
-This query focuses on identifying access attempts from potentially malicious IP ranges.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

@@ -62,93 +62,27 @@ has_any_ipv4_prefix(ip_column, prefixes)
 
 ### Returns
 
-- Returns a boolean value:
-  - `true` if the IPv4 address matches any of the specified prefixes.
-  - `false` otherwise.
+- `true` if the IPv4 address matches any of the specified prefixes.
+- `false` otherwise.
 
-## Use case examples
+## Use case example
 
-<Tabs>
-<Tab title="Log analysis">
-
-### Explanation
-
-Identify all requests originating from private IP ranges (e.g., `10.0.0.0/8` and `192.168.0.0/16`).
+Detect requests from specific IP ranges.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| where has_any_ipv4_prefix(uri, dynamic(['10.', '192.168.']))
-| summarize count() by status
+| extend has_ip_prefix = has_any_ipv4_prefix('192.168.0.1', dynamic(['172.16.', '192.168.']))
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20has_any_ipv4_prefix%28uri%2C%20dynamic%28%5B%2710.%27%2C%20%27192.168.%27%5D%29%29%20%7C%20summarize%20count%28%29%20by%20status%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20has_ip_prefix%20%3D%20has_any_ipv4_prefix('192.168.0.1'%2C%20dynamic(%5B'172.16.'%2C%20'192.168.'%5D))%22%7D)
 
 **Output**
 
-| status | count |
-|--------|-------|
-| 200    | 150   |
-| 404    | 20    |
-
-The query filters requests based on private IP prefixes and summarizes the results by HTTP status.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-### Explanation
-
-Filter spans to find traces originating from specific IP ranges.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where has_any_ipv4_prefix(['service.name'], dynamic(['10.1.', '192.168.1.']))
-| summarize avg(duration) by ['service.name']
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20has_any_ipv4_prefix%28%5B%27service.name%27%5D%2C%20dynamic%28%5B%2710.1.%27%2C%20%27192.168.1.%27%5D%29%29%20%7C%20summarize%20avg%28duration%29%20by%20%5B%27service.name%27%5D%22%7D)
-
-**Output**
-
-| service.name      | avg_duration |
-|-------------------|--------------|
-| cartservice       | 250ms        |
-| checkoutservice   | 300ms        |
-
-The query calculates the average duration of traces originating from the specified IP ranges.
-
-</Tab>
-<Tab title="Security logs">
-
-### Explanation
-
-Detect failed login attempts from specific IP ranges.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where has_any_ipv4_prefix(uri, dynamic(['172.16.', '192.168.']))
-| where status == '401'
-| summarize count() by geo.country
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20has_any_ipv4_prefix%28uri%2C%20dynamic%28%5B%27172.16.%27%2C%20%27192.168.%27%5D%29%29%20%7C%20where%20status%20%3D%3D%20%27401%27%20%7C%20summarize%20count%28%29%20by%20geo.country%22%7D)
-
-**Output**
-
-| geo.country | count |
-|-------------|-------|
-| US          | 30    |
-| DE          | 15    |
-
-The query identifies unauthorized access attempts originating from specific IP ranges and summarizes them by country.
-
-</Tab>
-</Tabs>
+| _time               | has_ip_prefix       | status |
+|---------------------|----------------|---------------------|
+| 2024-11-14T10:00:00 | true    | 200    |
 
 ## List of related functions
 
