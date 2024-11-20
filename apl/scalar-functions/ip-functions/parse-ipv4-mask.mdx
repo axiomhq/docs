@@ -5,7 +5,9 @@ description: 'This page explains how to use the parse_ipv4_mask function in APL.
 
 ## Introduction
 
-The `parse_ipv4_mask` function in APL converts an IPv4 address with a subnet mask into a tuple containing the address and the mask. You can use this function to analyze and manipulate network-related data, such as filtering log entries by IP ranges or calculating network sizes. This function is especially useful in network security, performance monitoring, and debugging tasks where IP address manipulation is required.
+The `parse_ipv4_mask` function in APL converts an IPv4 address and its associated netmask into a signed 64-bit wide, long number representation in big-endian order. Use this function when you need to process or compare IPv4 addresses efficiently as numerical values, such as for IP range filtering, subnet calculations, or network analysis.
+
+This function is particularly useful in scenarios where you need a compact and precise way to represent IP addresses and their masks for further aggregation or filtering.
 
 ## For users of other query languages
 
@@ -14,36 +16,30 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk, similar functionality is achieved using string splitting and custom logic. In APL, `parse_ipv4_mask` provides a built-in, simpler alternative for handling CIDR notation.
+In Splunk SPL, you use functions like `cidrmatch` for subnet operations. In APL, `parse_ipv4_mask` focuses on converting an IP and mask into a numerical representation for low-level processing.
 
 <CodeGroup>
-```spl Splunk example
-| eval cidr_split=split("192.168.1.1/24", "/")
-| eval ip=cidr_split[0], mask=tonumber(cidr_split[1])
+```sql Splunk example
+| eval converted_ip = cidrmatch("192.168.1.0/24", ip)
 ```
 
 ```kusto APL equivalent
-['sample-http-logs']
-| extend ip_mask_tuple=parse_ipv4_mask('192.168.1.1/24')
+print converted_ip = parse_ipv4_mask("192.168.1.0", 24)
 ```
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In SQL, similar functionality typically requires using string functions or custom stored procedures. In APL, `parse_ipv4_mask` streamlines this process with a single built-in function.
+In ANSI SQL, you typically use custom expressions or stored procedures to perform similar IP address transformations. In APL, `parse_ipv4_mask` offers a built-in, optimized function for this task.
 
 <CodeGroup>
 ```sql SQL example
-SELECT SUBSTRING_INDEX(ip_mask, '/', 1) AS ip, 
-       CAST(SUBSTRING_INDEX(ip_mask, '/', -1) AS INT) AS mask
-FROM network_logs
-WHERE ip_mask = '192.168.1.1/24';
+SELECT inet_aton('192.168.1.0') & (0xFFFFFFFF << (32 - 24)) AS converted_ip
 ```
 
 ```kusto APL equivalent
-['sample-http-logs']
-| extend ip_mask_tuple=parse_ipv4_mask('192.168.1.1/24')
+print converted_ip = parse_ipv4_mask("192.168.1.0", 24)
 ```
 </CodeGroup>
 
@@ -55,97 +51,46 @@ WHERE ip_mask = '192.168.1.1/24';
 ### Syntax
 
 ```kusto
-parse_ipv4_mask(ip_with_mask: string)
+parse_ipv4_mask(ip, prefix)
 ```
 
 ### Parameters
 
-| Parameter      | Type   | Description                                                                 |
-|----------------|--------|-----------------------------------------------------------------------------|
-| `ip_with_mask` | string | A string representing an IPv4 address with a subnet mask in CIDR notation. |
+| Name    | Type   | Description                                                                 |
+|---------|--------|-----------------------------------------------------------------------------|
+| `ip`    | string | The IPv4 address to convert to a long number.                              |
+| `prefix`| int    | An integer from 0 to 32 representing the number of most-significant bits.  |
 
 ### Returns
 
-A tuple with two elements:
-1. The IPv4 address as a string.
-2. The subnet mask as an integer.
+- A signed, 64-bit long number in big-endian order if the conversion is successful.
+- `null` if the conversion is unsuccessful.
 
-## Use case examples
+### Example
 
-<Tabs>
-<Tab title="Log analysis">
+```kusto
+print parse_ipv4_mask("127.0.0.1", 24)
+```
 
-When analyzing HTTP logs, you can extract the IP and subnet mask from a CIDR notation to filter requests from specific subnets.
+## Use case example
+
+Use `parse_ipv4_mask` to analyze logs and filter entries based on IP ranges.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend ip_mask_tuple=parse_ipv4_mask('192.168.0.1/24')
-| extend ip=ip_mask_tuple[0], mask=ip_mask_tuple[1]
-| project _time, ip, mask, method, status
+| extend masked_ip = parse_ipv4_mask('192.168.0.1', 24)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20ip_mask_tuple%3Dparse_ipv4_mask%28%27192.168.0.1%2F24%27%29%20%7C%20extend%20ip%3Dip_mask_tuple%5B0%5D%2C%20mask%3Dip_mask_tuple%5B1%5D%20%7C%20project%20_time%2C%20ip%2C%20mask%2C%20method%2C%20status%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20masked_ip%20%3D%20parse_ipv4_mask('192.168.0.1'%2C%2024)%22%7D)
 
 **Output**
 
-| _time                | ip            | mask | method | status |
-|----------------------|---------------|------|--------|--------|
-| 2024-11-14T10:12:00Z | 192.168.0.1   | 24   | GET    | 200    |
-
-This query demonstrates how to parse CIDR notation and project the IP and mask fields for analysis.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-You can use this function to extract subnet details from service logs to identify network distribution of traces.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend ip_mask_tuple=parse_ipv4_mask('192.168.1.5/16')
-| extend ip=ip_mask_tuple[0], mask=ip_mask_tuple[1]
-| project _time, trace_id, service['name'], ip, mask
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20ip_mask_tuple%3Dparse_ipv4_mask%28%27192.168.1.5%2F16%27%29%20%7C%20extend%20ip%3Dip_mask_tuple%5B0%5D%2C%20mask%3Dip_mask_tuple%5B1%5D%20%7C%20project%20_time%2C%20trace_id%2C%20service%5B%27name%27%5D%2C%20ip%2C%20mask%22%7D)
-
-**Output**
-
-| _time                | trace_id           | service['name']  | ip            | mask |
-|----------------------|--------------------|------------------|---------------|------|
-| 2024-11-14T10:12:00Z | abc1234def5678ghij | frontend         | 192.168.1.5   | 16   |
-
-This query shows how to use `parse_ipv4_mask` for network details in OpenTelemetry traces.
-
-</Tab>
-<Tab title="Security logs">
-
-Filter security logs to detect activities from specific subnets by extracting IP ranges from a CIDR block.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend ip_mask_tuple=parse_ipv4_mask('10.0.0.1/8')
-| extend ip=ip_mask_tuple[0], mask=ip_mask_tuple[1]
-| where ip startswith '10.'
-| project _time, ip, mask, status
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20ip_mask_tuple%3Dparse_ipv4_mask%28%2710.0.0.1%2F8%27%29%20%7C%20extend%20ip%3Dip_mask_tuple%5B0%5D%2C%20mask%3Dip_mask_tuple%5B1%5D%20%7C%20where%20ip%20startswith%20%2710.%27%20%7C%20project%20_time%2C%20ip%2C%20mask%2C%20status%22%7D)
-
-**Output**
-
-| _time                | ip        | mask | status |
-|----------------------|-----------|------|--------|
-| 2024-11-14T11:45:00Z | 10.0.0.1  | 8    | 403    |
-
-This query filters out activities from a specific subnet for security analysis.
-
-</Tab>
-</Tabs>
+| _time              | uri                 | method | masked_ip       |
+|---------------------|---------------------|--------|-----------------|
+| 2024-11-14T10:00:00 | /index.html         | GET    | [192, 168, 1, 1]|
 
 ## List of related functions
+
+- [**parse_ipv4**](/apl/string-functions/parse_ipv4-function): Converts an IPv4 address into a 64-bit wide, long number without applying a mask.

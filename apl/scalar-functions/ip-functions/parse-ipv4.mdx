@@ -64,10 +64,7 @@ parse_ipv4(ipv4_address)
 
 The function returns an array of four integers, each representing an octet of the IPv4 address.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 You can use the `parse_ipv4` function to analyze web traffic by breaking down user IP addresses into octets.
 
@@ -76,68 +73,15 @@ You can use the `parse_ipv4` function to analyze web traffic by breaking down us
 ```kusto
 ['sample-http-logs']
 | extend ip_octets = parse_ipv4('192.168.1.1')
-| project _time, uri, method, ip_octets
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20ip_octets%20%3D%20parse_ipv4%28%27192.168.1.1%27%29%20%7C%20project%20_time%2C%20uri%2C%20method%2C%20ip_octets%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20ip_octets%20%3D%20parse_ipv4('192.168.1.1')%22%7D)
 
 **Output**
 
 | _time              | uri                 | method | ip_octets       |
 |---------------------|---------------------|--------|-----------------|
 | 2024-11-14T10:00:00 | /index.html         | GET    | [192, 168, 1, 1]|
-
-This query demonstrates how to include parsed IPv4 addresses in log analysis.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Extract IPv4 octets to analyze trace-level data from specific IPs.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend ip_octets = parse_ipv4('192.168.100.200')
-| project _time, trace_id, service.name, ip_octets
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20ip_octets%20%3D%20parse_ipv4%28%27192.168.100.200%27%29%20%7C%20project%20_time%2C%20trace_id%2C%20service.name%2C%20ip_octets%22%7D)
-
-**Output**
-
-| _time              | trace_id           | service.name       | ip_octets       |
-|---------------------|--------------------|--------------------|-----------------|
-| 2024-11-14T10:05:00 | abcd1234efgh5678  | frontend           | [192, 168, 100, 200]|
-
-This query highlights IP details in OpenTelemetry trace data.
-
-</Tab>
-<Tab title="Security logs">
-
-Parse and analyze IPv4 addresses to identify suspicious patterns in security logs.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '403'
-| extend ip_octets = parse_ipv4('10.0.0.1')
-| project _time, geo.city, geo.country, ip_octets
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27403%27%20%7C%20extend%20ip_octets%20%3D%20parse_ipv4%28%2710.0.0.1%27%29%20%7C%20project%20_time%2C%20geo.city%2C%20geo.country%2C%20ip_octets%22%7D)
-
-**Output**
-
-| _time              | geo.city     | geo.country  | ip_octets       |
-|---------------------|--------------|--------------|-----------------|
-| 2024-11-14T11:00:00 | New York     | US           | [10, 0, 0, 1]   |
-
-This query identifies unauthorized access attempts by parsing blocked IPs.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

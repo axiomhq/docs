@@ -69,10 +69,7 @@ has_ipv4_prefix(column_name, prefix)
 
 - Returns a Boolean (`true` or `false`) indicating whether the IPv4 address starts with the specified prefix.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 Use `has_ipv4_prefix` to filter logs for requests originating from a specific IP range.
 
@@ -80,71 +77,16 @@ Use `has_ipv4_prefix` to filter logs for requests originating from a specific IP
 
 ```kusto
 ['sample-http-logs']
-| where has_ipv4_prefix(geo.country, '192.168.0')
-| project _time, id, uri, geo.city
+| extend has_prefix= has_ipv4_prefix('192.168.0.1', '192.168')
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20has_ipv4_prefix%28geo.country%2C%20%27192.168.0%27%29%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20geo.city%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20has_prefix%3D%20has_ipv4_prefix('192.168.0.1'%2C%20'192.168')%22%7D)
 
 **Output**
 
-| _time                 | id       | uri                     | geo.city |
-|-----------------------|----------|-------------------------|----------|
-| 2024-11-01T12:00:00Z | user123  | /api/login              | New York |
-| 2024-11-01T12:05:00Z | user456  | /api/orders             | Chicago  |
-
-This query identifies all requests from IPs within the `192.168.0` prefix, showing only the relevant fields for analysis.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Identify backend service calls originating from specific IP ranges.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where has_ipv4_prefix(service.name, '10.0.0')
-| project _time, trace_id, span_id, service.name
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20has_ipv4_prefix%28service.name%2C%20%2710.0.0%27%29%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20service.name%22%7D)
-
-**Output**
-
-| _time                 | trace_id    | span_id     | service.name       |
-|-----------------------|-------------|-------------|--------------------|
-| 2024-11-01T12:10:00Z | trace12345  | span12345   | frontend           |
-| 2024-11-01T12:15:00Z | trace67890  | span67890   | checkoutservice    |
-
-This query finds traces from services with IPs under the `10.0.0` range, helping with network-level analysis.
-
-</Tab>
-<Tab title="Security logs">
-
-Analyze security events to locate activity from specific IP ranges.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where has_ipv4_prefix(geo.city, '172.16')
-| summarize count() by geo.city
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20has_ipv4_prefix%28geo.city%2C%20%27172.16%27%29%20%7C%20summarize%20count%28%29%20by%20geo.city%22%7D)
-
-**Output**
-
-| geo.city      | count |
-|---------------|-------|
-| New York      | 5     |
-| San Francisco | 8     |
-
-This query summarizes the number of events for each city originating from the `172.16` IP range, useful for tracking unusual activity.
-
-</Tab>
-</Tabs>
+| _time               | has_prefix       | status |
+|---------------------|----------------|---------------------|
+| 2024-11-14T10:00:00 | true    | 200    |
 
 ## List of related functions
 
