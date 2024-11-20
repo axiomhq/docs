@@ -72,10 +72,7 @@ format_ipv4(ip: long) -> string
 |-------------|--------------------------------------------|
 | `string`    | The IPv4 address in dotted-decimal format. |
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 When analyzing HTTP request logs, you can convert IP addresses stored as integers into a readable format to identify client locations or troubleshoot issues.
 
@@ -84,10 +81,9 @@ When analyzing HTTP request logs, you can convert IP addresses stored as integer
 ```kusto
 ['sample-http-logs']
 | extend formatted_ip = format_ipv4(3232235776)
-| project _time, formatted_ip, status, uri, method
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20formatted_ip%20%3D%20format_ipv4%283232235776%29%20%7C%20project%20_time%2C%20formatted_ip%2C%20status%2C%20uri%2C%20method%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20formatted_ip%20%3D%20format_ipv4(3232235776)%22%7D)
 
 **Output**
 
@@ -96,56 +92,6 @@ When analyzing HTTP request logs, you can convert IP addresses stored as integer
 | 2024-11-14 10:00:00 | 192.168.1.0  | 200    | /api/products       | GET    |
 
 This query decodes raw IP addresses into a human-readable format for easier analysis.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-In OpenTelemetry traces, converting numeric IP addresses in telemetry data helps correlate network events with specific service calls.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend formatted_ip = format_ipv4(3232235776)
-| project _time, trace_id, span_id, service.name, formatted_ip
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20formatted_ip%20%3D%20format_ipv4%283232235776%29%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20service.name%2C%20formatted_ip%22%7D)
-
-**Output**
-
-| _time               | trace_id  | span_id   | service.name         | formatted_ip |
-|---------------------|-----------|-----------|----------------------|--------------|
-| 2024-11-14 10:00:00 | abc123456 | span12345 | frontendproxy        | 192.168.1.0  |
-
-This query makes telemetry data easier to understand by converting numeric IPs into standard format.
-
-</Tab>
-<Tab title="Security logs">
-
-In security log analysis, converting numeric IP addresses helps you quickly identify the source of attacks or suspicious activity.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '401'
-| extend formatted_ip = format_ipv4(3232235776)
-| project _time, formatted_ip, geo.country, method
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27401%27%20%7C%20extend%20formatted_ip%20%3D%20format_ipv4%283232235776%29%20%7C%20project%20_time%2C%20formatted_ip%2C%20geo.country%2C%20method%22%7D)
-
-**Output**
-
-| _time               | formatted_ip | geo.country | method |
-|---------------------|--------------|-------------|--------|
-| 2024-11-14 10:00:00 | 192.168.1.0  | US          | POST   |
-
-This query highlights unauthorized access attempts by displaying their source IP addresses in a readable format.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 
