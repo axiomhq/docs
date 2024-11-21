@@ -12,36 +12,7 @@ In Axiom, event data is the atomic unit of activity, encompassing logs, traces, 
 
 Rather than simply calling them logs or metrics, event data reflects a broader range of interactions, crossing boundaries from engineering to product management, security, and beyond. This includes everything from the number of documents created in a product to the sequence of API calls during a checkout process.
 
-## A brief history and evolution
-
-To understand Axiom’s focus on event data, consider how logging evolved:
-1. **Legacy Logging**: In the early days, logs consisted of unstructured text fields, with key details crammed into free-form strings. Engineers would SSH into servers to view these logs individually.
-1. **Structured Logging**: Over time, logs moved to structured formats like JSON, making them machine-readable and scalable. Key-value pairs replaced arbitrary text, and a consistent schema enabled collaboration and integration with monitoring tools.
-1. **Modern Distributed Systems**: With services becoming distributed, new fields like trace ID and span ID emerged, allowing engineers to track events across interconnected services. This evolution transformed logs from isolated lines to holistic views of entire workflows.
-
-Axiom builds on this history by storing these logs, traces, and metrics efficiently, ensuring they remain accessible for real-time insights.
-
-## Event data across business functions
-
-Event data isn’t limited to technical logs. It extends to other business functions as well:
-
-- **Engineering**: Engineering logs capture real-time health and state data across applications. Log events, error traces, and performance metrics help pinpoint issues in microservices, whether it’s a spike in CPU usage or an auth failure.
-- **Product**: Product teams analyze user interactions by capturing product events. Each event could represent user actions, like document creation in Notion, revealing how users engage with a product.
-- **Security**: Security teams monitor events such as firewall logs, login attempts, and policy violations, ensuring compliance and threat detection.
-- **Marketing**: Marketing collects data on clicks, ad engagement, and conversion rates. Events allow marketing teams to quantify and analyze the effectiveness of campaigns.
-
-While engineering logs might focus on error IDs and stack traces, product logs could capture user IDs, event names, and specific interactions. In all cases, events remain collections of timestamped key-value pairs, making them universally usable and efficient to store and retrieve.
-
-## Why use event data?
-
-Event data is the heartbeat of modern, data-driven organizations, serving purposes that traditional data stores can’t fully support:
-
-- **Real-time insight**: Timestamped event data provides a moment-by-moment look at system operations, allowing quick identification of issues.
-- **Root cause analysis**: By tracking the “why” behind “what” of record-based databases (like those in traditional analytics systems), event data can answer questions such as “Why did customers abandon their checkout?”
-- **Predictive analytics**: Event data holds the key to anticipating trends and outcomes, whether forecasting resource usage or identifying customer behavior patterns.
-- **Unified observability**: Event data seamlessly supports logs, traces, and metrics in one view, enabling a unified approach to observability across domains.
-
-## Logs, traces, and metrics
+## Types of event data
 
 Traditionally, observability has been associated with three pillars, each effectively a specialized view of event data:
 
@@ -49,26 +20,35 @@ Traditionally, observability has been associated with three pillars, each effect
 - **Traces**: Traces track the path of requests through a system, capturing each step’s duration. By linking related spans within a trace, developers can identify bottlenecks and dependencies.
 - **Metrics**: Metrics quantify state over time, recording data like CPU usage or user count at intervals. Product or engineering teams can then monitor and aggregate these values for performance insights.
 
-However, modern observability expands on this by aggregating diverse data types from engineering, product, marketing, and security functions, all of which contribute to understanding the deeper “why” behind user interactions and system behaviors. This holistic view, in turn, enables real-time diagnostics, predictive analyses, and proactive issue resolution.
-
 In Axiom, these observability elements are stored as event data, allowing for fine-grained, efficient tracking across all three pillars.
 
-## Value of capturing all events
+## Metrics support
 
-Traditional data storage often requires aggressive sampling, filtering, and aggregation, discarding valuable details to save space. Axiom, however, optimizes data storage so you can capture and retain every event. This approach enables:
+Axiom excels at collecting, storing, and analyzing timestamped event data. For logs and traces, Axiom offers unparalleled efficiency and query performance.
 
-- **Comprehensive analysis**: Retaining granular event data means you can trace even minor or rare occurrences that contribute to larger trends.
-- **Detailed audits**: From compliance to usage reporting, comprehensive event retention allows exhaustive record-keeping without added cost.
-- **Unmatched flexibility**: Full event history empowers teams to adapt analyses and queries over time, offering a complete look at past data.
+For metrics data, Axiom is well-suited for "event-level" metrics that behave more like logs, with each data point representing a discrete event. Your JSON schema fits this model well. Here's a quick example of how your data might look in Axiom:
 
-## Why Axiom for event data?
+```json
+{
+  "job_id": "train_123",
+  "user_name": "acme",
+  "timestamp": "2024-10-08T15:30:00Z",
+  "node_host": "worker-01",
+  "metric_name": "gpu_utilization",
+  "metric_value": 87.5,
+  "training_type": "image_classification"
+}
+```
 
-Axiom’s purpose-built data store allows you to capture every event (whether it’s a log line, trace span, or user interaction) with remarkable efficiency:
+You can easily query and analyze this kind of metrics data in Axiom. For instance, to get average GPU utilization across nodes:
 
-- **Compression**: Axiom compresses event data efficiently, making storage affordable without sacrificing detail.
-- **Scalability**: Designed for the long haul, Axiom scales effortlessly with your data needs, ensuring every event remains accessible.
-- **Unified insights**: By bridging logs, metrics, and traces, Axiom enables a cohesive view across different business needs, helping teams uncover the why behind the what.
+```kusto
+dataset
+| summarize avg(metric_value) by node_host, bin_auto(_time)
+```
 
-In Axiom, event data isn’t limited to logs or traces alone. It’s an umbrella term encompassing interactions across your organization, from infrastructure errors to customer behavior. These structured records help answer complex questions, driving data-informed decision-making across every department. By storing event data efficiently, Axiom empowers teams to retain every byte of context, providing the granular insight needed for modern observability and operational intelligence.
+Axiom’s metrics support currently comes with the following limitations:
+- Axiom doesn’t support pre-aggregated metrics such as scrape samples.
+- Axiom isn’t optimized for high-dimensionality metric timeseries with a very large number of metric/label combinations.
 
-Welcome to a world where you don’t just capture data. You capture every insight, interaction, and answer. That’s the power of event data in Axiom.
+Support for these types of metrics data is coming soon in the first half of 2025.
