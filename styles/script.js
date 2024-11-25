@@ -18,5 +18,6 @@ if (document.querySelector("#navbar a")) {
 
     if (logoLink.getAttribute("href") == "/" || logoLink.getAttribute("href") == "/docs") {
         logoLink.addEventListener("click", function(){document.location.href = "https://axiom.co/";});
+        logoLink.setAttribute("href") == "https://axiom.co/"
     }
 }
