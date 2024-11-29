@@ -1,0 +1,48 @@
+---
+title: 'Map fields'
+description: 'This page explains what map fields are and how to query them.'
+tags: ['axiom documentation', 'documentation', 'axiom', 'map fields', 'object fields', 'data types']
+---
+
+Map fields are a special type of field that can hold a collection of nested key-value pairs within a single field. You can think of the content of a map field as a JSON object.
+
+## Benefits and drawbacks of map fields
+
+The benefit of map fields is that you can store additional attributes without adding more fields. This is particularly useful when the shape of your data is unpredictable (for example, additional attributes added by OpenTelemetry instrumentation). Using map fields means that you can avoid reaching the field limit of a dataset.
+
+The drawbacks of map fields are the following:
+- Querying map fields uses more query-hours than querying conventional fields.
+- Map fields don’t compress as well as conventional fields. This means datasets with map fields use more storage.
+- You don’t have visibility into map fields from the schema. For example, autocomplete doesn’t know the properties inside the map field.
+
+## Custom attributes in tracing datasets
+
+If you use [OpenTelemetry](/send-data/opentelemetry) to send data to Axiom, you find some attributes in the `attributes.custom` map field. The reason is that instrumentation libraries can add hundreds or even thousands of arbitrary attributes to spans. Storing each custom attribute in a separate field would significantly increase the number of fields in your dataset. To keep the number of fields in your dataset under control, Axiom places all custom attributes in the single `attributes.custom` map field.
+
+## Use map fields in queries
+
+The example query below uses the `http.protocol` property inside the `attributes.custom` map field to filter results:
+
+```kusto
+['otel-demo-traces']
+| where ['attributes.custom']['http.protocol'] == 'HTTP/1.1'
+```
+
+[Run in playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7b%22apl%22%3a%22%5b%27otel-demo-traces%27%5d%5cn%7c%20where%20%5b%27attributes.custom%27%5d%5b%27http.protocol%27%5d%20%3d%3d%20%27HTTP%2f1.1%27%22%2c%22queryOptions%22%3a%7b%22quickRange%22%3a%2230d%22%7d%7d)
+
+## Access properties of nested maps
+
+To access the properties of nested maps, use dot notation, index notation, or a mix of the two. If you use index notation for an entity, enclose the entity name in quotation marks (`'` or `"`) and square brackets (`[]`). For example:
+- `where map_field.property1.property2 == 14`
+- `where ['map_field'].property1.property2 == 14`
+- `where ['map_field']['property1']['property2'] == 14`
+
+If an entity name has spaces (` `), dots (`.`), or dashes (`-`), you can only use index notation for that entity. You can use dot notation for the other entities. For example:
+- `where ['map.field']['property.name1']['property.name2'] == 14`
+- `where ['map.field'].property1.property2 == 14`
+
+For more information, see [Entity names](/apl/entities/entity-names#quote-identifiers).
+
+## Add custom fields
+
+The possibility to add custom fields is coming in early 2025. To express interest in the feature, [contact Axiom](https://axiom.co/contact).
