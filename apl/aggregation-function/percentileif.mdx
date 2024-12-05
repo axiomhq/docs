@@ -83,18 +83,18 @@ You can use `percentileif` to analyze request durations for specific HTTP method
 
 ```kusto
 ['sample-http-logs']
-| summarize percentileif(req_duration_ms, 90, method == 'POST')
+| summarize post_p90 = percentileif(req_duration_ms, 90, method == "POST"), get_p90 = percentileif(req_duration_ms, 90, method == "GET") by bin_auto(_time)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20percentileif%28req_duration_ms%2C%2090%2C%20method%20%3D%3D%20%27POST%27%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20post_p90%20%3D%20percentileif(req_duration_ms%2C%2090%2C%20method%20%3D%3D%20'POST')%2C%20get_p90%20%3D%20percentileif(req_duration_ms%2C%2090%2C%20method%20%3D%3D%20'GET')%20by%20bin_auto(_time)%22%7D)
 
 **Output**
 
-| Percentile90 |
-|--------------|
-| 450          |
+| post_p90 | get_p90 |
+|--------------|---|
+| 1.691 ms   | 1.453 ms |
 
-This query calculates the 90th percentile of request durations for HTTP `POST` methods.
+This query calculates the 90th percentile of request durations for HTTP POST and GET methods.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
