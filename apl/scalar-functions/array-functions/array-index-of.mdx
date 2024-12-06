@@ -1,0 +1,150 @@
+---
+title: array_index_of
+description: 'This page explains how to use the array_index_of function in APL.'
+---
+
+## Introduction
+
+The `array_index_of` function in APL returns the zero-based index of the first occurrence of a specified value within an array. If the value isn’t found, the function returns `-1`. Use this function when you need to identify the position of a specific item within an array, such as finding the location of an error code in a sequence of logs or pinpointing a particular value within telemetry data arrays.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `mvfind` function retrieves the position of an element within an array, similar to how `array_index_of` operates in APL. However, note that APL uses a zero-based index for results, while SPL is one-based.
+
+<CodeGroup>
+```splunk Splunk example
+| eval index=mvfind(array, "value")
+```
+
+```kusto APL equivalent
+let index = array_index_of(array, 'value')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t have a direct equivalent for finding the index of an element within an array. Typically, you would use a combination of array and search functions if supported by your SQL variant.
+
+<CodeGroup>
+```sql SQL example
+SELECT POSITION('value' IN ARRAY[...])
+```
+
+```kusto APL equivalent
+let index = array_index_of(array, 'value')
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+array_index_of(array, value)
+```
+
+### Parameters
+
+- **`array`**: The array to search within. Required.
+- **`value`**: The value to search for in the array. Required.
+
+### Returns
+
+`array_index_of` returns the zero-based index of the first occurrence of the specified `value` in `array`. If `value` doesn’t exist in the array, it returns `-1`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You can use `array_index_of` to find the position of a specific HTTP status code within an array of codes in your log analysis.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend status_array = make_list(status)
+| extend index_404 = array_index_of(status_array, '404')
+| project _time, id, status_array, index_404
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20status_array%20%3D%20make_list(status)%20%7C%20extend%20index_404%20%3D%20array_index_of(status_array%2C%20'404')%20%7C%20project%20_time%2C%20id%2C%20status_array%2C%20index_404%22%7D)
+
+**Output**
+
+| _time                | id       | status_array          | index_404 |
+|----------------------|----------|------------------------|-----------|
+| 2024-10-18T12:35:00Z | user123  | ["200", "404", "500"] | 1         |
+| 2024-10-18T12:37:00Z | user456  | ["200", "403", "404"] | 2         |
+
+This query creates an array of `status` codes for each log and identifies the position of the first occurrence of the `404` status.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In OpenTelemetry traces, you can find the position of a specific `service.name` within an array of service names to detect when a particular service appears.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend service_array = make_list(['service.name'])
+| extend frontend_index = array_index_of(service_array, 'frontend')
+| project _time, trace_id, service_array, frontend_index
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20service_array%20%3D%20make_list(%5B'service.name'%5D)%20%7C%20extend%20frontend_index%20%3D%20array_index_of(service_array%2C%20'frontend')%20%7C%20project%20_time%2C%20trace_id%2C%20service_array%2C%20frontend_index%22%7D)
+
+**Output**
+
+| _time                | trace_id   | service_array                     | frontend_index |
+|----------------------|------------|-----------------------------------|----------------|
+| 2024-10-18T13:10:00Z | abc123     | ["frontend", "cartservice"]       | 0              |
+| 2024-10-18T13:15:00Z | def456     | ["checkoutservice", "frontend"]   | 1              |
+
+This query collects the array of services and determines where the `frontend` service first appears.
+
+</Tab>
+<Tab title="Security logs">
+
+When working with security logs, `array_index_of` can help identify the index of a particular error or status code, such as `500`, within an array of `status` codes.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend status_array = make_list(status)
+| extend index_500 = array_index_of(status_array, '500')
+| project _time, id, status_array, index_500
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20status_array%20%3D%20make_list(status)%20%7C%20extend%20index_500%20%3D%20array_index_of(status_array%2C%20'500')%20%7C%20project%20_time%2C%20id%2C%20status_array%2C%20index_500%22%7D)
+
+**Output**
+
+| _time                | id       | status_array          | index_500 |
+|----------------------|----------|------------------------|-----------|
+| 2024-10-18T12:35:00Z | user123  | ["200", "404", "500"] | 2         |
+| 2024-10-18T12:37:00Z | user456  | ["200", "403", "404"] | -1        |
+
+This query helps identify if, and at what index, the `500` status code appears in each log entry.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [**`make_list`**](/apl/array-functions/make_list-function): Creates an array from multiple values. Use `make_list` to create the array you’ll search with `array_index_of`.
+- [**`array_length`**](/apl/array-functions/array_length-function): Returns the length of an array. Use it when you need the count of items in an array.
+- [**`array_slice`**](/apl/array-functions/array_slice-function): Extracts a portion of an array. Useful if you need a subset of the array to search.
+- [**`array_concat`**](/apl/array-functions/array_concat-function): Combines multiple arrays. Use it if you need to concatenate arrays before searching within them.
+- [**`array_index_of`**](/apl/array-functions/array_index_of-function): Returns the position of a value in an array or `-1` if the value is absent.
