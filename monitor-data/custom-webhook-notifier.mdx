@@ -15,7 +15,7 @@ To create a custom webhook notifier, follow these steps:
 1. Name your notifier.
 1. Click **Custom webhook**.
 1. In **Webhook URL**, enter the URL where you want to send the POST request.
-1. Optional: To customize the content of your webhook, use the Go template syntax to interact with these variables:
+1. Optional: To customize the content of your webhook, use the [Go template syntax](https://pkg.go.dev/text/template) to interact with these variables:
     - `.Action` has value `Open` when the notification corresponds to a match monitor matching or a threshold monitor triggering, and has value `Closed` when the notification corresponds to a threshold monitor resolving.
     - `.MonitorID` is the unique identifier for the monitor associated with the notification.
     - `.Body` is the message body associated with the notification. When the notification corresponds to a match monitor, this is the matching event data. When the notification corresponds to a threshold monitor, this provides information about the value that gave rise to the monitor triggering or resolving.
@@ -29,7 +29,7 @@ To create a custom webhook notifier, follow these steps:
 1. Optional: Add headers to the POST request sent to the webhook URL.
 1. Click **Create**.
 
-## Example
+## Examples
 
 The example below is a custom webhook notification generated from a threshold monitor triggering. The body of a POST request sent to the webhook URL using the default template is the following:
 
@@ -46,6 +46,25 @@ The example below is a custom webhook notification generated from a threshold mo
     "title": "Axiom Monitor Test Triggered",
     "value": 57347,
     "matchedEvent": null
+  }
+}
+```
+
+The example template below formats the webhook message to match the [expectations of incident.io](https://api-docs.incident.io/tag/Alert-Events-V2/) using the monitor ID as the `deduplication_key`.
+
+```json
+{
+  "action": "Open",
+  "event": {
+    "title": "{{.Title}}",
+    "description": "{{.Body}}",
+    "deduplication_key": "{{.MonitorID}}",
+    "status": "{{ if eq .Action "Open" }}firing{{ else }}resolved{{ end }}",
+    "metadata": {
+      "description": "{{.Description}}",
+      "value": {{.Value}},
+      "url": "https://app.axiom.co/{your-org-id-here}/monitors/{{.MonitorID}}"
+    }
   }
 }
 ```
