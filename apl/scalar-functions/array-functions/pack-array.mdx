@@ -1,0 +1,138 @@
+---
+title: pack_array
+description: 'This page explains how to use the pack_array function in APL.'
+---
+
+The `pack_array` function in APL creates an array from individual values or expressions. You can use this function to group related data into a single field, which can simplify handling and querying of data collections. It is especially useful when working with nested data structures or aggregating data into arrays for further processing.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use functions like `mvappend` to create multi-value fields. In APL, the `pack_array` function serves a similar purpose by combining values into an array.
+
+<CodeGroup>
+```sql Splunk example
+| eval array_field = mvappend(value1, value2, value3)
+```
+
+```kusto APL equivalent
+| extend array_field = pack_array(value1, value2, value3)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, arrays are often constructed using functions like `ARRAY`. The `pack_array` function in APL performs a similar operation, creating an array from specified values.
+
+<CodeGroup>
+```sql SQL example
+SELECT ARRAY[value1, value2, value3] AS array_field;
+```
+
+```kusto APL equivalent
+| extend array_field = pack_array(value1, value2, value3)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+pack_array(value1, value2, ..., valueN)
+```
+
+### Parameters
+
+| Parameter | Description                 |
+|-----------|-----------------------------|
+| `value1`  | The first value to include in the array. |
+| `value2`  | The second value to include in the array. |
+| `...`     | Additional values to include in the array. |
+| `valueN`  | The last value to include in the array.    |
+
+### Returns
+
+An array containing the specified values in the order they are provided.
+
+## Use case examples
+
+### Log analysis
+
+You can use `pack_array` to group related log attributes into an array for easier analysis.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend log_attributes = pack_array(trace_id, span_id, status_code)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20log_attributes%20%3D%20pack_array%28trace_id%2C%20span_id%2C%20status_code%29%22%7D)
+
+**Output**
+
+| trace_id | span_id  | status_code | log_attributes                     |
+|----------|----------|-------------|------------------------------------|
+| abc123   | span456  | 200         | ["abc123", "span456", "200"]       |
+
+This query creates an array of key log attributes for each log entry.
+
+### OpenTelemetry traces
+
+Use `pack_array` to consolidate span data into an array for a trace summary.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend span_summary = pack_array(service.name, kind, duration)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20span_summary%20%3D%20pack_array%28service.name%2C%20kind%2C%20duration%29%22%7D)
+
+**Output**
+
+| service.name      | kind     | duration | span_summary                        |
+|-------------------|----------|----------|-------------------------------------|
+| frontend          | server   | 123ms    | ["frontend", "server", "123ms"]    |
+
+This query creates a concise representation of span details.
+
+### Security logs
+
+Aggregate security event attributes into an array for analysis.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where kind == 'server'
+| extend security_data = pack_array(service.name, status_code, events)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20kind%20%3D%3D%20%27server%27%20%7C%20extend%20security_data%20%3D%20pack_array%28service.name%2C%20status_code%2C%20events%29%22%7D)
+
+**Output**
+
+| service.name      | status_code | events               | security_data                                |
+|-------------------|-------------|----------------------|---------------------------------------------|
+| checkoutservice   | 403         | ["alert1", "alert2"] | ["checkoutservice", "403", ["alert1", "alert2"]] |
+
+This query aggregates critical security attributes into an array for focused analysis.
+
+## List of related functions
+
+- [**make_list**](/apl/array-functions/make_list-function): Creates an array from multiple rows, unlike `pack_array`, which operates on individual values in the same row.
+- [**mv-apply**](/apl/array-functions/mv-apply-function): Expands arrays into multiple rows for individual processing.
+- [**array_length**](/apl/array-functions/array_length-function): Returns the number of elements in an array, which complements `pack_array` by allowing size checks.
+- [**array_concat**](/apl/array-functions/array_concat-function): Combines multiple arrays into one, as opposed to creating a new array from individual values.
+- [**array_slice**](/apl/array-functions/array_slice-function): Extracts a subset of an array, useful for handling arrays created by `pack_array`.

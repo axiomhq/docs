@@ -1,0 +1,145 @@
+---
+title: array_split
+description: 'This page explains how to use the array_split function in APL.'
+---
+
+The `array_split` function in APL divides an array into multiple subarrays of approximately equal size. This function is useful when you need to process or analyze data in chunks, such as splitting large datasets for parallel processing, segmenting logs for targeted analysis, or dividing numerical data for statistical operations.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+The `array_split` function in APL is similar to splitting an array in Splunk SPL using custom commands or functions. Unlike SPL, where manual iteration might be required, APL simplifies the process with a built-in function.
+
+<CodeGroup>
+```sql Splunk example
+| makeresults | eval array=split("1,2,3,4,5", ",") | ...
+```
+
+```kusto APL equivalent
+let array = dynamic([1, 2, 3, 4, 5]);
+array_split(array, 2)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+SQL lacks a direct equivalent to `array_split`. Typically, you would use procedural logic in stored procedures or user-defined functions to achieve similar functionality. APL’s `array_split` provides a concise and declarative alternative.
+
+<CodeGroup>
+```sql SQL example
+-- Example logic in SQL
+WITH split_array AS (
+    SELECT id, ... FROM ... WHERE ...
+)
+-- Further procedural processing
+```
+
+```kusto APL equivalent
+let array = dynamic([1, 2, 3, 4, 5]);
+array_split(array, 2)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+array_split(array: dynamic, num_splits: int)
+```
+
+### Parameters
+
+| Parameter     | Type   | Description                                      |
+|---------------|--------|--------------------------------------------------|
+| `array`       | dynamic | The array to split into smaller subarrays.      |
+| `num_splits`  | int    | The number of subarrays to create.               |
+
+### Returns
+
+A dynamic array containing the resulting subarrays.
+
+## Use case examples
+
+### Log analysis
+
+Split a set of log entries into smaller chunks for parallel processing.
+
+**Query**
+
+```kusto
+let logs = dynamic(["log1", "log2", "log3", "log4", "log5"]);
+array_split(logs, 3)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22let%20logs%20%3D%20dynamic%28%5B%5C%22log1%5C%22%2C%20%5C%22log2%5C%22%2C%20%5C%22log3%5C%22%2C%20%5C%22log4%5C%22%2C%20%5C%22log5%5C%22%5D%29%3B%20array_split%28logs%2C%203%29%22%7D)
+
+**Output**
+
+| Subarray  |
+|-----------|
+| ["log1", "log2"] |
+| ["log3", "log4"] |
+| ["log5"]         |
+
+This query divides the log entries into three groups for easier processing.
+
+### OpenTelemetry traces
+
+Group OpenTelemetry spans for distributed tracing analysis.
+
+**Query**
+
+```kusto
+let traces = dynamic(["span1", "span2", "span3", "span4", "span5", "span6"]);
+array_split(traces, 2)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22let%20traces%20%3D%20dynamic%28%5B%5C%22span1%5C%22%2C%20%5C%22span2%5C%22%2C%20%5C%22span3%5C%22%2C%20%5C%22span4%5C%22%2C%20%5C%22span5%5C%22%2C%20%5C%22span6%5C%22%5D%29%3B%20array_split%28traces%2C%202%29%22%7D)
+
+**Output**
+
+| Subarray          |
+|-------------------|
+| ["span1", "span2", "span3"] |
+| ["span4", "span5", "span6"] |
+
+This query groups the spans into two chunks for analysis.
+
+### Security logs
+
+Divide security logs for targeted anomaly detection.
+
+**Query**
+
+```kusto
+let securityLogs = dynamic(["entry1", "entry2", "entry3", "entry4"]);
+array_split(securityLogs, 2)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22let%20securityLogs%20%3D%20dynamic%28%5B%5C%22entry1%5C%22%2C%20%5C%22entry2%5C%22%2C%20%5C%22entry3%5C%22%2C%20%5C%22entry4%5C%22%5D%29%3B%20array_split%28securityLogs%2C%202%29%22%7D)
+
+**Output**
+
+| Subarray        |
+|-----------------|
+| ["entry1", "entry2"] |
+| ["entry3", "entry4"] |
+
+This query segments the security logs into manageable parts.
+
+## List of related functions
+
+- [**mv-expand**](/apl/array-functions/mv-expand-function): Expands a dynamic array into multiple rows for analysis.
+- [**mv-apply**](/apl/array-functions/mv-apply-function): Applies a query operation to each element in a dynamic array.
+- [**pack_array**](/apl/array-functions/pack_array-function): Packs multiple values into a dynamic array.
+- [**array_length**](/apl/array-functions/array_length-function): Returns the number of elements in a dynamic array.
+- [**array_concat**](/apl/array-functions/array_concat-function): Concatenates multiple dynamic arrays into one.

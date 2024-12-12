@@ -1,0 +1,141 @@
+---
+title: array_sum
+description: 'This page explains how to use the array_sum function in APL.'
+---
+
+The `array_sum` function in APL calculates the sum of numeric elements within an array. This function is particularly useful when you want to analyze aggregated data stored in arrays, such as calculating total values from nested fields in log entries or telemetry data. It simplifies operations on arrays by performing summation directly within queries.
+
+Use `array_sum` when you need to derive a total from array-type fields, such as in log analysis, telemetry data aggregation, or security event processing.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you perform similar operations by iterating through array fields using `mvsum`. In APL, `array_sum` directly computes the sum of an array’s numeric elements.
+
+<CodeGroup>
+```sql Splunk example
+| eval total=mvsum(array_field)
+```
+
+```kusto APL equivalent
+['dataset.name']
+| extend total = array_sum(array_field)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+SQL doesn’t natively support array operations, but you can achieve similar results by unnesting arrays and using aggregation functions like `SUM`. In APL, `array_sum` avoids the need to unnest arrays by calculating the sum directly.
+
+<CodeGroup>
+```sql SQL example
+SELECT trace_id, SUM(value) AS total
+FROM (SELECT trace_id, UNNEST(array_field) AS value FROM dataset_name) subquery
+GROUP BY trace_id;
+```
+
+```kusto APL equivalent
+['dataset.name']
+| extend total = array_sum(array_field)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+```kusto
+array_sum(array_expression)
+```
+
+### Parameters
+
+| Parameter          | Type     | Description                             |
+|--------------------|----------|-----------------------------------------|
+| `array_expression` | Array    | The array whose numeric elements are summed. |
+
+### Returns
+A numeric value representing the sum of all numeric elements in the array. If the array contains non-numeric elements, they are ignored. If the array is empty, the result is `0`.
+
+## Use case examples
+
+### Log analysis
+
+You can use `array_sum` to analyze logs that contain arrays of numeric data, such as HTTP response times.
+
+**Query**
+```kusto
+['otel-demo-traces']
+| extend total_duration = array_sum(duration)
+| project _time, service = ['service.name'], total_duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20total_duration%20%3D%20array_sum%28duration%29%20%7C%20project%20_time%2C%20service%20%3D%20%5B%27service.name%27%5D%2C%20total_duration%22%7D)
+
+**Output**
+
+| _time                | service                | total_duration |
+|----------------------|------------------------|----------------|
+| 2023-12-12T08:00:00 | frontend               | 1234           |
+| 2023-12-12T08:01:00 | productcatalogservice | 5678           |
+
+This query calculates the total duration for each service based on an array of response times.
+
+### OpenTelemetry traces
+
+`array_sum` can aggregate trace durations for spans in OpenTelemetry datasets.
+
+**Query**
+```kusto
+['otel-demo-traces']
+| extend span_durations = array_sum(duration)
+| project trace_id, span_durations
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20span_durations%20%3D%20array_sum%28duration%29%20%7C%20project%20trace_id%2C%20span_durations%22%7D)
+
+**Output**
+
+| trace_id          | span_durations |
+|-------------------|----------------|
+| abc123            | 345            |
+| def456            | 789            |
+
+This query calculates the total duration of all spans within a trace.
+
+### Security logs
+
+Aggregate event counts from array-type fields in security logs.
+
+**Query**
+```kusto
+['security-logs']
+| extend total_events = array_sum(events)
+| project _time, total_events
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27security-logs%27%5D%20%7C%20extend%20total_events%20%3D%20array_sum%28events%29%20%7C%20project%20_time%2C%20total_events%22%7D)
+
+**Output**
+
+| _time                | total_events |
+|----------------------|--------------|
+| 2023-12-12T08:00:00 | 45           |
+| 2023-12-12T08:01:00 | 78           |
+
+This query calculates the total number of events in each log entry.
+
+## List of related functions
+
+- [**array_avg**](/apl/array-functions/array_avg-function): Computes the average of numeric elements in an array.
+- [**array_max**](/apl/array-functions/array_max-function): Returns the maximum numeric value in an array.
+- [**array_min**](/apl/array-functions/array_min-function): Returns the minimum numeric value in an array.
+- [**array_length**](/apl/array-functions/array_length-function): Returns the number of elements in an array.
+- [**array_sort**](/apl/array-functions/array_sort-function): Sorts the elements of an array in ascending or descending order.

@@ -1,0 +1,141 @@
+---
+title: array_slice
+description: 'This page explains how to use the array_slice function in APL.'
+---
+
+The `array_slice` function in APL extracts a subset of elements from an array, based on specified start and end indices. This function is useful when you want to analyze or transform a portion of data within arrays, such as trimming logs, filtering specific events, or working with trace data in OpenTelemetry logs.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you can use `mvindex` to extract elements from an array. APL's `array_slice` is similar but more expressive, allowing you to specify slices with optional bounds.
+
+<CodeGroup>
+```sql Splunk example
+| eval sliced_array=mvindex(my_array, 1, 3)
+```
+
+```kusto APL equivalent
+T | extend sliced_array = array_slice(my_array, 1, 3)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, arrays are often handled using JSON functions or window functions, requiring workarounds to slice arrays. In APL, `array_slice` directly handles arrays, making operations more concise.
+
+<CodeGroup>
+```sql SQL example
+SELECT JSON_EXTRACT(my_array, '$[1:3]') AS sliced_array FROM my_table
+```
+
+```kusto APL equivalent
+T | extend sliced_array = array_slice(my_array, 1, 3)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+array_slice(array, start, end)
+```
+
+### Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `array`   | The input array to slice. |
+| `start`   | The starting index of the slice (inclusive). If negative, it is counted from the end of the array. |
+| `end`     | The ending index of the slice (exclusive). If negative, it is counted from the end of the array. |
+
+### Returns
+
+An array containing the elements from the specified slice. If the indices are out of bounds, it adjusts to return valid elements without error.
+
+## Use case examples
+
+### Log analysis
+
+Extract specific events from a log array to analyze targeted data.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend sliced_events = array_slice(events, 0, 2)
+| project _time, sliced_events
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20sliced_events%20%3D%20array_slice%28events%2C%200%2C%202%29%20%7C%20project%20_time%2C%20sliced_events%22%7D)
+
+**Output**
+
+| _time              | sliced_events       |
+|--------------------|---------------------|
+| 2023-12-12T10:00Z | [event1, event2]    |
+
+Extracts the first two events from the `events` array.
+
+### OpenTelemetry traces
+
+Filter spans from trace data to analyze a specific range of events.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where service.name == 'frontend'
+| extend sliced_events = array_slice(events, -3, -1)
+| project trace_id, sliced_events
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20service.name%20%3D%3D%20%27frontend%27%20%7C%20extend%20sliced_events%20%3D%20array_slice%28events%2C%20-3%2C%20-1%29%20%7C%20project%20trace_id%2C%20sliced_events%22%7D)
+
+**Output**
+
+| trace_id          | sliced_events       |
+|-------------------|---------------------|
+| abc123            | [event3, event4]    |
+
+Slices the last three events from the `events` array, excluding the final one.
+
+### Security logs
+
+Extract specific data points from a large array of security events for detailed inspection.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where kind == 'server' and status_code == '500'
+| extend error_events = array_slice(events, 0, 3)
+| project _time, service_name=service.name, error_events
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20kind%20%3D%3D%20%27server%27%20and%20status_code%20%3D%3D%20%27500%27%20%7C%20extend%20error_events%20%3D%20array_slice%28events%2C%200%2C%203%29%20%7C%20project%20_time%2C%20service_name%3Dservice.name%2C%20error_events%22%7D)
+
+**Output**
+
+| _time              | service_name       | error_events       |
+|--------------------|--------------------|--------------------|
+| 2023-12-12T10:10Z | checkoutservice    | [event1, event2]   |
+
+Slices the first three events for error analysis in server logs.
+
+## List of related functions
+
+- [**array_length**](/apl/array-functions/array_length-function): Returns the number of elements in an array. Use it to validate or explore array sizes.
+- [**array_index_of**](/apl/array-functions/array_index_of-function): Finds the index of a specific element in an array. Use it to locate elements before slicing.
+- [**array_concat**](/apl/array-functions/array_concat-function): Combines two arrays into one. Use it for merging arrays after slicing.
+- [**array_reverse**](/apl/array-functions/array_reverse-function): Reverses the order of elements in an array. Use it for reverse-order processing.
+- [**mv-expand**](/apl/array-functions/mv-expand-function): Expands an array into multiple rows. Use it to process individual array elements separately.

@@ -1,0 +1,146 @@
+---
+title: isarray
+description: 'This page explains how to use the isarray function in APL.'
+---
+
+The `isarray` function in APL determines whether a given input is an array. You can use this function to validate or filter data types in your datasets, particularly when dealing with dynamic fields or JSON-like structures. This function is especially useful for scenarios where you want to process arrays differently from other data types, such as in log analysis or data validation workflows.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, there is no direct equivalent to `isarray`. You typically check the type of a field through conditional expressions or specific commands. In APL, `isarray` is a dedicated function for determining whether a field contains an array.
+
+<CodeGroup>
+```sql Splunk example
+# No direct equivalent
+if(is_array(field), ..., ...)
+```
+
+```kusto APL equivalent
+['dataset.name']
+| where isarray(events)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, type-checking for arrays usually involves schema validation or custom functions. APL provides `isarray` as a native function for straightforward type validation.
+
+<CodeGroup>
+```sql SQL example
+-- Pseudocode example
+SELECT * FROM dataset WHERE IS_ARRAY(events);
+```
+
+```kusto APL equivalent
+['dataset.name']
+| where isarray(events)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+isarray(value)
+```
+
+### Parameters
+
+| Parameter | Type   | Description                                       |
+|-----------|--------|---------------------------------------------------|
+| `value`   | dynamic | The input to evaluate. Can be any APL-compatible value. |
+
+### Returns
+
+| Type    | Description                                                |
+|---------|------------------------------------------------------------|
+| boolean | Returns `true` if the input is an array; otherwise `false`. |
+
+## Use case examples
+
+### Log analysis
+
+You can use `isarray` to filter log entries where a specific field contains an array.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where isarray(events)
+| project _time, service.name, events
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20isarray(events)%20%7C%20project%20_time%2C%20service.name%2C%20events%22%7D)
+
+**Output**
+
+| _time                | service.name         | events                     |
+|----------------------|----------------------|----------------------------|
+| 2024-12-12T08:00:00 | frontend             | [{"event": "start"}]     |
+| 2024-12-12T08:01:00 | checkoutservice      | [{"event": "checkout"}] |
+
+This query identifies records with an array in the `events` field and projects specific fields for analysis.
+
+### OpenTelemetry traces
+
+Analyze traces where the `events` field is an array.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where isarray(events)
+| summarize count() by service.name
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20isarray(events)%20%7C%20summarize%20count()%20by%20service.name%22%7D)
+
+**Output**
+
+| service.name         | count |
+|----------------------|-------|
+| frontend             | 50    |
+| checkoutservice      | 30    |
+
+This query counts the number of traces where `events` is an array, grouped by service name.
+
+### Security logs
+
+Filter security logs to focus on entries where `events` is an array, then inspect the status codes.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where isarray(events)
+| summarize status_count=count() by status_code
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20isarray(events)%20%7C%20summarize%20status_count%3Dcount()%20by%20status_code%22%7D)
+
+**Output**
+
+| status_code | status_count |
+|-------------|--------------|
+| 200         | 80           |
+| 404         | 20           |
+
+This query groups logs by HTTP status codes for entries where `events` contains an array, providing insights into status distribution.
+
+## List of related functions
+
+- [**isnotempty**](/apl/array-functions/isnotempty-function): Determines whether a value is not empty, useful for non-array checks.
+- [**isempty**](/apl/array-functions/isempty-function): Checks whether a value is empty, complementary to `isarray`.
+- [**tostring**](/apl/array-functions/tostring-function): Converts a value to a string; use it when you need to analyze non-array fields.
+- [**typeof**](/apl/array-functions/typeof-function): Returns the type of a value, useful for identifying arrays among other types.
+- [**has**](/apl/array-functions/has-function): Checks whether an array contains a specified value, helpful for array content analysis.

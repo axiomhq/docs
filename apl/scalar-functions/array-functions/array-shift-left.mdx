@@ -1,0 +1,143 @@
+---
+title: array_shift_left
+description: 'This page explains how to use the array_shift_left function in APL.'
+---
+
+The `array_shift_left` function in APL rotates the elements of an array to the left by a specified number of positions. If the shift exceeds the array length, it wraps around and continues from the beginning. This function is useful when you need to realign or reorder elements for pattern analysis, comparisons, or other array transformations.
+
+For example, you can use `array_shift_left` to:
+- Align time-series data for comparative analysis.
+- Rotate log entries for cyclic pattern detection.
+- Reorganize multi-dimensional datasets in your queries.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, there is no direct equivalent to `array_shift_left`, but you can achieve similar results using custom code or by manipulating arrays manually. In APL, `array_shift_left` simplifies this operation by providing a built-in, efficient implementation.
+
+<CodeGroup>
+```sql Splunk example
+| eval rotated_array = mvindex(array, 1) . mvindex(array, 0)
+```
+
+```kusto APL equivalent
+['array_shift_left'](array, 1)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not have a native function equivalent to `array_shift_left`. Typically, you would use procedural SQL to write custom logic for this transformation. In APL, the `array_shift_left` function provides an elegant, concise solution.
+
+<CodeGroup>
+```sql SQL example
+-- Pseudo code in SQL
+SELECT ARRAY_SHIFT_LEFT(array_column, shift_amount)
+```
+
+```kusto APL equivalent
+['array_shift_left'](array_column, shift_amount)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+['array_shift_left'](array, shift_amount)
+```
+
+### Parameters
+
+| Parameter     | Type   | Description                                                         |
+|---------------|--------|---------------------------------------------------------------------|
+| `array`       | Array  | The array to shift.                                                |
+| `shift_amount`| Integer| The number of positions to shift elements to the left.             |
+
+### Returns
+
+An array with elements shifted to the left by the specified `shift_amount`. The function wraps the excess elements to the start of the array.
+
+## Use case examples
+
+### Log analysis
+
+Rotate log event arrays to detect recurring patterns or analyze shifted sequences.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend rotated_events = ['array_shift_left'](events, 2)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%0A%7C%20extend%20rotated_events%20%3D%20%5B%27array_shift_left%27%5D(events%2C%202)%22%7D)
+
+**Output**
+
+| events              | rotated_events      |
+|---------------------|---------------------|
+| [A, B, C, D]        | [C, D, A, B]        |
+
+This query rotates the `events` array two positions to the left, enabling pattern detection in shifted sequences.
+
+### OpenTelemetry traces
+
+Reorganize span events to analyze dependencies in a different sequence.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ['service.name'] == 'frontend'
+| extend shifted_events = ['array_shift_left'](events, 1)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%0A%7C%20where%20%5B%27service.name%27%5D%20%3D%3D%20%27frontend%27%0A%7C%20extend%20shifted_events%20%3D%20%5B%27array_shift_left%27%5D(events%2C%201)%22%7D)
+
+**Output**
+
+| events              | shifted_events      |
+|---------------------|---------------------|
+| [event1, event2]    | [event2, event1]    |
+
+This query shifts span events for `frontend` services to analyze the adjusted sequence.
+
+### Security logs
+
+Reorder security log entries for temporal analysis of cyclic anomalies.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where kind == 'server'
+| extend reordered_logs = ['array_shift_left'](events, 3)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%0A%7C%20where%20kind%20%3D%3D%20%27server%27%0A%7C%20extend%20reordered_logs%20%3D%20%5B%27array_shift_left%27%5D(events%2C%203)%22%7D)
+
+**Output**
+
+| events              | reordered_logs      |
+|---------------------|---------------------|
+| [log1, log2, log3]  | [log4, log1, log2]  |
+
+This query helps in temporal analysis by rotating the order of security logs.
+
+## List of related functions
+
+- [**array_shift_right**](/apl/array-functions/array_shift_right-function): Shifts array elements to the right instead of left.
+- [**array_slice**](/apl/array-functions/array_slice-function): Extracts a subarray based on start and end indices.
+- [**array_concat**](/apl/array-functions/array_concat-function): Concatenates two or more arrays.
+- [**array_length**](/apl/array-functions/array_length-function): Returns the number of elements in an array.
+- [**array_index_of**](/apl/array-functions/array_index_of-function): Finds the index of an element in an array.
