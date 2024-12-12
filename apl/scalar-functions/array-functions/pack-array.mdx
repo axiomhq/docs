@@ -63,30 +63,7 @@ pack_array(value1, value2, ..., valueN)
 
 An array containing the specified values in the order they are provided.
 
-## Use case examples
-
-### Log analysis
-
-You can use `pack_array` to group related log attributes into an array for easier analysis.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend log_attributes = pack_array(trace_id, span_id, status_code)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20log_attributes%20%3D%20pack_array%28trace_id%2C%20span_id%2C%20status_code%29%22%7D)
-
-**Output**
-
-| trace_id | span_id  | status_code | log_attributes                     |
-|----------|----------|-------------|------------------------------------|
-| abc123   | span456  | 200         | ["abc123", "span456", "200"]       |
-
-This query creates an array of key log attributes for each log entry.
-
-### OpenTelemetry traces
+## Use case example
 
 Use `pack_array` to consolidate span data into an array for a trace summary.
 
@@ -94,10 +71,10 @@ Use `pack_array` to consolidate span data into an array for a trace summary.
 
 ```kusto
 ['otel-demo-traces']
-| extend span_summary = pack_array(service.name, kind, duration)
+| extend span_summary = pack_array(['service.name'], kind, duration)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20span_summary%20%3D%20pack_array%28service.name%2C%20kind%2C%20duration%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20span_summary%20%3D%20pack_array(%5B'service.name'%5D%2C%20kind%2C%20duration)%22%7D)
 
 **Output**
 
@@ -106,28 +83,6 @@ Use `pack_array` to consolidate span data into an array for a trace summary.
 | frontend          | server   | 123ms    | ["frontend", "server", "123ms"]    |
 
 This query creates a concise representation of span details.
-
-### Security logs
-
-Aggregate security event attributes into an array for analysis.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where kind == 'server'
-| extend security_data = pack_array(service.name, status_code, events)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20kind%20%3D%3D%20%27server%27%20%7C%20extend%20security_data%20%3D%20pack_array%28service.name%2C%20status_code%2C%20events%29%22%7D)
-
-**Output**
-
-| service.name      | status_code | events               | security_data                                |
-|-------------------|-------------|----------------------|---------------------------------------------|
-| checkoutservice   | 403         | ["alert1", "alert2"] | ["checkoutservice", "403", ["alert1", "alert2"]] |
-
-This query aggregates critical security attributes into an array for focused analysis.
 
 ## List of related functions
 

@@ -62,31 +62,7 @@ array_slice(array, start, end)
 
 An array containing the elements from the specified slice. If the indices are out of bounds, it adjusts to return valid elements without error.
 
-## Use case examples
-
-### Log analysis
-
-Extract specific events from a log array to analyze targeted data.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend sliced_events = array_slice(events, 0, 2)
-| project _time, sliced_events
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20sliced_events%20%3D%20array_slice%28events%2C%200%2C%202%29%20%7C%20project%20_time%2C%20sliced_events%22%7D)
-
-**Output**
-
-| _time              | sliced_events       |
-|--------------------|---------------------|
-| 2023-12-12T10:00Z | [event1, event2]    |
-
-Extracts the first two events from the `events` array.
-
-### OpenTelemetry traces
+## Use case example
 
 Filter spans from trace data to analyze a specific range of events.
 
@@ -94,43 +70,83 @@ Filter spans from trace data to analyze a specific range of events.
 
 ```kusto
 ['otel-demo-traces']
-| where service.name == 'frontend'
+| where array_length(events) > 4
 | extend sliced_events = array_slice(events, -3, -1)
-| project trace_id, sliced_events
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20service.name%20%3D%3D%20%27frontend%27%20%7C%20extend%20sliced_events%20%3D%20array_slice%28events%2C%20-3%2C%20-1%29%20%7C%20project%20trace_id%2C%20sliced_events%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20array_length(events)%20%3E%204%20%7C%20extend%20sliced_events%20%3D%20array_slice(events%2C%20-3%2C%20-1)%22%7D)
 
 **Output**
 
-| trace_id          | sliced_events       |
-|-------------------|---------------------|
-| abc123            | [event3, event4]    |
+```json events
+[
+  {
+    "timestamp": 1734001336443987200,
+    "attributes": null,
+    "name": "prepared"
+  },
+  {
+    "attributes": {
+      "feature_flag.provider_name": "flagd",
+      "feature_flag.variant": "off",
+      "feature_flag.key": "paymentServiceUnreachable"
+    },
+    "name": "feature_flag",
+    "timestamp": 1734001336444001800
+  },
+  {
+    "name": "charged",
+    "timestamp": 1734001336445970200,
+    "attributes": {
+      "custom": {
+        "app.payment.transaction.id": "49567406-21f4-41aa-bab2-69911c055753"
+      }
+    }
+  },
+  {
+    "name": "shipped",
+    "timestamp": 1734001336446488600,
+    "attributes": {
+      "custom": {
+        "app.shipping.tracking.id": "9a3b7a5c-aa41-4033-917f-50cb7360a2a4"
+      }
+    }
+  },
+  {
+    "attributes": {
+      "feature_flag.variant": "off",
+      "feature_flag.key": "kafkaQueueProblems",
+      "feature_flag.provider_name": "flagd"
+    },
+    "name": "feature_flag",
+    "timestamp": 1734001336461096700
+  }
+]
+```
 
+```json sliced_events
+[
+  {
+    "name": "charged",
+    "timestamp": 1734001336445970200,
+    "attributes": {
+      "custom": {
+        "app.payment.transaction.id": "49567406-21f4-41aa-bab2-69911c055753"
+      }
+    }
+  },
+  {
+    "name": "shipped",
+    "timestamp": 1734001336446488600,
+    "attributes": {
+      "custom": {
+        "app.shipping.tracking.id": "9a3b7a5c-aa41-4033-917f-50cb7360a2a4"
+      }
+    }
+  }
+]
+```
 Slices the last three events from the `events` array, excluding the final one.
-
-### Security logs
-
-Extract specific data points from a large array of security events for detailed inspection.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where kind == 'server' and status_code == '500'
-| extend error_events = array_slice(events, 0, 3)
-| project _time, service_name=service.name, error_events
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20kind%20%3D%3D%20%27server%27%20and%20status_code%20%3D%3D%20%27500%27%20%7C%20extend%20error_events%20%3D%20array_slice%28events%2C%200%2C%203%29%20%7C%20project%20_time%2C%20service_name%3Dservice.name%2C%20error_events%22%7D)
-
-**Output**
-
-| _time              | service_name       | error_events       |
-|--------------------|--------------------|--------------------|
-| 2023-12-12T10:10Z | checkoutservice    | [event1, event2]   |
-
-Slices the first three events for error analysis in server logs.
 
 ## List of related functions
 

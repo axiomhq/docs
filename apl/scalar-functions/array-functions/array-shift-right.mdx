@@ -74,31 +74,7 @@ array_shift_right(array: array) : array
 
 An array with its elements shifted one position to the right. The last element of the input array wraps around to the first position.
 
-## Use case examples
-
-### Log analysis
-
-Shift elements in an array of event codes to align and analyze patterns.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend shifted_events = array_shift_right(events)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20shifted_events%20%3D%20array_shift_right%28events%29%22%7D)
-
-**Output**
-
-| events          | shifted_events |
-|-----------------|----------------|
-| [A, B, C]       | [C, A, B]      |
-| [X, Y, Z]       | [Z, X, Y]      |
-
-The query rotates the event codes to analyze sequences starting with the previous event.
-
-### OpenTelemetry traces
+## Use case example
 
 Reorganize span events in telemetry data for visualization or debugging.
 
@@ -106,43 +82,51 @@ Reorganize span events in telemetry data for visualization or debugging.
 
 ```kusto
 ['otel-demo-traces']
-| extend shifted_events = array_shift_right(events)
-| project trace_id, shifted_events
+| take 50
+| extend shifted_events = array_shift_right(events, 1)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20shifted_events%20%3D%20array_shift_right%28events%29%20%7C%20project%20trace_id%2C%20shifted_events%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20take%2050%20%7C%20extend%20shifted_events%20%3D%20array_shift_right(events%2C%201)%22%7D)
 
 **Output**
 
-| trace_id      | shifted_events |
-|---------------|----------------|
-| trace1        | [C, A, B]      |
-| trace2        | [Z, X, Y]      |
+```json events
+[
+  {
+    "name": "Enqueued",
+    "timestamp": 1734001215487927300,
+    "attributes": null
+  },
+  {
+    "attributes": null,
+    "name": "Sent",
+    "timestamp": 1734001215487937000
+  },
+  {
+    "timestamp": 1734001215488191000,
+    "attributes": null,
+    "name": "ResponseReceived"
+  }
+]
+```
+
+```json shifted_events
+[
+  null,
+  {
+    "timestamp": 1734001215487927300,
+    "attributes": null,
+    "name": "Enqueued"
+  },
+  {
+    "attributes": null,
+    "name": "Sent",
+    "timestamp": 1734001215487937000
+  }
+]
+```
 
 The query rotates span events for better trace debugging.
-
-### Security logs
-
-Analyze IP sequences in security logs by rotating array data for context-aware correlation.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend rotated_ips = array_shift_right(events)
-| project _time, rotated_ips
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20rotated_ips%20%3D%20array_shift_right%28events%29%20%7C%20project%20_time%2C%20rotated_ips%22%7D)
-
-**Output**
-
-| _time                | rotated_ips  |
-|----------------------|--------------|
-| 2024-12-12T08:00:00 | [5, 1, 2, 3] |
-| 2024-12-12T09:00:00 | [4, 5, 6, 1] |
-
-This example demonstrates shifting IP addresses for sequence analysis in logs.
 
 ## List of related functions
 

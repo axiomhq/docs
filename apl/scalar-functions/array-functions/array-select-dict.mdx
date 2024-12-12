@@ -3,9 +3,7 @@ title: array_select_dict
 description: 'This page explains how to use the array_select_dict function in APL.'
 ---
 
-The `array_select_dict` function in Axiom Processing Language (APL) lets you extract specific key-value pairs from dictionaries within an array. You can use this function to simplify and focus your data analysis by filtering only the relevant parts of a dataset.
-
-This function is useful when working with arrays of dictionaries in fields such as log analysis, OpenTelemetry traces, and security monitoring. By isolating the key-value pairs you care about, you can analyze data more efficiently.
+The `array_select_dict` function in APL allows you to retrieve a dictionary from an array of dictionaries based on a specified key-value pair. This function is useful when you need to filter arrays and extract specific dictionaries for further processing. If no match exists, it returns `null`. Non-dictionary values in the input array are ignored.
 
 ## For users of other query languages
 
@@ -14,34 +12,32 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, similar functionality is achieved using `mvexpand` and `spath` commands. However, in APL, `array_select_dict` provides a more direct way to select specific key-value pairs.
+The `array_select_dict` function in APL is similar to filtering objects in an array based on conditions in Splunk SPL. However, unlike Splunk, where filtering often applies directly to JSON structures, `array_select_dict` specifically targets arrays of dictionaries.
 
 <CodeGroup>
 ```sql Splunk example
-| eval data=mvexpand(array_field)
-| spath input=data key_to_extract
+| eval selected = mvfilter(array, 'key' == 5)
 ```
 
 ```kusto APL equivalent
-['dataset.name']
-| extend filtered_array=array_select_dict(array_field, dynamic(["key_to_extract"]))
+| project selected = array_select_dict(array, "key", 5)
 ```
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, you might need to use JSON functions to extract specific key-value pairs. APL simplifies this with `array_select_dict` for array processing.
+In ANSI SQL, filtering typically involves table rows rather than nested arrays. The APL `array_select_dict` function applies a similar concept to array elements, allowing you to extract dictionaries from arrays using a condition.
 
 <CodeGroup>
 ```sql SQL example
-SELECT JSON_EXTRACT(array_field, '$.key_to_extract') AS filtered_array
-FROM dataset
+SELECT *
+FROM my_table
+WHERE JSON_CONTAINS(array_column, '{"key": 5}')
 ```
 
 ```kusto APL equivalent
-['dataset.name']
-| extend filtered_array=array_select_dict(array_field, dynamic(["key_to_extract"]))
+| project selected = array_select_dict(array_column, "key", 5)
 ```
 </CodeGroup>
 
@@ -53,45 +49,47 @@ FROM dataset
 ### Syntax
 
 ```kusto
-array_select_dict(array, keys)
+array_select_dict(array, key, value)
 ```
 
 ### Parameters
 
-| Parameter  | Type            | Description                                       |
-|------------|-----------------|---------------------------------------------------|
-| `array`    | array of dicts  | The array of dictionaries to process.            |
-| `keys`     | dynamic array   | The list of keys to extract from each dictionary. |
+| Name   | Type     | Description                                   |
+|--------|----------|-----------------------------------------------|
+| array  | dynamic  | Input array of dictionaries.                 |
+| key    | string   | Key to match in each dictionary.             |
+| value  | scalar   | Value to match for the specified key.         |
 
 ### Returns
 
-An array of dictionaries containing only the specified key-value pairs from the input array.
+The function returns the first dictionary in the array that matches the specified key-value pair. If no match exists, it returns `null`. Non-dictionary elements in the array are ignored.
 
 ## Use case example
 
-Filter key details from span events in OpenTelemetry data.
+This example demonstrates how to use `array_select_dict` to extract a dictionary where the key `service.name` has the value `frontend`.
 
 **Query**
 
 ```kusto
-['otel-demo-traces']
-| extend span_details=array_select_dict(events, dynamic(["name", "attributes"]))
-| project _time, span_id, span_details
+['sample-http-logs']
+| extend array = dynamic([{"service.name": "frontend", "status_code": "200"}, {"service.name": "backend", "status_code": "500"}])
+| project selected = array_select_dict(array, "service.name", "frontend")
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20span_details%3Darray_select_dict%28events%2C%20dynamic%28%5B%27name%27%2C%20%27attributes%27%5D%29%29%20%7C%20project%20_time%2C%20span_id%2C%20span_details%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20array%20%3D%20dynamic(%5B%7B'service.name'%3A%20'frontend'%2C%20'status_code'%3A%20'200'%7D%2C%20%7B'service.name'%3A%20'backend'%2C%20'status_code'%3A%20'500'%7D%5D)%20%7C%20project%20selected%20%3D%20array_select_dict(array%2C%20'service.name'%2C%20'frontend')%22%7D)
 
 **Output**
 
-```
-[{"name": "http.request", "attributes": {"path": "/api"}}]
-```
+| selected                           |
+|------------------------------------|
+| {"service.name": "frontend", "status_code": "200"} |
 
-The query filters specific details from span events for easier analysis.
+This query selects the first dictionary in the array where `service.name` equals `frontend` and returns it.
 
 ## List of related functions
 
-- [**array_filter**](/apl/array-functions/array_filter-function): Use this to filter elements in an array based on a condition.
-- [**array_map**](/apl/array-functions/array_map-function): Use this to transform elements in an array.
-- [**array_concat**](/apl/array-functions/array_concat-function): Use this to concatenate arrays.
-- [**todynamic**](/apl/data-type-functions/todynamic-function): Convert JSON strings to dynamic objects for use in array operations.
+- [**array_length**](/apl/array-functions/array_length-function): Returns the number of elements in an array.
+- [**array_contains**](/apl/array-functions/array_contains-function): Checks if an array contains a specified value.
+- [**array_concat**](/apl/array-functions/array_concat-function): Concatenates two arrays.
+- [**array_index_of**](/apl/array-functions/array_index_of-function): Finds the index of the first occurrence of a value in an array.
+- [**mvexpand**](/apl/array-functions/mvexpand-function): Expands array elements into multiple rows.

@@ -67,30 +67,7 @@ SELECT ARRAY_SHIFT_LEFT(array_column, shift_amount)
 
 An array with elements shifted to the left by the specified `shift_amount`. The function wraps the excess elements to the start of the array.
 
-## Use case examples
-
-### Log analysis
-
-Rotate log event arrays to detect recurring patterns or analyze shifted sequences.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend rotated_events = ['array_shift_left'](events, 2)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%0A%7C%20extend%20rotated_events%20%3D%20%5B%27array_shift_left%27%5D(events%2C%202)%22%7D)
-
-**Output**
-
-| events              | rotated_events      |
-|---------------------|---------------------|
-| [A, B, C, D]        | [C, D, A, B]        |
-
-This query rotates the `events` array two positions to the left, enabling pattern detection in shifted sequences.
-
-### OpenTelemetry traces
+## Use case example
 
 Reorganize span events to analyze dependencies in a different sequence.
 
@@ -98,41 +75,51 @@ Reorganize span events to analyze dependencies in a different sequence.
 
 ```kusto
 ['otel-demo-traces']
-| where ['service.name'] == 'frontend'
-| extend shifted_events = ['array_shift_left'](events, 1)
+| take 50
+| extend shifted_events = array_shift_left(events, 1)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%0A%7C%20where%20%5B%27service.name%27%5D%20%3D%3D%20%27frontend%27%0A%7C%20extend%20shifted_events%20%3D%20%5B%27array_shift_left%27%5D(events%2C%201)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20take%2050%20%7C%20extend%20shifted_events%20%3D%20array_shift_left(events%2C%201)%22%7D)
 
 **Output**
 
-| events              | shifted_events      |
-|---------------------|---------------------|
-| [event1, event2]    | [event2, event1]    |
+```json events
+[
+  {
+    "name": "Enqueued",
+    "timestamp": 1734001111273917000,
+    "attributes": null
+  },
+  {
+    "attributes": null,
+    "name": "Sent",
+    "timestamp": 1734001111273925400
+  },
+  {
+    "name": "ResponseReceived",
+    "timestamp": 1734001111274167300,
+    "attributes": null
+  }
+]
+```
+
+```json shifted_events
+[
+  {
+    "attributes": null,
+    "name": "Sent",
+    "timestamp": 1734001111273925400
+  },
+  {
+    "name": "ResponseReceived",
+    "timestamp": 1734001111274167300,
+    "attributes": null
+  },
+  null
+]
+```
 
 This query shifts span events for `frontend` services to analyze the adjusted sequence.
-
-### Security logs
-
-Reorder security log entries for temporal analysis of cyclic anomalies.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where kind == 'server'
-| extend reordered_logs = ['array_shift_left'](events, 3)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%0A%7C%20where%20kind%20%3D%3D%20%27server%27%0A%7C%20extend%20reordered_logs%20%3D%20%5B%27array_shift_left%27%5D(events%2C%203)%22%7D)
-
-**Output**
-
-| events              | reordered_logs      |
-|---------------------|---------------------|
-| [log1, log2, log3]  | [log4, log1, log2]  |
-
-This query helps in temporal analysis by rotating the order of security logs.
 
 ## List of related functions
 
