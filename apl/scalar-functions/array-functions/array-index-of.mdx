@@ -72,21 +72,20 @@ You can use `array_index_of` to find the position of a specific HTTP status code
 
 ```kusto
 ['sample-http-logs']
-| extend status_array = make_list(status)
-| extend index_404 = array_index_of(status_array, '404')
-| project _time, id, status_array, index_404
+| take 50
+| summarize status_array = make_list(status)
+| extend index_500 = array_index_of(status_array, '500')
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20status_array%20%3D%20make_list(status)%20%7C%20extend%20index_404%20%3D%20array_index_of(status_array%2C%20'404')%20%7C%20project%20_time%2C%20id%2C%20status_array%2C%20index_404%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20take%2050%20%7C%20summarize%20status_array%20%3D%20make_list(status)%20%7C%20extend%20index_500%20%3D%20array_index_of(status_array%2C%20'500')%22%7D)
 
 **Output**
 
-| _time                | id       | status_array          | index_404 |
-|----------------------|----------|------------------------|-----------|
-| 2024-10-18T12:35:00Z | user123  | ["200", "404", "500"] | 1         |
-| 2024-10-18T12:37:00Z | user456  | ["200", "403", "404"] | 2         |
+| status_array          | index_500 |
+|----------------------|----------|
+| ["200", "404", "500"] | 2         |
 
-This query creates an array of `status` codes for each log and identifies the position of the first occurrence of the `404` status.
+This query creates an array of `status` codes and identifies the position of the first occurrence of the `500` status.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
@@ -97,19 +96,18 @@ In OpenTelemetry traces, you can find the position of a specific `service.name` 
 
 ```kusto
 ['otel-demo-traces']
-| extend service_array = make_list(['service.name'])
+| take 50
+| summarize  service_array = make_list(['service.name'])
 | extend frontend_index = array_index_of(service_array, 'frontend')
-| project _time, trace_id, service_array, frontend_index
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20service_array%20%3D%20make_list(%5B'service.name'%5D)%20%7C%20extend%20frontend_index%20%3D%20array_index_of(service_array%2C%20'frontend')%20%7C%20project%20_time%2C%20trace_id%2C%20service_array%2C%20frontend_index%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20%20service_array%20%3D%20make_list(%5B'service.name'%5D)%20%7C%20extend%20frontend_index%20%3D%20array_index_of(service_array%2C%20'frontend')%22%7D)
 
 **Output**
 
-| _time                | trace_id   | service_array                     | frontend_index |
-|----------------------|------------|-----------------------------------|----------------|
-| 2024-10-18T13:10:00Z | abc123     | ["frontend", "cartservice"]       | 0              |
-| 2024-10-18T13:15:00Z | def456     | ["checkoutservice", "frontend"]   | 1              |
+| service_array                     | frontend_index |
+|-----------------------------------|----------------|
+| ["frontend", "cartservice"]       | 0              |
 
 This query collects the array of services and determines where the `frontend` service first appears.
 
@@ -122,21 +120,20 @@ When working with security logs, `array_index_of` can help identify the index of
 
 ```kusto
 ['sample-http-logs']
-| extend status_array = make_list(status)
+| take 50
+| summarize status_array = make_list(status)
 | extend index_500 = array_index_of(status_array, '500')
-| project _time, id, status_array, index_500
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20status_array%20%3D%20make_list(status)%20%7C%20extend%20index_500%20%3D%20array_index_of(status_array%2C%20'500')%20%7C%20project%20_time%2C%20id%2C%20status_array%2C%20index_500%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20take%2050%20%7C%20summarize%20status_array%20%3D%20make_list(status)%20%7C%20extend%20index_500%20%3D%20array_index_of(status_array%2C%20'500')%22%7D)
 
 **Output**
 
-| _time                | id       | status_array          | index_500 |
-|----------------------|----------|------------------------|-----------|
-| 2024-10-18T12:35:00Z | user123  | ["200", "404", "500"] | 2         |
-| 2024-10-18T12:37:00Z | user456  | ["200", "403", "404"] | -1        |
+| status_array          | index_500 |
+|------------------------|-----------|
+| ["200", "404", "500"] | 2         |
 
-This query helps identify if, and at what index, the `500` status code appears in each log entry.
+This query helps identify at what index the `500` status code appears.
 
 </Tab>
 </Tabs>

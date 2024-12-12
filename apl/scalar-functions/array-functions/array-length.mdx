@@ -63,85 +63,28 @@ array_length(array_expression)
 
 The function returns an integer representing the number of elements in the specified array.
 
-## Use case examples
+## Use case example
 
-<Tabs>
-<Tab title="Log analysis">
-
-When analyzing HTTP request logs, `array_length` can determine the number of tags or error codes associated with each request.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend error_codes = dynamic(['404', '500'])
-| extend num_errors = array_length(error_codes)
-| project _time, id, status, uri, num_errors
-| where num_errors > 1
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20error_codes%20%3D%20dynamic(%5B'404'%2C%20'500'%5D)%20%7C%20extend%20num_errors%20%3D%20array_length(error_codes)%20%7C%20project%20_time%2C%20id%2C%20status%2C%20uri%2C%20num_errors%20%7C%20where%20num_errors%20%3E%201%22%7D)
-
-**Output**
-
-| _time               | id     | status | uri                    | num_errors |
-|---------------------|--------|--------|------------------------|------------|
-| 2024-10-28T12:00:00 | user_1 | 404    | /home                  | 2          |
-
-This query finds HTTP requests that returned multiple error codes. `array_length` measures the `error_codes` array length, allowing analysis based on the number of errors.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-In OpenTelemetry traces, `array_length` can reveal spans with multiple associated attributes, such as specific tags or metadata.
+In OpenTelemetry traces, `array_length` can reveal the number of events associated with a span.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| extend tags = dynamic(['api', 'critical', 'frontend'])
-| extend tag_count = array_length(tags)
-| project _time, trace_id, span_id, ['service.name'], tag_count
-| where tag_count > 2
+| take 50
+| extend event_count = array_length(events)
+| where event_count > 2
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20tags%20%3D%20dynamic(%5B'api'%2C%20'critical'%2C%20'frontend'%5D)%20%7C%20extend%20tag_count%20%3D%20array_length(tags)%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20%5B'service.name'%5D%2C%20tag_count%20%7C%20where%20tag_count%20%3E%202%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20take%2050%20%7C%20extend%20event_count%20%3D%20array_length(events)%20%7C%20where%20event_count%20%3E%202%22%7D)
 
 **Output**
 
-| _time               | trace_id      | span_id       | service.name       | tag_count |
+| _time               | trace_id      | span_id       | service.name       | event_count |
 |---------------------|---------------|---------------|--------------------|-----------|
 | 2024-10-28T12:30:00 | trace_abc123  | span_001      | frontend           | 3         |
 
-This query finds spans associated with at least three tags, helping identify specific traces with multiple classification tags.
-
-</Tab>
-<Tab title="Security logs">
-
-In security logs, `array_length` identifies entries with multiple IP addresses in the same event, useful for detecting suspicious activities involving multiple hosts.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend ip_addresses = dynamic(['192.168.1.1', '10.0.0.1'])
-| extend ip_count = array_length(ip_addresses)
-| project _time, id, status, uri, ip_count
-| where ip_count > 1
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20ip_addresses%20%3D%20dynamic(%5B'192.168.1.1'%2C%20'10.0.0.1'%5D)%20%7C%20extend%20ip_count%20%3D%20array_length(ip_addresses)%20%7C%20project%20_time%2C%20id%2C%20status%2C%20uri%2C%20ip_count%20%7C%20where%20ip_count%20%3E%201%22%7D)
-
-**Output**
-
-| _time               | id     | status | uri                    | ip_count |
-|---------------------|--------|--------|------------------------|----------|
-| 2024-10-28T14:00:00 | user_2 | 200    | /dashboard             | 2        |
-
-This query detects security log entries with more than one IP address, which could indicate unusual activity from multiple sources within a single request.
-
-</Tab>
-</Tabs>
+This query finds spans associated with at least three events.
 
 ## List of related functions
 

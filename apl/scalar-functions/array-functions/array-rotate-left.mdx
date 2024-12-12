@@ -61,34 +61,7 @@ array_rotate_left(array, positions)
 
 A new array where the elements have been rotated to the left by the specified number of positions.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
-
-Rotate specific fields in log data to reorganize sequences of request logs for analytical purposes.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend rotated_sequence = array_rotate_left(dynamic([_time, req_duration_ms, status]), 1)
-| project rotated_sequence
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20rotated_sequence%20%3D%20array_rotate_left%28dynamic%28%5B_time%2C%20req_duration_ms%2C%20status%5D%29%2C%201%29%20%7C%20project%20rotated_sequence%22%7D)
-
-**Output**
-
-| rotated_sequence       |
-|------------------------|
-| [value1, value2, ...]  |
-| [value1, value2, ...]  |
-
-This query rotates the array to analyze fields in shifted order, which may reveal different patterns in HTTP request sequences.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
+## Use case example
 
 Analyze traces by rotating the field order for visualization or pattern matching.
 
@@ -96,47 +69,48 @@ Analyze traces by rotating the field order for visualization or pattern matching
 
 ```kusto
 ['otel-demo-traces']
-| extend rotated_trace = array_rotate_left(dynamic([trace_id, span_id, duration]), 1)
-| project rotated_trace
+| extend rotated_sequence = array_rotate_left(events, 1)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20rotated_trace%20%3D%20array_rotate_left%28dynamic%28%5Btrace_id%2C%20span_id%2C%20duration%5D%29%2C%201%29%20%7C%20project%20rotated_trace%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20rotated_sequence%20%3D%20array_rotate_left(events%2C%201)%22%7D)
 
 **Output**
 
-| rotated_trace          |
-|------------------------|
-| [value1, value2, ...]  |
-| [value1, value2, ...]  |
+```json events
+[
+  {
+    "name": "Enqueued",
+    "timestamp": 1733997117722909000
+  },
+  {
+    "timestamp": 1733997117722911700,
+    "name": "Sent"
+  },
+  {
+    "name": "ResponseReceived",
+    "timestamp": 1733997117723591400
+  }
+]
+```
+
+```json rotated_sequence
+[
+  {
+    "timestamp": 1733997117722911700,
+    "name": "Sent"
+  },
+  {
+    "name": "ResponseReceived",
+    "timestamp": 1733997117723591400
+  },
+  {
+    "timestamp": 1733997117722909000,
+    "name": "Enqueued"
+  }
+]
+```
 
 This example rotates trace-related fields, which can help to identify variations in trace data when visualized differently.
-
-</Tab>
-<Tab title="Security logs">
-
-Reorder sequences in security logs for comparing log entries with shifted fields.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend rotated_security_info = array_rotate_left(dynamic([id, method, status]), 2)
-| project rotated_security_info
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20rotated_security_info%20%3D%20array_rotate_left%28dynamic%28%5Bid%2C%20method%2C%20status%5D%29%2C%202%29%20%7C%20project%20rotated_security_info%22%7D)
-
-**Output**
-
-| rotated_security_info   |
-|-------------------------|
-| [value1, value2, ...]   |
-| [value1, value2, ...]   |
-
-This query rotates key security-related fields, making it easier to compare reordered fields for certain types of security analysis.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

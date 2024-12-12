@@ -61,33 +61,7 @@ array_rotate_right(array, count)
 
 An array where the elements are rotated to the right by the specified `count`.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
-
-When analyzing log data, you might want to rotate an array of request durations to focus on the most recent request events in a reordered view.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend rotated_durations = array_rotate_right([req_duration_ms, id, status], 2)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20rotated_durations%20%3D%20array_rotate_right%28%5Breq_duration_ms%2C%20id%2C%20status%5D%2C%202%29%22%7D)
-
-**Output**
-
-| rotated_durations               |
-|---------------------------------|
-| `[status, id, req_duration_ms]` |
-| `[status, id, req_duration_ms]` |
-
-This query rotates the array containing `req_duration_ms`, `id`, and `status` fields to the right by two positions, allowing for re-prioritization of log attributes.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
+## Use case example
 
 In OpenTelemetry traces, rotating an array of span details can help you reorder trace information for performance tracking or troubleshooting.
 
@@ -95,45 +69,52 @@ In OpenTelemetry traces, rotating an array of span details can help you reorder 
 
 ```kusto
 ['otel-demo-traces']
-| extend rotated_trace_info = array_rotate_right([trace_id, service.name, duration], 1)
+| extend rotated_sequence = array_rotate_right(events, 1)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20rotated_trace_info%20%3D%20array_rotate_right%28%5Btrace_id%2C%20service.name%2C%20duration%5D%2C%201%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20rotated_sequence%20%3D%20array_rotate_right(events%2C%201)%22%7D)
 
 **Output**
 
-| rotated_trace_info                    |
-|---------------------------------------|
-| `[duration, trace_id, service.name]`  |
-| `[duration, trace_id, service.name]`  |
-
-This query shifts each trace entry’s `trace_id`, `service.name`, and `duration` by one position, which could help to spotlight specific details in an analysis.
-
-</Tab>
-<Tab title="Security logs">
-
-In security logs, rotating an array can highlight recent security events by bringing relevant fields to the beginning of the output.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend rotated_security_info = array_rotate_right([status, method, geo.country], 1)
+```json events
+[
+  {
+    "attributes": null,
+    "name": "Enqueued",
+    "timestamp": 1733997421220380700
+  },
+  {
+    "name": "Sent",
+    "timestamp": 1733997421220390400,
+    "attributes": null
+  },
+  {
+    "attributes": null,
+    "name": "ResponseReceived",
+    "timestamp": 1733997421221118500
+  }
+]
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20rotated_security_info%20%3D%20array_rotate_right%28%5Bstatus%2C%20method%2C%20geo.country%5D%2C%201%29%22%7D)
-
-**Output**
-
-| rotated_security_info             |
-|-----------------------------------|
-| `[geo.country, status, method]`   |
-| `[geo.country, status, method]`   |
-
-This example rotates the array containing `status`, `method`, and `geo.country` by one position, so `geo.country` appears first for easier review of origin data in security logs.
-
-</Tab>
-</Tabs>
+```json rotated_sequence
+[
+  {
+    "attributes": null,
+    "name": "ResponseReceived",
+    "timestamp": 1733997421221118500
+  },
+  {
+    "attributes": null,
+    "name": "Enqueued",
+    "timestamp": 1733997421220380700
+  },
+  {
+    "name": "Sent",
+    "timestamp": 1733997421220390400,
+    "attributes": null
+  }
+]
+```
 
 ## List of related functions
 
