@@ -1,0 +1,160 @@
+---
+title: join
+description: 'This page explains how to use the join operator in APL.'
+---
+
+The `join` operator in Axiom Processing Language (APL) combines rows from two tables based on matching values in specified columns. Use `join` to correlate data from different sources or datasets, such as linking logs to traces or enriching logs with additional metadata.
+
+This operator is useful when you want to:
+
+- Combine information from two datasets with shared keys.
+- Analyze relationships between different types of events.
+- Enrich existing data with supplementary details.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+The `join` operator in APL works similarly to the `join` command in Splunk SPL. However, APL provides additional flexibility by supporting various join types (e.g., `inner`, `outer`, `leftouter`). Splunk uses a single default join type.
+
+<CodeGroup>
+```sql Splunk example
+index=logs | join type=inner [search index=traces]
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| join kind=inner (['otel-demo-traces']) on $left.id == $right.trace_id
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+The `join` operator in APL resembles SQL joins but uses distinct syntax. SQL uses `FROM` and `ON` clauses, whereas APL uses the `join` operator with explicit `kind` and `on` clauses.
+
+<CodeGroup>
+```sql SQL example
+SELECT *
+FROM logs
+JOIN traces
+ON logs.id = traces.trace_id
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| join kind=inner (['otel-demo-traces']) on $left.id == $right.trace_id
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+T1 | join kind=JoinKind (T2) on AttributeEqualityExpression
+```
+
+### Parameters
+
+- `T1`: The first table (left side of the join).
+- `T2`: The second table (right side of the join).
+- `kind`: The type of join to perform. Supported values: `inner`, `outer`, `leftouter`, `rightouter`, `anti`.
+- `on`: The condition for matching rows, typically an equality expression like `$left.id == $right.trace_id`.
+
+### Returns
+
+The `join` operator returns a new table containing rows that match the specified join condition. The columns from the left and right tables are included, prefixed with `$left.` and `$right.` to differentiate overlapping names.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Join HTTP logs with trace data to correlate user activity with performance metrics.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| join kind=inner (['otel-demo-traces']) on $left.id == $right.trace_id
+```
+
+```
+['github-issues-event']
+| join kind=inner ['github-issue-comment-event'] on id
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20join%20kind%3Dinner%20%28%5B%27otel-demo-traces%27%5D%29%20on%20%24left.id%20%3D%3D%20%24right.trace_id%22%7D)
+
+**Output**
+
+| $left._time | $left.id  | $right.trace_id | $right.duration |
+|-------------|-----------|----------------|-----------------|
+| 2024-12-01  | user123   | trace123       | 500ms           |
+
+This query links user activity in HTTP logs to trace data to investigate performance issues.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Correlate service spans with HTTP logs to identify dependencies between services.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| join kind=leftouter (['sample-http-logs']) on $left.trace_id == $right.id
+```
+
+```kusto
+['http-logs']
+| join kind=inner ['otel-demo-traces'] on $left.status == $right.['status.code']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20join%20kind%3Dleftouter%20%28%5B%27sample-http-logs%27%5D%29%20on%20%24left.trace_id%20%3D%3D%20%24right.id%22%7D)
+
+**Output**
+
+| $left.trace_id | $left.service.name | $right.uri    |
+|----------------|--------------------|--------------|
+| trace123       | frontend           | /api/orders  |
+
+This query reveals how service traces map to specific HTTP endpoints.
+
+</Tab>
+<Tab title="Security logs">
+
+Detect suspicious activity by joining logs with geolocation information.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| join kind=inner (['sample-http-logs']) on $left.geo.city == $right.geo.city
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20join%20kind%3Dinner%20%28%5B%27sample-http-logs%27%5D%29%20on%20%24left.geo.city%20%3D%3D%20%24right.geo.city%22%7D)
+
+**Output**
+
+| $left.geo.city | $left._time       | $right.method |
+|----------------|-------------------|---------------|
+| San Francisco  | 2024-12-01 14:00 | GET           |
+
+This query identifies common activities originating from the same city to detect anomalies.
+
+</Tab>
+</Tabs>
+
+## List of related operators
+
+- [union](/apl/tabular-operators/union-operator): Combines rows from multiple tables without requiring a matching condition.
+- [where](/apl/tabular-operators/where-operator): Filters rows based on conditions, often used with `join` for more precise results.
+
