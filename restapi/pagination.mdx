@@ -37,45 +37,29 @@ To use timestamp-based pagination with the Run Query endpoint:
 To use timestamp-based pagination with the legacy Run Query endpoint:
 - Add the `limit` parameter to the body of your API request. The value of this parameter determines the number of events to display per page.
 - Add the `order` parameter to the body of your API request. In the value of this parameter, order the results by time in either ascending or descending chronological order. For example, `[{ "field": "_time", "desc": true }]`. For more information, see [order operator](/apl/tabular-operators/order-operator).
-- Specify `startTime` and `endTime` in the body of your API request.
-
-### Response format
-
-<ResponseField name="status" type="object">
-  Contains metadata about the response including pagination information.
-</ResponseField>
-
-<ResponseField name="status.minBlockTime" type="string">
-  Timestamp of the earliest event in the current page.
-</ResponseField>
-
-<ResponseField name="status.maxBlockTime" type="string">
-  Timestamp of the latest event in the current page.
-</ResponseField>
-
-<ResponseField name="status.rowsMatched" type="integer">
-  Total number of rows matching the query.
-</ResponseField>
-
-<ResponseField name="matches" type="array">
-  Contains the list of returned objects.
-</ResponseField>
+- Specify `startTime` and `startTime` in the body of your API request.
 
 ## Page through the result set
 
-To page through the result set, add the `cursor` parameter to the body of your API request.
+Use the timestamps as boundaries to page through the result set.
 
-<ParamField query="cursor" type="string">
-  Optional. A cursor for use in pagination. Use the cursor string returned in previous responses to fetch the next or previous page of results.
-</ParamField>
+### Queries with descending order
 
-The `minCursor` and `maxCursor` fields in the response are boundaries that help you page through the result set.
+To go to the next page of the result set for queries with descending order (`_time desc`):
+1. Determine the timestamp of last item on the current page. This is the least recent event.
+1. Subtract 1 nanosecond from the timestamp.
+1. In your next request, change the value `endTime` parameter in the body of your API request to the timestamp of the last item minus 1 nanosecond.
 
-For queries with descending order (`_time DESC`), use `minCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `minCursor` in the response.
+Repeat this process until the result set is empty.
 
-For queries with ascending order (`_time ASC`), use `maxCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `maxCursor` in the response.
+### Queries with ascending order
 
-If the query returns fewer results than the specified limit, paging can stop.
+To go to the next page of the result set for queries with ascending order (`_time asc`):
+1. Determine the timestamp of last item on the current page. This is the most recent event.
+1. Add 1 nanosecond to the timestamp.
+1. In your next request, change the value `startTime` parameter in the body of your API request to the timestamp of the last item plus 1 nanosecond.
+
+Repeat this process until the result set is empty.
 
 ### Examples
 
@@ -87,8 +71,8 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
 -H 'Content-Type: application/json' \
 -d '{
     "apl": "dataset | sort by _time desc | limit 100",
-    "startTime": "2024-01-01T00:00:00.000Z",
-    "endTime": "2024-01-31T23:59:59.999Z"
+    "startTime": "2024-11-30T00:00:00.000Z",
+    "endTime": "2024-11-30T23:59:59.999Z"
   }'
 ```
 
@@ -99,43 +83,25 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_id}/query' \
 -H 'Authorization: Bearer API_TOKEN' \
 -H 'Content-Type: application/json' \
 -d '{
-    "startTime": "2024-01-01T00:00:00.000Z",
-    "endTime": "2024-01-31T23:59:59.999Z",
+    "startTime": "2024-11-30T00:00:00.000Z",
+    "endTime": "2024-11-30T23:59:59.999Z",
     "limit": 100,
     "order": [{ "field": "_time", "desc": true }]
   }'
 ```
 
-#### Example response
-
-```json
-{
-  "status": {
-    "rowsMatched": 2500,
-    "minCursor": "0d3wo7v7e1oii-075a8c41710018b9-0000ecc5",
-    "maxCursor": "0d3wo7v7e1oii-075a8c41710018b9-0000faa3"
-  },
-  "matches": [
-    // ... events ...
-  ]
-}
-```
-
 #### Example request to page through the result set
-
-To page through the result set, use the appropriate cursor value in your next request. For more information, see [Page through the result set](#page-through-the-result-set).
 
 Example request to go to next page for Run Query:
 
 ```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl' \
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
 -H 'Authorization: Bearer API_TOKEN' \
 -H 'Content-Type: application/json' \
 -d '{
     "apl": "dataset | sort by _time desc | limit 100",
-    "startTime": "2024-01-01T00:00:00.000Z",
-    "endTime": "2024-01-31T23:59:59.999Z",
-    "cursor": "0d3wo7v7e1oii-075a8c41710018b9-0000ecc5"
+    "startTime": "2024-11-30T00:00:00.000Z",
+    "endTime": "2024-11-30T22:59:59.999Z"
   }'
 ```
 
@@ -146,11 +112,10 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_id}/query' \
 -H 'Authorization: Bearer API_TOKEN' \
 -H 'Content-Type: application/json' \
 -d '{
-    "startTime": "2024-01-01T00:00:00.000Z",
-    "endTime": "2024-01-31T23:59:59.999Z",
+    "startTime": "2024-11-30T00:00:00.000Z",
+    "endTime": "2024-11-30T22:59:59.999Z",
     "limit": 100,
-    "order": [{ "field": "_time", "desc": true }],
-    "cursor": "0d3wo7v7e1oii-075a8c41710018b9-0000ecc5"
+    "order": [{ "field": "_time", "desc": true }]
   }'
 ```
 
@@ -206,9 +171,9 @@ To page through the result set, add the `cursor` parameter to the body of your A
 
 The `minCursor` and `maxCursor` fields in the response are boundaries that help you page through the result set.
 
-For queries with descending order (`_time DESC`), use `minCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `minCursor` in the response.
+For queries with descending order (`_time desc`), use `minCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `minCursor` in the response.
 
-For queries with ascending order (`_time ASC`), use `maxCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `maxCursor` in the response.
+For queries with ascending order (`_time asc`), use `maxCursor` from the response as the `cursor` in your next request to go to the next page. You reach the end when your provided `cursor` matches the `maxCursor` in the response.
 
 If the query returns fewer results than the specified limit, paging can stop.
 
@@ -263,7 +228,7 @@ To page through the result set, use the appropriate cursor value in your next re
 Example request to go to next page for Run Query:
 
 ```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl' \
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
 -H 'Authorization: Bearer API_TOKEN' \
 -H 'Content-Type: application/json' \
 -d '{
