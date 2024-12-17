@@ -3,7 +3,7 @@ title: join
 description: 'This page explains how to use the join operator in APL.'
 ---
 
-The `join` operator in Axiom Processing Language (APL) combines rows from two tables based on matching values in specified columns. Use `join` to correlate data from different sources or datasets, such as linking logs to traces or enriching logs with additional metadata.
+The `join` operator in Axiom Processing Language (APL) combines rows from two datasets based on matching values in specified columns. Use `join` to correlate data from different sources or datasets, such as linking logs to traces or enriching logs with additional metadata.
 
 This operator is useful when you want to:
 
@@ -21,15 +21,15 @@ This operator is useful when you want to:
 
 The kinds of join and their typical use cases are the following:
 
-- `inner` (default): Returns rows where the join conditions exist in both tables. All matching rows from the right table are included for each matching row in the left table. Useful to retain all matches without limiting duplicates.
-- `innerunique`:  Matches rows from both tables where the join conditions exist in both. For each row in the left table, only the first matching row from the right table is returned. Optimized for performance when duplicate matching rows on the right table are irrelevant.
-- `leftouter`:  Returns all rows from the left table. If a match exists in the right table, the matching rows are included; otherwise, columns from the right table are `null`. Retains all data from the left table, enriching it with matching data from the right table.
-- `rightouter`: Returns all rows from the right table. If a match exists in the left table, the matching rows are included; otherwise, columns from the left table are `null`. Retains all data from the right table, enriching it with matching data from the left table.
-- `fullouter`: Returns all rows from both tables. Matching rows are combined, while non-matching rows from either table are padded with `null` values. Combines both tables while retaining unmatched rows from both sides.
-- `leftanti`: Returns rows from the left table that have no matches in the right table. Identifies rows in the left table that do not have corresponding entries in the right table.
-- `rightanti`: Returns rows from the right table that have no matches in the left table. Identifies rows in the right table that do not have corresponding entries in the left table.
-- `leftsemi`: Returns rows from the left table that have at least one match in the right table. Only columns from the left table are included. Filters rows in the left table based on existence in the right table.
-- `rightsemi`: Returns rows from the right table that have at least one match in the left table. Only columns from the right table are included. Filters rows in the right table based on existence in the left table.
+- `inner` (default): Returns rows where the join conditions exist in both datasets. All matching rows from the right dataset are included for each matching row in the left dataset. Useful to retain all matches without limiting duplicates.
+- `innerunique`:  Matches rows from both datasets where the join conditions exist in both. For each row in the left dataset, only the first matching row from the right dataset is returned. Optimized for performance when duplicate matching rows on the right dataset are irrelevant.
+- `leftouter`:  Returns all rows from the left dataset. If a match exists in the right dataset, the matching rows are included; otherwise, columns from the right dataset are `null`. Retains all data from the left dataset, enriching it with matching data from the right dataset.
+- `rightouter`: Returns all rows from the right dataset. If a match exists in the left dataset, the matching rows are included; otherwise, columns from the left dataset are `null`. Retains all data from the right dataset, enriching it with matching data from the left dataset.
+- `fullouter`: Returns all rows from both datasets. Matching rows are combined, while non-matching rows from either dataset are padded with `null` values. Combines both datasets while retaining unmatched rows from both sides.
+- `leftanti`: Returns rows from the left dataset that have no matches in the right dataset. Identifies rows in the left dataset that do not have corresponding entries in the right dataset.
+- `rightanti`: Returns rows from the right dataset that have no matches in the left dataset. Identifies rows in the right dataset that do not have corresponding entries in the left dataset.
+- `leftsemi`: Returns rows from the left dataset that have at least one match in the right dataset. Only columns from the left dataset are included. Filters rows in the left dataset based on existence in the right dataset.
+- `rightsemi`: Returns rows from the right dataset that have at least one match in the left dataset. Only columns from the right dataset are included. Filters rows in the right dataset based on existence in the left dataset.
 
 <Note>
     The preview of the `join` operator currently only supports `inner` join. Support for other kinds of join is coming soon.
@@ -39,23 +39,23 @@ The kinds of join and their typical use cases are the following:
 
 | Kind of join      | Behavior                                                          | Matches returned           |
 |--------------------|-----------------------------------------------------------------------|--------------------------------|
-| `inner`            | All matches between left and right tables                            | Multiple matches allowed       |
-| `innerunique`      | First match for each row in the left table                            | Only unique matches            |
+| `inner`            | All matches between left and right datasets                            | Multiple matches allowed       |
+| `innerunique`      | First match for each row in the left dataset                            | Only unique matches            |
 | `leftouter`        | All rows from the left, with matching rows from the right or `null`  | Left-dominant                  |
 | `rightouter`       | All rows from the right, with matching rows from the left or `null`  | Right-dominant                 |
-| `fullouter`        | All rows from both tables, with unmatched rows padded with `null`    | Complete join                  |
-| `leftanti`         | Rows in the left table with no matches in the right table            | No matches                     |
-| `rightanti`        | Rows in the right table with no matches in the left table            | No matches                     |
-| `leftsemi`         | Rows in the left table with at least one match in the right table    | Matching rows (left table only)|
-| `rightsemi`        | Rows in the right table with at least one match in the left table    | Matching rows (right table only)|
+| `fullouter`        | All rows from both datasets, with unmatched rows padded with `null`    | Complete join                  |
+| `leftanti`         | Rows in the left dataset with no matches in the right dataset            | No matches                     |
+| `rightanti`        | Rows in the right dataset with no matches in the left dataset            | No matches                     |
+| `leftsemi`         | Rows in the left dataset with at least one match in the right dataset    | Matching rows (left dataset only)|
+| `rightsemi`        | Rows in the right dataset with at least one match in the left dataset    | Matching rows (right dataset only)|
 
 ### Choose the right kind of join
 
 - Use `inner` for standard joins where you need all matches.
-- Use `leftouter` or `rightouter` when you need to retain all rows from one table.
+- Use `leftouter` or `rightouter` when you need to retain all rows from one dataset.
 - Use `leftanti` or `rightanti` to find rows that do not match.
-- Use `fullouter` for complete combinations of both tables.
-- Use `leftsemi` or `rightsemi` to filter rows based on existence in another table.
+- Use `fullouter` for complete combinations of both datasets.
+- Use `leftsemi` or `rightsemi` to filter rows based on existence in another dataset.
 
 ## For users of other query languages
 
@@ -110,9 +110,9 @@ LeftDataset
 
 ### Parameters
 
-- `LeftDataset`: The first dataset, also known as the outer table or the left side of the join. If you expect one of the datasets to contain consistently less data than the other, specify the smaller dataset as the left side of the join.
-- `RightDataset`: The second dataset, also known as the inner table or the right side of the join.
-- `KindOfJoin`: Optionally, the [kind of join](#kinds-of-join) to perform. The only supported value and the default is `inner`.
+- `LeftDataset`: The first dataset, also known as the outer dataset or the left side of the join. If you expect one of the datasets to contain consistently less data than the other, specify the smaller dataset as the left side of the join.
+- `RightDataset`: The second dataset, also known as the inner dataset or the right side of the join.
+- `KindOfJoin`: Optionally, the [kind of join](#kinds-of-join) to perform.
 - `Conditions`: The conditions for matching rows. The conditions determine how Axiom matches rows from the `LeftDataset` with rows from the `RightDataset`.
     - To join datasets on a field that has the same name in the two datasets, simply use the field name. For example, `on id`.
     - To join datasets on a field that has different names in the two datasets, define the two field names in an equality expression such as `on $left.id == $right.trace_id`.
@@ -122,7 +122,7 @@ LeftDataset
 
 ### Returns
 
-The `join` operator returns a new table containing rows that match the specified join condition. The columns from the left and right tables are included, prefixed with `$left.` and `$right.` to differentiate overlapping names.
+The `join` operator returns a new table containing rows that match the specified join condition. The fields from the left and right datasets are included.
 
 ## Use case examples
 
@@ -171,5 +171,5 @@ This query reveals how service traces map to specific HTTP endpoints.
 
 ## List of related operators
 
-- [union](/apl/tabular-operators/union-operator): Combines rows from multiple tables without requiring a matching condition.
+- [union](/apl/tabular-operators/union-operator): Combines rows from multiple datasets without requiring a matching condition.
 - [where](/apl/tabular-operators/where-operator): Filters rows based on conditions, often used with `join` for more precise results.
