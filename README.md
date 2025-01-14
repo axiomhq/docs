@@ -5,7 +5,7 @@ The repo is based on the Mintlify framework and the content is in Markdown forma
 ## Setup
 
 1. Install the latest LTS version of [Node.js](https://nodejs.org/en/download/package-manager).
-2. Install [Vale](https://vale.sh/vale-cli/installation/).
+2. Install [Vale](https://vale.sh/docs/install).
 3. Fork this repo, and then clone it. For more information, see the [GitHub documentation](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project).
 4. Go to the root folder in your terminal, and run the following to install Node dependencies:
 
