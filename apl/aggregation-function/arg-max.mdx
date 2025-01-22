@@ -3,9 +3,9 @@ title: arg_max
 description: 'This page explains how to use the arg_max aggregation in APL.'
 ---
 
-The `arg_max` aggregation in APL helps you identify the record with the maximum value for a specific numeric field and return one or more additional fields from that record. Use `arg_max` when you want to determine key details associated with a record having the maximum value, such as the longest request duration, highest transaction amount, or most significant span duration.
+The `arg_max` aggregation in APL helps you identify the row with the maximum value for an expression and return additional fields from that record. Use `arg_max` when you want to determine key details associated with a row where the expressions evaluates to the maximum value. If you group your data, `arg_max` finds the row within each group where a particular expression evaluates to the maximum value.
 
-This aggregation is particularly useful in scenarios like:
+This aggregation is particularly useful in scenarios like the following:
 
 - Pinpointing the slowest HTTP requests in log data.
 - Identifying the longest span durations in OpenTelemetry traces.
@@ -18,7 +18,7 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, you use `stats` with a combination of `max` and `by` clauses to achieve similar results. APL provides a dedicated `arg_max` aggregation that simplifies this process.
+Splunk SPL doesn’t have an equivalent to `arg_max`. You can use `stats` with a combination of `max` and `by` clauses to evaluate the maximum value of a single numberic field. APL provides a dedicated `arg_max` aggregation that evaluates expressions.
 
 <CodeGroup>
 ```sql Splunk example
@@ -63,35 +63,35 @@ ON logs.id = MaxValues.id;
 ### Syntax
 
 ```kusto
-| summarize arg_max(numeric_field, field1[, field2, ...])
+| summarize arg_max(expression, field1[, field2, ...])
 ```
 
 ### Parameters
 
 | Parameter        | Description                                                                         |
 |------------------|-------------------------------------------------------------------------------------|
-| `numeric_field`  | The numeric field whose maximum value determines the selected record.             |
+| `expression`  | The expression whose maximum value determines the selected record.             |
 | `field1, field2` | The additional fields to retrieve from the record with the maximum numeric value. |
 
 ### Returns
 
-`arg_max` returns a row for each group (or the entire dataset if no grouping is specified), containing the fields specified in the query.
+Returns a row where the expression evaluates to the maximum value for each group (or the entire dataset if no grouping is specified), containing the fields specified in the query.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-Find the slowest HTTP request for each URI in the `['sample-http-logs']` dataset.
+Find the slowest path for each HTTP method in the `['sample-http-logs']` dataset.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize arg_max(req_duration_ms, method) by uri
+| summarize arg_max(req_duration_ms, uri) by method
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20arg_max(req_duration_ms%2C%20method)%20by%20uri%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20arg_max(req_duration_ms%2C%20uri)%20by%20method%22%7D)
 
 **Output**
 
@@ -100,7 +100,7 @@ Find the slowest HTTP request for each URI in the `['sample-http-logs']` dataset
 | /home             | GET    | 1200            |
 | /api/products     | POST   | 2500            |
 
-This query identifies the slowest HTTP request for each URI along with the corresponding method.
+This query identifies the slowest path for each HTTP method.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
