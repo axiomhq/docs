@@ -1,6 +1,6 @@
 ---
-title: 'Get Started with Axiom API'
-description: 'Learn how to ingest structured data logs, handle queries, and manage your deployments using the API.'
+title: 'Get started with Axiom API'
+description: 'This section explains how to send data to Axiom, query data, and manage resources using the Axiom API.'
 overview: 'Standard interface for HTTP-based application programming'
 sidebarTitle: Introduction
 tags:
@@ -11,17 +11,17 @@ isPopular: true
 popularityOrder: 1
 ---
 
-Axiom understands your resources and provides an API to ingest structured data logs, handle queries, and manage your deployments. This REST-style API uses JSON for serialization and gives you complete control over the entire Axiom platform.
+import Prerequisites from "/snippets/minimal-prerequisites.mdx"
 
-This page covers the basics for interacting with the Axiom API, instructions for ingesting data, and notes on some commonly used endpoints.
+You can use the Axiom API (Application Programming Interface) to send data to Axiom, query data, and manage resources programmatically. This page covers the basics for interacting with the Axiom API.
 
-You can use the API commands with `curl` by providing your [Access Token](/reference/tokens).
+<Prerequisites />
 
-## API Basics
+## API basics
 
-All our endpoints live under the url `https://api.axiom.co` and follow the REST architectural style.
+Axiom API follows the REST architectural style and uses JSON for serialization. You can send API requests to Axiom with curl or API tools such as [Postman](https://www.postman.com/).
 
-Here’s an example in **curl**:
+For example, the following curl command ingests data to an Axiom dataset:
 
 ```bash
 curl -X 'POST' 'https://api.axiom.co/v1/datasets/{id}/ingest' \
@@ -29,56 +29,44 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/{id}/ingest' \
   -H 'Content-Type: application/json' \
   -d '[
     {
-      "axiom": "logging"
+      "axiom": "logs"
     }
   ]'
 ```
 
-## Content Type
+## Regions
 
-All requests must be encoded as JSON with the `Content-Type` header set to `application/json`. If not otherwise specified, responses from the Axiom API, including errors, are encoded exclusively as JSON as well.
+All examples in the Axiom API reference use the base domain `https://api.axiom.co`, which is the default for the US region. If your organization uses the EU region, change the base domain in the examples to `https://api.eu.axiom.co`.
 
-## Datasets
+For more information on regions, see [Regions](/reference/regions).
 
-Datasets are required to send, query, and retrieve requests. Datasets are a collection of similar events. When data is sent to Axiom, it is stored in a dataset.
+## Content type
 
-You will need to create or use an existing Dataset to get started with Axiom REST API.
-
-See [Creating a Dataset](/reference/datasets#create-dataset) to get started.
+Encode the body of API requests as JSON objects and set the `Content-Type` header to `application/json`. Unless otherwise specified, Axiom encodes all responses (including errors) as JSON objects.
 
 ## Authentication
 
-Requests to the Axiom API must provide an API token through the `Authorization` header:
+To prove that API requests come from you, you must include forms of authentication called tokens in your API requests. Axiom offers two types of tokens:
+
+- [API tokens](/reference/tokens#api-tokens) let you control the actions that can be performed with the token. For example, you can specify that requests authenticated with a certain API token can only query data from a particular dataset.
+- [Personal access tokens (PATs)](/reference/tokens#personal-access-tokens-pat) provide full control over your Axiom account. Requests authenticated with a PAT can perform every action you can perform in Axiom. When possible, avoid using PATs.
+
+If you use an API token for authentication, include the API token in the `Authorization` header.
 
 ```bash
-Authorization: Bearer {api_token}
+Authorization: Bearer {token}
 ```
 
-The `Authorization` header with an access token:
+If you use a PAT for authentication, include the PAT in the `Authorization` header and the org ID in the `x-axiom-org-id` header. For more information, see [Determine org ID](/reference/tokens#determine-org-id).
 
-API Tokens can be created and managed from **Settings --> API Tokens** on Axiom UI.
+```bash
+Authorization: Bearer {token}
+x-axiom-org-id: {org_id}
+```
 
-See [Access Tokens](/reference/tokens) for more detail.
+If authentication is unsuccessful for a request, Axiom returns the error status code `403`.
 
-## Organization ID
-
-Organization identification is required for you to send requests using [Personal Tokens](/reference/tokens#personal-access-tokens-pat).
-
-The `org id` credentials can be obtained on the **Settings** page.
-
-<Frame caption="Axiom">
-  <img src="/doc-assets/shots/rest-orgid-1.png" alt="Axiom" />
-</Frame>
-
-The `org id` can also be obtained from the `url` of your Axiom deployment.
-
-In your Axiom deployment url `https://app.axiom.co/axiom-wt8j/datasets`, the credential `axiom-wt8j` is the organization ID.
-
-## Failed Authentication
-
-If authentication is unsuccessful for a request, the error status code `403` is returned.
-
-## Types
+## Data types
 
 Below is a list of the types of data used within the Axiom API:
 
@@ -91,9 +79,3 @@ Below is a list of the types of data used within the Axiom API:
 | **Float**   | A number with decimals.                                           | 15.67                  |
 | **Map**     | A data structure with a list of values assigned to a unique key.  | \{ "key": "value" \}   |
 | **List**    | A data structure with only a list of values separated by a comma. | ["value", 4567, 45.67] |
-
-## Regions
-
-All examples in the Axiom API reference use the base domain `https://api.axiom.co`, which is the default for the US region. If your organization uses the EU region, change the base domain in the examples to `https://api.eu.axiom.co`.
-
-For more information on regions, see [Regions](/reference/regions).
