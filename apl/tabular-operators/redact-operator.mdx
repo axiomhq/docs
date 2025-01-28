@@ -3,7 +3,9 @@ title: redact
 description: 'This page explains how to use the redact operator in APL.'
 ---
 
-The `where` operator in APL is used to filter rows based on specified conditions. You can use the `where` operator to return only the records that meet the criteria you define. It’s a foundational operator in querying datasets, helping you focus on specific data by applying conditions to filter out unwanted rows. This is useful when working with large datasets, logs, traces, or security events, allowing you to extract meaningful information quickly.
+The `redact` operator in APL replaces sensitive or unwanted data in string fields using regular expressions. You can use it to sanitize log data, obfuscate personal information, or anonymize text for auditing or analysis. The operator allows you to define one or multiple regular expressions to identify and replace matching patterns. You can customize the replacement token, generate hashes of redacted values, or retain structural elements while obfuscating specific segments of data.
+
+This operator is useful when you need to ensure data privacy or compliance with regulations such as GDPR or HIPAA. For example, you can redact credit card numbers, email addresses, or personally identifiable information from logs and datasets.
 
 ## For users of other query languages
 
@@ -12,32 +14,30 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, the `where` operator filters events based on boolean expressions. APL’s `where` operator functions similarly, allowing you to filter rows that satisfy a condition.
+In Splunk SPL, data sanitization is often achieved using custom regex-based transformations or eval functions. The `redact` operator in APL simplifies this process by directly applying regular expressions and offering options for replacement or hashing.
 
 <CodeGroup>
 ```sql Splunk example
-index=main | where status="200"
+| eval sanitized_field=replace(field, "regex_pattern", "*")
 ```
 
 ```kusto APL equivalent
-['sample-http-logs']
-| where status == '200'
+| redact 'regex_pattern' on field
 ```
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, the `WHERE` clause filters rows in a `SELECT` query based on a condition. APL’s `where` operator behaves similarly, but the syntax reflects APL’s specific dataset structures.
+ANSI SQL typically requires a combination of functions like `REPLACE` or `REGEXP_REPLACE` for data obfuscation. APL’s `redact` operator consolidates these capabilities into a single, flexible command.
 
 <CodeGroup>
 ```sql SQL example
-SELECT * FROM sample_http_logs WHERE status = '200'
+SELECT REGEXP_REPLACE(field, 'regex_pattern', '*') AS sanitized_field FROM table;
 ```
 
 ```kusto APL equivalent
-['sample-http-logs']
-| where status == '200'
+| redact 'regex_pattern' on field
 ```
 </CodeGroup>
 
@@ -49,197 +49,102 @@ SELECT * FROM sample_http_logs WHERE status = '200'
 ### Syntax
 
 ```kusto
-| where condition
+| redact [replaceToken="*"] [replaceHash=false] [redactGroups=false] [auditField=string] [name=]<regex>, ([name=]<regex>) [on Field]
 ```
 
 ### Parameters
 
-- `condition`: A Boolean expression that specifies the filtering condition. The `where` operator returns only the rows that satisfy this condition.
+| Parameter       | Type     | Description                                                                 |
+|-----------------|----------|-----------------------------------------------------------------------------|
+| `replaceToken`  | string   | The character with which to replace matches. The default is `*`.                     |
+| `replaceHash`   | bool     | Specifies whether to replace matches with a hash of the data. Use either `replaceToken` or `replaceHash` within one query.     |
+| `redactGroups`  | bool     | Specifies whether to look for capturing groups in the regex and only redact characters in the capturing groups. Use this option for partial replacements or replacements that maintain the structure of the data. The default is false. |
+| `auditField`    | string   | Specifies the field where to store a map of redaction details in the format `map[field:string][]regexHits:string` for auditing.                             |
+| `name`          | string   | Assigns a name to the regex for auditing purposes.                          |
+| `regex`         | regex    | A single regex or an array/map of regexes to match against field values.    |
+| `on Field`      |          | Limits redaction to specific fields. The default is all string fields.    |
 
 ### Returns
 
-The `where` operator returns a filtered dataset containing only the rows where the condition evaluates to true.
+The `redact` operator returns the input dataset with sensitive data replaced or hashed, depending on the provided configuration.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-In this use case, you filter HTTP logs to focus on records where the HTTP status is 404 (Not Found).
+You can use the `redact` operator to sanitize HTTP logs by obfuscating geographical data.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| where status == '404'
+| redact replaceToken="x" @'.*' on ['geo.city'], ['geo.country']
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20%3D%3D%20'404'%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20redact%20replaceToken%3D'x'%20%40'.*'%20on%20%5B'geo.city'%5D%2C%20%5B'geo.country'%5D%22%7D)
 
 **Output**
 
-| _time              | id   | status | method | uri           | req_duration_ms | geo.city  | geo.country |
-|--------------------|------|--------|--------|---------------|-----------------|-----------|-------------|
-| 2024-10-17 10:20:00| 12345| 404    | GET    | /notfound.html| 120             | Seattle   | US          |
+| _time               | geo.city | geo.country |
+|---------------------|----------|-------------|
+| 2023-01-01 12:00:00 | `xxx`      | `xxxxxxxx`         |
+| 2023-01-01 12:05:00 | `xxxxxx`      | `xxxxxxxxxx`         |
 
-This query filters out all HTTP requests except those that resulted in a 404 error, making it easy to investigate pages that were not found.
+The query replaces all characters matching the pattern `.*` with the character `x` in the `geo.city` and `geo.country` fields.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-Here, you filter OpenTelemetry traces to retrieve spans where the `duration` exceeded 500 milliseconds.
+In OpenTelemetry traces, use `redact` to anonymize trace IDs with their hashes while preserving the service structure.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| where duration > 500ms
+| redact replaceHash=true @'.*' on trace_id
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20duration%20%3E%20500ms%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20redact%20replaceHash%3Dtrue%20%40'.*'%20on%20trace_id%22%7D)
 
 **Output**
 
-| _time              | span_id  | trace_id | duration | service.name      | kind    | status_code |
-|--------------------|----------|----------|----------|-------------------|---------|-------------|
-| 2024-10-17 11:15:00| abc123   | xyz789   | 520ms    | frontend           | server  | OK          |
+| _time               | trace_id          | service.name       |
+|---------------------|-------------------|--------------------|
+| 2023-01-01 12:00:00 | `d41d8cd98f...`   | `frontend`         |
+| 2023-01-01 12:05:00 | `c4ca4238a0...`   | `checkoutservice`  |
 
-This query helps identify spans with durations longer than 500 milliseconds, which might indicate performance issues.
+The query replaces trace IDs with hashed values while keeping the rest of the trace intact.
 
 </Tab>
 <Tab title="Security logs">
 
-In this security use case, you filter logs to find requests from users in a specific country, such as Germany.
+You can use the `redact` operator to remove parts of a URL from security logs.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| where ['geo.country'] == 'Germany'
+| redact replaceToken="." redactGroups=true @'.*/(.*)' on uri
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20'Germany'%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20redact%20replaceToken%3D'.'%20redactGroups%3Dtrue%20%40'.*%2F(.*)'%20on%20uri%22%7D)
 
 **Output**
 
-| _time              | id   | status | method | uri           | req_duration_ms | geo.city  | geo.country |
-|--------------------|------|--------|--------|---------------|-----------------|-----------|-------------|
-| 2024-10-17 09:45:00| 54321| 200    | POST   | /login        | 100             | Berlin    | Germany     |
+| _time               | uri |
+|---------------------|----------|-------------|
+| 2023-01-01 12:00:00 | `/api/v1/pub/sub/....`      |
+| 2023-01-01 12:05:00 | `/api/v1/textdata/......`      |
+| 2023-01-01 12:10:00 | `/api/v1/payment/....`      |
 
-This query helps filter logs to investigate activity originating from a specific country, useful for security and compliance.
+The query performs a partial redaction in the capturing groups of the regex. It replaces the characters in the slug of the URL (the part after the last `/`) with `.` characters.
 
 </Tab>
 </Tabs>
 
-## where * has
-
-The `* has` pattern in APL is a dynamic and powerful tool within the `where` operator. It offers you the flexibility to search for specific substrings across all fields in a dataset without the need to specify each field name individually. This becomes especially advantageous when dealing with datasets that have numerous or dynamically named fields.
-
-`where * has` is an expensive operation because it searches all fields. For a more efficient query, explicitly list the fields in which you want to search. For example: `where firstName has "miguel" or lastName has "miguel"`. 
-
-### Basic where * has usage
-
-Find events where any field contains a specific substring.
-
-```kusto
-['sample-http-logs'] 
-| where * has "GET"
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22GET%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D)
-
-### Combine multiple substrings
-
-Find events where any field contains one of multiple substrings.
-
-```kusto
-['sample-http-logs'] 
-| where * has "GET" or * has "text"
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22GET%5C%22%20or%20%2A%20has%20%5C%22text%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D)
-
-### Use * has with other operators
-
-Find events where any field contains a substring, and another specific field equals a certain value.
-
-```kusto
-['sample-http-logs'] 
-| where * has "css" and req_duration_ms == 1
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22css%5C%22%20and%20req_duration_ms%20%3D%3D%201%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D)
-
-### Advanced chaining
-
-Filter data based on several conditions, including fields containing certain substrings, then summarize by another specific criterion.
-
-```kusto
-['sample-http-logs']
-| where * has "GET" and * has "css"
-| summarize Count=count() by method, content_type, server_datacenter
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22GET%5C%22%20and%20%2A%20has%20%5C%22css%5C%22%5Cn%7C%20summarize%20Count%3Dcount%28%29%20by%20method%2C%20content_type%2C%20server_datacenter%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D)
-
-### Use with aggregations
-
-Find the average of a specific field for events where any field contains a certain substring.
-
-```kusto
-['sample-http-logs']
-| where * has "Japan"
-| summarize avg(req_duration_ms)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22Japan%5C%22%5Cn%7C%20summarize%20avg%28req_duration_ms%29%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D)
-
-### String case transformation
-
-The `has` operator is case insensitive. Use `has` if you’re unsure about the case of the substring in the dataset. For the case-sensitive operator, use `has_cs`.
-
-```kusto
-['sample-http-logs']
-| where * has "mexico"
-| summarize avg(req_duration_ms)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20where%20%2A%20has%20%5C%22mexico%5C%22%5Cn%7C%20summarize%20avg%28req_duration_ms%29%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D)
-
 ## List of related operators
 
-- [count](/apl/tabular-operators/count-operator): Use `count` to return the number of records that match specific criteria.
-- [distinct](/apl/tabular-operators/distinct-operator): Use `distinct` to return unique values in a dataset, complementing filtering.
-- [take](/apl/tabular-operators/take-operator): Use `take` to return a specific number of records, typically in combination with `where` for pagination.
-
-
-## redact()
-
-Replace fields based on the specified regular expression.
-
-### Arguments
-
-- csv_text: A string representing a single record of comma-separated values.
-
-### Returns
-
-A string array that contains the split values.
-
-### Examples
-
-```kusto
-parse_csv("axiom,logging,observability") ==  [ "axiom", "logging", "observability" ]
-```
-
-```kusto
-parse_csv("axiom, processing, language")  == [ "axiom", "processing", "language" ]
-```
-
-```kusto
-['github-issues-event']
-| project parse_csv("github, body, repo")
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22%5B'github-issues-event'%5D%5Cn%7C%20project%20parse_csv(%5C%22github%2C%20body%2C%20repo%5C%22)%22%7D)
-
-we are rolling out our redact operator which will allow to replace fields based on a specified regular expression. This enhances our notion to value each data event equally and make Axiom the single plane of truth for an organization’s data lifecycle. As such the redact features is part of a family of features including Flow and our RBAC with other features coming soon out to enable user to create data products and have better ownership and control over their data.
+- [project](/apl/tabular-operators/project-operator): Selects specific fields from the dataset, useful for focused analysis.
+- [summarize](/apl/tabular-operators/summarize-operator): Aggregates data, helpful when combining redacted data with statistical analysis.
+- [parse](/apl/tabular-operators/parse-operator): Extracts and parses structured data using regex patterns.
