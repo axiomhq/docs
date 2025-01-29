@@ -56,11 +56,11 @@ SELECT REGEXP_REPLACE(field, 'regex_pattern', '*') AS sanitized_field FROM table
 
 | Parameter       | Type     | Description                                                                 |
 |-----------------|----------|-----------------------------------------------------------------------------|
-| `replaceToken`  | string   | The character with which to replace matches. The default is `*`.                     |
-| `replaceHash`   | bool     | Specifies whether to replace matches with a hash of the data. Use either `replaceToken` or `replaceHash` within one query.     |
+| `replaceToken`  | string   | The string with which to replace matches. If you specify a single character, Axiom replaces each character in the matching text with `replaceToken`. If you specify more than one character, Axiom replaces the whole of the matching text with `replaceToken`. The default `replaceToken` is the `*` character. |
+| `replaceHash`   | bool     | Specifies whether to replace matches with a hash of the data. You cannot use both `replaceToken` and `replaceHash` in the same query.     |
 | `redactGroups`  | bool     | Specifies whether to look for capturing groups in the regex and only redact characters in the capturing groups. Use this option for partial replacements or replacements that maintain the structure of the data. The default is false. |
 | `regex`         | regex    | A single regex or an array/map of regexes to match against field values.    |
-| `on Field`      |          | Limits redaction to specific fields. The default is all string fields.    |
+| `on Field`      |          | Limits redaction to specific fields. If you omit this parameter, Axiom redacts all string fields in the dataset.    |
 
 ### Returns
 
@@ -86,8 +86,8 @@ You can use the `redact` operator to sanitize HTTP logs by obfuscating geographi
 
 | _time               | geo.city | geo.country |
 |---------------------|----------|-------------|
-| 2023-01-01 12:00:00 | `xxx`      | `xxxxxxxx`         |
-| 2023-01-01 12:05:00 | `xxxxxx`      | `xxxxxxxxxx`         |
+| 2025-01-01 12:00:00 | `xxx`      | `xxxxxxxx`         |
+| 2025-01-01 12:05:00 | `xxxxxx`      | `xxxxxxxxxx`         |
 
 The query replaces all characters matching the pattern `.*` with the character `x` in the `geo.city` and `geo.country` fields.
 
@@ -109,8 +109,8 @@ In OpenTelemetry traces, use `redact` to anonymize trace IDs with their hashes w
 
 | _time               | trace_id          | service.name       |
 |---------------------|-------------------|--------------------|
-| 2023-01-01 12:00:00 | `QQXRv6VU`   | `frontend`         |
-| 2023-01-01 12:05:00 | `Q1urOteW`   | `checkoutservice`  |
+| 2025-01-01 12:00:00 | `QQXRv6VU`   | `frontend`         |
+| 2025-01-01 12:05:00 | `Q1urOteW`   | `checkoutservice`  |
 
 The query replaces trace IDs with hashed values while keeping the rest of the trace intact.
 
@@ -123,18 +123,18 @@ You can use the `redact` operator to remove parts of a URL from security logs.
 
 ```kusto
 ['sample-http-logs']
-| redact replaceToken="." redactGroups=true @'.*/(.*)' on uri
+| redact replaceToken="<REDACTED>" redactGroups=true @'.*/(.*)' on uri
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20redact%20replaceToken%3D'.'%20redactGroups%3Dtrue%20%40'.*%2F(.*)'%20on%20uri%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20redact%20replaceToken%3D'%3CREDACTED%3E'%20redactGroups%3Dtrue%20%40'.*%2F(.*)'%20on%20uri%22%7D)
 
 **Output**
 
 | _time               | uri |
 |---------------------|----------|
-| 2023-01-01 12:00:00 | `/api/v1/pub/sub/....`      |
-| 2023-01-01 12:05:00 | `/api/v1/textdata/......`      |
-| 2023-01-01 12:10:00 | `/api/v1/payment/....`      |
+| 2025-01-01 12:00:00 | `/api/v1/pub/sub/<REDACTED>`      |
+| 2025-01-01 12:05:00 | `/api/v1/textdata/<REDACTED>`      |
+| 2025-01-01 12:10:00 | `/api/v1/payment/<REDACTED>`      |
 
 The query performs a partial redaction in the capturing groups of the regex. It replaces the characters in the slug of the URL (the part after the last `/`) with `.` characters.
 
