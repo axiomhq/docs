@@ -1,0 +1,172 @@
+---
+title: "Send data from JavaScript app to Axiom"
+description: "This page explains how to send data from your JavaScript app to Axiom using the @axiomhq/logging library."
+overview: "High-level, interpreted programming language for web development"
+sidebarTitle: JavaScript
+tags:
+  [
+    "js",
+    "axiom documentation",
+    "documentation",
+    "axiom",
+    "guide",
+    "logs",
+    "javascript",
+  ]
+isPopular: true
+popularityOrder: 9
+logoId: "javascript"
+---
+
+The `@axiomhq/logging` library is a logging solution from Axiom that serves as the base for libraries like `@axiomhq/react` and `@axiomhq/nextjs`.
+
+## Installation
+
+```bash
+npm install @axiomhq/logging
+```
+
+## Usage
+
+### Basic Usage
+```ts
+import { Logger, AxiomFetchTransport, ConsoleTransport } from "@axiomhq/logging";
+
+const logger = new Logger(
+  {
+    transports: [
+      new AxiomFetchTransport({
+        token: process.env.AXIOM_TOKEN,
+      }),
+      new ConsoleTransport(),
+    ],
+  }
+);
+
+logger.info("Hello, world!");
+```
+
+### Transports
+
+The `@axiomhq/logging` library includes the following transports:
+
+`AxiomFetchTransport`: Sends logs to Axiom using the Axiom HTTP API.
+
+```ts
+import { AxiomFetchTransport } from "@axiomhq/logging";
+
+const transport = new AxiomFetchTransport({
+  token: process.env.AXIOM_TOKEN,
+  dataset: process.env.AXIOM_DATASET,
+  url: process.env.AXIOM_URL,
+  autoFlush: 1000,
+  logLevel: "warn"
+});
+```
+
+- `ConsoleTransport`: Logs to the console.
+
+```ts
+import { ConsoleTransport } from "@axiomhq/logging";
+
+const transport = new ConsoleTransport({
+  logLevel: "warn",
+  prettyPrint: true,
+});
+```
+
+- `AxiomJSTransport`: Sends logs to Axiom using the Axiom JavaScript SDK.
+
+```ts
+import { Axiom } from "@axiomhq/js";
+import { AxiomJSTransport } from "@axiomhq/logging";
+
+const axiom = new Axiom({
+  token: process.env.AXIOM_TOKEN,
+});
+
+const transport = new AxiomJSTransport({
+  axiom,
+  dataset: process.env.AXIOM_DATASET,
+  logLevel: "warn",
+});
+```
+
+- `ProxyTransport`: Sends logs to a remote server that acts as a proxy.
+
+```ts
+import { ProxyTransport } from "@axiomhq/logging";
+
+const transport = new ProxyTransport({
+  url: "https://example.com/proxy",
+  logLevel: "warn",
+  autoFlush: 1000,
+});
+```
+
+- `SimpleFetchTransport`: Sends logs to a remote server using HTTP.
+
+```ts
+import { SimpleFetchTransport } from "@axiomhq/logging";
+
+const transport = new SimpleFetchTransport({
+  input: "https://example.com/proxy",
+  init: {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  },
+});
+```
+
+### Custom Transports
+
+You can also create your own transports by implementing the `Transport` interface.
+
+```ts
+import { Transport } from "@axiomhq/logging";
+
+class MyTransport implements Transport {
+  log(log: Transport['log']) {
+    console.log(log);
+  }
+
+  flush() {
+    console.log("Flushing logs");
+  }
+}
+```
+
+### Logging Levels
+
+The `@axiomhq/logging` library includes the following logging levels:
+
+- `debug`: Debug-level logs.
+- `info`: Informational logs.
+- `warn`: Warning logs.
+- `error`: Error logs.
+
+### Formatters
+
+Formatters are used to change the fields of a log before it is sent to a transport.
+
+```ts
+import { Logger } from "@axiomhq/logging";
+
+const myCustomFormatter = (fields: Record<string, unknown>) => {
+  const upperCaseKeys = Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [key.toUpperCase(), value])
+  );
+
+  return upperCaseKeys;
+};
+
+const logger = new Logger({
+  formatters: [myCustomFormatter],
+});
+
+logger.info("Hello, world!");
+```
+
+
