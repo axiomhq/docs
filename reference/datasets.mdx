@@ -6,6 +6,8 @@ tags:
     ['axiom documentation', 'documentation', 'axiom', 'dataset']
 ---
 
+import AccessToDatasets from "/snippets/access-to-datasets.mdx"
+
 This reference article explains how to manage datasets in Axiom, including creating new datasets, importing data, and deleting datasets.
 
 ## What datasets are
@@ -14,13 +16,26 @@ Axiom’s datastore is tuned for the efficient collection, storage, and analysis
 
 ## Best practices for organizing datasets
 
-Use datasets to organize your data ready for querying based on the event schema. Common ways to separate include environment and service.
+Use datasets to organize your data ready for querying based on the event schema. Common ways to separate include environment, signal type, and service.
 
 ### Separate by environment
 
 If you work with data sourced from different environments, separate them into different datasets. For example, use one dataset for events from production and another dataset for events from your development environment.
 
 You might be tempted to use a single `environment` attribute instead, but this risks causing confusion when results show up side-by-side in query results. Although some organizations choose to collect events from all environments in one dataset, they’ll often rely on applying an `environment` filter to all queries, which becomes a chore and is error-prone for newcomers.
+
+### Separate by signal type
+
+If you work with distributed applications, consider splitting your data into different datasets. For example:
+
+- A dataset with traces for all services
+- A dataset with application logs for all services
+- A dataset with frontend web vitals
+- A dataset with infrastructure logs
+- A dataset with security logs
+- A dataset with CI logs
+
+If you look for a specific event in a distributed system, you are likely to know its signal type but not the related service. By splitting data into different datasets using the approach above, you can find data easily.
 
 ### Separate by service
 
@@ -32,6 +47,8 @@ This separation enables teams to focus on their relevant data and simplifies que
 
 <Note>
 While separating by service is beneficial, avoid over-segmentation. Creating a dataset for every microservice or function can lead to unnecessary complexity and management overhead. Instead, group related services or functions into logical datasets that align with your organizational structure or major system components.
+
+When you work with OpenTelemetry trace data, keep all spans of a given trace in the same dataset. To investigate spans for different services, don’t send them to different datasets. Instead, keep the spans in the same dataset and filter on the `service.name` field. For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
 </Note>
 
 ### Avoid the “kitchen sink”
@@ -42,13 +59,28 @@ While it might seem convenient to send all events to a single dataset, this “k
 - Schema conflicts: Different event types may have conflicting field names or data types, leading to unnecessary type coercion at query time.
 - Access management: With all data in one dataset, it becomes challenging to provide granular access controls. You might end up giving users access to more data than they need.
 
+Don’t create multiple Axiom organizations to separate your data. For example, don’t use a different Axiom org for each deployment. If you’re on the Personal plan, this might go against [Axiom’s fair use policy](https://axiom.co/terms). Instead, separate data by creating a different dataset for each deployment within the same Axiom org.
+
+<AccessToDatasets />
+
+## Special fields
+
+Axiom creates the following two fields automatically for a new dataset:
+
+- `_time` is the timestamp of the event. If the data you ingest doesn’t have a `_time` field, Axiom assigns the time of the data ingest to the events.
+- `_sysTime` is the time when you ingested the data.
+
+In most cases, you can use `_time` and `_sysTime` interchangeably. The difference between them can be useful if you experience clock skews on your event-producing systems.
+
 ## Create dataset
 
-To create a dataset, follow these steps:
+To create a dataset using the Axiom app, follow these steps:
 
 1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
-2. Click **New dataset**.
-3. Name the dataset, and then click **Add**.
+1. Click **New dataset**.
+1. Name the dataset, and then click **Add**.
+
+To create a dataset using the Axiom API, send a POST request to the [datasets endpoint](https://axiom.co/docs/restapi/endpoints/createDataset).
 
 Dataset names are 1 to 128 characters in length. They only contain ASCII alphanumeric characters and the hyphen (`-`) character.
 
@@ -115,3 +147,21 @@ To delete a dataset, follow these steps:
 2. In the list, click the dataset that you want to delete.
 3. Click <img src="/doc-assets/icons/import.svg" className="inline-icon" alt="Delete dataset icon" /> **Delete dataset**.
 4. Enter the name of the dataset, and then click **Delete**.
+
+## Change data retention period
+
+The data retention period determines how long Axiom stores your data. By default, the data retention period is defined by your pricing plan and is the same for all datasets. You can configure custom retention periods for individual datasets. As a result, Axiom automatically trims data after the specified time period instead of the default one defined by your pricing plan. For example, this can be useful if your dataset contains sensitive event data that you don’t want to retain for a long time.
+
+Custom retention periods can only be shorter than your pricing plan’s default retention period. If you need a longer retention period, consider changing your plan or contacting [Axiom’s Sales team](https://axiom.co/contact).
+
+<Warning>
+When you change the data retention period for a dataset, all data older than the new retention period is automatically deleted. This process cannot be undone.
+</Warning>
+
+To change the data retention period for a dataset, follow these steps:
+
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+1. In the list, click the dataset for which you want to change the retention period.
+1. Click <img src="/doc-assets/icons/hard-drive.svg" className="inline-icon" alt="Hard drive icon" /> **Edit dataset retention**.
+1. Enter a data retention period. The custom retention period must be greater than 0 days and less than the default defined by your pricing plan.
+1. Click **Submit**.
