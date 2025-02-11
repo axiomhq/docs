@@ -23,42 +23,61 @@ popularityOrder: 9
 logoId: "react"
 ---
 
-## Installation
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
 
-```sh
-npm install --save @axiomhq/react @axiomhq/logging 
-```
+React is a popular open-source JavaScript library developed by Meta for building user interfaces. Known for its component-based architecture and efficient rendering with a virtual DOM, React is widely used by companies of all sizes to create fast, scalable, and dynamic web applications.
 
-To send data to Axiom using the `@axiomhq/react` library you will need to create a `Logger` instance and export the utils, in this case the `useLogger` and `WebVitals` components.
+This page explains how to use the @axiomhq/react library to send data from your client-side React apps to Axiom.
 
-> If you are using the `AxiomFetchTransport` make sure the token has only the necessary permissions.
+<Note>
+    The @axiomhq/react library is part of the Axiom JavaScript SDK, an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-js).
 
-```tsx
-'use client';
+    The @axiomhq/react library is currently in public preview. For more information, see [Features states](/getting-started-guide/feature-states).
+</Note>
 
-import { Logger, AxiomFetchTransport } from '@axiomhq/logging';
-import { createUseLogger, createWebVitalsComponent } from '@axiomhq/react';
+<Prerequisites />
+{/* list separator */}
+- A new or existing React app.
 
-export const logger = new Logger({
-  transports: [
-    new AxiomFetchTransport({
-      dataset: process.env.AXIOM_DATASET!,
-      token: process.env.AXIOM_TOKEN!,
-    }),
-  ],
-});
+## Install @axiomhq/react library
 
-const useLogger = createUseLogger(logger);
-const WebVitals = createWebVitalsComponent(logger);
+1. In your terminal, go to the root folder of your React app and run the following command:
 
-export { useLogger, WebVitals };
-```
+    ```sh
+    npm install --save @axiomhq/logging @axiomhq/react
+    ```
 
-## Usage
+1. Add the following environment variables to your React app:
 
-### Send logs from components
+    - `AXIOM_DATASET` is the name of the Axiom dataset where you want to send data.
+    - `AXIOM_TOKEN` is the Axiom API token you have generated.
 
-Within your components call the `useLogger` hook that will return your logger instance.
+1. Create a `Logger` instance and export the utils. The example below uses the `useLogger` and `WebVitals` components.
+
+    ```tsx [expandable]
+    'use client';
+
+    import { Logger, AxiomFetchTransport } from '@axiomhq/logging';
+    import { createUseLogger, createWebVitalsComponent } from '@axiomhq/react';
+
+    export const logger = new Logger({
+      transports: [
+        new AxiomFetchTransport({
+          dataset: process.env.AXIOM_DATASET!,
+          token: process.env.AXIOM_TOKEN!,
+        }),
+      ],
+    });
+
+    const useLogger = createUseLogger(logger);
+    const WebVitals = createWebVitalsComponent(logger);
+
+    export { useLogger, WebVitals };
+    ```
+
+## Send logs from components
+
+To send logs from components, use the `useLogger` hook that returns your logger instance.
 
 ```tsx
 import { useLogger } from "@/lib/axiom/client";
@@ -76,9 +95,9 @@ export default function ClientComponent() {
 }
 ```
 
-### Send Web Vitals
+## Send Web Vitals
 
-Mount the `WebVitals` component in the root of your react app.
+To send Web Vitals, mount the `WebVitals` component in the root of your React app.
 
 ```tsx
 import { WebVitals } from "@/lib/axiom/client";
@@ -92,4 +111,3 @@ export default function App({ children }: { children: React.ReactNode }) {
   );
 }
 ```
-
