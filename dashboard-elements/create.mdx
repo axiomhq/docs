@@ -9,15 +9,165 @@ tags:
 To create new dashboard elements:
 
 1. [Create a dashboard](/dashboards/create) or open an existing dashboard.
-1. Click <img src="/doc-assets/icons/plus.svg" className="inline-icon" alt="Add element" /> **Add element** in the top right corner.
+1. Click <img src="/doc-assets/icons/plus.svg" className="inline-icon" alt="Add chart" /> **Add element** in the top right corner.
 1. Choose the dashboard element from the list.
 1. For charts, select one of the following:
-    - Click **Simple Query Builder** to create your chart using a visual query builder. Create a chart in the same way you create a chart in the [Datasets tab](/query-data/datasets).
-    - Click **Advanced Query Language** to create your chart using the Axiom Processing Language (APL). Create a chart in the same way you create a chart in the APL query builder of the [Explore tab](/query-data/explore#create-a-query-using-apl).
+    - Click **Simple Query Builder** to create your chart using a [visual query builder](#create-chart-using-visual-query-builder).
+    - Click **Advanced Query Language** to create your chart using the Axiom Processing Language (APL). Create a chart in the same way you create a chart in the APL query builder of the [Query tab](/query-data/explore#create-a-query-using-apl).
 1. Optional: [Configure chart options](/dashboard-elements/configure).
+1. Optional: Set a custom time range that is different from the dashboard’s time range.
 1. Click **Save**.
 
 The new element appears in your dashboard. At the bottom, click **Save** to save your changes to the dashboard.
+
+## Create chart using visual query builder
+
+Use the query builder to create or edit queries for the selected dataset:
+
+<Frame caption="Query builder">
+  <img src="/doc-assets/shots/query-builder-time-range.png" alt="Query builder" />
+</Frame>
+
+This component is a visual query builder that eases the process of building visualizations and segments of your data.
+
+This guide walks you through the individual sections of the query builder.
+
+### Time range
+
+Every query has a start and end time and the time range component allows quick selection of common time ranges as well as the ability to input specific start and end timestamps:
+
+<Frame caption="Time range">
+  <img src="/doc-assets/shots/time-range-22.png" alt="Time range" />
+</Frame>
+
+- Use the **Quick Range** items to quickly select popular ranges
+- Use the **Custom Start/End Date** inputs to select specific times
+- Use the **Resolution** items to choose between various time bucket resolutions
+
+### Against
+
+When a time series visualization is selected, such as `count`, the **Against** menu is enabled and it’s possible to select a historical time to compare the results of your time range too.
+
+For example, to compare the last hour’s average response time to the same time yesterday, select `1 hr` in the time range menu, and then select `-1D` from the **Against** menu:
+
+<Frame caption="Time range against menu">
+  <img src="/doc-assets/shots/compare-against.png" alt="Time range against menu" />
+</Frame>
+
+The results look like this:
+
+<Frame caption="Time range against chart">
+  <img src="/doc-assets/shots/time-range-chart-1.png" alt="Time range against chart" />
+</Frame>
+
+The dotted line represents results from the base date, and the totals table includes the comparative totals.
+
+When you add `field` to the `group by` clause, the **time range against** values are attached to each `events`.
+
+<Frame caption="Time range against chart">
+  <img src="/doc-assets/shots/time-range-chart-2.png" alt="Time range against chart" />
+</Frame>
+
+### Visualizations
+
+Axiom provides powerful visualizations that display the output of running aggregate functions across your dataset. The Visualization menu allows you to add these visualizations and, where required, input their arguments:
+
+<Frame caption="Visualizations menu">
+  <img src="/doc-assets/shots/visualizations.png" alt="Visualizations menu" />
+</Frame>
+
+You can select a visualization to add it to the query. If a visualization requires an argument (such as the field and/or other parameters), the menu allows you to select eligible fields and input those arguments. Press `Enter` to complete the addition:
+
+<Frame caption="Visualizations demo">
+  <img src="/doc-assets/shots/analyze-visualizations-75.gif" alt="Visualizations demo" />
+</Frame>
+
+Click Visualization in the query builder to edit it at any time.
+
+[Learn about supported visualizations](/query-data/visualizations)
+
+### Filters
+
+Use the filter menu to attach filter clauses to your search.
+
+Axiom supports AND/OR operators at the top-level as well as one level deep. This means you can create filters that would read as `status == 200 AND (method == get OR method == head) AND (user-agent contains Mozilla or user-agent contains Webkit)`.
+
+Filters are divided up by the field type they operate on, but some may apply to more than one field type.
+
+<Frame caption="Filters demo">
+  <img src="/doc-assets/shots/analyze-filters-900.gif" alt="Filters demo" />
+</Frame>
+
+#### List of filters
+
+_String Fields_
+
+- `==`
+- `!=`
+- `exists`
+- `not-exists`
+- `starts-with`
+- `not-starts-with`
+- `ends-with`
+- `not-ends-with`
+- `contains`
+- `not-contains`
+- `regexp`
+- `not-regexp`
+
+_Number Fields_
+
+- `==`
+- `!=`
+- `exists`
+- `not-exists`
+- `>`
+- `>=`
+- `<`
+- `<=`
+
+_Boolean Fields_
+
+- `==`
+- `!=`
+- `exists`
+- `not-exists`
+
+_Array Fields_
+
+- `contains`
+- `not-contains`
+- `exists`
+- `not-exists`
+
+#### Special fields
+
+Axiom creates the following two fields automatically for a new dataset:
+
+- `_time` is the timestamp of the event. If the data you ingest doesn’t have a `_time` field, Axiom assigns the time of the data ingest to the events.
+- `_sysTime` is the time when you ingested the data.
+
+In most cases, you can use `_time` and `_sysTime` interchangeably. The difference between them can be useful if you experience clock skews on your event-producing systems.
+
+### Group by (segmentation)
+
+When visualizing data, it can be useful to segment data into specific groups to more clearly understand how the data behaves.
+
+The Group By component enables you to add one or more fields to group events by:
+
+<Frame caption="Group by">
+  <img src="/doc-assets/shots/group-by.png" alt="Group by" />
+</Frame>
+
+### Other options
+
+#### Order
+
+By default, Axiom automatically chooses the best ordering for results. However, you can manually set the desired order through this menu.
+
+#### Limit
+
+By default, Axiom chooses a reasonable limit for the query that has been passed in. However, you can control that limit manually through this component.
 
 ## Change element’s position
 
@@ -34,3 +184,49 @@ To change the size of the element, drag the bottom-right corner.
 <Frame>
   <video autoPlay muted loop playsInline className="w-full aspect-video" src="/doc-assets/videos/resize-dashboard-element.mp4"></video>
 </Frame>
+
+## Set custom time range
+
+You can set a custom time range for individual dashboard elements that is different from the dashboard’s time range. For example, the dashboard displays data about the last 30 minutes but individual dashboard elements display data for different time ranges. This can be useful for visualizing the same chart or statistic for different time periods, among others.
+
+To set a custom time range for a dashboard element:
+
+1. In the top right of the dashboard element, click <img src="/doc-assets/icons/ellipsis-vertical.svg" className="inline-icon" alt="Vertical ellipsis icon" /> **More >** <img src="/doc-assets/icons/pencil.svg" className="inline-icon" alt="Pencil icon" /> **Edit**.
+1. In the top right above the chart, click <img src="/doc-assets/icons/clock.svg" className="inline-icon" alt="Clock icon" />.
+1. Click **Custom**.
+1. Choose one of the following options:
+    - Use the **Quick range** items to quickly select popular time ranges.
+    - Use the **Custom start/end date** fields to select specific times.
+1. Click **Save**.
+
+Axiom displays the new time range in the top left of the dashboard element.
+
+### Set custom time range in APL
+
+To set a custom time range for dashboard elements created with APL, you can use the [procedure above](#set-custom-time-range) or define the time range in the APL query:
+
+1. In the top right of the dashboard element, click <img src="/doc-assets/icons/ellipsis-vertical.svg" className="inline-icon" alt="Vertical ellipsis icon" /> **More >** <img src="/doc-assets/icons/pencil.svg" className="inline-icon" alt="Pencil icon" /> **Edit**.
+1. In the APL query, specify the custom time range using the [where](/apl/tabular-operators/where-operator) operator. For example:
+    ```kusto
+    | where _time > now(-6h)
+    ```
+1. Click **Run query** to preview the result.
+1. Click **Save**.
+
+Axiom displays <img src="/doc-assets/icons/clock.svg" className="inline-icon" alt="Clock icon" /> in the top left of the dashboard element to indicate that its time range is defined in the APL query and might be different from the dashboard’s time range.
+
+## Set custom comparison period
+
+You can set a custom comparison time period for individual dashboard elements that is different from the dashboard’s. For example, the dashboard compares against data from yesterday but individual dashboard elements display data for different comparison periods.
+
+To set a custom comparison period for a dashboard element:
+
+1. In the top right of the dashboard element, click <img src="/doc-assets/icons/ellipsis-vertical.svg" className="inline-icon" alt="Vertical ellipsis icon" /> **More >** <img src="/doc-assets/icons/pencil.svg" className="inline-icon" alt="Pencil icon" /> **Edit**.
+1. In the top right above the chart, click <img src="/doc-assets/icons/clock-rotate-left.svg" className="inline-icon" alt="Clock rotate left icon" /> **Compare period**.
+1. Click **Custom**.
+1. Choose one of the following options:
+    - Use the **Quick range** items to quickly select popular comparison periods.
+    - Use the **Custom time** field to select specific comparison periods.
+1. Click **Save**.
+
+Axiom displays the new comparison period in the top left of the dashboard element.
