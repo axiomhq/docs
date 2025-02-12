@@ -38,3 +38,287 @@ Using non-field-specific filters degrades performance significantly. For more in
 ### Optimize string operators
 
 Different string operators have different impact on performance. Optimizing string operators in your query can significantly improve the performance of your queries. For more information, see [Use the string operators efficiently](/apl/scalar-operators/string-operators#use-string-operators-efficiently).
+
+## Practices that limit Axiom performance
+
+Axiom is optimized for storing and querying timestamped event data. However, certain ingest and query practices can degrade performance and increase cost. This page explains pitfalls and provides guidance on how you can avoid them to keep your Axiom queries fast and efficient.
+
+### Summary of pitfalls
+
+| Practice | Severity | Impact |
+| --- | --- | --- |
+| [Mixing unrelated data in datasets](#mixing-unrelated-data-in-datasets) | Critical | Combining unrelated data inflates schema, slows queries |
+| [Large time ranges in one ingest](#large-time-ranges-mixed-in-the-same-ingest) | Critical | Breaks time-based indexing |
+| [Failing to use _time](#failing-to-use-the-_time-field-for-event-timestamps) | High | No efficient time-based filtering |
+| [Overly wide queries (project *)](#overly-wide-queries-returning-more-fields-than-needed) | High | Returns massive unneeded data |
+| [Mixed data types in the same field](#mixing-unrelated-data-in-datasets) | Moderate | Reduces compression, complicates queries |
+| [Excessive backfilling, big _time vs _sysTime](#excessive-backfilling-and-large-_time-vs-_systime-gaps) | Moderate | Creates overlapping blocks |
+| [Using regex when simpler filters suffice](#regular-expressions-when-simple-filters-suffice) | Moderate | More CPU-heavy scanning |
+| [Overusing runtime JSON parsing (parse_json)](#overusing-runtime-json-parsing-parse_json) | Moderate | CPU overhead, no indexing on nested fields |
+| [Virtual fields for simple transformations](#virtual-fields-for-simple-transformations) | Low | Extra overhead for trivial conversions |
+| [Poor filter order in queries](#poor-filter-order-in-queries) | Low | Suboptimal scanning of data |
+
+### Mixing unrelated data in datasets
+
+#### Problem
+
+A “kitchen-sink” dataset is one in which events from multiple, unrelated applications or services get lumped together, often resulting in:
+
+- **Excessive width (too many columns)**: Adding more and more unique fields bloats the schema, reducing query throughput.
+- **Mixed data types in the same field**: For example, some events store `user_id` as a string, while others store it as a number in the same `user_id` field.
+- **Unrelated schemas in a single dataset**: Columns that make sense for one app might be `null` or typed differently for another.
+
+These issues reduce compression efficiency, make indexing less effective, and force Axiom to scan more data than necessary.
+
+#### Why it matters
+
+- **Slower queries**: Each query must parse wider blocks of data and handle inconsistent column types.
+- **Higher resource usage**: Wide schemas reduce row packing in blocks, harming throughput and potentially raising costs.
+- **Harder data exploration**: When fields differ drastically between events, discovering the correct columns or shaping queries becomes more difficult.
+
+#### How to fix it
+
+- **Keep datasets narrowly focused:** Group data from the same application or service in its own dataset. For example, keep `k8s_logs` separate from `web_traffic`.
+- **Avoid mixing data types for the same field:** Enforce consistent types during ingest. If a field is numeric, always send numeric values.
+- **Consider using map fields:** If you have sparse or high-cardinality nested data, consider storing it in a single map (object) field instead of flattening every key. This reduces the total number of top-level fields. Axiom’s [map fields](https://axiom.co/docs/apl/data-types/map-fields#map-fields) are optimized for large objects.
+
+### Large time ranges mixed in the same ingest
+
+#### Problem
+
+Axiom’s index is primarily built around time. Ideally, incoming events for a block lie in a closely bounded time range. However, if you ingest events that span very large or disjoint time ranges together—for example, mixing events from *now*, 30 days ago, and 90 days ago in a single push—this breaks the time index’s effectiveness.
+
+#### Why it matters
+
+- **Inefficient block filtering**: Queries that filter on recent or older times must scan blocks that contain data from many time segments.
+- **Slower queries**: Axiom cannot skip entire blocks based on time, so more data is read and processed.
+
+#### How to fix it
+
+- **Send data in time order:** Ingest events close to the time they occur. If you must backfill older data, do it in dedicated batches that do not mix with live data.
+- **Avoid wide time ranges in a single batch:** If you are sending data for a 24-hour period, avoid mixing in data that is weeks or months older.
+
+<Note>
+Future improvements: Axiom’s roadmap includes an initiative which aims to mitigate the impact of poorly clustered time data by performing incremental time-based compaction. Until then, avoid mixing large historical ranges with live ingest whenever possible.
+</Note>
+
+### Failing to use the `_time` field for event timestamps
+
+#### Problem
+
+Axiom’s core optimizations rely on `_time` for indexing and time-based queries. If you store event timestamps in a different field (for example, `timestamp` or `created_at`) and use that field in time filters, Axiom’s time-based optimizations will not be applied.
+
+#### Why it matters
+
+- **No time-based indexing**: Every block must be scanned, because your custom timestamp field is invisible to the time index.
+- **Incorrect event ordering**: You may lose correct chronological context or get unexpected query results.
+
+#### How to fix it
+
+- **Always use `_time`:** Configure your ingest pipelines so that Axiom sets `_time` to the actual event timestamp.
+    - If you have a custom field like `created_at`, map it to `_time` at ingest.
+    - Verify that your ingestion library or agent is correctly populating `_time`.
+- **Use Axiom’s native time filters:** Rely on `where _time >= ... and _time <= ...` or the built-in time range selectors in the query UI.
+
+### Handling mixed types in the same field
+
+#### Problem
+
+A single field sometimes stores different data types across events (for instance, strings in some events and integers in others). This is typically a side effect of using “kitchen-sink” ingestion or inconsistent parsing logic in your code.
+
+#### Why it matters
+
+- **Reduced compression**: Storing multiple types in the same column (variant column) is less efficient than storing a single type.
+- **Complex queries**: You might need frequent casting or conditional logic in queries (`tostring()` calls, etc.).
+
+#### How to fix it
+
+- **Standardize your types at ingest:** If a field is semantically an integer, always send it as an integer.
+- **Use consistent schemas across services:** If multiple applications write to the same dataset, agree on a schema and data types.
+- **Perform corrections at the source:** If you discover your data has been mixed historically, stop ingesting mismatched types. Over time, new blocks will reflect the corrected types even though historical blocks remain mixed.
+
+### Overly wide queries returning more fields than needed
+
+#### Problem
+
+By default, Axiom’s query engine projects all fields (`project *`) for each matching event. This can return large amounts of unneeded data, especially in wide datasets with many columns.
+
+#### Why it matters
+
+- **High I/O and memory usage**: Unnecessary data is scanned, read, and returned.
+- **Slower queries**: Time is wasted processing fields you never use.
+
+#### How to fix it
+
+- **Use `project` or `project-keep`**
+    
+    Specify exactly which fields you need. For example:
+    
+    ```
+    dataset
+    | where status == 500
+    | project timestamp, error_code, user_id
+    ```
+    
+- **Use `project-away` if you only need to exclude a few fields:** If you need 90% of the fields but want to exclude the largest ones, for instance:
+    
+    ```
+    dataset
+    | project-away debug_payload, large_object_field
+    
+    ```
+    
+- **Limit your results**
+    
+    If you only need a sample of events for debugging, use a lower `limit` value (such as 100) instead of the default 1000.
+    
+
+### Regular expressions when simple filters suffice
+
+#### Problem
+
+Regular expressions (`matches`, `regex`) can be powerful, but they are also expensive to evaluate, especially on large datasets.
+
+#### Why it matters
+
+- **High CPU usage**: Regex filters require complex per-row matching.
+- **Slower queries**: Large swaths of data are scanned with less efficient matching.
+
+#### How to fix it
+
+- **Use direct string filters**
+    
+    Instead of:
+    
+    ```
+    dataset
+    | where message matches "[Ff]ailed"
+    ```
+    
+    ```
+    dataset
+    | where message contains "failed"
+    ```
+    
+- **Use `search` for substring search:**
+    
+    If you simply need to find “foobar” anywhere in the text, use:
+    
+    ```
+    dataset
+    | search "foobar"
+    ```
+    
+    or:
+    
+    ```
+    dataset
+    | where FIELD contains_cs "foobar"
+    ```
+    
+    (“cs” stands for case-sensitive if you need that).
+    
+
+### Overusing runtime JSON parsing (`parse_json`)
+
+#### Problem
+
+Some ingestion pipelines place large JSON payloads into a string field, deferring parsing until query time with `parse_json()`. This is both CPU-intensive and slower than columnar operations.
+
+#### Why it matters
+
+- **Repeated parsing overhead**: You pay a performance penalty on each query.
+- **Limited indexing**: Axiom cannot index nested fields if they are only known at query time.
+
+#### How to fix it
+
+- **Ingest as map fields:** Axiom’s new [map column type](https://axiom.co/docs/apl/data-types/map-fields#map-fields) can store object fields column by column, preserving structure and optimizing for nested queries. This allows indexing of specific nested keys.
+- **Extract top-level fields where possible:** If a certain nested field is frequently used for filtering or grouping, consider promoting it to its own top-level column (for faster indexing).
+- **Avoid `parse_json()` in query:** If your JSON cannot be flattened entirely, ingest it into a map field. Then query subfields directly:
+    
+    ```
+    dataset
+    | where data_map.someKey == "someValue"
+    ```
+
+### Virtual fields for simple transformations
+
+#### Problem
+
+You can create virtual fields (for example, `extend converted = toint(some_field)`) to transform data at query time. While sometimes necessary, every additional virtual field imposes more overhead.
+
+#### Why it matters
+
+- **Increased CPU**: Each virtual field requires interpretation by Axiom’s expression engine.
+- **Slower queries**: Overuse of `extend` for trivial or frequently repeated operations can add up.
+
+#### How to fix it
+
+- **Avoid unnecessary casting:** If a field must be an integer, handle it at ingest time.
+    
+    **Example:** Instead of
+    
+    ```
+    dataset
+    | extend str_user_id = tostring(mixed_user_id)
+    | where str_user_id contains "123"
+    ```
+    
+    simply do
+    
+    ```
+    
+    | where mixed_user_id contains "123"
+    
+    ```
+    
+    The filter automatically matches string values in mixed columns.
+    
+- **Reserve virtual fields for truly dynamic or derived logic**
+    
+    If you frequently need a computed value, store it at ingest or keep the transformations minimal.
+    
+
+### Excessive backfilling and large `_time` vs. `_sysTime` gaps
+
+#### Problem
+
+Backfilling large amounts of historical data after the fact (especially out of chronological order) creates wide time overlaps in blocks. If `_time` is far from `_sysTime` (the time the event was ingested), Axiom’s primary time index is weakened.
+
+#### Why it matters
+
+- **Poor performance on time-based queries**: Blocks must be scanned despite time filters, because many blocks overlap the query time window.
+- **Large data merges**: Compaction processes that rely on time ordering become less efficient.
+
+#### How to fix it
+
+- **Minimize backfill:** Try to ingest events close to their actual creation time whenever possible.
+- **Use discrete backfill intervals:** If you must backfill many days or months, ingest one segment at a time (for example, day-by-day).
+- **Be aware of ingestion concurrency:** Avoid mixing brand-new events with extremely old events in the same ingest request.
+
+### Poor filter order in queries
+
+#### Problem
+
+Axiom’s query engine does not currently reorder your `where` clauses optimally. This means the sequence of filters in your query can matter.
+
+#### Why it matters
+
+- **Unnecessary scans**: If you use selective filters last, the engine may process many rows before discarding them.
+- **Longer execution times**: CPU usage and scan times increase.
+
+#### How to fix it
+
+- **Put the most selective filters first:**
+    
+    Example:
+    
+    ```
+    dataset
+    | where user_id == 1234
+    | where log_level == "ERROR"
+    ```
+    
+    If `user_id == 1234` discards most rows, apply it before `log_level == "ERROR"`.
+    
+- **Profile your filters:** Experiment with which filters discard the most rows to find the most selective conditions.
