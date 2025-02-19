@@ -144,14 +144,17 @@ npm install @axiomhq/logging
 The following example sends data to Axiom:
 
 ```ts
-import { Logger, AxiomFetchTransport, ConsoleTransport } from "@axiomhq/logging";
+import { Logger, AxiomJSTransport, ConsoleTransport } from "@axiomhq/logging";
+import { Axiom } from "@axiomhq/js";
+
+const axiom = new Axiom({
+  token: process.env.AXIOM_TOKEN,
+});
 
 const logger = new Logger(
   {
     transports: [
-      new AxiomFetchTransport({
-        token: process.env.AXIOM_TOKEN,
-      }),
+      new AxiomJSTransport({ axiom }),
       new ConsoleTransport(),
     ],
   }
@@ -165,20 +168,6 @@ logger.info("Hello, world!");
 #### Transports
 
 The `@axiomhq/logging` library includes the following transports:
-
-- `AxiomFetchTransport`: Sends logs to Axiom using the Axiom HTTP API.
-
-    ```ts
-    import { AxiomFetchTransport } from "@axiomhq/logging";
-
-    const transport = new AxiomFetchTransport({
-      token: process.env.AXIOM_TOKEN,
-      dataset: process.env.AXIOM_DATASET,
-      url: process.env.AXIOM_URL,
-      autoFlush: 1000,
-      logLevel: "warn"
-    });
-    ```
 
 - `ConsoleTransport`: Logs to the console.
 
@@ -208,31 +197,16 @@ The `@axiomhq/logging` library includes the following transports:
     });
     ```
 
-- `ProxyTransport`: Sends logs to a remote server that acts as a proxy.
+- `ProxyTransport`: Sends logs the [proxy server function](/send-data/nextjs#proxy-for-client-side-usage) that acts as a proxy between your application and Axiom, 
+specially useful when your application runs on top of a server-enabled framework like Next.js or Remix.
 
     ```ts
     import { ProxyTransport } from "@axiomhq/logging";
 
     const transport = new ProxyTransport({
-      url: "https://example.com/proxy",
+      url: "/proxy",
       logLevel: "warn",
-      autoFlush: 1000,
-    });
-    ```
-
-- `SimpleFetchTransport`: Sends logs to a remote server using HTTP.
-
-    ```ts
-    import { SimpleFetchTransport } from "@axiomhq/logging";
-
-    const transport = new SimpleFetchTransport({
-      input: "https://example.com/proxy",
-      init: {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
+      autoFlush: { durationMs: 1000 },
     });
     ```
 
