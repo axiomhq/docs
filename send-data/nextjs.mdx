@@ -299,7 +299,7 @@ The @axiomhq/nextjs library is part of the Axiom JavaScript SDK, an open-source 
 
     ```ts lib/axiom/server.ts [expandable]
     import axiomClient from '@/lib/axiom/axiom';
-    import { Logger, ConsoleTransport, AxiomJSTransport } from '@axiomhq/logging';
+    import { Logger, AxiomJSTransport } from '@axiomhq/logging';
     import { createAxiomRouteHandler, serverContextFieldsFormatter } from '@axiomhq/nextjs';
 
     export const logger = new Logger({
@@ -325,7 +325,7 @@ The @axiomhq/nextjs library is part of the Axiom JavaScript SDK, an open-source 
     ```ts lib/axiom/client.ts [expandable]
     'use client';
     import axiomClient from '@/lib/axiom/axiom';
-    import { Logger, ConsoleTransport, AxiomJSTransport } from '@axiomhq/logging';
+    import { Logger, AxiomJSTransport } from '@axiomhq/logging';
     import { createUseLogger, createWebVitalsComponent } from '@axiomhq/react';
 
     export const logger = new Logger({
@@ -552,7 +552,7 @@ Instead of sending logs directly to Axiom, you can send them to a proxy endpoint
     ```ts lib/axiom/client.ts [expandable]
     'use client';
 
-    import { Logger, ProxyTransport, ConsoleTransport } from '@axiomhq/logging';
+    import { Logger, ProxyTransport } from '@axiomhq/logging';
     import { createUseLogger, createWebVitalsComponent } from '@axiomhq/react';
 
     export const logger = new Logger({
@@ -589,7 +589,7 @@ To customize the reports sent to Axiom, use the `onError` and `onSuccess` functi
 In the `lib/axiom/server.ts` file, use the `transformRouteHandlerErrorResult` and `transformRouteHandlerSuccessResult` functions to customize the data sent to Axiom by adding fields to the report object:
 
 ```ts [expandable]
-import { Logger, AxiomFetchTransport, ConsoleTransport } from '@axiomhq/logging';
+import { Logger, AxiomJSTransport } from '@axiomhq/logging';
 import { 
   createAxiomRouteHandler, 
   getLogLevelFromStatusCode, 
@@ -632,7 +632,7 @@ Axiom recommends you add fields on top of the ones returned by the default `tran
 Alternatively, create your own `transformSuccessResult()` or `transformErrorResult()` functions:
 
 ```ts [expandable]
-import { Logger, AxiomFetchTransport, ConsoleTransport } from '@axiomhq/logging';
+import { Logger, AxiomJSTransport } from '@axiomhq/logging';
 import { 
   createAxiomRouteHandler, 
   getLogLevelFromStatusCode, 
@@ -724,7 +724,7 @@ By default, Axiom uses the following log levels:
 To customize this behavior, provide a custom `logLevelByStatusCode()` function when logging errors from your route handler:
 
 ```ts [expandable]
-import { Logger, AxiomFetchTransport, ConsoleTransport, LogLevel } from '@axiomhq/logging';
+import { Logger, AxiomJSTransport, LogLevel } from '@axiomhq/logging';
 import {
   createAxiomRouteHandler,
   serverContextFieldsFormatter,
@@ -761,7 +761,7 @@ export const withAxiom = createAxiomRouteHandler(logger, {
 Internally, the status code gets captured in the `transformErrorResult()` function using a `getNextErrorStatusCode()` function. To compose these functions yourself, create your own `getNextErrorStatusCode()` function and inject the result into the `transformErrorResult()` report.
 
 ```ts [expandable]
-import { Logger, AxiomFetchTransport, ConsoleTransport, LogLevel } from '@axiomhq/logging';
+import { Logger, AxiomJSTransport, LogLevel } from '@axiomhq/logging';
 import {
   createAxiomRouteHandler,
   serverContextFieldsFormatter,
@@ -770,13 +770,11 @@ import {
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { isHTTPAccessFallbackError } from 'next/dist/client/components/http-access-fallback/http-access-fallback';
 
+import axiomClient from '@/lib/axiom/axiom';
+
 export const logger = new Logger({
   transports: [
-    new AxiomFetchTransport({
-      dataset: process.env.AXIOM_DATASET!,
-      token: process.env.AXIOM_TOKEN!,
-    }),
-    new ConsoleTransport({ prettyPrint: true }),
+    new AxiomJSTransport({ axiom: axiomClient, dataset: process.env.NEXT_PUBLIC_AXIOM_DATASET! }),
   ],
   formatters: [serverContextFieldsFormatter],
 });
@@ -787,9 +785,9 @@ export const getNextErrorStatusCode = (error: Error & { digest?: string }) => {
   }
 
   if (isRedirectError(error)) {
-    return error.digest.split(';')[3];
+    return parseInt(error.digest.split(';')[3]);
   } else if (isHTTPAccessFallbackError(error)) {
-    return error.digest.split(';')[1];
+    return parseInt(error.digest.split(';')[1]);
   }
 };
 
@@ -834,17 +832,15 @@ The `createAxiomRouteHandler` accepts a `store` field in the configuration objec
 The fields in the store are added to the `fields` object of the log report. For example, you can use this to add a `trace_id` field to every log report within the same function execution in the route handler.
 
 ```ts [expandable]
-import { Logger, AxiomFetchTransport, ConsoleTransport } from '@axiomhq/logging';
+import { Logger, AxiomJSTransport } from '@axiomhq/logging';
 import { createAxiomRouteHandler, serverContextFieldsFormatter } from '@axiomhq/nextjs';
 import { NextRequest } from 'next/server';
 
+import axiomClient from '@/lib/axiom/axiom';
+
 export const logger = new Logger({
   transports: [
-    new AxiomFetchTransport({
-      dataset: process.env.AXIOM_DATASET!,
-      token: process.env.AXIOM_TOKEN!,
-    }),
-    new ConsoleTransport({ prettyPrint: true }),
+    new AxiomJSTransport({ axiom: axiomClient, dataset: process.env.NEXT_PUBLIC_AXIOM_DATASET! }),
   ],
   formatters: [serverContextFieldsFormatter],
 });
