@@ -12,12 +12,11 @@ Axiom is optimized for storing and querying timestamped event data. However, cer
 | Practice | Severity | Impact |
 | --- | --- | --- |
 | [Mixing unrelated data in datasets](#mixing-unrelated-data-in-datasets) | Critical | Combining unrelated data inflates schema, slows queries |
-| [Large time ranges in one ingest](#large-time-ranges-mixed-in-the-same-ingest) | Critical | Breaks time-based indexing |
+| [Excessive backfilling, big difference between _time and _sysTime](#excessive-backfilling-and-large-_time-vs-_systime-gaps) | Critical | Creates overlapping blocks, breaks time-based indexing |
 | [Large number of fields in a dataset](#large-number-of-fields-in-a-dataset) | High | Very high dimensionality slows down query performance |
 | [Failing to use _time](#failing-to-use-the-_time-field-for-event-timestamps) | High | No efficient time-based filtering |
 | [Overly wide queries (project *)](#overly-wide-queries-returning-more-fields-than-needed) | High | Returns massive unneeded data |
 | [Mixed data types in the same field](#mixing-unrelated-data-in-datasets) | Moderate | Reduces compression, complicates queries |
-| [Excessive backfilling, big _time vs _sysTime](#excessive-backfilling-and-large-_time-vs-_systime-gaps) | Moderate | Creates overlapping blocks |
 | [Using regex when simpler filters suffice](#regular-expressions-when-simple-filters-suffice) | Moderate | More CPU-heavy scanning |
 | [Overusing runtime JSON parsing (parse_json)](#overusing-runtime-json-parsing-parse_json) | Moderate | CPU overhead, no indexing on nested fields |
 | [Virtual fields for simple transformations](#virtual-fields-for-simple-transformations) | Low | Extra overhead for trivial conversions |
@@ -47,21 +46,25 @@ These issues reduce compression efficiency, make indexing less effective, and fo
 - **Avoid mixing data types for the same field:** Enforce consistent types during ingest. If a field is numeric, always send numeric values.
 - **Consider using map fields:** If you have sparse or high-cardinality nested data, consider storing it in a single map (object) field instead of flattening every key. This reduces the total number of top-level fields. Axiom’s [map fields](/apl/data-types/map-fields#map-fields) are optimized for large objects.
 
-## Large time ranges mixed in the same ingest
+## Excessive backfilling and large `_time` vs. `_sysTime` gaps
 
 ### Problem
 
-Axiom’s index is primarily built around time. Ideally, incoming events for a block lie in a closely bounded time range. However, if you ingest events that span very large or disjoint time ranges together—for example, mixing events from *now*, 30 days ago, and 90 days ago in a single push—this breaks the time index’s effectiveness.
+Axiom’s index is primarily built around time. Ideally, incoming events for a block lie in a closely bounded time range. However, backfilling large amounts of historical data after the fact (especially out of chronological order) creates wide time overlaps in blocks. If `_time` is far from `_sysTime` (the time the event was ingested), Axiom’s primary time index is weakened.
 
 ### Why it matters
 
-- **Inefficient block filtering**: Queries that filter on recent or older times must scan blocks that contain data from many time segments.
-- **Slower queries**: Axiom cannot skip entire blocks based on time, so more data is read and processed.
+- **Poor performance on time-based queries**: Blocks must be scanned despite time filters, because many blocks overlap the query time window.
+- **Inefficient block filtering**: Queries that filter on time must scan blocks that contain data from many time segments.
+- **Large data merges**: Compaction processes that rely on time ordering become less efficient.
 
 ### How to fix it
 
-- **Send data in time order:** Ingest events close to the time they occur. If you must backfill older data, do it in dedicated batches that do not mix with live data.
+- **Minimize backfill:** Try to ingest events close to their actual creation time whenever possible. Ingest events close to the time they occur.
+- **Backfill in dedicated batches:** If you must backfill older data, do it in dedicated batches that do not mix with live data.
+- **Use discrete backfill intervals:** When backfilling data, ingest one segment at a time (for example, day-by-day).
 - **Avoid wide time ranges in a single batch:** If you are sending data for a 24-hour period, avoid mixing in data that is weeks or months older.
+- **Be aware of ingestion concurrency:** Avoid mixing brand-new events with extremely old events in the same ingest request.
 
 <Note>
 Future improvements: Axiom’s roadmap includes an initiative which aims to mitigate the impact of poorly clustered time data by performing incremental time-based compaction. Until then, avoid mixing large historical ranges with live ingest whenever possible.
@@ -260,23 +263,6 @@ You can create virtual fields (for example, `extend converted = toint(some_field
     
     If you frequently need a computed value, store it at ingest or keep the transformations minimal.
     
-
-## Excessive backfilling and large `_time` vs. `_sysTime` gaps
-
-### Problem
-
-Backfilling large amounts of historical data after the fact (especially out of chronological order) creates wide time overlaps in blocks. If `_time` is far from `_sysTime` (the time the event was ingested), Axiom’s primary time index is weakened.
-
-### Why it matters
-
-- **Poor performance on time-based queries**: Blocks must be scanned despite time filters, because many blocks overlap the query time window.
-- **Large data merges**: Compaction processes that rely on time ordering become less efficient.
-
-### How to fix it
-
-- **Minimize backfill:** Try to ingest events close to their actual creation time whenever possible.
-- **Use discrete backfill intervals:** If you must backfill many days or months, ingest one segment at a time (for example, day-by-day).
-- **Be aware of ingestion concurrency:** Avoid mixing brand-new events with extremely old events in the same ingest request.
 
 ## Poor filter order in queries
 
