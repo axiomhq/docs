@@ -79,7 +79,7 @@ Slow query performance in datasets with very high dimensionality (with more than
 ### Why it matters
 
 Axiom stores event data in a tuned format. As a result:
-- The number of distinct values (cardinality) in your data has little impact on performance.
+- The number of distinct values (cardinality) in your data impacts performance because low-cardinality fields compress better than high-cardinality fields.
 - The number of fields in a dataset (dimensionality) impacts performance.
 - The volume of data collected impacts performance.
 
@@ -95,13 +95,13 @@ Axiom’s core optimizations rely on `_time` for indexing and time-based queries
 
 ### Why it matters
 
-- **No time-based indexing**: Every block must be scanned, because your custom timestamp field is invisible to the time index.
-- **Incorrect event ordering**: You may lose correct chronological context or get unexpected query results.
+- **No time-based indexing**: Every block must be scanned because your custom timestamp field is invisible to the time index.
+- **Inefficient event ordering**: Queries that sort on time are slow.
 
 ### How to fix it
 
 - **Always use `_time`:** Configure your ingest pipelines so that Axiom sets `_time` to the actual event timestamp.
-    - If you have a custom field like `created_at`, map it to `_time` at ingest.
+    - If you have a custom field like `created_at`, rename it to `_time` at ingest.
     - Verify that your ingestion library or agent is correctly populating `_time`.
 - **Use Axiom’s native time filters:** Rely on `where _time >= ... and _time <= ...` or the built-in time range selectors in the query UI.
 
@@ -189,21 +189,21 @@ Regular expressions (`matches`, `regex`) can be powerful, but they are also expe
     
 - **Use `search` for substring search:**
     
-    If you simply need to find “foobar” anywhere in the text, use:
+    To find `foobar` in all fields, use:
     
     ```kusto
     dataset
     | search "foobar"
     ```
     
-    Alternatively:
+    `search` matches text all fields. To find text in a specific field, a more efficient solution is to use the following:
     
     ```kusto
     dataset
     | where FIELD contains_cs "foobar"
     ```
     
-    (“cs” stands for case-sensitive if you need that).
+    In this example, `cs` stands for case-sensitive.
     
 
 ## Overusing runtime JSON parsing (`parse_json`)
