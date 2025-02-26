@@ -26,12 +26,35 @@ To create a custom webhook notifier, follow these steps:
     - `.Title` is the name of the monitor associated with the notification.
     - `.Value` is the value that gave rise to the monitor triggering or resolving. It’s only applicable if the notification corresponds to a threshold monitor.
     - `.MatchedEvent` is a JSON object that represents the event that matched the criteria of the monitor. It’s only applicable if the notification corresponds to a match monitor.
+    - `.GroupKeys` and `.GroupValues` are JSON arrays that contain the keys and the values returned by the group-by attributes of your query. They are only applicable if the APL query of the monitor groups by a non-time field.
+    You can fully customize the content of the webhook to match the requirements of your environment.
 1. Optional: Add headers to the POST request sent to the webhook URL.
 1. Click **Create**.
 
 ## Examples
 
-The example below is a custom webhook notification generated from a threshold monitor triggering. The body of a POST request sent to the webhook URL using the default template is the following:
+The example below is the default template for a custom webhook notification:
+
+```json
+{
+  "action": "{{.Action}}",
+  "event": {
+    "monitorID": "{{.MonitorID}}",
+    "body": "{{.Body}}",
+    "description": "{{.Description}}",
+    "queryEndTime": "{{.QueryEndTime}}",
+    "queryStartTime": "{{.QueryStartTime}}",
+    "timestamp": "{{.Timestamp}}",
+    "title": "{{.Title}}",
+    "value": {{.Value}},
+    "matchedEvent": {{jsonObject .MatchedEvent}},
+    "groupKeys": {{jsonArray .GroupKeys}},
+    "groupValues": {{jsonArray .GroupValues}}
+  }
+}
+```
+
+Using the template above, the body of a POST request sent to the webhook URL for a threshold monitor triggering:
 
 ```json
 {
@@ -45,7 +68,9 @@ The example below is a custom webhook notification generated from a threshold mo
     "timestamp": "2024-06-28 14:55:57 +0000 UTC",
     "title": "Axiom Monitor Test Triggered",
     "value": 57347,
-    "matchedEvent": null
+    "matchedEvent": null,
+    "groupKeys": null,
+    "groupValues": null
   }
 }
 ```
@@ -54,17 +79,14 @@ The example template below formats the webhook message to match the [expectation
 
 ```json
 {
-  "action": "Open",
-  "event": {
-    "title": "{{.Title}}",
-    "description": "{{.Body}}",
-    "deduplication_key": "{{.MonitorID}}",
-    "status": "{{ if eq .Action "Open" }}firing{{ else }}resolved{{ end }}",
-    "metadata": {
-      "description": "{{.Description}}",
-      "value": {{.Value}},
-      "url": "https://app.axiom.co/{your-org-id-here}/monitors/{{.MonitorID}}"
-    }
-  }
+  "title": "{{.Title}}",
+  "description": "{{.Body}}",
+  "deduplication_key": "{{.MonitorID}}",
+  "status": "{{ if eq .Action "Open" }}firing{{ else }}resolved{{ end }}",
+  "metadata": {
+    "description": "{{.Description}}",
+    "value": {{.Value}}
+  },
+  "source_url": "https://app.axiom.co/{your-org-id-here}/monitors/{{.MonitorID}}"
 }
 ```
