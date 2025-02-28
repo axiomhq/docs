@@ -5,7 +5,7 @@ description: 'This page explains how to use the lookup operator in APL.'
 
 ## Introduction
 
-The `lookup` operator extends a primary dataset with a lookup dataset based on a specified key column. It retrieves matching rows from the lookup dataset and appends relevant fields to the primary dataset. You can use `lookup` for enriching event data, adding contextual information, or correlating logs with reference tables.
+The `lookup` operator extends a primary dataset with a lookup table based on a specified key column. It retrieves matching rows from the lookup table and appends relevant fields to the primary dataset. You can use `lookup` for enriching event data, adding contextual information, or correlating logs with reference tables.
 
 The `lookup` operator is useful when:
 
@@ -20,34 +20,34 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, the `lookup` command performs a similar function by enriching event data with fields from an external lookup table.
+In Splunk SPL, the `lookup` command performs a similar function by enriching event data with fields from an external lookup table. However, unlike Splunk, APL’s `lookup` operator only performs an inner join.
 
 <CodeGroup>
 ```sql Splunk example
-index=web_logs | lookup geoip_lookup ip AS client_ip OUTPUT city, country
+index=web_logs | lookup port_lookup port AS client_port OUTPUT service_name
 ```
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| lookup kind=inner ['geoip_lookup'] on id
+| lookup kind=inner ['port_lookup'] on port
 ```
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, `lookup` is similar to an `INNER JOIN`, where records from both tables are matched based on a common key.
+In ANSI SQL, `lookup` is similar to an `INNER JOIN`, where records from both tables are matched based on a common key. Unlike SQL, APL does not support other types of joins in `lookup`.
 
 <CodeGroup>
 ```sql SQL example
-SELECT logs.*, geo.city, geo.country
+SELECT logs.*, ports.service_name 
 FROM logs
-INNER JOIN geoip_lookup geo ON logs.id = geo.id;
+INNER JOIN port_lookup ports ON logs.port = ports.port;
 ```
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| lookup kind=inner ['geoip_lookup'] on id
+| lookup kind=inner ['port_lookup'] on port
 ```
 </CodeGroup>
 
@@ -65,14 +65,14 @@ PrimaryDataset
 
 ### Parameters
 
-- `PrimaryDataset`: The primary dataset that you want to extend. If you expect one of the datasets to contain consistently more data than the other, specify the larger dataset as the left side of the join.
-- `LookupTable`: The secondary dataset containing additional data, also known as the dimension table or lookup table.
+- `PrimaryDataset`: The primary dataset that you want to extend. If you expect one of the tables to contain consistently more data than the other, specify the larger table as the primary dataset.
+- `LookupTable`: The data table containing additional data, also known as the dimension table or lookup table.
 - `KindOfLookup`: Optionally, specifies the lookup type as `leftouter` or `inner`. The default is `leftouter`.
     - `leftouter` lookup includes all rows from the primary dataset even if they don’t match the conditions. In unmatched rows, the new fields contain nulls.
     - `inner` lookup only includes rows from the primary dataset if they match the conditions. Unmatched rows are excluded from the output.
 - `Conditions`: The conditions for matching rows from `PrimaryDataset` to rows from `LookupTable`. The conditions are equality expressions that determine how Axiom matches rows from the `PrimaryDataset` (left side of the equality expression) with rows from the `LookupTable` (right side of the equality expression). The two sides of the equality expression must have the same data type.
-    - To use `lookup` on a key column that has the same name in the two datasets, simply use the field name. For example, `on id`.
-    - To use `lookup` on a key column that has different names in the two datasets, define the two field names in an equality expression such as `on id == trace_id`.
+    - To use `lookup` on a key column that has the same name in the primary dataset and the lookup table, simply use the field name. For example, `on id`.
+    - To use `lookup` on a key column that has different names in the primary dataset and the lookup table, define the two field names in an equality expression such as `on id == trace_id`.
     - You can define multiple conditions. To separate conditions, use commas (`,`). Don’t use `and`. For example, `on id == trace_id, span == span_id`.
 
 ### Returns
@@ -105,9 +105,10 @@ let LookupTable=datatable(serviceName:string, humanreadableServiceName:string)[
 ];
 ['otel-demo-traces']
 | lookup kind=leftouter LookupTable on $left.['service.name'] == $right.serviceName
+| project _time, span_id, ['service.name'], humanreadableServiceName
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let%20LookupTable%3Ddatatable(serviceName%3Astring%2C%20humanreadableServiceName%3Astring)%5B%20'frontend'%2C%20'Frontend'%2C%20'frontendproxy'%2C%20'Frontend%20proxy'%2C%20'flagd'%2C%20'Flagd'%2C%20'productcatalogservice'%2C%20'Product%20catalog'%2C%20'loadgenerator'%2C%20'Load%20generator'%2C%20'checkoutservice'%2C%20'Checkout'%2C%20'cartservice'%2C%20'Cart'%2C%20'recommendationservice'%2C%20'Recommendations'%2C%20'emailservice'%2C%20'Email'%2C%20'adservice'%2C%20'Ads'%2C%20'shippingservice'%2C%20'Shipping'%2C%20'quoteservice'%2C%20'Quote'%2C%20'currencyservice'%2C%20'Currency'%2C%20'paymentservice'%2C%20'Payment'%2C%20'frauddetectionservice'%2C%20'Fraud%20detection'%2C%20%5D%3B%20%5B'otel-demo-traces'%5D%20%7C%20lookup%20kind%3Dleftouter%20LookupTable%20on%20%24left.%5B'service.name'%5D%20%3D%3D%20%24right.serviceName%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let%20LookupTable%3Ddatatable(serviceName%3Astring%2C%20humanreadableServiceName%3Astring)%5B%20'frontend'%2C%20'Frontend'%2C%20'frontendproxy'%2C%20'Frontend%20proxy'%2C%20'flagd'%2C%20'Flagd'%2C%20'productcatalogservice'%2C%20'Product%20catalog'%2C%20'loadgenerator'%2C%20'Load%20generator'%2C%20'checkoutservice'%2C%20'Checkout'%2C%20'cartservice'%2C%20'Cart'%2C%20'recommendationservice'%2C%20'Recommendations'%2C%20'emailservice'%2C%20'Email'%2C%20'adservice'%2C%20'Ads'%2C%20'shippingservice'%2C%20'Shipping'%2C%20'quoteservice'%2C%20'Quote'%2C%20'currencyservice'%2C%20'Currency'%2C%20'paymentservice'%2C%20'Payment'%2C%20'frauddetectionservice'%2C%20'Fraud%20detection'%2C%20%5D%3B%20%5B'otel-demo-traces'%5D%20%7C%20lookup%20kind%3Dleftouter%20LookupTable%20on%20%24left.%5B'service.name'%5D%20%3D%3D%20%24right.serviceName%20%7C%20project%20_time%2C%20span_id%2C%20%5B'service.name'%5D%2C%20humanreadableServiceName%22%7D)
 
 **Output**
 
