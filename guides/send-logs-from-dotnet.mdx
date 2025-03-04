@@ -210,12 +210,13 @@ This command builds the project and runs the app. You see the log messages being
 
 ### Install Serilog Packages
 
-Add Serilog and the necessary extensions to your project. You need the `Serilog`, `Serilog.Sinks.Http`, and `Serilog.Formatting.Json` packages.
+Add Serilog and the necessary extensions to your project. You need the `Serilog`, `Serilog.Sinks.Http`, `Serilog.Formatting.Elasticsearch` and `Serilog.Formatting.Json` packages.
 
 ```bash
 dotnet add package Serilog
 dotnet add package Serilog.Sinks.Http
 dotnet add package Serilog.Formatting.Json
+dotnet add package Serilog.Formatting.Elasticsearch
 ```
 
 ### Configure Serilog
@@ -224,11 +225,12 @@ In your `Program.cs` or a startup configuration file, set up Serilog to use the 
 
 ```csharp
 using Serilog;
+using Serilog.Formatting.Elasticsearch;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Http(
         requestUri: "https://api.axiom.co/v1/datasets/YOUR-DATASET-NAME/ingest",
-        textFormatter: new Serilog.Formatting.Json.JsonFormatter(),
+        textFormatter: new ElasticsearchJsonFormatter(renderMessageTemplate: false, inlineFields: true),
         httpClient: new HttpClient
         {
             DefaultRequestHeaders =
@@ -301,10 +303,10 @@ Ensure your `axiomlogs.csproj` file is configured with the package references. T
     <PackageReference Include="Serilog" Version="2.10.0" />
     <PackageReference Include="Serilog.Sinks.Http" Version="5.0.0" />
     <PackageReference Include="Serilog.Formatting.Json" Version="3.1.0" />
+    <PackageReference Include="Serilog.Formatting.Elasticsearch" Version="8.4.1" />
   </ItemGroup>
 
 </Project>
-
 ```
 
 ### Build and run the app
@@ -327,6 +329,7 @@ You need NLog and potentially an extension for HTTP targets.
 ```bash
 dotnet add package NLog
 dotnet add package NLog.Web.AspNetCore
+dotnet add package NLog.Targets.Http
 ```
 
 ### Configure NLog
@@ -336,16 +339,25 @@ Set up NLog by creating an `NLog.config` file or configuring it programmatically
 ```xml
 <nlog xmlns="http://www.nlog-project.org/schemas/NLog.xsd"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <extensions>
+        <add assembly="NLog.Targets.Http" />
+    </extensions>
     <targets>
         <target xsi:type="BufferingWrapper"
                 name="allLogs"
                 flushTimeout="5000">
-            <target xsi:type="WebClient"
-                    name="http"
+            <target xsi:type="HTTP" 
+                    name="axiom"
                     url="https://api.axiom.co/v1/datasets/YOUR-DATASET-NAME/ingest"
-                    method="POST"
-                    header="Authorization: Bearer YOUR-API-TOKEN"
-                    layout="${longdate}|${level:uppercase=true}|${message} ${exception:format=toString,Data}">
+                    HttpHeaders="Authorization: Bearer YOUR-API-TOKEN"
+                    contentType="application/json">
+                <layout xsi:type="JsonLayout" includeAllProperties="true">
+                    <attribute name="timestamp" layout="${date:universalTime=true:format=o}" />
+                    <attribute name="level" layout="${level:lowercase=true}" />
+                    <attribute name="message" layout="${message}" />
+                    <attribute name="exception" layout="${exception:format=toString}" 
+                               encode="false" />
+                </layout>
             </target>
         </target>
     </targets>
@@ -427,6 +439,7 @@ Ensure your `axiomlogs.csproj` file is configured with the package references. T
   <ItemGroup>
     <PackageReference Include="NLog" Version="4.7.12" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="4.9.3" />
+    <PackageReference Include="NLog.Targets.Http" Version="1.0.4" />
   </ItemGroup>
 
 </Project>
