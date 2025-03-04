@@ -9,82 +9,100 @@ This page explains how to try out Axiom with sample data. It walks you through a
 
 By following this page, you will:
 
-1. Send sample data to Axiom.
-2. Analyze the data.
-3. Visualize the data by creating a simple dashboard.
-4. Set up a monitor that alerts you about internal server errors.
+1. Explore the structure of sample data.
+1. Display stream of incoming data.
+1. Analyze the data.
+1. Visualize the data by creating a simple dashboard.
+1. Set up a monitor that alerts you about internal server errors.
 
 To try out Axiom without registration, go to the [Axiom Playground](https://play.axiom.co/). For more information on how to navigate the Playground, see [Try out Axiom without registration](/getting-started-guide/explore-axiom-playground).
 
-To start integrating Axiom into your system, see [Start integrating Axiom into your system](/getting-started-guide/integrate-axiom).
+To start integrating Axiom into your system, see [Integrate Axiom into your system](/getting-started-guide/integrate-axiom).
 
-## 1. Send data to Axiom
+## 1. Explore sample data
 
 1. [Sign up for an Axiom account](https://app.axiom.co/register). All you need is an email address.
-2. Click **Create dataset**.
-3. Name your dataset **sample-http-logs**, and then click **Add**.
-4. Click **Send sample data to this dataset**.
+1. Click the **Datasets** tab on the top of the page.
+1. In the list of datasets, click `sample-http-logs`.
 
-This creates a dataset in your account. In Axiom, an individual piece of data is an event, and a dataset is a collection of similar events. In this example, an event is an HTTP request to your website, and the dataset holds incoming data about all these HTTP requests.
+This displays the fields in the sample dataset `sample-http-logs`. In Axiom, an individual piece of data is an event, and a dataset is a collection of similar events. In this example, an event is an HTTP request to your website, and the dataset holds incoming data about all these HTTP requests.
 
-## 2. Analyze data
-
-### Display stream of incoming data
+## 2. Display stream of incoming data
 
 1. Click the **Stream** tab on the top of the page.
 2. Click **sample-http-logs** in the list.
 
 You see the data that Axiom receives realtime. In this example, this page displays the HTTP requests to your imaginary website.
 
+## 3. Analyze data
+
 ### Query data
 
-1. Click the **Datasets** tab on the top of the page, and then click **sample-http-logs**. This tab enables you to query your data with a visual query editor.
-2. In the **Filter** section, click **+**.
-3. Write **status == "500"**, and then press **Enter**.
-4. Click **Run query**.
+1. Click the **Query** tab on the top of the page, and then click **Builder** in the top left. This enables you to query your data with a visual query builder.
+1. In the **Dataset** section, select **sample-http-logs** from the list of datasets.
+1. In the **Where** section, click **+**.
+1. Write **status == "500"**, and then press **Enter**.
+1. Click **Run**.
 
-You see all the HTTP requests with the status **500**. This is important to know because this status indicates an internal server error, meaning that the server has encountered a situation that it can't handle.
+You see all the HTTP requests with the status 500. This is important to know because this status indicates an internal server error, meaning that the server has encountered a situation that it can’t handle.
 
-### Run an advanced query
+### Run an APL query
 
-1. Click the **Explore** tab on the top of the page, and then click your dataset. This tab enables you to query your data using the Axiom Processing Language (APL). For more information, see [Introduction to APL](/apl/introduction).
-2. In the text field, enter the following:
-    ```apl copy
+1. Click the **Query** tab on the top of the page, and then click **APL** in the top left. This enables you to query your data with the Axiom Processing Language (APL). For more information, see [Introduction to APL](/apl/introduction).
+1. In the text field, enter the following:
+    ```kusto
     ['sample-http-logs']
     | summarize count() by bin_auto(_time), status
     ```
-3. Click **Run query**.
+1. Click **Run**.
 
 You see the number of HTTP requests of each status over time.
 
-## 3. Visualize data
+## 4. Visualize data
+
+1. Click the **Dashboards** tab on the top of the page.
+1. Click **Http logs** in the list.
+
+You see a dashboard that displays important information about the HTTP requests to the website.
+
+## 5. Create new dashboard
 
 1. Click the **Dashboards** tab on the top of the page, and then click **New dashboard** on the right.
-2. Name the dashboard and click **Create**.
-3. Click **Add a chart**, and then click **Simple Query Builder**.
-4. In **Dataset**, select **sample-http-logs**.
-5. To the right of **Group by**, click **+**, and then select **status**.
-6. Click **Save**.
+1. Name the dashboard and click **Create**.
+1. Click **Add a chart**, and then click **Timeseries**.
+1. In the **Dataset** section, select **sample-http-logs**.
+1. In the **Summarize** section, click **no group** to the right of **by**, and then select **status**.
+1. Click **Save**.
 
 You created a simple dashboard that displays the number of HTTP requests of each status over time.
 
-## 4. Monitor data for issues
+## 6. Monitor data for issues
 
-1. Click the **Monitors** tab on the top of the page, and then click **Manage notifiers** on the right.
-2. Click **New notifier** on the top right.
-3. In **Name**, enter **Internal server error notifier**.
-4. In **Users**, enter your email address, and then click **+** on the right.
-5. Click **Create**, and then click **Done**.
-6. Click **New monitor**.
-7. Click **Add notifier**, and then select **Internal server error notifier**.
-8. click **Simple Query Builder**.
-9. In **Dataset**, select **sample-http-logs**.
-10. In the **Filter** section, click **+**.
-11. Write **status == "500"**, and then press **Enter**.
-12. Click **Create**.
+### Create notifier
+
+1. Click the **Monitors** tab on the top of the page.
+1. In the top left, click **Notifiers**, and then click **New notifier** on the top right.
+1. In **Name**, enter **Internal server error notifier**.
+1. In **Users**, enter your email address, and then click **+** on the right.
+1. Click **Create**.
+
+### Create monitor
+
+1. In the top left, click **Monitors**, and then click **New monitor** on the top right.
+1. Click **Threshold monitor**.
+1. In **Check options**, enter `1000` as the value.
+1. Click **+ Add notifier**, and then select **Email: Internal server error notifier**.
+1. Click **Builder**.
+1. In the **APL** section, enter the following:
+    ```kusto
+    ['sample-http-logs']
+    | where status == "500"
+    | summarize count() by bin_auto(_time)
+    ```
+1. Click **Create**.
 
 You created a monitor that automatically sends a notification to your email address if the HTTP requests with the status **500** is higher than 1,000 in ten minutes.
 
 ## What's next
 
-To start integrating Axiom into your system, see [Start integrating Axiom into your system](/getting-started-guide/integrate-axiom).
+To start integrating Axiom into your system, see [Integrate Axiom into your system](/getting-started-guide/integrate-axiom).
