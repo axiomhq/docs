@@ -3,165 +3,60 @@ title: 'Get started with example app'
 excerpt: 'This page explains how to try out Axiom with an example app.'
 ---
 
-Axiom enables you to query your event data without compromises: all your data, all the time, for all possible needs. No sampling, no waiting, and no extravagant bills.
+This page explains how to try out Axiom with an example app that emits OpenTelemetry (OTel) trace data. There are many others ways you can send data to Axiom. For a full list, see [Send data](/send-data/ingest).
 
-This page explains how to try out Axiom with an example Node.js app that emits OpenTelemetry trace data. There are many others ways you can send data to Axiom. For a full list, see [Send data](/send-data/ingest).
+Choose one of the following example apps:
+
+<CardGroup cols={2}>
+<Card
+  title=".NET"
+  href="/guides/opentelemetry-dotnet"
+>
+</Card>
+
+<Card
+  title="Django"
+  href="/guides/opentelemetry-django"
+>
+</Card>
+
+<Card
+  title="Golang"
+  href="/guides/opentelemetry-go"
+>
+</Card>
+
+<Card
+  title="Java"
+  href="/guides/opentelemetry-java"
+>
+</Card>
+
+<Card
+  title="Next.js"
+  href="/guides/opentelemetry-nextjs"
+>
+</Card>
+
+<Card
+  title="Node.js"
+  href="/guides/opentelemetry-nodejs"
+>
+</Card>
+
+<Card
+  title="Python"
+  href="/guides/opentelemetry-python"
+>
+</Card>
+
+<Card
+  title="Ruby on Rails"
+  href="/guides/opentelemetry-ruby"
+>
+</Card>
+</CardGroup>
 
 To try out Axiom without registration, see [Explore Axiom Playground](/getting-started-guide/explore-axiom-playground).
 
 To try out Axiom with sample data, see [Quickstart using sample data](getting-started-guide/quickstart-using-sample-data).
-
-## 1. Set up Axiom
-
-To set up Axiom to receive data, first [sign up for a free Axiom account](https://app.axiom.co/register). All you need is an email address.
-
-### Create a dataset
-
-In Axiom, an individual piece of data is an event, and a dataset is a collection of similar events. In this example, events are emitted by the sample app, and the dataset contains the incoming event data.
-
-1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**, and then click **New dataset**.
-2. Name your dataset **test-dataset**, and then click **Add**.
-
-This creates a dataset in your account where you will send event data.
-
-<video controls autoPlay muted loop>
-  <source src="/doc-assets/videos/create-dataset.mp4" type="video/mp4">
-  </source>
-</video>
-
-### Create an API token
-
-An API token is a form of authentication that enables you to send data to Axiom. Keep it confidential because anyone with this key can send data to your Axiom dataset.
-
-1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > API tokens**, and then click **New API token**.
-2. Name your API token **test-token**.
-3. In **Dataset access**, select **test-dataset**.
-4. Click **Add**.
-5. Copy the API token that appears and store it securely. It won't be displayed again.
-
-This creates an API token that you will use to authenticate requests to send data to Axiom.
-
-<video controls autoPlay muted loop>
-  <source src="/doc-assets/videos/create-api-token.mp4" type="video/mp4">
-  </source>
-</video>
-
-## 2. Send data to Axiom
-
-1. [Install Node.js](https://nodejs.org/).
-2. Clone the [`otlp-exporter-node` example from OpenTelemetry](https://github.com/open-telemetry/opentelemetry-js/tree/main/examples/otlp-exporter-node).
-3. In the `tracing.js` file, edit the code that creates the `OTLPTraceExporter` object. Replace `AXIOM_API_TOKEN` with the Axiom API token you have generated.
-
-    ```js
-    const exporter = new OTLPTraceExporter({
-        url: 'https://api.axiom.co/v1/traces',
-        headers: {
-          'Authorization': 'Bearer AXIOM_API_TOKEN',
-          'X-Axiom-Dataset': 'test-dataset'
-        },
-    });
-    ```
-
-4. In your terminal, go to the root folder of the example app. Run the following to install dependencies and start the app three times:
-
-    ```shell
-    npm i
-    npm run start:tracing
-    npm run start:tracing
-    npm run start:tracing
-    ```
-
-This connects the example app to Axiom. Every time the app runs, it sends event data to Axiom.
-
-## 3. Analyze data
-
-### Display stream of incoming data
-
-1. Click the **Stream** tab on the top of the page.
-2. Click **test-dataset** in the list.
-
-You see the event data that Axiom receives realtime.
-
-<video controls autoPlay muted loop>
-  <source src="/doc-assets/videos/stream-tab.mp4" type="video/mp4">
-  </source>
-</video>
-
-### Query data
-
-1. Click the **Datasets** tab on the top of the page, and then click **test-dataset**. This tab enables you to query your data with a visual query editor.
-2. In the **Visualize** section, click **+**.
-3. Write `histogram(duration, 15)`, and then press **Enter**.
-4. Click **Run query**.
-
-You see a heatmap of events and their duration.
-
-<video controls autoPlay muted loop>
-  <source src="/doc-assets/videos/datasets-tab.mp4" type="video/mp4">
-  </source>
-</video>
-
-### Run a query with Axiom Processing Language (APL)
-
-1. Click the **Explore** tab on the top of the page, and then click your dataset. This tab enables you to query your data using the Axiom Processing Language (APL). For more information, see [Introduction to APL](/apl/introduction).
-2. In the text field, enter the following:
-    ```apl copy
-    ['test-dataset']
-    | where duration > 1000000
-    | take 1000
-    ```
-3. Click **Run query**.
-
-You see the events that took longer than 1 ms. In the query above, you see one million because time in the `duration` field is stored in nanoseconds.
-
-<video controls autoPlay muted loop>
-  <source src="/doc-assets/videos/explore-tab.mp4" type="video/mp4">
-  </source>
-</video>
-
-## 4. Visualize data
-
-1. Click the **Dashboards** tab on the top of the page, and then click **OpenTelemetry Traces (test-dataset)**. You see data about incoming traces and spans. Whenever Axiom detects known schemas like OpenTelemetry, it automatically creates dashboards for you.
-2. The `Slowest Operations` chart shows the list of services. Click `basic-service` to display the traces of this service.
-3. Click one of the traces in the list.
-
-You see a waterfall view of spans that displays each span in the trace and their duration.
-
-<video controls autoPlay muted loop>
-  <source src="/doc-assets/videos/dashboards-tab.mp4" type="video/mp4">
-  </source>
-</video>
-
-## 5. Monitor data for issues
-
-### Create a notifier
-
-Set up a notifier to determine the channel Axiom uses to alert you about what's happening with your data. For example, Axiom can send you an email.
-
-1. Click the **Monitors** tab on the top of the page, and then click **Manage notifiers** on the right.
-2. Click **New notifier** on the top right.
-3. In **Name**, enter **test-notifier**.
-4. In **Users**, enter your email address, and then click **+** on the right.
-5. Click **Create**, and then click **Done**.
-
-<video controls autoPlay muted loop>
-  <source src="/doc-assets/videos/create-notifier.mp4" type="video/mp4">
-  </source>
-</video>
-
-### Create a monitor
-
-Set up a monitor to receive alerts if certain conditions about your event data are met.
-
-1. Click the **Monitors** tab on the top of the page, and then click **New monitor**.
-2. Click **Add notifier**, and then select **Email: test-notifier**.
-3. Click **Simple Query Builder**.
-4. In **Dataset**, select **test-dataset**.
-5. Click **Create**.
-
-You created a monitor that automatically sends a notification to your email address if the number of events Axiom receives is higher than 1,000 in ten minutes.
-
-<video controls autoPlay muted loop>
-  <source src="/doc-assets/videos/create-monitor.mp4" type="video/mp4">
-  </source>
-</video>
