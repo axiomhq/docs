@@ -35,7 +35,7 @@ You see the data that Axiom receives realtime.
 ### Query data
 
 1. Click the **Query** tab on the top of the page, and then click **Builder** in the top left. This enables you to query your data with a visual query builder.
-1. In the **Dataset** section, select **otel-demo-tracess** from the list of datasets.
+1. In the **Dataset** section, select **otel-demo-traces** from the list of datasets.
 1. In the **Where** section, click **+**.
 1. Write **service.name == frontend**, and then press **Enter**.
 1. Click **Run**.
@@ -53,7 +53,7 @@ You see all the traces for the Frontend service.
     ```
 1. Click **Run**.
 
-You see the number of requests taking longer than 5ms for each service over time.
+You see the number of requests taking longer than 5 ms for each service over time.
 
 ## 4. Visualize data
 
@@ -62,16 +62,18 @@ You see the number of requests taking longer than 5ms for each service over time
 
 You see a dashboard that displays important information about the OTel traces.
 
+TODO from here
+
 ## 5. Create new dashboard
 
 1. Click the **Dashboards** tab on the top of the page, and then click **New dashboard** on the right.
 1. Name the dashboard and click **Create**.
 1. Click **Add a chart**, and then click **Timeseries**.
-1. In the **Dataset** section, select **sample-http-logs**.
-1. In the **Summarize** section, click **no group** to the right of **by**, and then select **status**.
+1. In the **Dataset** section, select **otel-demo-traces**.
+1. In the **Summarize** section, click **no group** to the right of **by**, and then select **service.name**.
 1. Click **Save**.
 
-You created a simple dashboard that displays the number of HTTP requests of each status over time.
+You created a simple dashboard that displays the number of requests for each service over time.
 
 ## 6. Monitor data for issues
 
@@ -79,7 +81,7 @@ You created a simple dashboard that displays the number of HTTP requests of each
 
 1. Click the **Monitors** tab on the top of the page.
 1. In the top left, click **Notifiers**, and then click **New notifier** on the top right.
-1. In **Name**, enter **Internal server error notifier**.
+1. In **Name**, enter **Slow requests notifier**.
 1. In **Users**, enter your email address, and then click **+** on the right.
 1. Click **Create**.
 
@@ -88,17 +90,16 @@ You created a simple dashboard that displays the number of HTTP requests of each
 1. In the top left, click **Monitors**, and then click **New monitor** on the top right.
 1. Click **Threshold monitor**.
 1. In **Check options**, enter `10000` as the value.
-1. Click **+ Add notifier**, and then select **Email: Internal server error notifier**.
-1. Click **Builder**.
+1. Click **+ Add notifier**, and then select **Email: Slow requests notifier**.
 1. In the **APL** section, enter the following:
     ```kusto
-    ['sample-http-logs']
-    | where status == "500"
+    ['otel-demo-traces']
+    | where duration > 5ms
     | summarize count() by bin_auto(_time)
     ```
 1. Click **Create**.
 
-You created a monitor that automatically sends a notification to your email address if the HTTP requests with the status **500** is higher than 10,000 in ten minutes.
+You created a monitor that automatically sends a notification to your email address if the number of requests taking longer than 5 ms is higher than 10,000 in ten minutes.
 
 ## What's next
 
