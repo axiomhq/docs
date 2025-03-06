@@ -113,10 +113,9 @@ LeftDataset
 - `LeftDataset`: The first dataset, also known as the outer dataset or the left side of the join. If you expect one of the datasets to contain consistently less data than the other, specify the smaller dataset as the left side of the join.
 - `RightDataset`: The second dataset, also known as the inner dataset or the right side of the join.
 - `KindOfJoin`: Optionally, the [kind of join](#kinds-of-join) to perform.
-- `Conditions`: The conditions for matching rows. The conditions are equality expressions that determine how Axiom matches rows from the `LeftDataset` (left side of the equality expression) with rows from the `RightDataset` (right side of the equality expression)).
+- `Conditions`: The conditions for matching rows. The conditions are equality expressions that determine how Axiom matches rows from the `LeftDataset` (left side of the equality expression) with rows from the `RightDataset` (right side of the equality expression). The two sides of the equality expression must have the same data type.
     - To join datasets on a field that has the same name in the two datasets, simply use the field name. For example, `on id`.
     - To join datasets on a field that has different names in the two datasets, define the two field names in an equality expression such as `on id == trace_id`.
-    - The two sides of the equality expression must have the same data type.
     - You can use expressions in the join conditions. For example, to compare two fields of different data types, use `on id_string == tostring(trace_id_int)`.
     - You can define multiple join conditions. To separate conditions, use commas (`,`). Don’t use `and`. For example, `on id == trace_id, span == span_id`.
 
@@ -124,51 +123,24 @@ LeftDataset
 
 The `join` operator returns a new table containing rows that match the specified join condition. The fields from the left and right datasets are included.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 Join HTTP logs with trace data to correlate user activity with performance metrics.
 
 **Query**
 
 ```kusto
-['otel-demo-logs']
-| join ['http-logs']
-| join kind=inner ['otel-demo-traces'] on span_id
+['otel-demo-traces']
+| join kind=inner ['otel-demo-logs'] on trace_id
 ```
 
 **Output**
 
-| _time | span_id  | trace_id | duration |
-|-------------|-----------|----------------|-----------------|
-| 2024-12-01  | user123   | trace123       | 500ms           |
+| _time | trace_id  | span_id | service.name | duration |
+|-------------|-----------|----------------|-----------------|---|
+| 2024-12-01  | trace123   | span123       | frontend | 500ms           |
 
 This query links user activity in HTTP logs to trace data to investigate performance issues.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Correlate service spans with HTTP logs to identify dependencies between services.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| join kind=inner ['sample-http-logs'] on trace_id == id
-```
-
-**Output**
-
-| trace_id | ['service.name'] | uri    |
-|----------------|--------------------|--------------|
-| trace123       | frontend           | /api/orders  |
-
-This query reveals how service traces map to specific HTTP endpoints.
-
-</Tab>
-</Tabs>
 
 ## List of related operators
 
