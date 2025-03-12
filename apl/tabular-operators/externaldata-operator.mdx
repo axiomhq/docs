@@ -5,6 +5,10 @@ description: 'This page explains how to use the externaldata operator in APL.'
 
 The `externaldata` operator in APL allows you to retrieve data from external storage sources, such as Azure Blob Storage, AWS S3, or HTTP endpoints, and use it within queries. You can specify the schema of the external data and query it as if it were a native dataset. This operator is useful when you need to analyze data that is stored externally without importing it into Axiom.
 
+<Note>
+The `externaldata` operator currently supports external data sources with a file size of maximum 5 MB.
+</Note>
+
 ## For users of other query languages
 
 If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
@@ -20,7 +24,7 @@ Splunk does not have a direct equivalent to `externaldata`, but you can use `inp
 ```
 
 ```kusto APL equivalent
-externaldata (id:string, timestamp:datetime) ["https://storage.example.com/data.csv"] with(format="csv")
+externaldata (id:string, timestamp:datetime) ["https://storage.example.com/data.csv"] with (format="csv")
 ```
 </CodeGroup>
 
@@ -35,7 +39,7 @@ SELECT * FROM OPENROWSET(BULK 'https://storage.example.com/data.csv', FORMAT = '
 ```
 
 ```kusto APL equivalent
-externaldata (id:string, timestamp:datetime) ["https://storage.example.com/data.csv"] with(format="csv")
+externaldata (id:string, timestamp:datetime) ["https://storage.example.com/data.csv"] with (format="csv")
 ```
 </CodeGroup>
 
@@ -63,22 +67,17 @@ externaldata (FieldName1:FieldType1, FieldName2:FieldType2, ...) ["URI1", "URI2"
 
 The operator returns a table with the specified schema, containing data retrieved from the external source.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 Retrieve HTTP logs stored in an external CSV file.
 
 **Query**
 
 ```kusto
-externaldata(_time:datetime, method:string, status:string, uri:string)
-["https://storage.example.com/sample-http-logs.csv"]
-with(format="csv")
+externaldata (_time: datetime, method: string, status: string, ['geo.city']: string, ['geo.country']: string, id: string)
+["https://raw.githubusercontent.com/axiomhq/docs/3e42e6802ddde93176770397bf9483580f74b62e/doc-assets/files/example-event-data.csv"]
+with (format="csv", ignoreFirstRecord=true)
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22externaldata%28_time%3Adatetime%2C%20method%3Astring%2C%20status%3Astring%2C%20uri%3Astring%29%5Cn%5B%5C%22https%3A%2F%2Fstorage.example.com%2Fsample-http-logs.csv%5C%22%5D%5Cnwith%28format%3D%5C%22csv%5C%22%29%22%7D)
 
 **Output**
 
@@ -88,59 +87,7 @@ with(format="csv")
 
 This query retrieves log data stored in an external CSV file and makes it available for analysis.
 
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Retrieve OpenTelemetry trace data stored in JSON format.
-
-**Query**
-
-```kusto
-externaldata(_time:datetime, trace_id:string, span_id:string, duration:timespan)
-["https://storage.example.com/otel-demo-traces.json"]
-with(format="json")
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22externaldata%28_time%3Adatetime%2C%20trace_id%3Astring%2C%20span_id%3Astring%2C%20duration%3Atimespan%29%5Cn%5B%5C%22https%3A%2F%2Fstorage.example.com%2Fotel-demo-traces.json%5C%22%5D%5Cnwith%28format%3D%5C%22json%5C%22%29%22%7D)
-
-**Output**
-
-| _time | trace_id | span_id | duration |
-|--------|----------|--------|----------|
-| 2024-03-10T12:30:00Z | abc123 | span567 | 2.3s |
-
-This query extracts trace data stored in an external JSON file for further analysis.
-
-</Tab>
-<Tab title="Security logs">
-
-Retrieve security logs stored in an external Parquet file.
-
-**Query**
-
-```kusto
-externaldata(_time:datetime, id:string, status:string, geo.city:string, geo.country:string)
-["https://storage.example.com/security-logs.parquet"]
-with(format="parquet")
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22externaldata%28_time%3Adatetime%2C%20id%3Astring%2C%20status%3Astring%2C%20geo.city%3Astring%2C%20geo.country%3Astring%29%5Cn%5B%5C%22https%3A%2F%2Fstorage.example.com%2Fsecurity-logs.parquet%5C%22%5D%5Cnwith%28format%3D%5C%22parquet%5C%22%29%22%7D)
-
-**Output**
-
-| _time | id | status | geo.city | geo.country |
-|--------|----|--------|----------|------------|
-| 2024-03-10T12:30:00Z | user123 | 403 | Berlin | Germany |
-
-This query retrieves security logs stored in an external Parquet file for investigation.
-
-</Tab>
-</Tabs>
-
 ## List of related operators
 
 - [lookup](/apl/tabular-operators/lookup-operator): Performs joins between a dataset and an external table.
 - [union](/apl/tabular-operators/union-operator): Merges multiple datasets, including external ones.
-
-
-we are gonna have different limits, probably just a few thousand rows allowed in most cases - guessing around 5mb max size, 20sec timeout
