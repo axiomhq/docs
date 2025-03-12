@@ -1,0 +1,146 @@
+---
+title: externaldata
+description: 'This page explains how to use the externaldata operator in APL.'
+---
+
+The `externaldata` operator in APL allows you to retrieve data from external storage sources, such as Azure Blob Storage, AWS S3, or HTTP endpoints, and use it within queries. You can specify the schema of the external data and query it as if it were a native dataset. This operator is useful when you need to analyze data that is stored externally without importing it into Axiom.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk does not have a direct equivalent to `externaldata`, but you can use `inputlookup` or `| rest` commands to retrieve data from external sources.
+
+<CodeGroup>
+```sql Splunk example
+| inputlookup external_data.csv
+```
+
+```kusto APL equivalent
+externaldata (id:string, timestamp:datetime) ["https://storage.example.com/data.csv"] with(format="csv")
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, the equivalent approach is to use `OPENROWSET` to access external data stored in cloud storage.
+
+<CodeGroup>
+```sql SQL example
+SELECT * FROM OPENROWSET(BULK 'https://storage.example.com/data.csv', FORMAT = 'CSV') AS data;
+```
+
+```kusto APL equivalent
+externaldata (id:string, timestamp:datetime) ["https://storage.example.com/data.csv"] with(format="csv")
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+externaldata (FieldName1:FieldType1, FieldName2:FieldType2, ...) ["URI1", "URI2", ...] [with (format = "FormatType", ignoreFirstRecord=false)]
+```
+
+### Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `FieldName1:FieldType1, FieldName2:FieldType2, ...` | Defines the schema of the external data. |
+| `URI1, URI2, ...` | The external storage URIs where the source data resides. |
+| `format` | Optional: Specifies the file format. The supported types are `csv`, `scsv`, `tsv`, `psv`, `json`, `multijson`, `raw`, `txt`. |
+| `ignoreFirstRecord` | Optional: A Boolean value that specifies whether to ignore the first record in the external data sources. The default is false. Use this property for CSV files with headers. |
+
+### Returns
+
+The operator returns a table with the specified schema, containing data retrieved from the external source.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Retrieve HTTP logs stored in an external CSV file.
+
+**Query**
+
+```kusto
+externaldata(_time:datetime, method:string, status:string, uri:string)
+["https://storage.example.com/sample-http-logs.csv"]
+with(format="csv")
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22externaldata%28_time%3Adatetime%2C%20method%3Astring%2C%20status%3Astring%2C%20uri%3Astring%29%5Cn%5B%5C%22https%3A%2F%2Fstorage.example.com%2Fsample-http-logs.csv%5C%22%5D%5Cnwith%28format%3D%5C%22csv%5C%22%29%22%7D)
+
+**Output**
+
+| _time | method | status | uri |
+|--------|--------|--------|--------|
+| 2024-03-10T12:30:00Z | GET | 200 | /home |
+
+This query retrieves log data stored in an external CSV file and makes it available for analysis.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Retrieve OpenTelemetry trace data stored in JSON format.
+
+**Query**
+
+```kusto
+externaldata(_time:datetime, trace_id:string, span_id:string, duration:timespan)
+["https://storage.example.com/otel-demo-traces.json"]
+with(format="json")
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22externaldata%28_time%3Adatetime%2C%20trace_id%3Astring%2C%20span_id%3Astring%2C%20duration%3Atimespan%29%5Cn%5B%5C%22https%3A%2F%2Fstorage.example.com%2Fotel-demo-traces.json%5C%22%5D%5Cnwith%28format%3D%5C%22json%5C%22%29%22%7D)
+
+**Output**
+
+| _time | trace_id | span_id | duration |
+|--------|----------|--------|----------|
+| 2024-03-10T12:30:00Z | abc123 | span567 | 2.3s |
+
+This query extracts trace data stored in an external JSON file for further analysis.
+
+</Tab>
+<Tab title="Security logs">
+
+Retrieve security logs stored in an external Parquet file.
+
+**Query**
+
+```kusto
+externaldata(_time:datetime, id:string, status:string, geo.city:string, geo.country:string)
+["https://storage.example.com/security-logs.parquet"]
+with(format="parquet")
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/explorer?initForm=%7B%22apl%22%3A%22externaldata%28_time%3Adatetime%2C%20id%3Astring%2C%20status%3Astring%2C%20geo.city%3Astring%2C%20geo.country%3Astring%29%5Cn%5B%5C%22https%3A%2F%2Fstorage.example.com%2Fsecurity-logs.parquet%5C%22%5D%5Cnwith%28format%3D%5C%22parquet%5C%22%29%22%7D)
+
+**Output**
+
+| _time | id | status | geo.city | geo.country |
+|--------|----|--------|----------|------------|
+| 2024-03-10T12:30:00Z | user123 | 403 | Berlin | Germany |
+
+This query retrieves security logs stored in an external Parquet file for investigation.
+
+</Tab>
+</Tabs>
+
+## List of related operators
+
+- [lookup](/apl/tabular-operators/lookup-operator): Performs joins between a dataset and an external table.
+- [union](/apl/tabular-operators/union-operator): Merges multiple datasets, including external ones.
+
+
+we are gonna have different limits, probably just a few thousand rows allowed in most cases - guessing around 5mb max size, 20sec timeout
