@@ -51,7 +51,7 @@ externaldata (id:string, timestamp:datetime) ["https://storage.example.com/data.
 ### Syntax
 
 ```kusto
-externaldata (FieldName1:FieldType1, FieldName2:FieldType2, ...) ["URI1", "URI2", ...] [with (format = "FormatType", ignoreFirstRecord=false)]
+externaldata (FieldName1:FieldType1, FieldName2:FieldType2, ...) ["URL1", "URL2", ...] [with (format = "FormatType", ignoreFirstRecord=false)]
 ```
 
 ### Parameters
@@ -59,7 +59,7 @@ externaldata (FieldName1:FieldType1, FieldName2:FieldType2, ...) ["URI1", "URI2"
 | Parameter | Description |
 |-----------|-------------|
 | `FieldName1:FieldType1, FieldName2:FieldType2, ...` | Defines the schema of the external data. |
-| `URI1, URI2, ...` | The external storage URIs where the source data resides. |
+| `URL1, URL2, ...` | The external storage URIs where the source data resides. |
 | `format` | Optional: Specifies the file format. The supported types are `csv`, `scsv`, `tsv`, `psv`, `json`, `multijson`, `raw`, `txt`. |
 | `ignoreFirstRecord` | Optional: A Boolean value that specifies whether to ignore the first record in the external data sources. The default is false. Use this property for CSV files with headers. |
 
@@ -69,7 +69,7 @@ The operator returns a table with the specified schema, containing data retrieve
 
 ## Use case example
 
-Retrieve HTTP logs stored in an external CSV file.
+Use a lookup table from an external source to extend an OTel logs dataset with a field that contains human-readable names for each service.
 
 **Query**
 
@@ -82,11 +82,19 @@ let LookupTable = externaldata (serviceName: string, humanreadableServiceName: s
 
 **Output**
 
-| _time | method | status | uri |
-|--------|--------|--------|--------|
-| 2024-03-10T12:30:00Z | GET | 200 | /home |
-
-This query retrieves log data stored in an external CSV file and makes it available for analysis.
+| _time            | span_id                 | service.name                 | humanreadableServiceName |
+|------------------|-------------------------|------------------------------|--------------------------|
+| Mar 13, 10:02:28 | 398050797bb646ef   | flagd                   | Flagd               |
+| Mar 13, 10:02:28 | 0ccd6baca8bea890   | flagd                   | Flagd               |
+| Mar 13, 10:02:28 | 2e579cbb3632381a   | flagd                   | Flagd               |
+| Mar 13, 10:02:29 | 468be2336e35ca32   | loadgenerator           | Loadgenerator       |
+| Mar 13, 10:02:29 | e06348cc4b50ab0d   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | 74571a6fa797f769   | frontendproxy           | Frontendproxy       |
+| Mar 13, 10:02:29 | 7ab5eb0a5cd2e0cd   | frontendproxy           | Frontendproxy       |
+| Mar 13, 10:02:29 | 050cf3e9ab7efdda   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | b2882e3343414175   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | fd7c06a6a746f3e2   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | 606d8a818bec7637   | productcatalogservice   | Productcatalog      |
 
 ## List of related operators
 
