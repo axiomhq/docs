@@ -74,9 +74,10 @@ Retrieve HTTP logs stored in an external CSV file.
 **Query**
 
 ```kusto
-externaldata (_time: datetime, method: string, status: string, ['geo.city']: string, ['geo.country']: string, id: string)
-["https://raw.githubusercontent.com/axiomhq/docs/3e42e6802ddde93176770397bf9483580f74b62e/doc-assets/files/example-event-data.csv"]
-with (format="csv", ignoreFirstRecord=true)
+let LookupTable = externaldata (serviceName: string, humanreadableServiceName: string) ["https://raw.githubusercontent.com/axiomhq/docs/eaf16cb80dd21220b602a62e67cfe405fbcb3ae4/doc-assets/files/example-lookup-table.csv"] with (format="csv", ignoreFirstRecord=true);
+['otel-demo-traces']
+| lookup kind=leftouter LookupTable on $left.['service.name'] == $right.serviceName
+| project _time, span_id, ['service.name'], humanreadableServiceName
 ```
 
 **Output**
