@@ -1,0 +1,106 @@
+---
+title: externaldata
+description: 'This page explains how to use the externaldata operator in APL.'
+---
+
+The `externaldata` operator in APL allows you to retrieve data from external storage sources, such as Azure Blob Storage, AWS S3, or HTTP endpoints, and use it within queries. You can specify the schema of the external data and query it as if it were a native dataset. This operator is useful when you need to analyze data that is stored externally without importing it into Axiom.
+
+<Note>
+The `externaldata` operator currently supports external data sources with a file size of maximum 5 MB.
+
+In queries with `externaldata`, reference at least one Axiom dataset. Axiom doesn’t support APL queries that don’t reference Axiom datasets.
+</Note>
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk does not have a direct equivalent to `externaldata`, but you can use `inputlookup` or `| rest` commands to retrieve data from external sources.
+
+<CodeGroup>
+```sql Splunk example
+| inputlookup external_data.csv
+```
+
+```kusto APL equivalent
+externaldata (id:string, timestamp:datetime) ["https://storage.example.com/data.csv"] with (format="csv")
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, the equivalent approach is to use `OPENROWSET` to access external data stored in cloud storage.
+
+<CodeGroup>
+```sql SQL example
+SELECT * FROM OPENROWSET(BULK 'https://storage.example.com/data.csv', FORMAT = 'CSV') AS data;
+```
+
+```kusto APL equivalent
+externaldata (id:string, timestamp:datetime) ["https://storage.example.com/data.csv"] with (format="csv")
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+externaldata (FieldName1:FieldType1, FieldName2:FieldType2, ...) ["URL1", "URL2", ...] [with (format = "FormatType", ignoreFirstRecord=false)]
+```
+
+### Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `FieldName1:FieldType1, FieldName2:FieldType2, ...` | Defines the schema of the external data. |
+| `URL1, URL2, ...` | The external storage URIs where the source data resides. |
+| `format` | Optional: Specifies the file format. The supported types are `csv`, `scsv`, `tsv`, `psv`, `json`, `multijson`, `raw`, `txt`. |
+| `ignoreFirstRecord` | Optional: A Boolean value that specifies whether to ignore the first record in the external data sources. The default is false. Use this property for CSV files with headers. |
+
+### Returns
+
+The operator returns a table with the specified schema, containing data retrieved from the external source.
+
+## Use case example
+
+Use a lookup table from an external source to extend an OTel logs dataset with a field that contains human-readable names for each service.
+
+**Query**
+
+```kusto
+let LookupTable = externaldata (serviceName: string, humanreadableServiceName: string) ["https://raw.githubusercontent.com/axiomhq/docs/refs/heads/main/doc-assets/files/example-lookup-table.csv"] with (format="csv", ignoreFirstRecord=true);
+['otel-demo-traces']
+| lookup kind=leftouter LookupTable on $left.['service.name'] == $right.serviceName
+| project _time, span_id, ['service.name'], humanreadableServiceName
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let%20LookupTable%20%3D%20externaldata%20(serviceName%3A%20string%2C%20humanreadableServiceName%3A%20string)%20%5B'https%3A%2F%2Fraw.githubusercontent.com%2Faxiomhq%2Fdocs%2Frefs%2Fheads%2Fmain%2Fdoc-assets%2Ffiles%2Fexample-lookup-table.csv'%5D%20with%20(format%3D'csv'%2C%20ignoreFirstRecord%3Dtrue)%3B%20%5B'otel-demo-traces'%5D%20%7C%20lookup%20kind%3Dleftouter%20LookupTable%20on%20%24left.%5B'service.name'%5D%20%3D%3D%20%24right.serviceName%20%7C%20project%20_time%2C%20span_id%2C%20%5B'service.name'%5D%2C%20humanreadableServiceName%22%7D)
+
+**Output**
+
+| _time            | span_id                 | service.name                 | humanreadableServiceName |
+|------------------|-------------------------|------------------------------|--------------------------|
+| Mar 13, 10:02:28 | 398050797bb646ef   | flagd                   | Flagd               |
+| Mar 13, 10:02:28 | 0ccd6baca8bea890   | flagd                   | Flagd               |
+| Mar 13, 10:02:28 | 2e579cbb3632381a   | flagd                   | Flagd               |
+| Mar 13, 10:02:29 | 468be2336e35ca32   | loadgenerator           | Loadgenerator       |
+| Mar 13, 10:02:29 | e06348cc4b50ab0d   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | 74571a6fa797f769   | frontendproxy           | Frontendproxy       |
+| Mar 13, 10:02:29 | 7ab5eb0a5cd2e0cd   | frontendproxy           | Frontendproxy       |
+| Mar 13, 10:02:29 | 050cf3e9ab7efdda   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | b2882e3343414175   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | fd7c06a6a746f3e2   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | 606d8a818bec7637   | productcatalogservice   | Productcatalog      |
+
+## List of related operators
+
+- [lookup](/apl/tabular-operators/lookup-operator): Performs joins between a dataset and an external table.
+- [union](/apl/tabular-operators/union-operator): Merges multiple datasets, including external ones.
