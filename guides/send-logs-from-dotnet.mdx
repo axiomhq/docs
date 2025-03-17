@@ -8,6 +8,7 @@ logoId: 'dotnet'
 ---
 
 import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
 
 <Prerequisites />
 {/* list separator */}
@@ -49,11 +50,11 @@ public static class AxiomLogger
         var client = new HttpClient();
 
         // Specify the Axiom dataset name and construct the API endpoint URL
-        var datasetName = "YOUR-DATASET-NAME"; // Replace with your actual dataset name
+        var datasetName = "DATASET-NAME"; // Replace with your actual dataset name
         var axiomUri = $"https://api.axiom.co/v1/datasets/{datasetName}/ingest";
 
         // Replace with your Axiom API token
-        var apiToken = "YOUR-API-TOKEN"; // Ensure your API token is correct
+        var apiToken = "API-TOKEN"; // Ensure your API token is correct
 
         // Create an array of log entries, including the timestamp, message, and log level
         var logEntries = new[]
@@ -90,6 +91,8 @@ public static class AxiomLogger
     }
 }
 ```
+
+<ReplaceDatasetToken />
 
 ### Configure the main program
 
@@ -214,9 +217,10 @@ Add Serilog and the necessary extensions to your project. You need the `Serilog`
 
 ```bash
 dotnet add package Serilog
+dotnet add package Serilog.Sinks.Console
 dotnet add package Serilog.Sinks.Http
-dotnet add package Serilog.Formatting.Json
 dotnet add package Serilog.Formatting.Elasticsearch
+dotnet add package Microsoft.Extensions.Configuration
 ```
 
 ### Configure Serilog
@@ -226,39 +230,90 @@ In your `Program.cs` or a startup configuration file, set up Serilog to use the 
 ```csharp
 using Serilog;
 using Serilog.Formatting.Elasticsearch;
+using Serilog.Sinks.Http;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.IO;
+using Microsoft.Extensions.Configuration;
 
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Http(
-        requestUri: "https://api.axiom.co/v1/datasets/YOUR-DATASET-NAME/ingest",
-        textFormatter: new ElasticsearchJsonFormatter(renderMessageTemplate: false, inlineFields: true),
-        httpClient: new HttpClient
-        {
-            DefaultRequestHeaders =
-            {
-                { "Authorization", "Bearer YOUR-API-TOKEN" }
-            }
-        })
-    .CreateLogger();
-
-class Program
+public class AxiomConfig
 {
-    static async Task Main(string[] args)
+    public const string DatasetName = "DATASET_NAME";
+    public const string ApiToken = "API_TOKEN";
+    public const string ApiUrl = "https://api.axiom.co/v1/datasets";
+}
+
+public class AxiomHttpClient : IHttpClient
+{
+    private readonly HttpClient _httpClient;
+
+    public AxiomHttpClient()
     {
-        Log.Information("Application started");
-        await SimulateOperations();
-        Log.Information($"CLR version: {Environment.Version}");
-        Log.Information("Application shutting down");
+        _httpClient = new HttpClient();
+        _httpClient.DefaultRequestHeaders.Authorization = 
+            new AuthenticationHeaderValue("Bearer", AxiomConfig.ApiToken);
+    }
+
+    public void Configure(IConfiguration configuration)
+    {
+    }
+
+    public async Task<HttpResponseMessage> PostAsync(string requestUri, Stream contentStream, CancellationToken cancellationToken = default)
+    {
+        var content = new StreamContent(contentStream);
+        content.Headers.Add("Content-Type", "application/json");
+        return await _httpClient.PostAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+    }
+
+    public void Dispose()
+    {
+        _httpClient?.Dispose();
+    }
+}
+
+public class Program
+{
+    public static async Task Main(string[] args)
+    {
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Console()
+            .WriteTo.Http(
+                requestUri: $"{AxiomConfig.ApiUrl}/{AxiomConfig.DatasetName}/ingest",
+                queueLimitBytes: null,
+                textFormatter: new ElasticsearchJsonFormatter(renderMessageTemplate: false, inlineFields: true),
+                httpClient: new AxiomHttpClient()
+            )
+            .CreateLogger();
+
+        try
+        {
+            Log.Information("Application started on .NET 8");
+            await SimulateOperations();
+            Log.Information($"Runtime version: {Environment.Version}");
+            Log.Information("Application shutting down");
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Application terminated unexpectedly");
+        }
+        finally
+        {
+            await Log.CloseAndFlushAsync();
+        }
     }
 
     static async Task SimulateOperations()
     {
         Log.Debug("Starting operations");
         Log.Debug("Connecting to database");
-        await Task.Delay(500); // Simulated delay
+        await Task.Delay(500);
         Log.Information("Connected to database successfully");
+        
         Log.Debug("Retrieving user data");
         await Task.Delay(1000);
         Log.Information("Retrieved 100 user records");
+        
         Log.Debug("Updating user preferences");
         await Task.Delay(800);
         Log.Information("Updated user preferences successfully");
@@ -271,19 +326,23 @@ class Program
         }
         catch (Exception ex)
         {
-            Log.Error($"Payment processing failed: {ex.Message}");
+            Log.Error(ex, "Payment processing failed: {ErrorMessage}", ex.Message);
         }
 
         Log.Debug("Sending email notifications");
         await Task.Delay(1200);
         Log.Information("Sent 50 email notifications");
-        Log.Warning("Detected high memory usage");
+        
+        Log.Warning("Detected high memory usage: {UsagePercentage}%", 85);
         await Task.Delay(500);
         Log.Information("Memory usage normalized");
+        
         Log.Debug("Operations completed");
     }
 }
 ```
+
+<ReplaceDatasetToken />
 
 ### Project file configuration
 
@@ -291,21 +350,22 @@ Ensure your `axiomlogs.csproj` file is configured with the package references. T
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>SerilogApp</AssemblyName>
+    <RootNamespace>SerilogApp</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Serilog" Version="2.10.0" />
-    <PackageReference Include="Serilog.Sinks.Http" Version="5.0.0" />
-    <PackageReference Include="Serilog.Formatting.Json" Version="3.1.0" />
-    <PackageReference Include="Serilog.Formatting.Elasticsearch" Version="8.4.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Serilog.Formatting.Elasticsearch" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageReference Include="Serilog.Sinks.Http" Version="9.0.0" />
   </ItemGroup>
-
 </Project>
 ```
 
@@ -348,8 +408,8 @@ Set up NLog by creating an `NLog.config` file or configuring it programmatically
                 flushTimeout="5000">
             <target xsi:type="HTTP" 
                     name="axiom"
-                    url="https://api.axiom.co/v1/datasets/YOUR-DATASET-NAME/ingest"
-                    HttpHeaders="Authorization: Bearer YOUR-API-TOKEN"
+                    url="https://api.axiom.co/v1/datasets/DATASET_NAME/ingest"
+                    HttpHeaders="Authorization: Bearer API_TOKEN"
                     contentType="application/json">
                 <layout xsi:type="JsonLayout" includeAllProperties="true">
                     <attribute name="timestamp" layout="${date:universalTime=true:format=o}" />
@@ -366,6 +426,8 @@ Set up NLog by creating an `NLog.config` file or configuring it programmatically
     </rules>
 </nlog>
 ```
+
+<ReplaceDatasetToken />
 
 ### Configure the main program
 
