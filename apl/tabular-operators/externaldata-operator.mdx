@@ -69,7 +69,10 @@ externaldata (FieldName1:FieldType1, FieldName2:FieldType2, ...) ["URL1", "URL2"
 
 The operator returns a table with the specified schema, containing data retrieved from the external source.
 
-## Use case example
+## Use case examples
+
+<Tabs>
+<Tab title="OpenTelemetry traces">
 
 Use a lookup table from an external source to extend an OTel logs dataset with a field that contains human-readable names for each service.
 
@@ -99,6 +102,45 @@ let LookupTable = externaldata (serviceName: string, humanreadableServiceName: s
 | Mar 13, 10:02:29 | b2882e3343414175   | frontend                | Frontend            |
 | Mar 13, 10:02:29 | fd7c06a6a746f3e2   | frontend                | Frontend            |
 | Mar 13, 10:02:29 | 606d8a818bec7637   | productcatalogservice   | Productcatalog      |
+
+</Tab>
+<Tab title="Log analysis">
+
+You have an Axiom dataset that contains access logs with a field `employeeID`. You want to add extra information to your APL query by cross-referencing each employee ID in the Axiom dataset with an employee ID defined in an external lookup table. The lookup table is hosted somewhere else in CSV format.
+
+**External lookup table**
+
+```
+employeeID, email, name, location
+00001, tifa@acme.com, Tifa Lockhart, US
+00002, barret@acme.com, Barret Wallace, Europe
+00003, cid@acme.com, Cid Highwind, Europe
+```
+
+**Query**
+
+```kusto
+let employees = externaldata (employeeID: string, email: string, name: string, location: string) ["http://example.com/lookup-table.csv"] with (format="csv", skipFirstRow=true);
+accessLogs
+| where severity == "high"
+| lookup employees on employeeID
+| project _time, severity, employeeID, email, name
+```
+
+**Output**
+
+| _time            | severity                 | employeeID                 | email | name |
+|------------------|-------------------------|------------------------------|--------------------------|---|
+| Mar 13, 10:08:23 | high   | 00001                   | tifa@acme.com               | Tifa Lockhart |
+| Mar 13, 10:05:03 | high   | 00001                   | tifa@acme.com               | Tifa Lockhart |
+| Mar 13, 10:04:51 | high   | 00003                   | cid@acme.com               | Cid Highwind |
+| Mar 13, 10:02:29 | high   | 00002           | barret@acme.com       | Barret Wallace |
+| Mar 13, 10:01:13 | high   | 00001                | tifa@acme.com            | Tifa Lockhart |
+
+This example extends the original dataset with the fields `email` and `name`. These new fields come from the external lookup table.
+
+</Tab>
+</Tabs>
 
 ## List of related operators
 
