@@ -72,38 +72,6 @@ The operator returns a table with the specified schema, containing data retrieve
 ## Use case examples
 
 <Tabs>
-<Tab title="OpenTelemetry traces">
-
-Use a lookup table from an external source to extend an OTel logs dataset with a field that contains human-readable names for each service.
-
-**Query**
-
-```kusto
-let LookupTable = externaldata (serviceName: string, humanreadableServiceName: string) ["https://raw.githubusercontent.com/axiomhq/docs/refs/heads/main/doc-assets/files/example-lookup-table.csv"] with (format="csv", ignoreFirstRecord=true);
-['otel-demo-traces']
-| lookup kind=leftouter LookupTable on $left.['service.name'] == $right.serviceName
-| project _time, span_id, ['service.name'], humanreadableServiceName
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let%20LookupTable%20%3D%20externaldata%20(serviceName%3A%20string%2C%20humanreadableServiceName%3A%20string)%20%5B'https%3A%2F%2Fraw.githubusercontent.com%2Faxiomhq%2Fdocs%2Frefs%2Fheads%2Fmain%2Fdoc-assets%2Ffiles%2Fexample-lookup-table.csv'%5D%20with%20(format%3D'csv'%2C%20ignoreFirstRecord%3Dtrue)%3B%20%5B'otel-demo-traces'%5D%20%7C%20lookup%20kind%3Dleftouter%20LookupTable%20on%20%24left.%5B'service.name'%5D%20%3D%3D%20%24right.serviceName%20%7C%20project%20_time%2C%20span_id%2C%20%5B'service.name'%5D%2C%20humanreadableServiceName%22%7D)
-
-**Output**
-
-| _time            | span_id                 | service.name                 | humanreadableServiceName |
-|------------------|-------------------------|------------------------------|--------------------------|
-| Mar 13, 10:02:28 | 398050797bb646ef   | flagd                   | Flagd               |
-| Mar 13, 10:02:28 | 0ccd6baca8bea890   | flagd                   | Flagd               |
-| Mar 13, 10:02:28 | 2e579cbb3632381a   | flagd                   | Flagd               |
-| Mar 13, 10:02:29 | 468be2336e35ca32   | loadgenerator           | Loadgenerator       |
-| Mar 13, 10:02:29 | e06348cc4b50ab0d   | frontend                | Frontend            |
-| Mar 13, 10:02:29 | 74571a6fa797f769   | frontendproxy           | Frontendproxy       |
-| Mar 13, 10:02:29 | 7ab5eb0a5cd2e0cd   | frontendproxy           | Frontendproxy       |
-| Mar 13, 10:02:29 | 050cf3e9ab7efdda   | frontend                | Frontend            |
-| Mar 13, 10:02:29 | b2882e3343414175   | frontend                | Frontend            |
-| Mar 13, 10:02:29 | fd7c06a6a746f3e2   | frontend                | Frontend            |
-| Mar 13, 10:02:29 | 606d8a818bec7637   | productcatalogservice   | Productcatalog      |
-
-</Tab>
 <Tab title="Log analysis">
 
 You have an Axiom dataset that contains access logs with a field `employeeID`. You want to add extra information to your APL query by cross-referencing each employee ID in the Axiom dataset with an employee ID defined in an external lookup table. The lookup table is hosted somewhere else in CSV format.
@@ -138,6 +106,57 @@ accessLogs
 | Mar 13, 10:01:13 | high   | 00001                | tifa@acme.com            | Tifa Lockhart |
 
 This example extends the original dataset with the fields `email` and `name`. These new fields come from the external lookup table.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use a lookup table from an external source to extend an OTel logs dataset with a field that contains human-readable names for each service.
+
+**External lookup table**
+
+```
+serviceName,humanreadableServiceName
+frontend,Frontend
+frontendproxy,Frontendproxy
+flagd,Flagd
+productcatalogservice,Productcatalog
+loadgenerator,Loadgenerator
+checkoutservice,Checkout
+cartservice,Cart
+recommendationservice,Recommendations
+emailservice,Email
+adservice,Ads
+shippingservice,Shipping
+quoteservice,Quote
+currencyservice,Currency
+paymentservice,Payment
+frauddetectionservice,Frauddetection
+```
+
+**Query**
+
+```kusto
+let LookupTable = externaldata (serviceName: string, humanreadableServiceName: string) ["http://example.com/lookup-table.csv"] with (format="csv", ignoreFirstRecord=true);
+['otel-demo-traces']
+| lookup kind=leftouter LookupTable on $left.['service.name'] == $right.serviceName
+| project _time, span_id, ['service.name'], humanreadableServiceName
+```
+
+**Output**
+
+| _time            | span_id                 | service.name                 | humanreadableServiceName |
+|------------------|-------------------------|------------------------------|--------------------------|
+| Mar 13, 10:02:28 | 398050797bb646ef   | flagd                   | Flagd               |
+| Mar 13, 10:02:28 | 0ccd6baca8bea890   | flagd                   | Flagd               |
+| Mar 13, 10:02:28 | 2e579cbb3632381a   | flagd                   | Flagd               |
+| Mar 13, 10:02:29 | 468be2336e35ca32   | loadgenerator           | Loadgenerator       |
+| Mar 13, 10:02:29 | e06348cc4b50ab0d   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | 74571a6fa797f769   | frontendproxy           | Frontendproxy       |
+| Mar 13, 10:02:29 | 7ab5eb0a5cd2e0cd   | frontendproxy           | Frontendproxy       |
+| Mar 13, 10:02:29 | 050cf3e9ab7efdda   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | b2882e3343414175   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | fd7c06a6a746f3e2   | frontend                | Frontend            |
+| Mar 13, 10:02:29 | 606d8a818bec7637   | productcatalogservice   | Productcatalog      |
 
 </Tab>
 </Tabs>
