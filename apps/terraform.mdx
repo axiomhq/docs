@@ -106,28 +106,30 @@ To create a monitor in Axiom using the provider, add the following code to your 
 ```hcl
 resource "axiom_monitor" "test_monitor" {
   depends_on       = [axiom_dataset.test_dataset, axiom_notifier.test_slack_notifier]
-  
 
-  # - "Threshold": For numeric values against thresholds (requires operator, threshold)
-  # - "MatchEvent": For detecting specific events (doesn't require operator/threshold)
-  # - "AnomalyDetection": For detecting anomalies (requires compare_days, tolerance, operator)
-  
+  # `type` can be one of the following:
+  # - "Threshold": For numeric values against thresholds. It requires `operator` and `threshold`.
+  # - "MatchEvent": For detecting specific events. It doesn’t require `operator` and `threshold`.
+  # - "AnomalyDetection": For detecting anomalies. It requires `compare_days` and `tolerance, operator`.
+
   type             = "Threshold"
-  
+
   name             = "test_monitor"
   description      = "This is a test monitor created by Terraform."
   apl_query        = "['test_dataset'] | summarize count() by bin_auto(_time)"
   interval_minutes = 5
   
-  # Required for Threshold and AnomalyDetection types
-  operator         = "Above"  # Valid values: "Above", "AboveOrEqual", "Below", "BelowOrEqual"
-  
+  # `operator` is required for threshold and anomaly detection monitors.
+  # Valid values are "Above", "AboveOrEqual", "Below", "BelowOrEqual".
+  operator         = "Above"
+
   range_minutes    = 5
-  
-  # Required for Threshold type
+
+  # `threshold` is required for threshold monitors
   threshold        = 1
-  
-  # Required for AnomalyDetection type (uncomment if using that type)
+
+  # `compare_days` and `tolerance` are required for anomaly detection monitors.
+  # Uncomment the two lines below for anomaly detection monitors.
   # compare_days     = 7
   # tolerance        = 25
   
