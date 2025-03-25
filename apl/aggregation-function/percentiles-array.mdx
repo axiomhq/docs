@@ -68,12 +68,12 @@ percentiles_array(Expression, Percentile1, Percentile2, ...)
 
 | Name        | Type              | Description |
 |-------------|-------------------|-------------|
-| `Expression` | `real` or `long` | The numeric expression to evaluate. |
-| `Percentile1`, `Percentile2`, ... | `real` | One or more percentile values between `0` and `100`. |
+| `Expression` | `number` | The numeric expression to evaluate. |
+| `Percentile1`, `Percentile2`, ... | `number` | One or more percentile values between `0` and `100`. |
 
 ### Returns
 
-An array of real numbers, where each element is the value at the corresponding percentile.
+An array of numbers where each element is the value at the corresponding percentile.
 
 ## Use case examples
 
@@ -89,16 +89,18 @@ Use `percentiles_array` to understand the spread of request durations per HTTP m
 | summarize percentiles_array(req_duration_ms, 25, 50, 95) by method
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D %7C summarize percentiles_array(req_duration_ms%2C 25%2C 50%2C 95) by method%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20percentiles_array(req_duration_ms%2C%2025%2C%2050%2C%2095)%20by%20method%22%7D)
 
 **Output**
 
-| method | percentiles_array_req_duration_ms |
-|--------|-----------------------------------|
-| GET    | [48, 85, 203]                     |
-| POST   | [92, 150, 302]                    |
+| method | P25       | P50       | P95      |
+|--------|-----------|-----------|----------|
+|   GET  | 0.3981 ms | 0.7352 ms | 1.981 ms |
+|  POST  | 0.3261 ms | 0.7162 ms | 2.341 ms |
+|   PUT  | 0.3324 ms | 0.7772 ms | 1.341 ms |
+| DELETE | 0.2332 ms | 0.4652 ms | 1.121 ms |
 
-This query calculates the 25th, 50th, and 95th percentiles of request durations for each HTTP method. It helps identify performance differences between GET and POST requests.
+This query calculates the 25th, 50th, and 95th percentiles of request durations for each HTTP method. It helps identify performance differences between different methods.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
@@ -112,14 +114,16 @@ Use `percentiles_array` to analyze the distribution of span durations by service
 | summarize percentiles_array(duration, 50, 90, 99) by ['service.name']
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D %7C summarize percentiles_array(duration%2C 50%2C 90%2C 99) by %5B%27service.name%27%5D%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20percentiles_array(duration%2C%2050%2C%2090%2C%2099)%20by%20%5B'service.name'%5D%22%7D)
 
 **Output**
 
-| service.name         | percentiles_array_duration |
-|----------------------|----------------------------|
-| frontend             | [85ms, 140ms, 305ms]        |
-| checkoutservice      | [110ms, 210ms, 450ms]       |
+| service.name          | P50      | P90       | P99       | P99       |
+|-----------------------|----------|-----------|-----------|-----------|
+| recommendationservice |  1.96 ms |  2.965 ms |  3.477 ms |  3.477 ms |
+|     frontendproxy     | 3.767 ms | 13.101 ms | 39.735 ms | 39.735 ms |
+|    shippingservice    | 2.119 ms |  3.085 ms |  9.739 ms |  9.739 ms |
+|    checkoutservice    | 1.454 ms | 12.342 ms | 29.542 ms | 29.542 ms |
 
 This query shows latency patterns across services by computing the median, 90th, and 99th percentile of span durations.
 
@@ -135,14 +139,16 @@ Use `percentiles_array` to assess outlier response times per status code, which 
 | summarize percentiles_array(req_duration_ms, 50, 95, 99) by status
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D %7C summarize percentiles_array(req_duration_ms%2C 50%2C 95%2C 99) by status%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20percentiles_array(req_duration_ms%2C%2050%2C%2095%2C%2099)%20by%20status%22%7D)
 
 **Output**
 
-| status | percentiles_array_req_duration_ms |
-|--------|-----------------------------------|
-| 200    | [90, 200, 300]                    |
-| 500    | [180, 450, 700]                   |
+| status | P50       | P95      | P99      |
+|--------|-----------|----------|----------|
+|   200  | 0.7352 ms | 1.981 ms | 2.612 ms |
+|   201  | 0.7856 ms | 1.356 ms | 2.234 ms |
+|   301  | 0.8956 ms | 1.547 ms | 2.546 ms |
+|   500  | 0.6587 ms | 1.856 ms | 2.856 ms |
 
 This query helps identify whether requests resulting in errors (like 500) are significantly slower than successful ones.
 
@@ -153,6 +159,6 @@ This query helps identify whether requests resulting in errors (like 500) are si
 
 - [avg](/apl/aggregation-function/avg): Returns the average value. Use it when a single central tendency is sufficient.
 - [percentile](/apl/aggregation-function/percentile): Returns a single percentile value. Use it when you only need one percentile.
-- [percentile_if](/apl/aggregation-function/percentileif): 
-- [percentiles_arrayif](/apl/aggregation-function/percentiles-arrayif): 
-- [sum](/apl/array-functions/sum): Returns the sum of a numeric column.
+- [percentile_if](/apl/aggregation-function/percentileif): Returns a single percentile value for the records that satisfy a condition.
+- [percentiles_arrayif](/apl/aggregation-function/percentiles-arrayif): Returns an array of percentile values for the records that satisfy a condition.
+- [sum](/apl/aggregation-function/sum): Returns the sum of a numeric column.

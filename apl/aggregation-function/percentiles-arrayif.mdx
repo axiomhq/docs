@@ -22,7 +22,7 @@ index=main sourcetype=access_combined
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| summarize Dist=percentiles_arrayif(req_duration_ms, 90, 99, status == '200')
+| summarize Dist=percentiles_arrayif(req_duration_ms, dynamic([90, 99]), status == '200')
 ```
 </CodeGroup>
 
@@ -42,8 +42,7 @@ WHERE status = '200';
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| where status == '200'
-| summarize Dist=percentiles_arrayif(req_duration_ms, 90, 99, true)
+| summarize Dist=percentiles_arrayif(req_duration_ms, dynamic([90, 99]), status == '200')
 ```
 </CodeGroup>
 
@@ -55,20 +54,20 @@ WHERE status = '200';
 ## Syntax
 
 ```kusto
-percentiles_arrayif(Expression, Percentile1, Percentile2, ..., Predicate)
+percentiles_arrayif(Field, Array, Condition)
 ```
 
 ## Parameters
 
 | Parameter    | Description                                                               |
 |------------- |---------------------------------------------------------------------------|
-| Expression   | A numeric expression for which you want to compute percentile values.     |
-| Percentile1, Percentile2, ... | One or more percentile values (between 0 and 100).       |
-| Predicate    | A Boolean expression that indicates which records to include in the calculation. |
+| Field   | A field for which you want to compute percentile values.     |
+| Array | A dynamic array of one or more percentile values (between 0 and 100).       |
+| Condition    | A Boolean expression that indicates which records to include in the calculation. |
 
 ## Returns
 
-The function returns an array of approximate percentile values, corresponding to the numeric expression for the records that satisfy `Predicate`. The position of each returned percentile in the array matches the order in which it appears in the function call.
+The function returns an array of percentile values for the records that satisfy the condition. The position of each returned percentile in the array matches the order in which it appears in the function call.
 
 ## Use case examples
 
@@ -81,73 +80,79 @@ You can use `percentiles_arrayif` to analyze request durations in HTTP logs whil
 
 ```kusto
 ['sample-http-logs']
-| where geo.country == 'US'
-| summarize DurationPercentiles=percentiles_arrayif(req_duration_ms, 50, 90, 95, 99, status == '200')
+| summarize percentiles_arrayif(req_duration_ms, dynamic([50, 90, 95, 99]), status == '200') by bin_auto(_time)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20geo.country%20%3D%3D%20%27US%27%20%7C%20summarize%20DurationPercentiles%3Dpercentiles_arrayif%28req_duration_ms%2C%2050%2C%2090%2C%2095%2C%2099%2C%20status%20%3D%3D%20%27200%27%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20percentiles_arrayif(req_duration_ms%2C%20dynamic(%5B50%2C%2090%2C%2095%2C%2099%5D)%2C%20status%20%3D%3D%20'200')%20by%20bin_auto(_time)%22%7D)
 
 **Output**
 
-| DurationPercentiles      |
+| percentiles_req_duration_ms  |
 |--------------------------|
-| [103, 180, 210, 260]     |
+| 0.7352 ms     |
+| 1.691 ms     |
+| 1.981 ms     |
+| 2.612 ms     |
 
-This query filters records to those originating in the United States and with a status of ‘200’. It returns an array of approximate percentile values for the request durations.
+
+This query filters records to those with a status of 200 and returns the percentile values for the request durations.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-Use `percentiles_arrayif` to track performance of spans and filter on a specific `kind` of service operation. This lets you quickly gauge how request durations differ for incoming traffic (for example, server spans).
+Use `percentiles_arrayif` to track performance of spans and filter on a specific service operation. This lets you quickly gauge how request durations differ for incoming traffic.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| where service.name == 'frontend'
-| summarize SpanPercentiles=percentiles_arrayif(duration, 50, 90, 95, 99, kind == 'server')
+| summarize percentiles_arrayif(duration, dynamic([50, 90, 99, 99]), ['method'] == "POST") by bin_auto(_time)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20service.name%20%3D%3D%20%27frontend%27%20%7C%20summarize%20SpanPercentiles%3Dpercentiles_arrayif%28duration%2C%2050%2C%2090%2C%2095%2C%2099%2C%20kind%20%3D%3D%20%27server%27%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20percentiles_arrayif(duration%2C%20dynamic(%5B50%2C%2090%2C%2099%2C%2099%5D)%2C%20%5B'method'%5D%20%3D%3D%20'POST')%20by%20bin_auto(_time)%22%7D)
 
 **Output**
 
-| SpanPercentiles           |
+| percentiles_duration           |
 |---------------------------|
-| [35ms, 80ms, 100ms, 115ms]|
+| 5.166 ms |
+| 25.18 ms |
+| 71.996 ms |
 
-This query returns an array of approximate percentile values for span durations in a ‘server’ context within the ‘frontend’ service.
+This query returns the percentile values for span durations for requests with the POST method.
 
 </Tab>
 <Tab title="Security logs">
 
-You can focus on potentially unauthorized requests by filtering for specific status codes, then see how request durations are distributed in those scenarios.
+You can focus on server issues by filtering for specific status codes, then see how request durations are distributed in those scenarios.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| where status == '401'
-| summarize DurationPercentiles=percentiles_arrayif(req_duration_ms, 50, 90, 95, 99, true)
+| summarize percentiles_arrayif(req_duration_ms, dynamic([50, 90, 95, 99]), status startswith '5') by bin_auto(_time)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27401%27%20%7C%20summarize%20DurationPercentiles%3Dpercentiles_arrayif%28req_duration_ms%2C%2050%2C%2090%2C%2095%2C%2099%2C%20true%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20percentiles_arrayif(req_duration_ms%2C%20dynamic(%5B50%2C%2090%2C%2095%2C%2099%5D)%2C%20status%20startswith%20'5')%20by%20bin_auto(_time)%22%7D)
 
 **Output**
 
-| DurationPercentiles      |
-|--------------------------|
-| [150, 280, 320, 400]     |
+| percentiles_req_duration_ms |
+|---------------------------|
+| 0.7352 ms |
+| 1.691 ms |
+| 1.981 ms |
+| 2.612 ms |
 
-This query calculates percentile values for request durations that return a ‘401’ status code.
+This query calculates percentile values for request durations that return a status code starting with 5 which means server error.
 
 </Tab>
 </Tabs>
 
 ## List of related functions
 
-- [avg](/apl/array-functions/avg): Returns the average of a numeric column.
-- [percentile](/apl/array-functions/percentile): Returns a single approximate percentile value.
-- [percentile_if](/apl/aggregation-function/percentileif): 
-- [percentiles_array](/apl/array-functions/percentiles_array): Returns an array of approximate percentile values for all rows without a predicate.
-- [sum](/apl/array-functions/sum): Returns the sum of a numeric column.
+- [avg](/apl/aggregation-function/avg): Returns the average of a numeric column.
+- [percentile](/apl/aggregation-function/percentile): Returns a single percentile value.
+- [percentile_if](/apl/aggregation-function/percentileif): Returns a single percentile value for the records that satisfy a condition.
+- [percentiles_array](/apl/aggregation-function/percentiles-array): Returns an array of percentile values for all rows.
+- [sum](/apl/aggregation-function/sum): Returns the sum of a numeric column.
