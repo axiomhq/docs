@@ -1,0 +1,215 @@
+---
+title: 'Mapping location data with Axiom and Hex'
+description: 'This page explains how to '
+overview: ''
+sidebarTitle: ''
+tags: ['go']
+logoId: ''
+---
+
+This guide demonstrates how to integrate Hex, a collaborative data platform, with Axiom to visualize geospatial data from your logs. You'll learn how to ingest location data into Axiom, query it using APL, and create interactive map visualizations in Hex.
+
+## Prerequisites
+
+- Create an Axiom account
+- Create a dataset in Axiom where you will send your data
+- Create an API token in Axiom with permissions to query and ingest data
+- Sign up for a Hex account at [app.hex.tech](https://app.hex.tech/)
+
+## Setting up Axiom for Geospatial data ingestion
+
+Before creating visualizations in Hex, you need to ingest geospatial data into Axiom. This guide uses a sample dataset of robot locations with latitude, longitude, status, and satellite information.
+
+### Ingesting sample data to Axiom
+
+Use the following curl command to send sample location data to your Axiom dataset:
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/$DATASET/ingest' \
+  -H 'Authorization: Bearer $API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '[
+    {
+      "data": {
+        "robot_id": "robot-001",
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "num_satellites": 8,
+        "status": "active"
+      }
+    }
+  ]'
+```
+
+Replace `$API_TOKEN`  and `DATASET` with your actual Axiom API token and dataset. 
+
+## Verifying data with an APL query
+
+You can verify that your data has been ingested correctly by running a simple APL query in the Axiom UI:
+
+```
+[Dataset]
+| where _time > ago(5h)
+| project latitude = todouble(['data.latitude']), longitude = todouble(['data.longitude'])
+```
+
+This query retrieves records from the last 5 hours and extracts the latitude and longitude fields, converting them to double type for proper handling of decimal coordinates.
+
+### Setting up your Hex project
+
+Hex is a powerful collaborative data platform that allows you to create notebooks with Python/SQL code and interactive visualizations. Let's set up a project to visualize our Axiom data.
+
+### Creating a new Hex project
+
+1. Log in to your Hex account at [app.hex.tech](https://app.hex.tech/)
+2. Click on new project to create a blank project
+3. Give your project a meaningful name, such as Axiom geospatial analysis
+
+### Storing your Axiom API token securely
+
+Hex provides a secure way to store API tokens and other sensitive information:
+
+1. In your Hex project, click on the settings gear icon
+2. Select Project settings
+3. Navigate to the secrets tab
+4. Add a new secret with the name `AXIOM_API_TOKEN` and paste your Axiom API token as the value
+5. Click save
+
+This approach keeps your token secure and prevents it from being exposed in your notebook code.
+
+## Querying Axiom data with Python
+
+Write Python code in your Hex notebook to fetch data from Axiom. Add a new code cell and insert the following Python code:
+
+```python
+import requests
+import pandas as pd
+from datetime import datetime, timedelta
+import os
+
+# Retrieve the API token from Hex secrets
+axiom_token = os.environ.get("AXIOM_API_TOKEN")
+
+# Define Axiom API endpoint and headers
+base_url = "https://api.axiom.co/v1/datasets/_apl"
+headers = {
+    'Authorization': f'Bearer {axiom_token}',
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Accept-Encoding': 'gzip'
+}
+
+# Define the time range for your query
+end_time = datetime.utcnow()
+start_time = end_time - timedelta(days=3)  # Get data from the last 3 days
+
+# Construct the APL query
+query = {
+    "apl": """latitude
+| project ['data.latitude'], ['data.longitude'], ['data.num_satellites'], ['data.robot_id'], ['data.status']""",
+    "startTime": start_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "endTime": end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+}
+
+try:
+    # Send the request to Axiom API
+    response = requests.post(
+        f"{base_url}?format=tabular",
+        headers=headers,
+        json=query,
+        timeout=10
+    )
+    
+    # Print request details for debugging
+    print("Request Details:")
+    print(f"URL: {base_url}?format=tabular")
+    print(f"Query: {query['apl']}")
+    print(f"Response Status: {response.status_code}")
+    
+    if response.status_code == 200:
+        data = response.json()
+        if 'tables' in data:
+            table = data['tables'][0]
+            if table.get('columns') and len(table['columns']) > 0:
+                columns = [field['name'] for field in table['fields']]
+                rows = table['columns']
+                
+                # Create DataFrame with proper column orientation
+                df = pd.DataFrame(list(zip(*rows)), columns=columns)
+                
+                # Ensure data types are appropriate for mapping
+                df['data.latitude'] = pd.to_numeric(df['data.latitude'])
+                df['data.longitude'] = pd.to_numeric(df['data.longitude'])
+                df['data.num_satellites'] = pd.to_numeric(df['data.num_satellites'])
+                
+                # Display the first few rows to verify our data
+                print("\nDataFrame Preview:")
+                display(df.head())
+                
+                # Store the DataFrame for visualization
+                robot_locations = df
+            else:
+                print("\nNo data found in the specified time range.")
+        else:
+            print("\nNo tables found in response")
+            print("Response structure:", data.keys())
+            
+except Exception as e:
+    print(f"\nError: {str(e)}")
+```
+
+This code:
+
+1. Imports the necessary libraries
+2. Retrieves your Axiom API token from Hex secrets
+3. Sets up the API request parameters
+4. Queries Axiom for the robot location data
+5. Processes the response into a pandas DataFrame
+6. Converts data types appropriately for mapping
+7. Displays a preview of the data
+
+### Creating map visualisations in Hex
+
+Create an interactive map visualization:
+
+1. Click the `+ ` button below your code cell to add a new visualization
+2. Select map from the visualization options
+3. Configure your map with the following settings:
+
+### Map configuration
+
+For a basic device location map for example :
+
+**Layer 1 - Robot Locations:**
+
+- **Type:** Point
+- **Coordinates:**
+    - Select "Lat and Lon"
+    - Latitude: data.latitude
+    - Longitude: data.longitude
+- **Fill:**
+    - Type: Color based on data
+    - Based on: data.status
+    - Choose a color scheme (e.g., green for active, red for inactive)
+- **Size:**
+    - Type: Size based on data
+    - Based on: data.num_satellites
+    - This will make points larger when more satellites are visible
+- **Tooltip:**
+    - Select all fields to show:
+        - Robot ID
+        - Status
+        - Number of satellites
+
+### Customize your map
+
+Hex offers several options to enhance your map visualization:
+
+1. **Base map style:** Choose between different map styles like Streets, Outdoors, Light, Dark, or Satellite
+2. **Map controls:** Enable zoom controls, full-screen option, and navigation controls
+3. **Legend:** Add a legend to explain the color coding of your points
+4. **Interactivity:** Configure tooltips to display additional information when hovering over points
+
+## Conclusion
+
+This guide has demonstrated how to integrate Hex with Axiom to create interactive map visualizations.
