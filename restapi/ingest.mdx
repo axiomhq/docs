@@ -8,17 +8,28 @@ tags: ['axiom documentation', 'documentation', 'axiom', 'axiom api', 'rest api',
 import Prerequisites from "/snippets/standard-prerequisites.mdx"
 import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
 
-This page explains how to send data to Axiom via cURL commands in JSON and CSV formats.
+The Axiom REST API accepts the following data formats:
+
+- JSON
+- NDJSON
+- CSV
+
+This page explains how to send data to Axiom via cURL commands in each of these formats.
 
 For more information on other ingest options, see [Send data](send-data/ingest).
 
 <Prerequisites />
 
-## Ingest data in JSON format
+## Send data in JSON format
+
+To send data to Axiom in JSON format:
+1. Encode the events as JSON objects.
+1. Enter the array of JSON objects into the body of the API request.
+1. Set the `Content-Type` header to `application/json`.
+
+### Example with grouped events
 
 The following example request contains grouped events. The structure of the JSON payload has the scheme of `[ { "labels": { "key1": "value1", "key2": "value2" } }, ]` where the array contains one or more JSON objects describing events.
-
-### Example with data in JSON format
 
 **Example request**
 
@@ -109,12 +120,12 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/ingest' \
 
 ```json
 {
-  "ingested":1,
-  "failed":0,
-  "failures":[],
-  "processedBytes":1587,
-  "blocksCreated":0,
-  "walLength":3
+    "ingested":1,
+    "failed":0,
+    "failures":[],
+    "processedBytes":1587,
+    "blocksCreated":0,
+    "walLength":3
 }
 ```
 
@@ -124,24 +135,24 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/ingest' \
 
 ```bash
 curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/ingest' \
-  -H 'Authorization: Bearer API_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '[{ "axiom": {
-    "logging": {
-        "observability": [
-            { "apl": 23, "function": "tostring" },
-            { "apl": 24, "operator": "summarize" }
-        ],
-        "axiom": [
-            { "stream": "livetail", "datasets": [4, 0, 16], "logging": "observability", "metrics": 8, "dashboard": 10, "alerting": "kubernetes" }
-        ]
-    },
-    "apl": {
-        "reference":
-            [[80, 12], [30, 40]]
+    -H 'Authorization: Bearer API_TOKEN' \
+    -H 'Content-Type: application/json' \
+    -d '[{ "axiom": {
+        "logging": {
+            "observability": [
+                { "apl": 23, "function": "tostring" },
+                { "apl": 24, "operator": "summarize" }
+            ],
+            "axiom": [
+                { "stream": "livetail", "datasets": [4, 0, 16], "logging": "observability", "metrics": 8, "dashboard": 10, "alerting": "kubernetes" }
+            ]
+        },
+        "apl": {
+            "reference":
+                [[80, 12], [30, 40]]
+        }
     }
-  }
-}]'
+    }]'
 ```
 
 <ReplaceDatasetToken />
@@ -150,28 +161,56 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/ingest' \
 
 ```json
 {
-  "ingested":1,
-  "failed":0,
-  "failures":[],
-  "processedBytes":432,
-  "blocksCreated":0,
-  "walLength":4
+    "ingested":1,
+    "failed":0,
+    "failures":[],
+    "processedBytes":432,
+    "blocksCreated":0,
+    "walLength":4
 }
 ```
 
-## Ingest in CSV format
+## Send data in NDJSON format
 
-The following example request contains events. The structure of the CSV payload uses a comma to separate values: `'value1, value2, value3'`.
+To send data to Axiom in NDJSON format:
+1. Encode the events as JSON objects.
+1. Enter each JSON object in a separate line into the body of the API request.
+1. Set the `Content-Type` header to `application/x-ndjson`.
+
+#### Example
+
+```bash
+curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/ingest' \
+    -H 'Authorization: Bearer API_TOKEN' \
+    -H 'Content-Type: application/x-ndjson' \
+    -d '{"id":1,"name":"machala"}
+        {"id":2,"name":"axiom"}
+        {"id":3,"name":"apl"}
+        {"index": {"_index": "products"}}
+        {"timestamp": "2016-06-06T12:00:00+02:00", "attributes": {"key1": "value1","key2": "value2"}}
+        {"queryString": "count()"}'
+```
+
+<ReplaceDatasetToken />
+
+## Send data in CSV format
+
+To send data to Axiom in JSON format:
+1. Encode the events in CSV format. The first line specifies the field names separated by commas. Subsequent new lines specify the values separated by commas.
+1. Enter the CSV representation in the body of the API request.
+1. Set the `Content-Type` header to `text/csv`.
 
 **Example request**
 
 ```bash
 curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/ingest' \
-      -H 'Authorization: Bearer API_TOKEN' \
-      -H 'Content-Type: text/csv' \
-      -d 'user, name
-         foo, bar'
+    -H 'Authorization: Bearer API_TOKEN' \
+    -H 'Content-Type: text/csv' \
+    -d 'user, name
+        foo, bar'
 ```
+
+<ReplaceDatasetToken />
 
 **Example response**
 
@@ -185,3 +224,7 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/ingest' \
     "walLength": 2
 }
 ```
+
+## What’s next
+
+After ingesting data to Axiom, you can [query it via API](/restapi/query).
