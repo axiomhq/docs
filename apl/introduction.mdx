@@ -6,45 +6,78 @@ icon: door-open
 tags: ['axiom documentation', 'documentation', 'axiom', 'APL', 'axiom processing language', 'data explorer', 'getiing started guide', 'summarize', 'filter']
 ---
 
-## Introduction
+import Prerequisites from "/snippets/minimal-prerequisites.mdx"
 
 The Axiom Processing Language (APL) is a query language that is perfect for getting deeper insights from your data. Whether logs, events, analytics, or similar, APL provides the flexibility to filter, manipulate, and summarize your data exactly the way you need it.
 
-## Get started
+<Prerequisites />
 
-Go to the Query tab and click one of your datasets to get started. The APL editor has full auto-completion so you can poke around or you can get a better understanding of all the features by using the reference menu to the left of this page.
+## Build an APL query
 
-## APL query structure
+APL queries consist of the following:
 
-At a minimum, a query consists of source data reference (name of a dataset) and zero or more query operators applied in sequence. Individual operators are delimited using the pipe character (`|`).
+- **Data source:** The most common data source is one of your Axiom datasets.
+- **Operators:** Operators filter, manipulate, and summarize your data. 
 
-APL query has the following structure:
+Delimit operators with the pipe character (`|`).
+
+A typical APL query has the following structure:
 
 ```kusto
-DataSource
-| operator ...
-| operator ...
+DatasetName
+| Operator ...
+| Operator ...
 ```
 
-Where:
+- `DatasetName` is the name of the dataset you want to query.
+- `Operator` is an operation you apply to the data.
 
-- DataSource is the name of the dataset you want to query
-- Operator is a function that will be applied to the data
+<Note>
+Apart from Axiom datasets, you can use other data sources:
+- External data sources using the [externaldata](/apl/tabular-operators/externaldata-operator) operator.
+- Specify a data table in the APL query itself using the `let` statement.
+</Note>
 
-Let’s look at an example query.
+## Example query
 
 ```kusto
 ['github-issue-comment-event']
-| extend bot = actor contains "-bot" or actor contains "[bot]"
-| where bot == true
+| extend isBot = actor contains '-bot' or actor contains '[bot]'
+| where isBot == true
 | summarize count() by bin_auto(_time), actor
 ```
 
-The query above begins with reference to a dataset called **github-issue-comment-event** and contains several operators, [extend](/apl/tabular-operators/extend-operator), [where](/apl/tabular-operators/where-operator), and [summarize](/apl/tabular-operators/summarize-operator), each separated by a `pipe`. The extend operator creates the **bot** column in the returned result, and sets its values depending on the value of the actor column, the **where** operator filters out the value of the **bot** to a branch of rows and then produce a chart from the aggregation using the **summarize** operator.
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'github-issue-comment-event'%5D%20%7C%20extend%20isBot%20%3D%20actor%20contains%20'-bot'%20or%20actor%20contains%20'%5Bbot%5D'%20%7C%20where%20isBot%20%3D%3D%20true%20%7C%20summarize%20count()%20by%20bin_auto(_time)%2C%20actor%22%7D)
 
-The most common kind of query statement is a tabular expression statement. Tabular statements contain operators, each of which starts with a tabular `input` and returns a tabular `output.`
+The query above uses a dataset called `github-issue-comment-event` as its data source. It uses the follwing operators:
 
-- Explore the [tabular operators](/apl/tabular-operators/extend-operator) we support.
-- Check out our [entity names and identifier naming rules](/apl/entities/entity-names).
+- [extend](/apl/tabular-operators/extend-operator) adds a new field `isBot` to the query results. It sets the values of the new field to true if the values of the `actor` field in the original dataset contain `-bot` or `[bot]`.
+- [where](/apl/tabular-operators/where-operator) filters for the values of the `isBot` field. It only returns rows where the value is true.
+- [summarize](/apl/tabular-operators/summarize-operator) aggregates the data and produces a chart.
 
-Axiom Processing Language supplies a set of system [data types](/apl/data-types/scalar-data-types) that define all the types of [data](/apl/data-types/null-values) that can be used with Axiom Processing Language.
+Each operator is separated using the pipe character (`|`).
+
+## Example result
+
+As a result, the query returns a chart and a table. The table counts the different values of the `actor` field where `isBot` is true, and the chart displays the distribution of these counts over time.
+
+```kusto
+| actor               | count_ |
+|---------------------|--------|
+| github-actions[bot] |    487 |
+| sonarqubecloud[bot] |    208 |
+|   dependabot[bot]   |    148 |
+|     vercel[bot]     |     91 |
+|     codecov[bot]    |     63 |
+|  openshift-ci[bot]  |     52 |
+|  coderabbitai[bot]  |     43 |
+|     netlify[bot]    |     37 |
+```
+
+<Note>
+The query results are a representation of your data based on your request. The query doesn’t change the original dataset.
+</Note>
+
+## What's next
+
+Check out the [list of sample queries](/apl/tutorial) or use the left navigation to explore the supported operators and functions such as the [tabular operators](/apl/tabular-operators/overview).
