@@ -1,494 +1,334 @@
 ---
 title: 'Query data via Axiom API'
-description: 'Learn how to use Axiom querying API to create and get query objects.'
+description: 'Learn how to use the Axiom API to query data.'
 sidebarTitle: Query data
 tags:
     ['axiom documentation', 'documentation', 'axiom', 'axiom api', 'rest api', 'rest', 'authorization', 'query', 'querying', 'node js', 'headers', 'send data', 'ingesting', 'json', 'arrays', 'nested arrays', 'objects', 'strings', 'csv', 'response']
 ---
 
-Use Axiom querying API to create and get query objects.
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceToken from "/snippets/replace-token.mdx"
 
-## Authorization and headers
+This page explains how to query data via the Axiom API using the following:
 
-The only expected header is `Authorization: Bearer` which is your token to authenticate the request. For more information, see [Tokens](/reference/tokens).
+- [cURL](#query-data-with-curl)
+- [Axiom Node.js library](#query-data-with-axiom-nodejs)
 
-## Using Axiom Node.js library to query data
+For an introduction to the basics of the Axiom API and to the authentication options, see [Introduction to Axiom API](/restapi/introduction).
 
-Axiom maintains the [axiom-js](https://github.com/axiomhq/axiom-js) to provide official Node.js bindings for the Axiom API.
+The API requests on this page use the query data endpoint. For more information, see the [API reference](/restapi/endpoints/queryApl).
 
-Install using `npm install`:
+<Prerequisites />
 
-```shell
-npm install @axiomhq/js
-```
+## Query data with cURL
 
-If you use the [Axiom CLI](https://github.com/axiomhq/cli), run `eval $(axiom config export -f)` to configure your environment variables.
+To query data with cURL:
 
-Otherwise, create an [API token](/reference/tokens) and export it as `AXIOM_TOKEN`.
+1. Build the APL query. For more information, see [Introduction to APL](/apl/introduction).
+1. Encode the APL query as a JSON object and enter it into the body of the API request.
+1. Optional: In the body of the request, set optional parameters such as `startTime` and `endTime`. For more information, see the [query data API reference](/restapi/endpoints/queryApl).
+1. Set the `Content-Type` header to `application/json`.
+1. Set the `Authorization` header to `Bearer API_TOKEN`. Replace `API_TOKEN` with the Axiom API token you have generated. 
+1. Send the POST request to one of the following:
+    - For tabular output, use `https://api.axiom.co/v1/datasets/_apl?format=tabular`. The tabular output
+    - For legacy output, use `https://api.axiom.co/v1/datasets/_apl?format=legacy`. The legacy output
 
-Create and use a client like this:
-
-```ts
-// The purpose of this example is to show how to query a dataset using the Axiom
-// Processing Language (APL).
-import { Axiom } from '@axiomhq/js';
-
-const axiom = new Axiom({
-    token: process.env.AXIOM_TOKEN
-});
-
-async function query() {
-    const aplQuery = "['flights'] | where altitude > 49000 and flight != '' ";
-
-    const res = await axiom.query(aplQuery);
-    if (!res.matches || res.matches.length === 0) {
-        console.warn('no matches found');
-        return;
-    }
-
-    for (let matched of res.matches) {
-        console.log(matched.data);
-    }
-}
-
-query();
-```
-
-In the above example we’re querying a dataset containing contemporary flight data obtained from an ADSB antenna. Results may look similar to this:
-
-```json
-{
-  aircraft: null,
-  altitude: 123600,
-  category: null,
-  flight: 'BCI96D  ',
-  hex: '407241',
-  lat: 50.951285,
-  lon: -1.347961,
-  messages: 13325,
-  mlat: [ 'lat', 'lon', 'track', 'speed', 'vert_rate' ],
-  now: null,
-  nucp: 0,
-  rssi: -13.3,
-  seen: 3.6,
-  seen_pos: 19.7,
-  speed: 260,
-  squawk: '6014',
-  tisb: [],
-  track: 197,
-  type: null,
-  vert_rate: 64
-}
-{
-  aircraft: null,
-  altitude: 123600,
-  category: null,
-  flight: 'BCI96D  ',
-  hex: '407241',
-  lat: 50.951285,
-  lon: -1.347961,
-  messages: 13325,
-  mlat: [ 'lat', 'lon', 'track', 'speed', 'vert_rate' ],
-  now: null,
-  nucp: 0,
-  rssi: -13.3,
-  seen: 4.6,
-  seen_pos: 20.8,
-  speed: 260,
-  squawk: '6014',
-  tisb: [],
-  track: 197,
-  type: null,
-  vert_rate: 64
-}
-```
-
-Further [examples](https://github.com/axiomhq/axiom-js/tree/main/examples/js) can be found in the [axiom-js](https://github.com/axiomhq/axiom-js) repo.
-
-## Querying via Curl using APL
-
-This section provides a guide on how to leverage the power of APL through curl commands. By combining the flexibility of curl with the querying capabilities of APL, users can seamlessly fetch and analyze their data right from the terminal.
-
-Whether you’re looking to fetch specific data points, aggregate metrics over time, or filter datasets based on certain criteria, the examples provided here will serve as a foundation to build upon. As you become more familiar with APL’s syntax and curl’s options, you'll find that the possibilities are vast and the insights you can derive are profound.
-
-## Examples 
-
-## Count of distinct routes 
+### Example
 
 ```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "vercel | summarize Count = dcount(vercel.route)",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Top 5 routes by count 
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "vercel | summarize Count = dcount(vercel.route)",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Average request duration
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "vercel | summarize AvgDuration = avg(vercel.duration)",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Requests with duration greater than 1 second
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "vercel | where vercel.duration > 1000",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Top 3 routes with the highest average duration
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "vercel | summarize AvgDuration = avg(vercel.duration) by vercel.route | top 3 by AvgDuration desc",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Requests grouped by hour
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "vercel | summarize Count = count() by bin(_time, 1h)",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Requests with errors
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "vercel | where vercel.status >= 400",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Getting the most common user agents
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "[\"sample-http-logs\"] | summarize count() by user_agent | top 5 by count_",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Identifying the server data centers with the highest number of requests
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "[\"sample-http-logs\"] | summarize count() by server_datacenter | top 3 by count_",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Identifying the average, minimum, and maximum request duration for each method type
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "[\"sample-http-logs\"] | summarize avg(todouble(req_duration_ms)), min(todouble(req_duration_ms)), max(todouble(req_duration_ms)) by method",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Finding the top 3 URIs accessed via TLS connections with a response body size greater than a specified threshold
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "[\"sample-http-logs\"] | where is_tls == true and todouble(resp_body_size_bytes) > 5000 | summarize count() by uri | top 3 by count()",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Calculating the 95th percentile of the request duration for each server datacenter
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "[\"sample-http-logs\"] | summarize percentile(todouble(req_duration_ms), 95) by server_datacenter",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Active issue contributors
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "[\"github-issue-comment-event\"] | where repo startswith \"kubernetes/\" | where actor !endswith \"[bot]\" | summarize dcount(actor) by bin_auto(_time)",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Top Issue Wranglers
-
-```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
--H 'Authorization: Bearer API_TOKEN' \
--H 'Accept: application/json' \
--H 'Accept-Encoding: gzip' \
--H 'Content-Type: application/json' \
--d '{
-      "apl": "[\"github-issues-event\"] | where actor !endswith \"[bot]\" and repo startswith \"cockroachdb/\" and actor !~ \"cockroach-teamcity\" | summarize topk(actor, 5) by bin_auto(_time), action",
-      "startTime": "2023-08-15T00:00:00Z",
-      "endTime": "2023-08-22T00:00:00Z"
-    }'
-```
-
-## Using Curl to query the API
-
-`POST api.axiom.co/v1/datasets/\{id\}/query`
-
-```bash
-curl -X 'POST' \
-  'https://api.axiom.co/v1/datasets/<dataset_id>/query?saveAsKind=<save_as_kind_query>&streaming-duration=<streaming_duration>&nocache=true' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer API_TOKEN' \
-  -d '{
-  "aggregations": [
-    {
-      "alias": "string",
-      "argument": {},
-      "field": "string",
-      "op": "count"
-    }
-  ],
-  "continuationToken": "string",
-  "cursor": "string",
-  "endTime": "string",
-  "filter": {
-    "caseSensitive": true,
-    "children": [
-      "string"
-    ],
-    "field": "string",
-    "op": "and",
-    "value": {}
-  },
-  "groupBy": [
-    "string"
-  ],
-  "includeCursor": true,
-  "limit": 0,
-  "order": [
-    {
-      "desc": true,
-      "field": "string"
-    }
-  ],
-  "project": [
-    {
-      "alias": "string",
-      "field": "string"
-    }
-  ],
-  "queryOptions": {
-    "against": "string",
-    "againstStart": "string",
-    "againstTimestamp": "string",
-    "caseSensitive": "string",
-    "containsTimeFilter": "string",
-    "datasets": "string",
-    "displayNull": "string",
-    "editorContent": "string",
-    "endColumn": "string",
-    "endLineNumber": "string",
-    "endTime": "string",
-    "integrationsFilter": "string",
-    "openIntervals": "string",
-    "quickRange": "string",
-    "resolution": "string",
-    "startColumn": "string",
-    "startLineNumber": "string",
-    "startTime": "string",
-    "timeSeriesView": "string"
-  },
-  "resolution": "string",
+curl --request POST \
+  --url 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
+  --header 'Authorization: Bearer API_TOKEN' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "apl": "http-logs | limit 10",
   "startTime": "string",
-  "virtualFields": [
-    {
-      "alias": "string",
-      "expr": "string"
-    }
-  ]
+  "endTime": "string"
 }'
 ```
 
-## Response Example
+<ReplaceToken />
 
-Response code **200** and the response body:
+**Example response**
 
-```json
+```json [expandable]
 {
-  "buckets": {
-    "series": [
-      {
-        "endTime": "2022-07-26T03:00:48.925Z",
-        "groups": [
-          {
-            "aggregations": [
-              {
-                "op": "string",
-                "value": {}
-              }
-            ],
-            "group": {
-              "additionalProp1": {},
-              "additionalProp2": {},
-              "additionalProp3": {}
-            },
-            "id": 0
-          }
-        ],
-        "startTime": "2022-07-26T03:00:48.925Z"
-      }
-    ],
-    "totals": [
-      {
-        "aggregations": [
-          {
-            "op": "string",
-            "value": {}
-          }
-        ],
-        "group": {
-          "additionalProp1": {},
-          "additionalProp2": {},
-          "additionalProp3": {}
+  "format": "tabular",
+  "status": {
+    "elapsedTime": 260650,
+    "minCursor": "0d8q6stroluyo-07c3957e7400015c-0000c875",
+    "maxCursor": "0d8q6stroluyo-07c3957e7400015c-0000c877",
+    "blocksExamined": 4,
+    "blocksCached": 0,
+    "blocksMatched": 0,
+    "rowsExamined": 197604,
+    "rowsMatched": 197604,
+    "numGroups": 0,
+    "isPartial": false,
+    "cacheStatus": 1,
+    "minBlockTime": "2025-03-26T12:03:14Z",
+    "maxBlockTime": "2025-03-26T12:12:42Z"
+  },
+  "tables": [
+    {
+      "name": "0",
+      "sources": [
+        {
+          "name": "http-logs"
+        }
+      ],
+      "fields": [
+        {
+          "name": "_sysTime",
+          "type": "datetime"
         },
-        "id": 0
+        {
+          "name": "_time",
+          "type": "datetime"
+        },
+        {
+          "name": "content_type",
+          "type": "string"
+        },
+        {
+          "name": "geo.city",
+          "type": "string"
+        },
+        {
+          "name": "geo.country",
+          "type": "string"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "is_tls",
+          "type": "boolean"
+        },
+        {
+          "name": "message",
+          "type": "string"
+        },
+        {
+          "name": "method",
+          "type": "string"
+        },
+        {
+          "name": "req_duration_ms",
+          "type": "float"
+        },
+        {
+          "name": "resp_body_size_bytes",
+          "type": "integer"
+        },
+        {
+          "name": "resp_header_size_bytes",
+          "type": "integer"
+        },
+        {
+          "name": "server_datacenter",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        },
+        {
+          "name": "user_agent",
+          "type": "string"
+        },
+        {
+          "name": "is_ok_2    ",
+          "type": "boolean"
+        },
+        {
+          "name": "city_str_len",
+          "type": "integer"
+        }
+      ],
+      "order": [
+        {
+          "field": "_time",
+          "desc": true
+        }
+      ],
+      "groups": [],
+      "range": {
+        "field": "_time",
+        "start": "1970-01-01T00:00:00Z",
+        "end": "2025-03-26T12:12:43Z"
+      },
+      "columns": [
+        [
+          "2025-03-26T12:12:42.68112905Z",
+          "2025-03-26T12:12:42.68112905Z",
+          "2025-03-26T12:12:42.68112905Z"
+        ],
+        [
+          "2025-03-26T12:12:42Z",
+          "2025-03-26T12:12:42Z",
+          "2025-03-26T12:12:42Z"
+        ],
+        [
+          "text/html",
+          "text/plain-charset=utf-8",
+          "image/jpeg"
+        ],
+        [
+          "Ojinaga",
+          "Humboldt",
+          "Nevers"
+        ],
+        [
+          "Mexico",
+          "United States",
+          "France"
+        ],
+        [
+          "8af366cf-6f25-42e6-bbb4-d860ab535a60",
+          "032e7f68-b0ab-47c0-a24a-35af566359e5",
+          "4d2c7baa-ff28-4b1f-9db9-8e6c0ed5a9c9"
+        ],
+        [
+          false,
+          false,
+          true
+        ],
+        [
+          "QCD permutations were not solvable in linear time, expected compressed time",
+          "QCD permutations were not solvable in linear time, expected compressed time",
+          "Expected a new layer of particle physics but got a Higgs Boson"
+        ],
+        [
+          "GET",
+          "GET",
+          "GET"
+        ],
+        [
+          1.396373193863436,
+          0.16252390534308514,
+          0.4093416175186162
+        ],
+        [
+          3448,
+          2533,
+          1906
+        ],
+        [
+          84,
+          31,
+          29
+        ],
+        [
+          "DCA",
+          "GRU",
+          "FRA"
+        ],
+        [
+          "201",
+          "200",
+          "200"
+        ],
+        [
+          "/api/v1/buy/commit/id/go",
+          "/api/v1/textdata/cnfigs",
+          "/api/v1/bank/warn"
+        ],
+        [
+          "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; AS; rv:11.0) like Gecko",
+          "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+          "Mozilla/5.0 (Windows; U; MSIE 9.0; WIndows NT 9.0; en-US))"
+        ],
+        [
+          true,
+          true,
+          true
+        ],
+        [
+          7,
+          8,
+          6
+        ]
+      ]
+    }
+  ],
+  "datasetNames": [
+    "http-logs"
+  ],
+  "fieldsMetaMap": {
+    "http-logs": [
+      {
+        "name": "status",
+        "type": "",
+        "unit": "",
+        "hidden": false,
+        "description": "HTTP status code"
+      },
+      {
+        "name": "resp_header_size_bytes",
+        "type": "integer",
+        "unit": "none",
+        "hidden": false,
+        "description": ""
+      },
+      {
+        "name": "geo.city",
+        "type": "string",
+        "unit": "",
+        "hidden": false,
+        "description": "the city"
+      },
+      {
+        "name": "resp_body_size_bytes",
+        "type": "integer",
+        "unit": "decbytes",
+        "hidden": false,
+        "description": ""
+      },
+      {
+        "name": "content_type",
+        "type": "string",
+        "unit": "",
+        "hidden": false,
+        "description": ""
+      },
+      {
+        "name": "geo.country",
+        "type": "string",
+        "unit": "",
+        "hidden": false,
+        "description": ""
+      },
+      {
+        "name": "req_duration_ms",
+        "type": "float",
+        "unit": "ms",
+        "hidden": false,
+        "description": "Request duration"
       }
     ]
-  },
-  "fieldsMeta": [
-    {
-      "description": "string",
-      "hidden": true,
-      "name": "string",
-      "type": "string",
-      "unit": "string"
-    }
-  ],
-  "matches": [
-    {
-      "_rowId": "string",
-      "_sysTime": "2022-07-26T03:00:48.925Z",
-      "_time": "2022-07-26T03:00:48.925Z",
-      "data": {
-        "additionalProp1": {},
-        "additionalProp2": {},
-        "additionalProp3": {}
-      }
-    }
-  ],
-  "status": {
-    "blocksExamined": 0,
-    "cacheStatus": 0,
-    "continuationToken": "string",
-    "elapsedTime": 0,
-    "isEstimate": true,
-    "isPartial": true,
-    "maxBlockTime": "2022-07-26T03:00:48.925Z",
-    "messages": [
-      {
-        "code": "string",
-        "count": 0,
-        "msg": "string",
-        "priority": "string"
-      }
-    ],
-    "minBlockTime": "2022-07-26T03:00:48.925Z",
-    "numGroups": 0,
-    "rowsExamined": 0,
-    "rowsMatched": 0
   }
 }
 ```
+
+## Query data with Axiom Node.js
+
+1. [Install and configure](/guides/javascript#use-axiomhq-js) the Axiom Node.js library.
+1. Build the APL query. For more information, see [Introduction to APL](/apl/introduction).
+1. Pass the APL query as a string to the `axiom.query` function.
+
+    ```ts
+    const res = await axiom.query(`['DATASET_NAME'] | where foo == 'bar' | limit 100`);
+    console.log(res);
+    ```
+
+    <ReplaceDataset />
+
+For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-js/tree/main/examples).
+
+For more information on other libraries you can use to query data, see [Send data](send-data/ingest).
