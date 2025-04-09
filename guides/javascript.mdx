@@ -11,7 +11,7 @@ popularityOrder: 8
 ---
 
 import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import Replacement from "/snippets/api-token-replacement.mdx"
+import ReplaceDataset from "/snippets/replace-dataset.mdx"
 
 JavaScript is a versatile, high-level programming language primarily used for creating dynamic and interactive web content.
 
@@ -66,8 +66,6 @@ Configure the environment variables in one of the following ways:
     });
     ```
 
-    <Replacement />
-
 - Install the [Axiom CLI](/reference/cli), and then run the following command:
 
     ```sh
@@ -83,6 +81,8 @@ axiom.ingest('DATASET_NAME', [{ foo: 'bar' }]);
 await axiom.flush();
 ```
 
+<ReplaceDataset />
+
 The client automatically batches events in the background. In most cases, call `flush()` only before your application exits.
 
 ### Query data
@@ -93,6 +93,8 @@ The following example queries data from Axiom:
 const res = await axiom.query(`['DATASET_NAME'] | where foo == 'bar' | limit 100`);
 console.log(res);
 ```
+
+<ReplaceDataset />
 
 For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-js/tree/main/examples).
 
@@ -162,8 +164,6 @@ const logger = new Logger(
 
 logger.info("Hello, world!");
 ```
-
-<Replacement />
 
 #### Transports
 
@@ -236,15 +236,18 @@ The `@axiomhq/logging` library includes the following logging levels:
 
 #### Formatters
 
-Formatters are used to change the fields of a log before sending it to a transport. For example:
+Formatters are used to change the content of a log before sending it to a transport. For example:
 
 ```ts
-import { Logger } from "@axiomhq/logging";
+import { Logger, LogEvent } from "@axiomhq/logging";
 
-const myCustomFormatter = (fields: Record<string, unknown>) => {
-  const upperCaseKeys = Object.fromEntries(
-    Object.entries(fields).map(([key, value]) => [key.toUpperCase(), value])
-  );
+const myCustomFormatter = (event: LogEvent) => {
+  const upperCaseKeys = {
+    ...event,
+    fields: Object.fromEntries(
+      Object.entries(event.fields).map(([key, value]) => [key.toUpperCase(), value])
+    ),
+  };
 
   return upperCaseKeys;
 };

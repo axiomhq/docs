@@ -3,7 +3,7 @@ title: parse_ipv4
 description: 'This page explains how to use the parse_ipv4 function in APL.'
 ---
 
-The `parse_ipv4` function in APL extracts the four octets of an IPv4 address and represents them as integers. You can use this function to break down an IPv4 address into its constituent components for advanced analysis, filtering, or comparisons. It is especially useful for tasks like analyzing network traffic logs, identifying trends in IP address usage, or performing security-related queries.
+The `parse_ipv4` function in APL converts an IPv4 address and represents it as a long number. You can use this function to convert an IPv4 address for advanced analysis, filtering, or comparisons. It is especially useful for tasks like analyzing network traffic logs, identifying trends in IP address usage, or performing security-related queries.
 
 ## For users of other query languages
 
@@ -12,34 +12,37 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, extracting IPv4 components requires using regular expressions or string manipulation. APL simplifies this process with the dedicated `parse_ipv4` function.
+Splunk does not provide a direct function for converting an IPv4 address into a long number. However, you can achieve similar functionality using custom SPL expressions.
 
 <CodeGroup>
 ```sql Splunk example
-| eval octets=split("192.168.1.1", ".") | table octets
+| eval ip_int = tonumber(replace(ip, "\\.", ""))
 ```
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend octets = parse_ipv4('192.168.1.1')
-| project octets
+| extend ip_long = parse_ipv4(uri)
 ```
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, breaking down an IPv4 address often requires using functions like `SUBSTRING` or `SPLIT`. APL offers the `parse_ipv4` function as a straightforward alternative.
+SQL does not have a built-in function equivalent to `parse_ipv4`, but you can use bitwise operations to achieve a similar result.
 
 <CodeGroup>
 ```sql SQL example
-SELECT SPLIT_PART(ip, '.', 1) AS octet1, SPLIT_PART(ip, '.', 2) AS octet2 FROM logs
+SELECT
+  (CAST(SPLIT_PART(ip, '.', 1) AS INT) << 24) +
+  (CAST(SPLIT_PART(ip, '.', 2) AS INT) << 16) +
+  (CAST(SPLIT_PART(ip, '.', 3) AS INT) << 8) +
+  CAST(SPLIT_PART(ip, '.', 4) AS INT) AS ip_int
+FROM logs;
 ```
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend octets = parse_ipv4('192.168.1.1')
-| project octets
+| extend ip_long = parse_ipv4(uri)
 ```
 </CodeGroup>
 
@@ -58,28 +61,28 @@ parse_ipv4(ipv4_address)
 
 | Parameter       | Type   | Description                                    |
 |------------------|--------|------------------------------------------------|
-| `ipv4_address`   | string | The IPv4 address to parse into integer octets. |
+| `ipv4_address`   | string | The IPv4 address to parse into a long number. |
 
 ### Returns
 
-The function returns an array of four integers, each representing an octet of the IPv4 address.
+The function returns the IPv4 address as a long number if the conversion succeeds. If the conversion fails, the function returns `null`.
 
 ## Use case example
 
-You can use the `parse_ipv4` function to analyze web traffic by breaking down user IP addresses into octets.
+You can use the `parse_ipv4` function to analyze web traffic by representing IP addresses as long numbers.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend ip_octets = parse_ipv4('192.168.1.1')
+| extend ip_long = parse_ipv4('192.168.1.1')
 ```
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20ip_octets%20%3D%20parse_ipv4('192.168.1.1')%22%7D)
 
 **Output**
 
-| _time              | uri                 | method | ip_octets       |
+| _time              | uri                 | method | ip_long       |
 |---------------------|---------------------|--------|-----------------|
 | 2024-11-14T10:00:00 | /index.html         | GET    | 3,232,235,777 |
 
