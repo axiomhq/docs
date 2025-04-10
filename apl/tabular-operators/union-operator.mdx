@@ -90,12 +90,13 @@ SELECT * FROM security_logs;
 ### Syntax
 
 ```kusto
-T1 | union [T2], [T3], ...
+T1 | union [withsource=FieldName] [T2], [T3], ...
 ```
 
 ### Parameters
 
 - `T1, T2, T3, ...`: Tables or query results you want to combine into a single output.
+- `withsource`: Optional, adds a field to the output where each value specifies the source dataset of the row. Specify the name of this additional field in `FieldName`.
 
 ### Returns
 
@@ -281,6 +282,17 @@ After the union, the query calculates the number of unique `geo.city`  and `repo
 ```
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20union%20%5B%27github-push-event%27%5D%5Cn%7C%20summarize%20UniqueNames%20%3D%20dcount%28%5B%27geo.city%27%5D%29%2C%20UniqueData%20%3D%20dcount%28repo%29%22%7D)
+
+### Union using withsource
+
+The example below returns the union of all datasets that match the pattern `github*` and counts the number of events in each.
+
+```kusto
+union withsource=dataset github*
+| summarize count() by dataset
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22union%20withsource%3Ddataset%20github*%20%7C%20summarize%20count()%20by%20dataset%22%7D)
 
 ## Best practices for the union operator
 
