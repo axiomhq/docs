@@ -7,13 +7,13 @@ tags: ['guides', 'cloudflare worker', 'otel', 'opentelemetry']
 logoId: 'cloudflareWorkers'
 ---
 
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
 This guide demonstrates how to configure OpenTelemetry in Cloudflare Workers to send telemetry data to Axiom using the [OTel CF Worker package](https://github.com/evanderkoogh/otel-cf-workers).
 
-## Prerequisites
-
-- [Create an Axiom account](https://app.axiom.co/).
-- [Create a dataset in Axiom](/reference/settings#data) where you will send your data.
-- [Create an API token in Axiom with permissions to query and ingest data](/reference/settings#access-overview).
+<Prerequisites />
+{/* list separator */}
 - Create a Cloudflare account.
 - [Install Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/), the CLI tool for Cloudflare.
 
@@ -58,7 +58,7 @@ const handler = {
 const config: ResolveConfigFn = (env: Env, _trigger) => {
   return {
     exporter: {
-      url: 'https://api.axiom.co/v1/traces',
+      url: 'https://DOMAIN/v1/traces',
       headers: {
         'Authorization': `Bearer ${env.AXIOM_API_TOKEN}`,
         'X-Axiom-Dataset': `${env.AXIOM_DATASET}`
@@ -70,6 +70,8 @@ const config: ResolveConfigFn = (env: Env, _trigger) => {
 
 export default instrument(handler, config);
 ```
+
+<ReplaceDomain />
 
 ## Wrangler Configuration (`wrangler.toml`)
 
@@ -261,7 +263,7 @@ export default instrument(yourHandler, yourConfig);
 ```js
 const config = (env) => ({
   exporter: {
-    url: 'https://api.axiom.co/v1/traces',
+    url: 'https://DOMAIN/v1/traces',
     headers: {
       'Authorization': `Bearer ${env.AXIOM_API_TOKEN}`,
       'X-Axiom-Dataset': `${env.AXIOM_DATASET}`
@@ -270,6 +272,8 @@ const config = (env) => ({
   service: { name: 'axiom-cloudflare-workers' },
 });
 ```
+
+    <ReplaceDomain />
 
 After instrumenting your Worker script, the `@microlabs/otel-cf-workers` package takes care of tracing automatically.
 
