@@ -148,24 +148,22 @@ For logs with a specific structure (like AWS ELB logs), you have to implement a 
 
 ```py
 import shlex
-import re
+import re 
 
-# Example: Custom parser for a specific log format
-class CustomLogParser:
+class Parser:
     def parse_line(self, line):
         try:
-            # Handle quoted strings properly
-            parts = shlex.split(line)
-            
-            # Map to your specific log format
-            return {
-                "request": parts[0],
-                "level": parts[1],
-                "service": parts[2],
-                "message": " ".join(parts[3:])
+            line = re.sub(r"[\[\]]", "", line)
+            data = shlex.split(line)
+            result = {
+                "protocol": data[0],
+                "timestamp": data[1],
+                "client_ip_port": data[2],
+                # ...more fields...
             }
+            return result
         except Exception as e:
-            return {"message": line, "parse_error": str(e)}
+            raise e
 ```
 
 ## Configure S3 to trigger Lambda
