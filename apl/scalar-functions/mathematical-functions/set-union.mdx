@@ -1,0 +1,167 @@
+---
+title: set_union
+description: 'This page explains how to use the set_union function in APL.'
+---
+
+## Introduction
+
+Use the `set_union` function in APL to combine two dynamic arrays into one, returning a new array that includes all distinct elements from both. The order of elements in the result is not guaranteed and may differ from the original input arrays.
+
+You can use `set_union` when you need to merge two arrays and eliminate duplicates. It is especially useful in scenarios where you need to perform set-based logic, such as comparing user activity across multiple sources, correlating IPs from different datasets, or combining traces or log attributes from different events.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+APL’s `set_union` works similarly to using `mvappend` followed by `mvdedup` in SPL. While SPL stores multivalue fields and uses field-based manipulation, APL focuses on dynamic arrays. You need to explicitly apply set logic in APL using functions like `set_union`.
+
+<CodeGroup>
+```sql Splunk example
+| eval result=mvappend(array1, array2)
+| eval result=mvdedup(result)
+````
+
+```kusto APL equivalent
+print result = set_union(array1, array2)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Standard SQL doesn’t support arrays as first-class types or set functions like `set_union`. However, conceptually, `set_union` behaves like applying `UNION` between two subqueries that return one column each, followed by a `DISTINCT`.
+
+<CodeGroup>
+```sql SQL example
+SELECT value FROM (
+  SELECT value FROM table1
+  UNION
+  SELECT value FROM table2
+)
+```
+
+```kusto APL equivalent
+print result = set_union(array1, array2)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+set_union(array1, array2)
+```
+
+### Parameters
+
+| Name   | Type    | Description                |
+| ------ | ------- | -------------------------- |
+| array1 | dynamic | The first array to merge.  |
+| array2 | dynamic | The second array to merge. |
+
+### Returns
+
+A dynamic array that contains the distinct elements of both input arrays.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `set_union` to analyze logs from multiple HTTP request methods and aggregate the unique cities involved in each method.
+
+**Query**
+
+```kusto
+let get_cities = ['sample-http-logs']
+  | where method == 'GET'
+  | summarize get_cities = make_set(['geo.city']);
+let post_cities = ['sample-http-logs']
+  | where method == 'POST'
+  | summarize post_cities = make_set(['geo.city']);
+set_union(get_cities, post_cities)
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let) get_cities = ['sample-http-logs'] | where method == 'GET' | summarize get_cities = make_set(['geo.city']); let post_cities = ['sample-http-logs'] | where method == 'POST' | summarize post_cities = make_set(['geo.city']); set_union(get_cities, post_cities)%22%7D)
+
+**Output**
+
+| result                                   |
+| ---------------------------------------- |
+| ["New York", "San Francisco", "Berlin"] |
+
+This query merges cities involved in GET and POST requests into one unique set.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `set_union` to consolidate service names from client and server spans in OpenTelemetry traces.
+
+**Query**
+
+```kusto
+let clients = ['otel-demo-traces']
+  | where kind == 'client'
+  | summarize client_services = make_set(['service.name']);
+let servers = ['otel-demo-traces']
+  | where kind == 'server'
+  | summarize server_services = make_set(['service.name']);
+set_union(clients, servers)
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let) clients = ['otel-demo-traces'] | where kind == 'client' | summarize client_services = make_set(['service.name']); let servers = ['otel-demo-traces'] | where kind == 'server' | summarize server_services = make_set(['service.name']); set_union(clients, servers)%22%7D)
+
+**Output**
+
+| result                                          |
+| ----------------------------------------------- |
+| ["frontend", "cartservice", "checkoutservice"] |
+
+This query extracts all unique services that appear in client or server spans.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `set_union` to combine IPs from successful and failed login attempts and identify all unique sources.
+
+**Query**
+
+```kusto
+let success_ips = ['sample-http-logs']
+  | where status == '200'
+  | summarize success_set = make_set(['geo.city']);
+let failure_ips = ['sample-http-logs']
+  | where status == '401'
+  | summarize failure_set = make_set(['geo.city']);
+set_union(success_ips, failure_ips)
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let) success_ips = ['sample-http-logs'] | where status == '200' | summarize success_set = make_set(['geo.city']); let failure_ips = ['sample-http-logs'] | where status == '401' | summarize failure_set = make_set(['geo.city']); set_union(success_ips, failure_ips)%22%7D)
+
+**Output**
+
+| result                            |
+| --------------------------------- |
+| ["Chicago", "London", "Toronto"] |
+
+This query helps detect all cities involved in authentication attempts, successful or not.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [set_intersect](/apl/array-functions/set_intersect): Returns elements common to both arrays. Use this when you want the intersection instead of the union.
+* [set_difference](/apl/array-functions/set_difference): Returns elements in the first array that are not in the second. Use it to find exclusions.
+* [array_concat](/apl/array-functions/array_concat): Concatenates arrays without removing duplicates. Use this when you want to preserve all values.
+* [array_distinct](/apl/array-functions/array_distinct): Removes duplicates from a single array. Use this when working with one array only.
+* [set_has_element](/apl/array-functions/set_has_element): Checks if an array contains a specific value. Use this for conditional filtering based on set membership.

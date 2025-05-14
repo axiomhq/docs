@@ -1,0 +1,161 @@
+---
+title: min_of
+description: 'This page explains how to use the min_of function in APL.'
+---
+
+Use the `min_of` function in APL to determine the minimum value among two or more scalar values. The function returns the smallest of its arguments, making it especially useful when you want to compare metrics, constants, or calculated expressions in queries.
+
+You typically use `min_of` when you want to:
+
+- Compare numeric or time-based values across multiple fields or constants.
+- Apply conditional logic in summarization or filtering steps.
+- Normalize or bound values when computing metrics.
+
+Unlike aggregation functions such as `min()`, which work across rows in a group, `min_of` operates on values within a single row or context.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk, you often use the `eval` command with the `min` function to compare multiple values. APL’s `min_of` is similar, but used as a scalar function directly in expressions.
+
+<CodeGroup>
+```sql Splunk example
+... | eval smallest=min(field1, field2)
+````
+
+```kusto APL equivalent
+... | extend smallest = min_of(field1, field2)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, you typically use `LEAST()` to find the smallest of multiple values. APL’s `min_of` is the equivalent of `LEAST()`.
+
+<CodeGroup>
+```sql SQL example
+SELECT LEAST(col1, col2, col3) AS min_val FROM table;
+```
+
+```kusto APL equivalent
+['dataset'] | extend min_val = min_of(col1, col2, col3)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+min_of(value1, value2, ...)
+```
+
+### Parameters
+
+| Name   | Type   | Description                                 |
+| ------ | ------ | ------------------------------------------- |
+| value1 | scalar | The first value to compare.                 |
+| value2 | scalar | The second value to compare.                |
+| ...    | scalar | Additional values to include in comparison. |
+
+All values must be of the same type (e.g., all numbers, all timespans, all datetime values).
+
+### Returns
+
+The smallest of the provided values. The type of the return value matches the type of the input arguments.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `min_of` to find the minimum request duration between two internal measurements.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend adjusted_duration = min_of(req_duration_ms, 100)
+| project _time, id, uri, req_duration_ms, adjusted_duration
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C extend adjusted_duration%20%3D%20min_of(req_duration_ms%2C%20100) %7C project _time%2C id%2C uri%2C req_duration_ms%2C adjusted_duration%22%7D)
+
+**Output**
+
+| _time               | id   | uri    | req_duration_ms | adjusted_duration |
+| -------------------- | ---- | ------ | ----------------- | ------------------ |
+| 2025-05-14T10:05:00Z | u123 | /login | 80                | 80                 |
+| 2025-05-14T10:06:00Z | u124 | /cart  | 120               | 100                |
+
+The query caps request duration at 100 ms by choosing the lower of the two values.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `min_of` to find the faster of two synthetic service durations for performance testing.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ['service.name'] in ('frontend', 'checkoutservice')
+| summarize min_duration = min_of(min(duration), time(100ms)) by ['service.name']
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D) %7C where%20%5B'service.name'%5D%20in%20('frontend'%2C%20'checkoutservice') %7C summarize min_duration%20%3D%20min_of(min(duration)%2C%20time(100ms))%20by%20%5B'service.name'%5D%22%7D)
+
+**Output**
+
+| service.name    | min_duration |
+| --------------- | ------------- |
+| frontend        | 80ms          |
+| checkoutservice | 100ms         |
+
+The query compares the minimum observed duration with a fixed benchmark of 100 ms for each service.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `min_of` to flag events with unusually short durations relative to a suspicious threshold.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '403'
+| extend suspicious_score = min_of(req_duration_ms, 50)
+| project _time, id, uri, status, req_duration_ms, suspicious_score
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C where%20status%20%3D%3D%20'403' %7C extend suspicious_score%20%3D%20min_of(req_duration_ms%2C%2050) %7C project _time%2C id%2C uri%2C status%2C req_duration_ms%2C suspicious_score%22%7D)
+
+**Output**
+
+| _time               | id   | uri    | status | req_duration_ms | suspicious_score |
+| -------------------- | ---- | ------ | ------ | ----------------- | ----------------- |
+| 2025-05-14T10:10:00Z | u555 | /admin | 403    | 30                | 30                |
+| 2025-05-14T10:11:00Z | u556 | /login | 403    | 70                | 50                |
+
+This helps identify fast-denied requests, which may be indicative of automated access attempts.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [min()](/apl/aggregation-functions/min): Returns the minimum value across a group of rows. Use when aggregating across records instead of within a row.
+* [max_of()](/apl/scalar-functions/max_of): Returns the largest value from a set of scalars. Use when you want the maximum instead of the minimum.
+* [iif()](/apl/scalar-functions/iif): Performs conditional logic. Use when you want more complex decision trees instead of simple comparisons.
+* [coalesce()](/apl/scalar-functions/coalesce): Returns the first non-null value from a list. Use for null handling rather than minimum value selection.
+* [case()](/apl/scalar-functions/case): Evaluates multiple conditions and returns corresponding values. Use for multi-branch logic instead of direct comparison.

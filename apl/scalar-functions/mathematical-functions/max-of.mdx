@@ -1,0 +1,156 @@
+---
+title: max_of
+description: 'This page explains how to use the max_of function in APL.'
+---
+
+Use the `max_of` function in APL (Axiom Processing Language) to return the maximum value from a list of scalar expressions. You can use it when you need to compute the maximum of a fixed set of values within each row, rather than across rows like with aggregation functions. It is especially useful when the values you want to compare come from different columns or are dynamically calculated within the same row.
+
+Use `max_of` when you want to:
+
+- Compare multiple fields in a single event to determine the highest value.
+- Perform element-wise maximum calculations in datasets where values are spread across columns.
+- Evaluate conditional values and select the highest one on a per-row basis.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk does not provide a direct function equivalent to `max_of`. However, you can use the `eval` command with nested `if` statements or custom logic to emulate similar functionality on a per-event basis.
+
+<CodeGroup>
+```sql Splunk example
+eval max_value=if(a > b and a > c, a, if(b > c, b, c))
+````
+
+```kusto APL equivalent
+extend max_value = max_of(a, b, c)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not offer a built-in function like `max_of` to compute the maximum across expressions in a single row. Instead, you typically use `GREATEST`, which serves a similar purpose.
+
+<CodeGroup>
+```sql SQL example
+SELECT GREATEST(a, b, c) AS max_value FROM table
+```
+
+```kusto APL equivalent
+extend max_value = max_of(a, b, c)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+max_of(expr1, expr2, ..., exprN)
+```
+
+### Parameters
+
+| Name     | Type   | Description                                      |
+| -------- | ------ | ------------------------------------------------ |
+| expr1..N | scalar | A comma-separated list of expressions to compare |
+
+### Returns
+
+The function returns the maximum value among the input expressions. The type of the result matches the type of the input expressions. All expressions must be of the same or compatible types.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You want to find the longest request duration per user from two possible internal metrics: `req_duration_ms` and an alternate derived metric, for example, `req_duration_ms * 1.2`.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend max_duration = max_of(req_duration_ms, req_duration_ms * 1.2)
+| summarize max=max(max_duration) by id
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C extend max_duration%20%3D%20max_of(req_duration_ms%2C%20req_duration_ms%20*%201.2) %7C summarize max%3Dmax(max_duration)%20by%20id%22%7D)
+
+**Output**
+
+| id        | max   |
+| --------- | ----- |
+| user_123 | 180.0 |
+| user_456 | 210.5 |
+
+This query computes the higher value between two duration metrics for each event, then aggregates the maximum value per user.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You want to evaluate the longest duration between actual and adjusted durations per trace.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend adjusted_duration = duration * 1.1
+| extend max_span_duration = max_of(duration, adjusted_duration)
+| summarize max=max(max_span_duration) by trace_id
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D) %7C extend adjusted_duration%20%3D%20duration%20*%201.1 %7C extend max_span_duration%20%3D%20max_of(duration%2C%20adjusted_duration) %7C summarize max%3Dmax(max_span_duration)%20by%20trace_id%22%7D)
+
+**Output**
+
+| trace_id | max          |
+| --------- | ------------ |
+| abc123    | 00:00:03.300 |
+| def456    | 00:00:05.500 |
+
+This query calculates both the original and an inflated duration, then finds the longest per trace ID.
+
+</Tab>
+<Tab title="Security logs">
+
+You want to compare the actual request duration with a fixed threshold (e.g. 1000 ms) and report the higher value per HTTP status.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend threshold_ms = 1000
+| extend effective_duration = max_of(req_duration_ms, threshold_ms)
+| summarize avg_duration=avg(effective_duration) by status
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C extend threshold_ms%20%3D%201000 %7C extend effective_duration%20%3D%20max_of(req_duration_ms%2C%20threshold_ms) %7C summarize avg_duration%3Davg(effective_duration)%20by%20status%22%7D)
+
+**Output**
+
+| status | avg_duration |
+| ------ | ------------- |
+| 200    | 1200.5        |
+| 500    | 1450.0        |
+
+This query ensures that durations are never reported below a baseline threshold, which is useful for compliance or alert tuning.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [min_of](/apl/scalar-functions/min_of): Returns the smallest value among scalar expressions. Use it when you want the minimum rather than the maximum.
+* [max](/apl/aggregation-functions/max): Returns the maximum value across rows in a group. Use it for aggregation instead of per-row comparison.
+* [iif](/apl/scalar-functions/iif): Evaluates a condition and returns one of two values. You can use it to build conditional max logic manually.
+* [coalesce](/apl/scalar-functions/coalesce): Returns the first non-null value among its arguments. Use it when checking null precedence rather than numeric maximum.
+* [case](/apl/scalar-functions/case): Provides conditional evaluation over multiple branches. Use it for more complex logic involving multiple comparisons.
