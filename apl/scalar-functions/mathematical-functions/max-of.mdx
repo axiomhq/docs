@@ -55,102 +55,39 @@ extend max_value = max_of(a, b, c)
 ### Syntax
 
 ```kusto
-max_of(expr1, expr2, ..., exprN)
+max_of(Expr1, Expr2, ..., ExprN)
 ```
 
 ### Parameters
 
-| Name     | Type   | Description                                      |
-| -------- | ------ | ------------------------------------------------ |
-| expr1..N | scalar | A comma-separated list of expressions to compare |
+The function takes a comma-separated list of expressions to compare. All values must be of the same type.
 
 ### Returns
 
 The function returns the maximum value among the input expressions. The type of the result matches the type of the input expressions. All expressions must be of the same or compatible types.
 
-## Use case examples
+## Use case example
 
-<Tabs>
-<Tab title="Log analysis">
-
-You want to find the longest request duration per user from two possible internal metrics: `req_duration_ms` and an alternate derived metric, for example, `req_duration_ms * 1.2`.
+You have two data points for the size of HTTP responses: header size and body size. You want to find the maximum of these two values for each event.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend max_duration = max_of(req_duration_ms, req_duration_ms * 1.2)
-| summarize max=max(max_duration) by id
+| extend max_size = max_of(resp_header_size_bytes, resp_body_size_bytes)
+| project _time, id, resp_header_size_bytes, resp_body_size_bytes, max_size
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C extend max_duration%20%3D%20max_of(req_duration_ms%2C%20req_duration_ms%20*%201.2) %7C summarize max%3Dmax(max_duration)%20by%20id%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20max_size%20%3D%20max_of(resp_header_size_bytes%2C%20resp_body_size_bytes)%20%7C%20project%20_time%2C%20id%2C%20resp_header_size_bytes%2C%20resp_body_size_bytes%2C%20max_size%22%7D)
 
 **Output**
 
-| id        | max   |
-| --------- | ----- |
-| user_123 | 180.0 |
-| user_456 | 210.5 |
-
-This query computes the higher value between two duration metrics for each event, then aggregates the maximum value per user.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-You want to evaluate the longest duration between actual and adjusted durations per trace.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend adjusted_duration = duration * 1.1
-| extend max_span_duration = max_of(duration, adjusted_duration)
-| summarize max=max(max_span_duration) by trace_id
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D) %7C extend adjusted_duration%20%3D%20duration%20*%201.1 %7C extend max_span_duration%20%3D%20max_of(duration%2C%20adjusted_duration) %7C summarize max%3Dmax(max_span_duration)%20by%20trace_id%22%7D)
-
-**Output**
-
-| trace_id | max          |
-| --------- | ------------ |
-| abc123    | 00:00:03.300 |
-| def456    | 00:00:05.500 |
-
-This query calculates both the original and an inflated duration, then finds the longest per trace ID.
-
-</Tab>
-<Tab title="Security logs">
-
-You want to compare the actual request duration with a fixed threshold (e.g. 1000 ms) and report the higher value per HTTP status.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend threshold_ms = 1000
-| extend effective_duration = max_of(req_duration_ms, threshold_ms)
-| summarize avg_duration=avg(effective_duration) by status
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C extend threshold_ms%20%3D%201000 %7C extend effective_duration%20%3D%20max_of(req_duration_ms%2C%20threshold_ms) %7C summarize avg_duration%3Davg(effective_duration)%20by%20status%22%7D)
-
-**Output**
-
-| status | avg_duration |
-| ------ | ------------- |
-| 200    | 1200.5        |
-| 500    | 1450.0        |
-
-This query ensures that durations are never reported below a baseline threshold, which is useful for compliance or alert tuning.
-
-</Tab>
-</Tabs>
-
-## List of related functions
-
-* [min_of](/apl/scalar-functions/min_of): Returns the smallest value among scalar expressions. Use it when you want the minimum rather than the maximum.
-* [max](/apl/aggregation-functions/max): Returns the maximum value across rows in a group. Use it for aggregation instead of per-row comparison.
-* [iif](/apl/scalar-functions/iif): Evaluates a condition and returns one of two values. You can use it to build conditional max logic manually.
-* [coalesce](/apl/scalar-functions/coalesce): Returns the first non-null value among its arguments. Use it when checking null precedence rather than numeric maximum.
-* [case](/apl/scalar-functions/case): Provides conditional evaluation over multiple branches. Use it for more complex logic involving multiple comparisons.
+| _time            | id                                   | resp_header_size_bytes | resp_body_size_bytes | max_size     |
+|------------------|--------------------------------------|------------------------|----------------------|--------------|
+| May 15, 11:18:53 | 4baad81e-2bca-408f-8a47-092065274037 | 39 B            | 2,805 B       | 2,805 |
+| May 15, 11:18:53 | 05b257c0-8f9d-4b23-8901-c5f288abc30b | 24 B            | 988 B         | 988   |
+| May 15, 11:18:53 | b34d937c-527a-4a05-b88f-5f3dba645de6 | 72 B            | 4,399 B       | 4,399 |
+| May 15, 11:18:53 | 12a623ec-8b0d-4149-a9eb-d3e18ad5b1cd | 34 B            | 1,608 B       | 1,608 |
+| May 15, 11:18:53 | d24f22a7-8748-4d3d-a815-ed93081fd5d1 | 84 B            | 4,080 B       | 4,080 |
+| May 15, 11:18:53 | 3cc68be1-bb9a-4199-bf75-62eef59e3a09 | 76 B            | 5,117 B       | 5,117 |
+| May 15, 11:18:53 | abadabac-a6c0-4ff2-80a1-11143d7c408b | 41 B            | 2,845 B       | 2,845 |

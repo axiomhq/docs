@@ -24,11 +24,11 @@ In Splunk, you often use the `eval` command with the `min` function to compare m
 
 <CodeGroup>
 ```sql Splunk example
-... | eval smallest=min(field1, field2)
+eval smallest=min(field1, field2)
 ````
 
 ```kusto APL equivalent
-... | extend smallest = min_of(field1, field2)
+extend smallest = min_of(field1, field2)
 ```
 
 </CodeGroup>
@@ -44,7 +44,7 @@ SELECT LEAST(col1, col2, col3) AS min_val FROM table;
 ```
 
 ```kusto APL equivalent
-['dataset'] | extend min_val = min_of(col1, col2, col3)
+extend min_val = min_of(col1, col2, col3)
 ```
 
 </CodeGroup>
@@ -57,105 +57,39 @@ SELECT LEAST(col1, col2, col3) AS min_val FROM table;
 ### Syntax
 
 ```kusto
-min_of(value1, value2, ...)
+min_of(Expr1, Expr2, ..., ExprN)
 ```
 
 ### Parameters
 
-| Name   | Type   | Description                                 |
-| ------ | ------ | ------------------------------------------- |
-| value1 | scalar | The first value to compare.                 |
-| value2 | scalar | The second value to compare.                |
-| ...    | scalar | Additional values to include in comparison. |
-
-All values must be of the same type (e.g., all numbers, all timespans, all datetime values).
+The function takes a comma-separated list of expressions to compare. All values must be of the same type.
 
 ### Returns
 
-The smallest of the provided values. The type of the return value matches the type of the input arguments.
+The function returns the smallest of the provided values. The type of the return value matches the type of the input arguments.
 
-## Use case examples
+## Use case example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `min_of` to find the minimum request duration between two internal measurements.
+You have two data points for the size of HTTP responses: header size and body size. You want to find the minimum of these two values for each event.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend adjusted_duration = min_of(req_duration_ms, 100)
-| project _time, id, uri, req_duration_ms, adjusted_duration
+| extend min_size = min_of(resp_header_size_bytes, resp_body_size_bytes)
+| project _time, id, resp_header_size_bytes, resp_body_size_bytes, min_size
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C extend adjusted_duration%20%3D%20min_of(req_duration_ms%2C%20100) %7C project _time%2C id%2C uri%2C req_duration_ms%2C adjusted_duration%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20min_size%20%3D%20min_of(resp_header_size_bytes%2C%20resp_body_size_bytes)%20%7C%20project%20_time%2C%20id%2C%20resp_header_size_bytes%2C%20resp_body_size_bytes%2C%20min_size%22%7D)
 
 **Output**
 
-| _time               | id   | uri    | req_duration_ms | adjusted_duration |
-| -------------------- | ---- | ------ | ----------------- | ------------------ |
-| 2025-05-14T10:05:00Z | u123 | /login | 80                | 80                 |
-| 2025-05-14T10:06:00Z | u124 | /cart  | 120               | 100                |
-
-The query caps request duration at 100 ms by choosing the lower of the two values.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `min_of` to find the faster of two synthetic service durations for performance testing.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ['service.name'] in ('frontend', 'checkoutservice')
-| summarize min_duration = min_of(min(duration), time(100ms)) by ['service.name']
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D) %7C where%20%5B'service.name'%5D%20in%20('frontend'%2C%20'checkoutservice') %7C summarize min_duration%20%3D%20min_of(min(duration)%2C%20time(100ms))%20by%20%5B'service.name'%5D%22%7D)
-
-**Output**
-
-| service.name    | min_duration |
-| --------------- | ------------- |
-| frontend        | 80ms          |
-| checkoutservice | 100ms         |
-
-The query compares the minimum observed duration with a fixed benchmark of 100 ms for each service.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `min_of` to flag events with unusually short durations relative to a suspicious threshold.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '403'
-| extend suspicious_score = min_of(req_duration_ms, 50)
-| project _time, id, uri, status, req_duration_ms, suspicious_score
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C where%20status%20%3D%3D%20'403' %7C extend suspicious_score%20%3D%20min_of(req_duration_ms%2C%2050) %7C project _time%2C id%2C uri%2C status%2C req_duration_ms%2C suspicious_score%22%7D)
-
-**Output**
-
-| _time               | id   | uri    | status | req_duration_ms | suspicious_score |
-| -------------------- | ---- | ------ | ------ | ----------------- | ----------------- |
-| 2025-05-14T10:10:00Z | u555 | /admin | 403    | 30                | 30                |
-| 2025-05-14T10:11:00Z | u556 | /login | 403    | 70                | 50                |
-
-This helps identify fast-denied requests, which may be indicative of automated access attempts.
-
-</Tab>
-</Tabs>
-
-## List of related functions
-
-* [min()](/apl/aggregation-functions/min): Returns the minimum value across a group of rows. Use when aggregating across records instead of within a row.
-* [max_of()](/apl/scalar-functions/max_of): Returns the largest value from a set of scalars. Use when you want the maximum instead of the minimum.
-* [iif()](/apl/scalar-functions/iif): Performs conditional logic. Use when you want more complex decision trees instead of simple comparisons.
-* [coalesce()](/apl/scalar-functions/coalesce): Returns the first non-null value from a list. Use for null handling rather than minimum value selection.
-* [case()](/apl/scalar-functions/case): Evaluates multiple conditions and returns corresponding values. Use for multi-branch logic instead of direct comparison.
+| _time            | id                                      | resp_header_size_bytes | resp_body_size_bytes | min_size  |
+|------------------|-----------------------------------------|------------------------|----------------------|-----------|
+| May 15, 11:31:05 | 739b0433-39aa-4891-a5e0-3bde3cb40386    | 41 B               | 3,410 B          | 41    |
+| May 15, 11:31:05 | 3016c439-ea30-454b-858b-06f0a66f44b9    | 53 B               | 5,333 B          | 53    |
+| May 15, 11:31:05 | b26b0a5c-bc73-4693-86ad-be9e0cc767d6    | 60 B               | 2,936 B          | 60    |
+| May 15, 11:31:05 | 8d939423-26ae-43f7-9927-13499e7cc7d3    | 60 B               | 2,896 B          | 60    |
+| May 15, 11:31:05 | 10c37b1a-5639-4c99-a232-c8295e3ce664    | 63 B               | 4,871 B          | 63    |
+| May 15, 11:31:05 | 4aa1821a-6906-4ede-9417-3097efb76b89    | 78 B               | 1,729 B          | 78    |
+| May 15, 11:31:05 | 6325de66-0033-4133-b2f3-99fa70f8c9c0    | 96 B               | 4,232 B          | 96    |
