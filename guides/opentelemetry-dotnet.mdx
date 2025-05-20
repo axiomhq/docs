@@ -7,6 +7,9 @@ tags: ['guides', '.NET', 'dotnet', 'OpenTelemetry', 'otel']
 logoId: 'openTelemetry'
 ---
 
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+
 OpenTelemetry provides a [unified approach to collecting telemetry data](https://opentelemetry.io/docs/languages/net/) from your .NET applications. This guide explains how to configure OpenTelemetry in a .NET application to send telemetry data to Axiom using the OpenTelemetry SDK.
 
 ## Prerequisites
@@ -163,9 +166,9 @@ public static class TracingConfiguration
             .AddHttpClientInstrumentation() // Add automatic instrumentation for HttpClient requests
             .AddOtlpExporter(options => // Configure the OTLP exporter
             {
-                options.Endpoint = new Uri("https://api.axiom.co/v1/traces"); // Set the endpoint for the exporter
+                options.Endpoint = new Uri("https://AXIOM_DOMAIN/v1/traces"); // Set the endpoint for the exporter
                 options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf; // Set the protocol
-                options.Headers = "Authorization=Bearer API_TOKEN, X-Axiom-Dataset=DATASET"; // Update API token and dataset
+                options.Headers = "Authorization=Bearer API_TOKEN, X-Axiom-Dataset=DATASET_NAME"; // Update API token and dataset
             })
             .Build(); // Build the tracer provider
     }
@@ -182,8 +185,9 @@ public static class TracingConfiguration
 In the `tracing.cs` file, make the following changes:
 
 - Replace the value of the `serviceName` variable with the name of the service you want to trace. This is used for identifying and categorizing trace data, particularly in systems with multiple services.
-- Replace `API_TOKEN` with your Axiom API key.
-- Replace `DATASET_NAME` with the name of the Axiom dataset where you want to send data.
+{/* list separator */}
+<ReplaceDatasetToken />
+<ReplaceDomain />
 
 ## Run the instrumented application
 
@@ -254,12 +258,14 @@ Sdk.CreateTracerProviderBuilder()
     .AddHttpClientInstrumentation()
     .AddOtlpExporter(options =>
     {
-        options.Endpoint = new Uri("https://api.axiom.co/v1/traces");
-        // Replace API_TOKEN and DATASET_NAME with your actual API token and dataset name
+        options.Endpoint = new Uri("https://AXIOM_DOMAIN/v1/traces");
         options.Headers = $"Authorization=Bearer API_TOKEN, X-Axiom-Dataset=DATASET_NAME";
     })
     .Build();
 ```
+
+<ReplaceDatasetToken />
+<ReplaceDomain />
 
 2. Install and configure additional OpenTelemetry instrumentation packages as needed, based on the technologies your application uses. For example, to automatically trace SQL database queries, you might add the corresponding database instrumentation package.
 
