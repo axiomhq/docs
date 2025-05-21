@@ -10,37 +10,69 @@ isPopular: true
 popularityOrder: 8
 ---
 
-To send data from a JavaScript app to Axiom, use the Axiom JavaScript SDK.
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDataset from "/snippets/replace-dataset.mdx"
+
+JavaScript is a versatile, high-level programming language primarily used for creating dynamic and interactive web content.
+
+To send data from a JavaScript app to Axiom, use one of the following libraries of the Axiom JavaScript SDK:
+
+- [@axiomhq/js](#use-axiomhq-js)
+- [@axiomhq/logging](#use-axiomhq-logging)
+
+The choice between these options depends on your individual requirements:
+
+| Capabilities                                        | @axiomhq/js | @axiomhq/logging |
+|-----------------------------------------------------|-------------|------------------|
+| Send data to Axiom                                  | Yes         | Yes              |
+| Query data                                          | Yes         | No               |
+| Capture errors                                      | Yes         | No               |
+| Create annotations                                  | Yes         | No               |
+| Transports                                          | No          | Yes              |
+| Structured logging by default                       | No          | Yes              |
+| Send data to multiple places from a single function | No          | Yes              |
+
+The `@axiomhq/logging` library is a logging solution that also serves as the base for other libraries like `@axiomhq/react` and `@axiomhq/nextjs`.
 
 <Note>
-The Axiom JavaScript SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-js).
-</Note>
+The @axiomhq/js and the @axiomhq/logging libraries are part of the Axiom JavaScript SDK, an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-js).
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
+The @axiomhq/logging library is currently in public preview. For more information, see [Feature states](/getting-started-guide/feature-states).
+</Note>
 
 <Prerequisites />
 
-## Install SDK
+## Use @axiomhq/js
 
-To install the SDK, run the following:
+### Install @axiomhq/js
 
-```shell
-npm install @axiomhq/js
-```
+In your terminal, go to the root folder of your JavaScript app and run the following command:
 
-If you use the [Axiom CLI](/reference/cli), run `eval $(axiom config export -f)` to configure your environment variables. Otherwise, [create an API token](/reference/tokens) and export it as `AXIOM_TOKEN`.
+    ```shell
+    npm install @axiomhq/js
+    ```
 
-You can also configure the client using options passed to the constructor of the client:
+### Configure environment variables
 
-```ts
-import { Axiom } from '@axiomhq/js';
+Configure the environment variables in one of the following ways:
+- Export the API token as `AXIOM_TOKEN`.
+- Pass the API token to the constructor of the client:
 
-const axiom = new Axiom({
-  token: process.env.AXIOM_TOKEN,
-});
-```
+    ```ts
+    import { Axiom } from '@axiomhq/js';
 
-## Send data
+    const axiom = new Axiom({
+      token: process.env.AXIOM_TOKEN,
+    });
+    ```
+
+- Install the [Axiom CLI](/reference/cli), and then run the following command:
+
+    ```sh
+    eval $(axiom config export -f)
+    ```
+
+### Send data to Axiom
 
 The following example sends data to Axiom:
 
@@ -49,9 +81,11 @@ axiom.ingest('DATASET_NAME', [{ foo: 'bar' }]);
 await axiom.flush();
 ```
 
-The client automatically batches events in the background. In most cases, you only want to call `flush()` before your application exits.
+<ReplaceDataset />
 
-## Query data
+The client automatically batches events in the background. In most cases, call `flush()` only before your application exits.
+
+### Query data
 
 The following example queries data from Axiom:
 
@@ -60,9 +94,11 @@ const res = await axiom.query(`['DATASET_NAME'] | where foo == 'bar' | limit 100
 console.log(res);
 ```
 
+<ReplaceDataset />
+
 For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-js/tree/main/examples).
 
-## Capture errors
+### Capture errors
 
 To capture errors, pass a method `onError` to the client:
 
@@ -78,7 +114,7 @@ let client = new Axiom({
 
 By default, `onError` is set to `console.error`.
 
-## Create annotations
+### Create annotations
 
 The following example creates an annotation:
 
@@ -95,9 +131,145 @@ await annotations.create({
 })
 ```
 
-## Log from Node.js
+## Use @axiomhq/logging
 
-While the Axiom JavaScript client works on both the backend and the browsers, Axiom provides transports for some of the popular loggers:
+### Install @axiomhq/logging
+
+In your terminal, go to the root folder of your JavaScript app and run the following command:
+
+```bash
+npm install @axiomhq/logging
+```
+
+### Send data to Axiom
+
+The following example sends data to Axiom:
+
+```ts
+import { Logger, AxiomJSTransport, ConsoleTransport } from "@axiomhq/logging";
+import { Axiom } from "@axiomhq/js";
+
+const axiom = new Axiom({
+  token: process.env.AXIOM_TOKEN,
+});
+
+const logger = new Logger(
+  {
+    transports: [
+      new AxiomJSTransport({ axiom }),
+      new ConsoleTransport(),
+    ],
+  }
+);
+
+logger.info("Hello, world!");
+```
+
+#### Transports
+
+The `@axiomhq/logging` library includes the following transports:
+
+- `ConsoleTransport`: Logs to the console.
+
+    ```ts
+    import { ConsoleTransport } from "@axiomhq/logging";
+
+    const transport = new ConsoleTransport({
+      logLevel: "warn",
+      prettyPrint: true,
+    });
+    ```
+
+- `AxiomJSTransport`: Sends logs to Axiom using the @axiomhq/js library.
+
+    ```ts
+    import { Axiom } from "@axiomhq/js";
+    import { AxiomJSTransport } from "@axiomhq/logging";
+
+    const axiom = new Axiom({
+      token: process.env.AXIOM_TOKEN,
+    });
+
+    const transport = new AxiomJSTransport({
+      axiom,
+      dataset: process.env.AXIOM_DATASET,
+      logLevel: "warn",
+    });
+    ```
+
+- `ProxyTransport`: Sends logs the [proxy server function](/send-data/nextjs#proxy-for-client-side-usage) that acts as a proxy between your application and Axiom. It’s particularly useful when your application runs on top of a server-enabled framework like Next.js or Remix.
+
+    ```ts
+    import { ProxyTransport } from "@axiomhq/logging";
+
+    const transport = new ProxyTransport({
+      url: "/proxy",
+      logLevel: "warn",
+      autoFlush: { durationMs: 1000 },
+    });
+    ```
+
+Alternatively, create your own transports by implementing the `Transport` interface:
+
+```ts
+import { Transport } from "@axiomhq/logging";
+
+class MyTransport implements Transport {
+  log(log: Transport['log']) {
+    console.log(log);
+  }
+
+  flush() {
+    console.log("Flushing logs");
+  }
+}
+```
+
+#### Logging levels
+
+The `@axiomhq/logging` library includes the following logging levels:
+
+- `debug`: Debug-level logs.
+- `info`: Informational logs.
+- `warn`: Warning logs.
+- `error`: Error logs.
+
+#### Formatters
+
+Formatters are used to change the content of a log before sending it to a transport. For example:
+
+```ts
+import { Logger, LogEvent } from "@axiomhq/logging";
+
+const myCustomFormatter = (event: LogEvent) => {
+  const upperCaseKeys = {
+    ...event,
+    fields: Object.fromEntries(
+      Object.entries(event.fields).map(([key, value]) => [key.toUpperCase(), value])
+    ),
+  };
+
+  return upperCaseKeys;
+};
+
+const logger = new Logger({
+  formatters: [myCustomFormatter],
+});
+
+logger.info("Hello, world!");
+```
+
+## Related logging options
+
+### Send data from JavaScript libraries and frameworks
+
+To send data to Axiom from JavaScript libraries and frameworks, see the following:
+- [Send data from React app](/send-data/react)
+- [Send data from Next.js app](/send-data/nextjs)
+
+### Send data from Node.js
+
+While the Axiom JavaScript SDK works on both the backend and the browsers, Axiom provides transports for some of the popular loggers:
 
 - [Pino](/guides/pino)
 - [Winston](/guides/winston)

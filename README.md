@@ -65,5 +65,5 @@ We value your input and invite you to help us make the Axiom documentation even 
 
 ## Troubleshooting
 
-- If the local build fails, run `mintlify install` to re-install dependencies.
-- If a page loads as a 404, make sure you run the local build in the root folder where the file `mint.json` is present.
+- If the local build fails, run `npm run mintlify install` to re-install dependencies.
+- If a page loads as a 404, make sure you run the local build in the root folder where the file `docs.json` is present.

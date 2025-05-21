@@ -6,6 +6,8 @@ tags:
     ['axiom documentation', 'documentation', 'axiom', 'dataset']
 ---
 
+import AccessToDatasets from "/snippets/access-to-datasets.mdx"
+
 This reference article explains how to manage datasets in Axiom, including creating new datasets, importing data, and deleting datasets.
 
 ## What datasets are
@@ -57,7 +59,9 @@ While it might seem convenient to send all events to a single dataset, this “k
 - Schema conflicts: Different event types may have conflicting field names or data types, leading to unnecessary type coercion at query time.
 - Access management: With all data in one dataset, it becomes challenging to provide granular access controls. You might end up giving users access to more data than they need.
 
-Don’t create multiple Axiom organizations to separate your data. For example, don’t use a different Axiom org for each deployment. If you’re on the Personal plan, this might go against [Axiom’s fair use policy](https://axiom.co/terms). Instead, separate data by creating a different dataset for each deployment within the same Axiom org.
+Don’t create multiple Axiom organizations to separate your data. For example, don’t use a different Axiom organization for each deployment. If you’re on the Axiom Cloud (Personal) plan, this might go against [Axiom’s fair use policy](https://axiom.co/terms). Instead, separate data by creating a different dataset for each deployment within the same Axiom organization.
+
+<AccessToDatasets />
 
 ## Special fields
 
@@ -70,11 +74,13 @@ In most cases, you can use `_time` and `_sysTime` interchangeably. The differenc
 
 ## Create dataset
 
-To create a dataset, follow these steps:
+To create a dataset using the Axiom app, follow these steps:
 
 1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
-2. Click **New dataset**.
-3. Name the dataset, and then click **Add**.
+1. Click **New dataset**.
+1. Name the dataset, and then click **Add**.
+
+To create a dataset using the Axiom API, send a POST request to the [datasets endpoint](https://axiom.co/docs/restapi/endpoints/createDataset).
 
 Dataset names are 1 to 128 characters in length. They only contain ASCII alphanumeric characters and the hyphen (`-`) character.
 
@@ -89,14 +95,13 @@ You can import data to your dataset in one of the following formats:
 To import data to a dataset, follow these steps:
 
 1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
-2. In the list, click the dataset where you want to import data.
-3. Click <img src="/doc-assets/icons/import.svg" className="inline-icon" alt="Import icon" /> **Import**.
-4. Optional: Specify the timestamp field. This is only necessary if your data contains a timestamp field and it’s different from `_time`.
-5. Upload the file, and then click **Import**.
+1. In the list, find the dataset where you want to import data, and then click <img src="/doc-assets/icons/import.svg" className="inline-icon" alt="Import icon" /> **Import** on the right.
+1. Optional: Specify the timestamp field. This is only necessary if your data contains a timestamp field and it’s different from `_time`.
+1. Upload the file, and then click **Import**.
 
 ## Trim dataset
 
-Trimming a dataset deletes all data in the dataset before a date you specify. This can be useful if your dataset contains too many fields or takes up too much storage space, and you want to reduce its size to ensure you stay within the [allowed limits](/reference/field-restrictions).
+Trimming a dataset deletes all data in the dataset before a date you specify. This can be useful if your dataset contains too many fields or takes up too much storage space, and you want to reduce its size to ensure you stay within the [allowed limits](/reference/field-restrictions#pricing-based-limits).
 
 <Warning>
 Trimming a dataset deletes all data before the specified date.
@@ -105,14 +110,13 @@ Trimming a dataset deletes all data before the specified date.
 To trim a dataset, follow these steps:
 
 1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
-2. In the list, click the dataset that you want to trim.
-3. Click <img src="/doc-assets/icons/trim.svg" className="inline-icon" alt="Trim dataset icon" /> **Trim dataset**.
-4. Specify the date before which you want to delete data.
-5. Enter the name of the dataset, and then click **Trim**.
+1. In the list, find the dataset that you want to trim, and then click <img src="/doc-assets/icons/trim.svg" className="inline-icon" alt="Trim dataset icon" /> **Trim dataset** on the right.
+1. Specify the date before which you want to delete data.
+1. Enter the name of the dataset, and then click **Trim**.
 
 ## Vacuum fields
 
-The data schema of your dataset is defined on read. Axiom continuously creates and updates the data structures during the data ingestion process. At the same time, Axiom only retains data for the [retention period defined by your pricing plan](/reference/field-restrictions). This means that the data schema can contain fields that you ingested into the dataset in the past, but these fields are no longer present in the data currently associated with the dataset. This can be an issue if the number of fields in the dataset exceeds the [allowed limits](/reference/field-restrictions).
+The data schema of your dataset is defined on read. Axiom continuously creates and updates the data structures during the data ingestion process. At the same time, Axiom only retains data for the [retention period you specify](#specify-data-retention-period). This means that the data schema can contain fields that you ingested into the dataset in the past, but these fields are no longer present in the data currently associated with the dataset. This can be an issue if the number of fields in the dataset exceeds the [allowed limits](/reference/field-restrictions#pricing-based-limits).
 
 In this case, vacuuming fields in a dataset can help you reduce the number of fields associated with a dataset and stay within the allowed limits. Vacuuming fields resets the number of fields associated with a dataset to the fields that occur in events within your retention period. Technically, it wipes the data schema and rebuilds it from the data you currently have in the dataset, which is partly defined by the retention period. For example, you have ingested 500 fields over the last year and 50 fields in the last 95 days, which is your retention period. In this case, before vacuuming, your data schema contains 500 fields. After vacuuming, the dataset only contains 50 fields.
 
@@ -125,9 +129,78 @@ You can only vacuum fields once per day for each dataset.
 To vacuum fields, follow these steps:
 
 1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
-2. In the list, click the dataset where you want to vacuum fields.
-3. Click <img src="/doc-assets/icons/vacuum.svg" className="inline-icon" alt="Vacuum fields icon" /> **Vacuum fields**.
-4. Select the checkbox, and then click **Vacuum**.
+1. In the list, find the dataset where you want to vacuum fields, and then click <img src="/doc-assets/icons/vacuum.svg" className="inline-icon" alt="Vacuum fields icon" /> **Vacuum fields** on the right.
+1. Select the checkbox, and then click **Vacuum**.
+
+## Share datasets
+
+You can share your datasets with other Axiom organizations. The receiving organization:
+
+- can query the shared dataset.
+- can create other Axiom resources that rely on query access such as dashboards and monitors.
+- can’t ingest data into the shared dataset.
+- can‘t modify the shared dataset.
+
+No ingest usage associated with the shared dataset accrues to the receiving organization. Query usage associated with the shared dataset accrues to the organization running the query.  
+
+To share a dataset with another Axiom organization:
+
+1. Ensure you have the necessary privileges to share datasets. By default, only users with the Owner role can share datasets.
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+1. In the list, find the dataset that you want to share, and then click <img src="/doc-assets/icons/share-dataset.svg" className="inline-icon" alt="Share dataset icon" /> **Share dataset** on the right.
+1. In the Sharing links section, click **+** to create a new sharing link.
+1. Copy the URL and share it with the receiving user in the organization with which you want to share the dataset. For example, `https://app.axiom.co/s/dataset/{sharing-token}`.
+1. Ask the receiving user to open the sharing link. When opening the link, the receiving user sees the name of the dataset and the email address of the Axiom user that created the sharing link. They click **Add dataset** to confirm that they want to receive the shared dataset.
+
+### Delete sharing link
+
+Organizations can gain access to the dataset with an active sharing link. To deactivate the sharing link, delete the sharing link. Deleting a sharing link means that organizations that don’t have access to the dataset can’t use the sharing link to join the dataset in the future. Deleting a sharing link doesn’t affect the access of organizations that already have access to the shared dataset.
+
+To delete a sharing link:
+
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+1. In the list, find the dataset, and then click <img src="/doc-assets/icons/share-dataset.svg" className="inline-icon" alt="Share dataset icon" /> **Share dataset** on the right.
+1. To the right of the sharing link, click <img src="/doc-assets/icons/delete.svg" className="inline-icon" alt="Delete icon" /> **Delete**.
+1. Click **Delete sharing link**.
+
+### Remove access to shared dataset
+
+If your organization has previously shared a dataset with a receiving organization, and you want to remove the receiving organization’s access to the dataset, follow these steps:
+
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+1. In the list, find the dataset, and then click <img src="/doc-assets/icons/share-dataset.svg" className="inline-icon" alt="Share dataset icon" /> **Share dataset** on the right.
+1. In the list, find the organization whose access you want to remove, and then click <img src="/doc-assets/icons/delete.svg" className="inline-icon" alt="Delete icon" /> **Remove**.
+1. Click **Remove access**.
+
+### Remove shared dataset
+
+If your organization has previously received access to a dataset from a sending organization, and you want to remove the shared dataset from your organization, follow these steps:
+
+1. Ensure you have Delete permissions for the shared dataset.
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+1. In the list, click the shared dataset that you want to remove, and then click <img src="/doc-assets/icons/delete.svg" className="inline-icon" alt="Delete dataset icon" /> **Remove dataset**.
+1. Enter the name of the dataset, and then click **Remove**.
+
+<Note>
+This procedure only removes the shared dataset from your organization. The underlying dataset in the sending organization isn’t affected.
+</Note>
+
+## Specify data retention period
+
+The data retention period determines how long Axiom stores your data. By default, the data retention period is the same for all datasets. You can configure custom retention periods for individual datasets. As a result, Axiom automatically trims data after the specified time period instead of the default period. For example, this can be useful if your dataset contains sensitive event data that you don’t want to retain for a long time.
+
+If you’re on the Personal plan, the default data retention period is 30 days and you can only specify a shorter period. For more information, see [Pricing-based limits](/reference/field-restrictions#pricing-based-limits).
+
+<Warning>
+When you specify a data retention period for a dataset that is shorter than the previous setting, all data older than the new retention period is automatically deleted. This process cannot be undone.
+</Warning>
+
+To change the data retention period for a dataset, follow these steps:
+
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
+1. In the list, find the dataset for which you want to change the retention period, and then click <img src="/doc-assets/icons/change-data-retention.svg" className="inline-icon" alt="Edit dataset retention icon" /> **Edit dataset retention** on the right.
+1. Enter a data retention period. The custom retention period must be greater than 0 days.
+1. Click **Submit**.
 
 ## Delete dataset
 
@@ -138,24 +211,5 @@ Deleting a dataset deletes all data contained in the dataset.
 To delete a dataset, follow these steps:
 
 1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
-2. In the list, click the dataset that you want to delete.
-3. Click <img src="/doc-assets/icons/import.svg" className="inline-icon" alt="Delete dataset icon" /> **Delete dataset**.
-4. Enter the name of the dataset, and then click **Delete**.
-
-## Change data retention period
-
-The data retention period determines how long Axiom stores your data. By default, the data retention period is defined by your pricing plan and is the same for all datasets. You can configure custom retention periods for individual datasets. As a result, Axiom automatically trims data after the specified time period instead of the default one defined by your pricing plan. For example, this can be useful if your dataset contains sensitive event data that you don’t want to retain for a long time.
-
-Custom retention periods can only be shorter than your pricing plan’s default retention period. If you need a longer retention period, consider changing your plan or contacting [Axiom’s Sales team](https://axiom.co/contact).
-
-<Warning>
-When you change the data retention period for a dataset, all data older than the new retention period is automatically deleted. This process cannot be undone.
-</Warning>
-
-To change the data retention period for a dataset, follow these steps:
-
-1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Datasets**.
-1. In the list, click the dataset for which you want to change the retention period.
-1. Click <img src="/doc-assets/icons/hard-drive.svg" className="inline-icon" alt="Hard drive icon" /> **Edit dataset retention**.
-1. Enter a data retention period. The custom retention period must be greater than 0 days and less than the default defined by your pricing plan.
-1. Click **Submit**.
+1. In the list, click the dataset that you want to delete, and then click <img src="/doc-assets/icons/delete.svg" className="inline-icon" alt="Delete dataset icon" /> **Delete dataset**.
+1. Enter the name of the dataset, and then click **Delete**.
