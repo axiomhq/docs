@@ -102,11 +102,11 @@ Use `bag_pack` to enrich trace summaries with service metadata for each span.
 
 ```kusto
 ['otel-demo-traces']
-| where ['service.name'] == 'checkoutservice'
+| where ['service.name'] == 'checkout'
 | project trace_id, span_id, span_info = bag_pack('kind', kind, 'duration', duration, 'status_code', status_code)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'checkoutservice'%20%7C%20project%20trace_id%2C%20span_id%2C%20span_info%20%3D%20bag_pack%28'kind'%2C%20kind%2C%20'duration'%2C%20duration%2C%20'status_code'%2C%20status_code%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'checkout'%20%7C%20project%20trace_id%2C%20span_id%2C%20span_info%20%3D%20bag_pack%28'kind'%2C%20kind%2C%20'duration'%2C%20duration%2C%20'status_code'%2C%20status_code%29%22%7D)
 
 **Output**
 
@@ -115,7 +115,7 @@ Use `bag_pack` to enrich trace summaries with service metadata for each span.
 | a1b2...   | f9c3...  | `{ "kind": "server", "duration": "00:00:00.1240000", "status_code": "OK" }`    |
 | c3d4...   | h7e2...  | `{ "kind": "client", "duration": "00:00:00.0470000", "status_code": "ERROR" }` |
 
-The query targets spans from the `checkoutservice` and combines attributes into a single object per span.
+The query targets spans from the `checkout` and combines attributes into a single object per span.
 
 </Tab>
 <Tab title="Security logs">
@@ -126,11 +126,10 @@ Use `bag_pack` to create a compact event summary combining user ID and geographi
 
 ```kusto
 ['sample-http-logs']
-| where status == '403'
 | project _time, id, geo_summary = bag_pack('city', ['geo.city'], 'country', ['geo.country'])
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20%3D%3D%20'403'%20%7C%20project%20_time%2C%20id%2C%20geo_summary%20%3D%20bag_pack%28'city'%2C%20%5B'geo.city'%5D%2C%20'country'%2C%20%5B'geo.country'%5D%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20project%20_time%2C%20id%2C%20geo_summary%20%3D%20bag_pack('city'%2C%20%5B'geo.city'%5D%2C%20'country'%2C%20%5B'geo.country'%5D)%22%7D)
 
 **Output**
 
@@ -146,8 +145,6 @@ The query helps identify patterns in failed access attempts by summarizing locat
 
 ## List of related functions
 
-- [pack](/apl/array-functions/pack): Similar to `bag_pack`, but uses values as keys and values alternately without requiring string keys.
-- [parse_json](/apl/parse-functions/parse_json): Converts a JSON string into a dynamic object; use it when the source data is raw JSON.
-- [pack_all](/apl/array-functions/pack_all): Automatically packs all columns into a dynamic object; use when you want to capture the entire row.
-- [todynamic](/apl/convert-functions/todynamic): Converts a value into a dynamic type; use it to prepare data for `bag_pack`.
-- [project](/apl/operators/project): Use with `bag_pack` to construct structured columns inline in your result set.
+- [bag_keys](/apl/scalar-functions/array-functions/bag-keys): Returns all keys in a dynamic property bag. Use it when you need to enumerate available keys.
+- [bag_merge](/apl/scalar-functions/array-functions/bag-merge): Merge several dynamic bags into a single dynamic value.
+- [bag_has_key](/apl/scalar-functions/array-functions/bag-has-key): Check whether a dynamic property bag contains a specific key.
