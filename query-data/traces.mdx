@@ -174,57 +174,36 @@ Top five errors per service and operation
 | limit 5
 ```
 
-## Semantic Conventions 
+## Semantic conventions 
 
-OpenTelemetry defines [Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/) which specify standard attribute names and values for different kinds of operations and data. Attributes that follow semantic conventions will be available as nested fields under the `attributes` field, such as `attributes.http.method`, `attributes.db.system`, etc.
+[OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/) specify standard attribute names and values for different kinds of operations and data.
 
-For example, if a span represents an HTTP request, it may include the following attributes:
+### Attributes in Axiom
 
-- `attributes.http.method`: The HTTP request method. For example, `GET`, `POST`, etc.
-- `attributes.http.url`: The full HTTP request URL.
-- `attributes.http.status_code`: The HTTP response status code.
+The OTel attributes you send to Axiom are available under the following fields:
 
-Similarly, resource attributes that follow semantic conventions are available under the `resource` field, such as `resource.host.name`, `resource.host.id`, `resource.host.os`, etc.
+- Attributes that follow semantic conventions are nested fields under the `attributes` map field. For example, `attributes.http.method` or `attributes.http.url`.
+- Resource attributes that follow semantic conventions are nested fields under the `resource` map field. For example, `resource.host.name` or `resource.host.id`.
+- Custom attributes that don’t match any semantic conventions are nested fields under the `attributes.custom` map field.
 
-Custom attributes that don’t match any semantic conventions are nested under the `attributes.custom` map field.
+For more information on map fields and querying nested fields, see [Map fields](/apl/data-types/map-fields).
 
-Axiom defaults to the version 1.25.0 of OTel semantic conventions. The supported versions are the following:
-- 1.21.0
-- 1.22.0
-- 1.23.0
-- 1.23.1
-- 1.24.0
-- 1.25.0
-- 1.26.0
+### Supported versions
 
-## Querying custom attributes 
+Axiom supports OTel semantic conventions from version 1.21 to version 1.32.
 
-Trace spans often include many custom attributes under the `attributes.custom` field. These custom attributes are stored as nested key-value pairs.
+(Recommended) When you send OTel data to Axiom, include the version of the OTel semantic conventions that your data follows. This ensures that your data is properly shaped in Axiom.
 
-To access nested custom attributes, you can use Axiom Processing Language (APL) for example:
+If you don’t define the version and Axiom can’t detect it, Axiom defaults to version 1.25.0. In this case, Axiom nests attributes that don’t match the semantic conventions of version 1.25.0 under the `attributes.custom` map field.
 
-```kusto
-['otel-demo-traces'] 
-| where ['attributes.custom']['app.synthetic_request'] == true
-```
+### Support for new versions
 
-If you frequently need to query the same nested attribute, consider creating a virtual field for it:
+Axiom regularly updates the list of supported versions. If you used an unsupported version that becomes supported after the update, the shape of your data can change:
 
-1. Go to "Datasets" and click the f(x) button
-2. Define the new virtual field, for example:
+- Before the update, attributes that Axiom couldn’t match to the previously supported semantic conventions were nested under the `attributes.custom` map field.
+- After the update, Axiom matches these attributes to the newly supported semantic conventions. The newly recognised attributes are nested under the `attributes` map field, similarly to all other attributes that follow semantic conventions.
 
-```kusto
-['otel-demo-traces']
-| extend useragent = ['attributes.custom']['User-Agent']
-```
-
-3. You can then query the virtual field like any other field in the UI or APL.
-
-To create a typed virtual field, you can specify the type, e.g.:
-
-```kusto
-| extend deployment_id = tostring(['attributes.custom']['deployment_id'])
-```
+If the shape of your data changes, update all saved queries, dashboards, and monitors that rely on the newly recognised attributes.
 
 ## Span links
 
@@ -240,13 +219,13 @@ Span links in Axiom are based on the [OpenTelemetry specification](https://opent
 
 1. Run the following APL query to find traces with span links, for example:
 
-```kusto
-['dataset'] 
-| where isnotempty(links)
-```
+    ```kusto
+    ['dataset'] 
+    | where isnotempty(links)
+    ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27otel-demo-traces%27%5D%5Cn%7C%20where%20isnotempty%28links%29%22%7D)
+    [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27otel-demo-traces%27%5D%5Cn%7C%20where%20isnotempty%28links%29%22%7D)
 
-2. Click on a trace in the results and select the `trace_id`.
-3. In the trace details view, find the links section. This displays the `trace_id` and `span_id` associated with each linked span, as well as other attributes of the link.
-4. Click **View span** to navigate to a linked span, either in the same trace or a different trace.
+1. Click on a trace in the results and select the `trace_id`.
+1. In the trace details view, find the links section. This displays the `trace_id` and `span_id` associated with each linked span, as well as other attributes of the link.
+1. Click **View span** to navigate to a linked span, either in the same trace or a different trace.
