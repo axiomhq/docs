@@ -53,19 +53,28 @@ SELECT CASE WHEN REGEXP_LIKE(field, 'pattern') THEN 0 ELSE -1 END FROM table;
 ### Syntax
 
 ```kusto
-indexof_regex(source, regex)
+indexof_regex(string, match [, start [, length [, occurrence]]])
 ```
 
 ### Parameters
 
-| Name   | Type   | Description                      |
-| ------ | ------ | -------------------------------- |
-| source | string | The input string to search.      |
-| regex  | string | The regular expression to match. |
+| Name       | Type   | Required | Description |
+| ---------- | ------ | -------- | --- |
+| string     | string | Yes       | The input text to inspect. |
+| match      | string | Yes       | The regular expression pattern to search for. |
+| start      | int    |          | The index in the string where to begin the search. If negative, the function starts that many characters from the end. |
+| length     | int    |          | The number of characters to search through. Use `-1` to search to the end of the string. |
+| occurrence | int    |          | Which instance of the pattern to match. Defaults to `1` if not specified. |
 
 ### Returns
 
-A `long` value that represents the zero-based index of the first match of the regular expression in the input string. If no match is found, returns `-1`.
+The function returns the position (starting at zero) where the pattern first matches within the string. If the pattern is not found, the result is `-1`.
+
+The function returns `null` in the following cases:
+
+- The `start` value is negative.
+- The `occurrence` value is less than 1.
+- The `length` is set to a value below `-1`.
 
 ## Use case examples
 
@@ -83,11 +92,11 @@ Use `indexof_regex` to detect whether the URI in a log entry contains an encoded
 | project _time, id, uri, user_id_pos
 ```
 
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend user\_id\_pos = indexof\_regex(uri%2C 'user-%5B0-9%5D%2B') %7C where user\_id\_pos != -1 %7C project \_time%2C id%2C uri%2C user\_id\_pos%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20user_id_pos%20%3D%20indexof_regex(uri%2C%20'user-%5B0-9%5D%2B')%20%7C%20where%20user_id_pos%20!%3D%20-1%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20user_id_pos%22%7D)
 
 **Output**
 
-| \_time               | id     | uri                      | user\_id\_pos |
+| _time               | id     | uri                      | user_id_pos |
 | -------------------- | ------ | ------------------------ | ------------- |
 | 2025-06-10T12:34:56Z | user42 | /api/user-12345/settings | 5             |
 | 2025-06-10T12:35:07Z | user91 | /v2/user-6789/dashboard  | 4             |
@@ -108,11 +117,11 @@ Use `indexof_regex` to detect trace IDs that include a specific structure, such 
 | project _time, trace_id, match_index
 ```
 
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) %7C extend match\_index = indexof\_regex(trace\_id%2C '^\[0-9a-f]%7B8%7D-%5B0-9a-f%5D%7B4%7D') %7C where match\_index == 0 %7C project \_time%2C trace\_id%2C match\_index%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20match_index%20%3D%20indexof_regex(trace_id%2C%20'%5E%5B0-9a-f%5D%7B8%7D-%5B0-9a-f%5D%7B4%7D')%20%7C%20where%20match_index%20%3D%3D%200%20%7C%20project%20_time%2C%20trace_id%2C%20match_index%22%7D)
 
 **Output**
 
-| \_time               | trace\_id                            | match\_index |
+| _time               | trace_id                            | match_index |
 | -------------------- | ------------------------------------ | ------------ |
 | 2025-06-10T08:23:12Z | ab12cd34-1234-5678-9abc-def123456789 | 0            |
 | 2025-06-10T08:24:55Z | fe98ba76-4321-abcd-8765-fedcba987654 | 0            |
@@ -133,11 +142,11 @@ Use `indexof_regex` to locate suspicious request patterns such as attempts to ac
 | project _time, id, uri, passwd_index
 ```
 
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend passwd\_index = indexof\_regex(uri%2C '/etc/passwd') %7C where passwd\_index != -1 %7C project \_time%2C id%2C uri%2C passwd\_index%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20passwd_index%20%3D%20indexof_regex(uri%2C%20'%2Fetc%2Fpasswd')%20%7C%20where%20passwd_index%20!%3D%20-1%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20passwd_index%22%7D)
 
 **Output**
 
-| \_time               | id     | uri                            | passwd\_index |
+| _time               | id     | uri                            | passwd_index |
 | -------------------- | ------ | ------------------------------ | ------------- |
 | 2025-06-10T10:15:45Z | user88 | /cgi-bin/view?path=/etc/passwd | 20            |
 
@@ -145,11 +154,3 @@ This query detects HTTP requests attempting to access sensitive file paths, a co
 
 </Tab>
 </Tabs>
-
-## List of related functions
-
-* [indexof](/apl/string-functions/indexof): Searches for a substring and returns its first position. Use this when you don’t need regex.
-* [extract](/apl/string-functions/extract): Extracts a substring that matches a regex pattern. Use when you want to capture and return the matching content.
-* [replace\_regex](/apl/string-functions/replace_regex): Replaces substrings matching a regex pattern. Use this for transformations based on patterns.
-* [matches\_regex](/apl/string-functions/matches_regex): Returns whether the string matches a regex pattern. Use when you only need a true/false result.
-* [parse\_url](/apl/string-functions/parse_url): Extracts URL components. Use this when parsing URLs, instead of manually matching with regex.

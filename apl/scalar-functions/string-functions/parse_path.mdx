@@ -69,20 +69,17 @@ parse_path(source)
 
 ### Returns
 
-Returns a dynamic object with the following fields, depending on the path structure:
+Returns a dynamic object with the following fields:
 
-* `scheme`: The scheme part (e.g. `http`, `file`).
-* `host`: The hostname or domain.
-* `port`: The port number, if any.
-* `directory`: The path up to but not including the file name.
-* `basename`: The file or endpoint name.
-* `extension`: The file extension, if any.
-* `query`: A string with the query portion (e.g. `?q=test`).
+- Scheme
+- RootPath
+- DirectoryPath
+- DirectoryName
+- Filename
+- Extension
+- AlternateDataStreamName
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 Extract endpoint directories and file extensions from HTTP request URIs.
 
@@ -91,77 +88,16 @@ Extract endpoint directories and file extensions from HTTP request URIs.
 ```kusto
 ['sample-http-logs']
 | extend path_parts = parse_path(uri)
-| summarize count() by path_parts.directory, path_parts.extension
-| sort by count_ desc
 ```
 
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend path\_parts%20%3D%20parse\_path(uri) %7C summarize count()%20by%20path\_parts.directory%2C%20path\_parts.extension %7C sort%20by%20count\_%20desc%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20path_parts%20%3D%20parse_path(uri)%20%7C%20project%20_time%2C%20path_parts%22%7D)
 
 **Output**
 
-| path\_parts.directory | path\_parts.extension | count\_ |
-| --------------------- | --------------------- | ------- |
-| /api/v1/products      | json                  | 1345    |
-| /static/images        | jpg                   | 789     |
+| _time            | path_parts                                                                                                                                                                                             |
+|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Jun 11, 10:39:16 | \{   "Filename": "users",   "RootPath": "",   "Scheme": "",   "AlternateDataStream": "",   "DirectoryName": "messages",   "DirectoryPath": "/api/v1/messages",   "Extension": "" \}                |
+| Jun 11, 10:39:16 | \{   "Scheme": "",   "AlternateDataStream": "",   "DirectoryName": "background",   "DirectoryPath": "/api/v1/textdata/background",   "Extension": "",   "Filename": "change",   "RootPath": "" \}   |
+| Jun 11, 10:39:16 | \{   "Filename": "users",   "RootPath": "",   "Scheme": "",   "AlternateDataStream": "",   "DirectoryName": "textdata",   "DirectoryPath": "/api/v1/textdata",   "Extension": "" \}                      |
 
 This query helps you identify which directories and file types receive the most traffic.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Break down trace spans by the path requested by frontend services.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend path_parts = parse_path(['service.name'])
-| summarize count() by path_parts.basename, kind
-| sort by count_ desc
-```
-
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) %7C extend path\_parts%20%3D%20parse\_path(%5B%27service.name%27%5D) %7C summarize count()%20by%20path\_parts.basename%2C%20kind %7C sort%20by%20count\_%20desc%22%7D)
-
-**Output**
-
-| path\_parts.basename | kind   | count\_ |
-| -------------------- | ------ | ------- |
-| frontend             | server | 1020    |
-| cartservice          | client | 876     |
-
-This helps you understand service-to-service communication patterns using parsed service identifiers.
-
-</Tab>
-<Tab title="Security logs">
-
-Extract domain names and query parameters from potentially suspicious URLs.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend path_parts = parse_path(uri)
-| where path_parts.host has 'example.com'
-| project _time, id, method, uri, path_parts.query
-```
-
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend path\_parts%20%3D%20parse\_path(uri) %7C where%20path\_parts.host%20has%20%27example.com%27 %7C project%20\_time%2C%20id%2C%20method%2C%20uri%2C%20path\_parts.query%22%7D)
-
-**Output**
-
-| \_time              | id     | method | uri                                                              | path\_parts.query |
-| ------------------- | ------ | ------ | ---------------------------------------------------------------- | ----------------- |
-| 2024-06-05T14:10:00 | user42 | GET    | [https://example.com/data?q=xyz](https://example.com/data?q=xyz) | ?q=xyz            |
-
-This query helps you isolate and inspect URL queries that contain suspicious domains.
-
-</Tab>
-</Tabs>
-
-## List of related functions
-
-* [parse\_url](/apl/string-functions/parse_url): Extracts components from a URL. Use this when you are parsing full URLs rather than local paths or partial URIs.
-* [parse\_urlquery](/apl/string-functions/parse_urlquery): Extracts individual query parameters from the query string. Use this to access specific values like `q=test`.
-* [split](/apl/string-functions/split): Splits a string by a delimiter into an array. Use this when you need custom tokenization rather than structured parsing.
-* [extract](/apl/string-functions/extract): Uses regular expressions to extract matching values. Use this when your path or URL format is non-standard.
-* [parse\_ipv4](/apl/string-functions/parse_ipv4): Converts a string into an IPv4 structure. Use this when parsing IP addresses in logs or URIs.

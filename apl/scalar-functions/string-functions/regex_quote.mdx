@@ -87,9 +87,9 @@ let pattern = '/api/v1/users[1]';
 
 **Output**
 
-| \_time               | id       | uri               | status |
+| _time               | id       | uri               | status |
 | -------------------- | -------- | ----------------- | ------ |
-| 2025-06-10T15:42:00Z | user-293 | /api/v1/users\[1] | 200    |
+| 2025-06-10T15:42:00Z | user-293 | /api/v1/users[1] | 200    |
 
 This query searches for logs where the `uri` exactly matches the string `/api/v1/users[1]`, without interpreting `[1]` as a character class.
 
@@ -111,9 +111,9 @@ let search_id = 'abc.def[0]';
 
 **Output**
 
-| \_time               | trace\_id   | span\_id | \['service.name'] | duration |
+| _time               | trace_id   | span_id | ['service.name'] | duration |
 | -------------------- | ----------- | -------- | ----------------- | -------- |
-| 2025-06-10T13:20:00Z | abc.def\[0] | span-91  | frontend          | 00:00:01 |
+| 2025-06-10T13:20:00Z | abc.def[0] | span-91  | frontend          | 00:00:01 |
 
 This query avoids misinterpretation of `[0]` as a regex character class and treats the whole `trace_id` literally.
 
@@ -125,29 +125,21 @@ You want to scan for potential path traversal attempts where a user’s input in
 **Query**
 
 ```kusto
-let attack_pattern = '..\\..\\windows\\system32';
+let attack_pattern = '../../windows/system32';
 ['sample-http-logs']
 | where uri matches regex regex_quote(attack_pattern)
 | project _time, id, uri, status, ['geo.country']
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let%20attack_pattern%20%3D%20'..\\..\\windows\\system32'%3B%20['sample-http-logs']%20%7C%20where%20uri%20matches%20regex%20regex_quote%28attack_pattern%29%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20status%2C%20['geo.country']%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22let%20attack_pattern%20%3D%20'..%2F..%2Fwindows%2Fsystem32'%3B%20%5B'sample-http-logs'%5D%20%7C%20where%20uri%20matches%20regex%20regex_quote(attack_pattern)%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20status%2C%20%5B'geo.country'%5D%22%7D)
 
 **Output**
 
-| \_time               | id       | uri                   | status | \['geo.country'] |
+| _time               | id       | uri                   | status | ['geo.country'] |
 | -------------------- | -------- | --------------------- | ------ | ---------------- |
 | 2025-06-11T10:15:00Z | user-103 | ....\windows\system32 | 403    | DE               |
 
-This query detects malicious-looking strings literally, without treating `\` as an escape character or `.` as a wildcard.
+This query detects malicious-looking strings literally, without treating `.` as a wildcard.
 
 </Tab>
 </Tabs>
-
-## List of related functions
-
-* [matches regex](/apl/string-functions/matches-regex): Matches input against a regex pattern. Use with `regex_quote` when the pattern comes from user input.
-* [extract](/apl/string-functions/extract): Extracts values using a regex pattern. Use `regex_quote` to prepare user-supplied patterns safely.
-* [replace\_regex](/apl/string-functions/replace-regex): Replaces substrings matching a regex pattern. Combine with `regex_quote` for literal patterns.
-* [parse\_url](/apl/string-functions/parse-url): Parses components of a URL. Use when working with structured URLs rather than pattern matching.
-* [split](/apl/string-functions/split): Splits strings by a delimiter. Use when you don’t need full regex support.
