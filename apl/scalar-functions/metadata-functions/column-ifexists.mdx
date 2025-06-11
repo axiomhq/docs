@@ -94,24 +94,25 @@ The query returns `geo.region` if it exists; otherwise, it falls back to `geo.co
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-You analyze OpenTelemetry traces and you’re not sure if your data contains a `status_code` field. You fall back to `OK` when it’s missing.
+You analyze OpenTelemetry traces and you’re not sure if your data contains `status_code` and `status` fields. You fall back to `100` when it’s missing.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| extend status = column_ifexists('status_code', '100')
-| project _time, trace_id, span_id, status
+| extend status_code_field = column_ifexists('status_code', '100')
+| extend status_field = column_ifexists('status', 100)
+| project _time, trace_id, span_id, status_code_field, status_field
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20status%20%3D%20column_ifexists('status_code'%2C%20'100')%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20status%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20status_code_field%20%3D%20column_ifexists('status_code'%2C%20'100')%20%7C%20extend%20status_field%20%3D%20column_ifexists('status'%2C%20100)%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20status_code_field%2C%20status_field%22%7D)
 
 **Output**
 
-| _time                | trace_id     | span_id     | status |
-|---------------------|--------------|-------------|--------|
-| 2025-04-28T10:30:12Z | abc123       | span567     | nil  |
-| 2025-04-28T10:30:15Z | def456       | span890     | 200    |
+| _time                | trace_id     | span_id     | status_code_field | status_field |
+|---------------------|--------------|-------------|--------|---|
+| 2025-04-28T10:30:12Z | abc123       | span567     | nil  | 100 |
+| 2025-04-28T10:30:15Z | def456       | span890     | 200    | 100 |
 
 The query returns the `status_code` field if it exists. Otherwise, it falls back to `100`.
 
