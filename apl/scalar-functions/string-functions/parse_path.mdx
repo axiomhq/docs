@@ -1,0 +1,167 @@
+---
+title: parse_path
+description: 'This page explains how to use the parse_path function in APL.'
+---
+
+Use the `parse_path` function to extract structured components from file paths, URIs, or URLs in your log and trace data. This function is useful when you want to decompose a full path into individual segments such as the directory, filename, extension, or query parameters for easier filtering, aggregation, or analysis.
+
+You typically use `parse_path` in log analysis, OpenTelemetry traces, and security investigations to understand which resources are being accessed, identify routing patterns, or isolate endpoints with high error rates. It simplifies complex string parsing tasks and helps you normalize paths for comparisons and reporting.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, path or URL parsing often involves a combination of `spath`, `rex`, and `spath` field access logic. You typically write regular expressions or JSONPath selectors manually.
+
+In APL, `parse_path` handles common URL and path structures for you automatically. It returns a dynamic object with fields like `directory`, `basename`, `extension`, `query`, and others.
+
+<CodeGroup>
+```sql Splunk example
+... | rex field=uri "(?<endpoint>\/api\/v1\/[^\?]+)"
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend path_parts = parse_path(uri)
+| extend endpoint = path_parts.directory
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t have a built-in function for parsing structured paths. You often use a combination of `SUBSTRING`, `CHARINDEX`, or user-defined functions.
+
+APL simplifies this task with `parse_path`, which returns a structured object from a URI or file path, removing the need for manual string manipulation.
+
+<CodeGroup>
+```sql SQL example
+SELECT SUBSTRING(uri, 1, CHARINDEX('/', uri)) AS directory FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend directory = parse_path(uri).directory
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+parse_path(source)
+```
+
+### Parameters
+
+| Name   | Type   | Description                                          |
+| ------ | ------ | ---------------------------------------------------- |
+| source | string | A string representing a path, file URI, or full URL. |
+
+### Returns
+
+Returns a dynamic object with the following fields, depending on the path structure:
+
+* `scheme`: The scheme part (e.g. `http`, `file`).
+* `host`: The hostname or domain.
+* `port`: The port number, if any.
+* `directory`: The path up to but not including the file name.
+* `basename`: The file or endpoint name.
+* `extension`: The file extension, if any.
+* `query`: A string with the query portion (e.g. `?q=test`).
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Extract endpoint directories and file extensions from HTTP request URIs.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend path_parts = parse_path(uri)
+| summarize count() by path_parts.directory, path_parts.extension
+| sort by count_ desc
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend path\_parts%20%3D%20parse\_path(uri) %7C summarize count()%20by%20path\_parts.directory%2C%20path\_parts.extension %7C sort%20by%20count\_%20desc%22%7D)
+
+**Output**
+
+| path\_parts.directory | path\_parts.extension | count\_ |
+| --------------------- | --------------------- | ------- |
+| /api/v1/products      | json                  | 1345    |
+| /static/images        | jpg                   | 789     |
+
+This query helps you identify which directories and file types receive the most traffic.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Break down trace spans by the path requested by frontend services.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend path_parts = parse_path(['service.name'])
+| summarize count() by path_parts.basename, kind
+| sort by count_ desc
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) %7C extend path\_parts%20%3D%20parse\_path(%5B%27service.name%27%5D) %7C summarize count()%20by%20path\_parts.basename%2C%20kind %7C sort%20by%20count\_%20desc%22%7D)
+
+**Output**
+
+| path\_parts.basename | kind   | count\_ |
+| -------------------- | ------ | ------- |
+| frontend             | server | 1020    |
+| cartservice          | client | 876     |
+
+This helps you understand service-to-service communication patterns using parsed service identifiers.
+
+</Tab>
+<Tab title="Security logs">
+
+Extract domain names and query parameters from potentially suspicious URLs.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend path_parts = parse_path(uri)
+| where path_parts.host has 'example.com'
+| project _time, id, method, uri, path_parts.query
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend path\_parts%20%3D%20parse\_path(uri) %7C where%20path\_parts.host%20has%20%27example.com%27 %7C project%20\_time%2C%20id%2C%20method%2C%20uri%2C%20path\_parts.query%22%7D)
+
+**Output**
+
+| \_time              | id     | method | uri                                                              | path\_parts.query |
+| ------------------- | ------ | ------ | ---------------------------------------------------------------- | ----------------- |
+| 2024-06-05T14:10:00 | user42 | GET    | [https://example.com/data?q=xyz](https://example.com/data?q=xyz) | ?q=xyz            |
+
+This query helps you isolate and inspect URL queries that contain suspicious domains.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [parse\_url](/apl/string-functions/parse_url): Extracts components from a URL. Use this when you are parsing full URLs rather than local paths or partial URIs.
+* [parse\_urlquery](/apl/string-functions/parse_urlquery): Extracts individual query parameters from the query string. Use this to access specific values like `q=test`.
+* [split](/apl/string-functions/split): Splits a string by a delimiter into an array. Use this when you need custom tokenization rather than structured parsing.
+* [extract](/apl/string-functions/extract): Uses regular expressions to extract matching values. Use this when your path or URL format is non-standard.
+* [parse\_ipv4](/apl/string-functions/parse_ipv4): Converts a string into an IPv4 structure. Use this when parsing IP addresses in logs or URIs.

@@ -1,0 +1,155 @@
+---
+title: indexof_regex
+description: 'This page explains how to use the indexof_regex function in APL.'
+---
+
+Use the `indexof_regex` function to find the position of the first match of a regular expression in a string. The function is helpful when you want to locate a pattern within a larger text field and take action based on its position. For example, you can use `indexof_regex` to extract fields from semi-structured logs, validate string formats, or trigger alerts when specific patterns appear in log data.
+
+The function returns the zero-based index of the first match. If no match is found, it returns `-1`. Use `indexof_regex` when you need more flexibility than simple substring search (`indexof`), especially when working with dynamic or non-fixed patterns.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Use `match()` in Splunk SPL to perform regular expression matching. However, `match()` returns a Boolean, not the match position. APL’s `indexof_regex` is similar to combining `match()` with additional logic to extract position, which is not natively supported in SPL.
+
+<CodeGroup>
+```sql Splunk example
+... | eval match_index=if(match(field, "pattern"), 0, -1)
+````
+
+```kusto APL equivalent
+['dataset']
+| extend match_index = indexof_regex(field, 'pattern')
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not have a built-in function to return the index of a regex match. You typically use `REGEXP_LIKE` for Boolean evaluation. `indexof_regex` provides a more direct and powerful way to find the exact match position in APL.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE WHEN REGEXP_LIKE(field, 'pattern') THEN 0 ELSE -1 END FROM table;
+```
+
+```kusto APL equivalent
+['dataset']
+| extend match_index = indexof_regex(field, 'pattern')
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+indexof_regex(source, regex)
+```
+
+### Parameters
+
+| Name   | Type   | Description                      |
+| ------ | ------ | -------------------------------- |
+| source | string | The input string to search.      |
+| regex  | string | The regular expression to match. |
+
+### Returns
+
+A `long` value that represents the zero-based index of the first match of the regular expression in the input string. If no match is found, returns `-1`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `indexof_regex` to detect whether the URI in a log entry contains an encoded user ID by checking for patterns like `user-[0-9]+`.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend user_id_pos = indexof_regex(uri, 'user-[0-9]+')
+| where user_id_pos != -1
+| project _time, id, uri, user_id_pos
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend user\_id\_pos = indexof\_regex(uri%2C 'user-%5B0-9%5D%2B') %7C where user\_id\_pos != -1 %7C project \_time%2C id%2C uri%2C user\_id\_pos%22%7D)
+
+**Output**
+
+| \_time               | id     | uri                      | user\_id\_pos |
+| -------------------- | ------ | ------------------------ | ------------- |
+| 2025-06-10T12:34:56Z | user42 | /api/user-12345/settings | 5             |
+| 2025-06-10T12:35:07Z | user91 | /v2/user-6789/dashboard  | 4             |
+
+The query finds log entries where the URI contains a user ID pattern and shows the position of the match in the URI string.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `indexof_regex` to detect trace IDs that include a specific structure, such as four groups of hex digits.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend match_index = indexof_regex(trace_id, '^[0-9a-f]{8}-[0-9a-f]{4}')
+| where match_index == 0
+| project _time, trace_id, match_index
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) %7C extend match\_index = indexof\_regex(trace\_id%2C '^\[0-9a-f]%7B8%7D-%5B0-9a-f%5D%7B4%7D') %7C where match\_index == 0 %7C project \_time%2C trace\_id%2C match\_index%22%7D)
+
+**Output**
+
+| \_time               | trace\_id                            | match\_index |
+| -------------------- | ------------------------------------ | ------------ |
+| 2025-06-10T08:23:12Z | ab12cd34-1234-5678-9abc-def123456789 | 0            |
+| 2025-06-10T08:24:55Z | fe98ba76-4321-abcd-8765-fedcba987654 | 0            |
+
+This query finds spans where the trace ID begins with a specific regex pattern, helping validate span ID formatting.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `indexof_regex` to locate suspicious request patterns such as attempts to access system files (`/etc/passwd`).
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend passwd_index = indexof_regex(uri, '/etc/passwd')
+| where passwd_index != -1
+| project _time, id, uri, passwd_index
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend passwd\_index = indexof\_regex(uri%2C '/etc/passwd') %7C where passwd\_index != -1 %7C project \_time%2C id%2C uri%2C passwd\_index%22%7D)
+
+**Output**
+
+| \_time               | id     | uri                            | passwd\_index |
+| -------------------- | ------ | ------------------------------ | ------------- |
+| 2025-06-10T10:15:45Z | user88 | /cgi-bin/view?path=/etc/passwd | 20            |
+
+This query detects HTTP requests attempting to access sensitive file paths, a common indicator of intrusion attempts.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [indexof](/apl/string-functions/indexof): Searches for a substring and returns its first position. Use this when you don’t need regex.
+* [extract](/apl/string-functions/extract): Extracts a substring that matches a regex pattern. Use when you want to capture and return the matching content.
+* [replace\_regex](/apl/string-functions/replace_regex): Replaces substrings matching a regex pattern. Use this for transformations based on patterns.
+* [matches\_regex](/apl/string-functions/matches_regex): Returns whether the string matches a regex pattern. Use when you only need a true/false result.
+* [parse\_url](/apl/string-functions/parse_url): Extracts URL components. Use this when parsing URLs, instead of manually matching with regex.
