@@ -1,0 +1,162 @@
+---
+title: bag_merge
+description: 'This page explains how to use the bag_merge function in APL.'
+---
+
+Use the `bag_merge` function in APL (Axiom Processing Language) to merge two or more dynamic (JSON-like) bags into a single dynamic value. This function is useful when you want to aggregate multiple properties from different sources or rows into one unified structure. The function is especially valuable in scenarios involving flexible schemas, such as semi-structured log or trace data, where each record might contain partial metadata that you want to consolidate.
+
+Use `bag_merge` to combine dynamic values across groups or time ranges. When multiple input bags share the same property name, `bag_merge` returns the last one by default, replacing earlier ones.
+
+<Note>
+`bag_merge` is currently in private preview. To try it out, [contact Axiom](https://axiom.co/contact).
+</Note>
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk, you use `spath`, `mvcombine`, or `eval` with `json_object` and `json_merge`-style logic to work with JSON objects. APL’s `bag_merge` provides a simpler and more direct way to merge dynamic values (bags) across rows or groups.
+
+<CodeGroup>
+```sql Splunk example
+| stats values(field1) as field1_values values(field2) as field2_values 
+| eval merged=json_object("field1", field1_values, "field2", field2_values)
+````
+
+```kusto APL equivalent
+datatable(x: dynamic)
+[
+    dynamic({'a': 1}),
+    dynamic({'b': 2})
+]
+| summarize merged = bag_merge(x)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t have a built-in equivalent to APL’s `bag_merge` because it lacks native support for dynamic (JSON-like) objects and merging them. You often need to write complex expressions using `JSON_OBJECT`, `JSON_MERGE`, or user-defined functions. APL handles this use case natively with `bag_merge`.
+
+<CodeGroup>
+```sql SQL example
+SELECT JSON_OBJECT_AGG(key, value)
+FROM (
+  SELECT 'a' AS key, '1' AS value
+  UNION
+  SELECT 'b', '2'
+) t
+```
+
+```kusto APL equivalent
+datatable(x: dynamic)
+[
+    dynamic({'a': 1}),
+    dynamic({'b': 2})
+]
+| summarize merged = bag_merge(x)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+bag_merge(Bag1, Bag2, Bag3, ...)
+```
+
+### Parameters
+
+| Name | Type    | Description                                |
+| ---- | ------- | ------------------------------------------ |
+| `Bag1, Bag2, ...` | dynamic | The bags you want to merge. |
+
+### Returns
+
+A single dynamic value that merges all bags in the group. If the same key appears in multiple bags, the value from the last bag takes precedence.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Combine metadata from multiple logs for each user into a single object to simplify downstream analysis.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| project id, metadata = pack('uri', uri, 'status', status, 'method', method)
+| summarize merged_metadata = bag_merge(metadata) by id
+```
+
+**Output**
+
+| id    | merged_metadata                                      |
+| ----- | ----------------------------------------------------- |
+| user1 | `{'uri': '/home', 'status': '200', 'method': 'GET'}`  |
+| user2 | `{'uri': '/cart', 'status': '404', 'method': 'POST'}` |
+
+Each row shows merged HTTP metadata for each unique user.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Aggregate span metadata across service kinds in a trace to create a unified summary.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| project trace_id, metadata = pack('service', ['service.name'], 'kind', kind, 'status', status_code)
+| summarize merged_metadata = bag_merge(metadata) by trace_id
+```
+
+**Output**
+
+| trace_id | merged_metadata                                                  |
+| --------- | ----------------------------------------------------------------- |
+| abc123    | `{'service': 'frontend', 'kind': 'client', 'status': 'OK'}`       |
+| def456    | `{'service': 'cartservice', 'kind': 'server', 'status': 'ERROR'}` |
+
+The query combines span-level metadata across services into trace-level summaries.
+
+</Tab>
+<Tab title="Security logs">
+
+Merge location metadata from multiple access attempts into a single object per user ID.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| project id, location = pack('city', ['geo.city'], 'country', ['geo.country'])
+| summarize merged_location = bag_merge(location) by id
+```
+
+**Output**
+
+| id    | merged_location                        |
+| ----- | --------------------------------------- |
+| user1 | `{'city': 'New York', 'country': 'US'}` |
+| user2 | `{'city': 'Berlin', 'country': 'DE'}`   |
+
+This query builds a consolidated location profile for each user.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [bag_has_key](/apl/scalar-functions/array-functions/bag-has-key): Checks whether a dynamic property bag contains a specific key.
+- [bag_keys](/apl/scalar-functions/array-functions/bag-keys): Returns all keys in a dynamic property bag. Use it when you need to enumerate available keys.
+- [bag_pack](/apl/scalar-functions/array-functions/bag-pack): Converts a list of key-value pairs to a dynamic property bag. Use when you need to build a bag.
