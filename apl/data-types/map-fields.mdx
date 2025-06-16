@@ -37,21 +37,6 @@ The example query below uses the `http.protocol` property inside the `attributes
 
 [Run in playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7b%22apl%22%3a%22%5b%27otel-demo-traces%27%5d%5cn%7c%20where%20%5b%27attributes.custom%27%5d%5b%27http.protocol%27%5d%20%3d%3d%20%27HTTP%2f1.1%27%22%2c%22queryOptions%22%3a%7b%22quickRange%22%3a%2230d%22%7d%7d)
 
-## Access properties of nested maps
-
-To access the properties of nested maps, use dot notation, index notation, or a mix of the two. If you use index notation for an entity, enclose the entity name in quotation marks (`'` or `"`) and square brackets (`[]`). For example:
-
-- `where map_field.property1.property2 == 14`
-- `where ['map_field'].property1.property2 == 14`
-- `where ['map_field']['property1']['property2'] == 14`
-
-If an entity name has spaces (` `), dots (`.`), or dashes (`-`), you can only use index notation for that entity. You can use dot notation for the other entities. For example:
-
-- `where ['map.field']['property.name1']['property.name2'] == 14`
-- `where ['map.field'].property1.property2 == 14`
-
-For more information, see [Entity names](/apl/entities/entity-names#quote-identifiers).
-
 ## Create map fields
 
 To create a map field:
@@ -73,25 +58,60 @@ To view map fields:
 - **UNUSED** means that the field is configured as a map field but you haven’t yet ingested data into it. Once ingested, data within this field won’t count toward your field limit.
 - **REMOVED** means that the field was configured as a map field but at some point it was changed to an ordinary field. Axiom adds new events to the field as usual. Events you ingested before the change retain the map structure. To fully remove this field, first [trim your dataset](/reference/datasets#trim-dataset) to remove the time period when map data was ingested, and then [vacuum the fields](/reference/datasets#vacuum-fields).
 
+## Access properties of nested maps
+
+To access the properties of nested maps, use dot notation, index notation, or a mix of the two. If you use index notation for an entity, enclose the entity name in quotation marks (`'` or `"`) and square brackets (`[]`). For example:
+
+- `where map_field.property1.property2 == 14`
+- `where ['map_field'].property1.property2 == 14`
+- `where ['map_field']['property1']['property2'] == 14`
+
+If an entity name has spaces (` `), dots (`.`), or dashes (`-`), you can only use index notation for that entity. You can use dot notation for the other entities. For example:
+
+- `where ['map.field']['property.name1']['property.name2'] == 14`
+- `where ['map.field'].property1.property2 == 14`
+
+For more information, see [Entity names](/apl/entities/entity-names#quote-identifiers).
+
 ## Map fields and flattened fields
 
-The parent map field and its flattened subfields can appear in the same dataset. For example, ingesting the following JSON adds a map field (`geo`) and two flattened fields (`geo.city`, `geo.country`) to the dataset. Axiom treats them as separate fields and doesn’t maintain a relationship between them.
+Within a dataset, the same fields can exist as flattened fields and as subfields of a map field.
 
+For example, consider the following:
 
-```json
-{
-  "geo": {
-    "city": "Paris",
-    "country": "France"
-  }
-}
-```
+1. `geo` is initially not a map field.
+1. You ingest the following:
 
-This means the following:
+    ```json
+    {
+      "geo": {
+        "city": "Paris",
+        "country": "France"
+      }
+    }
+    ```
 
-- Projecting away all subfields (in this example, `geo.city` and `geo.country`) doesn’t remove the parent map field `geo` unless it is explicitly projected away.
-- Fields metadata may still include entries for projected-away fields if the map field is preserved.
-- Queries using `['geo.city']` access a field literally named `geo.city`, while `['geo']['city']` accesses the `city` key inside a `geo` map. These references are not equivalent.
+    This adds two flattened fields to the dataset that you can access as `['geo.city']` or `['geo.country']`.
+
+1. You change `geo` to a map field through the UI or the API.
+1. You ingest the following:
+
+    ```json
+    {
+      "geo": {
+        "city": "Paris",
+        "country": "France"
+      }
+    }
+    ```
+
+    You use the same ingest JSON as before, but this adds the new subfields to the `geo` parent map field. You can access the subfields as `['geo']['city']` and `['geo']['country']`.
+
+Axiom treats the flattened fields (`['geo.city']` and `['geo.country']`) and the subfields of the map field (`['geo']['city']` and `['geo']['country']`) as separate fields and doesn’t maintain a relationship between them.
+
+<Note>
+Queries using `['geo.city']` access a field literally named `geo.city`, while `['geo']['city']` accesses the `city` key inside a `geo` map. These references are not equivalent.
+</Note>
 
 To avoid confusion:
 
