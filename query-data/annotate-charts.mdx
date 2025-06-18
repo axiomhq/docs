@@ -6,6 +6,11 @@ tags:
     ['axiom documentation', 'documentation', 'axiom', 'annotation', 'span', 'trace']
 ---
 
+import Prerequisites from "/snippets/minimal-prerequisites.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceToken from "/snippets/replace-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+
 Annotating charts lets you add context to your charts. For example, use annotations to mark the time of the following:
 
 - Deployments
@@ -15,7 +20,6 @@ Annotating charts lets you add context to your charts. For example, use annotati
 
 This adds context to the trends displayed in your charts and makes it easier to investigate issues in your app or system.
 
-import Prerequisites from "/snippets/minimal-prerequisites.mdx"
 
 <Prerequisites />
 {/* list separator */}
@@ -37,9 +41,7 @@ Axiom automatically creates an annotation if a monitor triggers.
 
 You can configure GitHub Actions using YAML syntax. For more information, see the [GitHub documentation](https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions#create-an-example-workflow).
 
-To create an annotation when a deployment happens in GitHub, follow these steps:
-
-1. Add the following to the end of your GitHub Action file:
+To create an annotation when a deployment happens in GitHub, add the following to the end of your GitHub Action file:
 
     ```yml
     - name: Add annotation in Axiom when a deployment happens
@@ -55,11 +57,11 @@ To create an annotation when a deployment happens in GitHub, follow these steps:
         url: "https://example.com"                                      # optional, defaults to job URL
     ```
 
-2. In the code above, replace the following:
-    - Replace `DATASET_NAME` with the Axiom dataset where you want to send data. To add the annotation to more than one dataset, enter a string of Axiom dataset names separated by commas. For example `axiom_datasets: 'DATASET_NAME_1, DATASET_NAME_2, DATASET_NAME_3'`.
-    - Replace `API_TOKEN` with your Axiom API token. Add this token to your secrets.
+<Info>
+<ReplaceDatasetToken />
+</Info>
 
-3. Customize the other fields of the code above such as the title, the description, and the URL.
+Customize the other fields of the code above such as the title, the description, and the URL.
 
 This creates an annotation in Axiom each time you deploy in GitHub.
 
@@ -68,7 +70,7 @@ This creates an annotation in Axiom each time you deploy in GitHub.
 To create an annotation using the Axiom API, use the following API request:
 
 ```bash
-curl -X 'POST' 'https://api.axiom.co/v2/annotations' \
+curl -X 'POST' 'https://AXIOM_DOMAIN/v2/annotations' \
   -H 'Authorization: Bearer API_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -81,12 +83,14 @@ curl -X 'POST' 'https://api.axiom.co/v2/annotations' \
   }'
 ```
 
-- In the code above, replace the following:
-    - Replace `DATASET_NAME` with the Axiom dataset where you want to send data. To add the annotation to more than one dataset, enter a list of Axiom dataset names.
-    - Replace `API_TOKEN` with your Axiom API token.
-- Customize the other fields of the code above such as the title, the description, and the URL. For more information on the allowed fields, see [Annotation object](#annotation-object).
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
-Example response:
+Customize the other fields of the code above such as the title, the description, and the URL. For more information on the allowed fields, see [Annotation object](#annotation-object).
+
+**Example response**
 
 ```bash
 {
@@ -107,11 +111,14 @@ The API response from Axiom contains an `id` field. This is the annotation ID th
 To get information about all datasets in your org, use the following API request:
 
 ```bash
-curl -X 'GET' 'https://api.axiom.co/v2/annotations' \
+curl -X 'GET' 'https://AXIOM_DOMAIN/v2/annotations' \
   -H 'Authorization: Bearer API_TOKEN'
 ```
 
-In the code above, replace `API_TOKEN` with your Axiom API token.
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
 
 Use the following parameters in the endpoint URL to filter for a specific time interval and dataset:
 - `start` is an ISO timestamp that specifies the beginning of the time interval.
@@ -121,11 +128,11 @@ Use the following parameters in the endpoint URL to filter for a specific time i
 The example below gets information about annotations about occurrences between March 16th and 19th, 2024 and added to the dataset `my-dataset`:
 
 ```bash
-curl -X 'GET' 'https://api.axiom.co/v2/annotations?start=2024-03-16T00:00:00.000Z&end=2024-03-19T23:59:59.999Z&datasets=my-dataset' \
+curl -X 'GET' 'https://AXIOM_DOMAIN/v2/annotations?start=2024-03-16T00:00:00.000Z&end=2024-03-19T23:59:59.999Z&datasets=my-dataset' \
   -H 'Authorization: Bearer API_TOKEN'
 ```
 
-Example response:
+**Example response**
 
 ```json
 [
@@ -156,15 +163,17 @@ The API response from Axiom contains an `id` field. This is the annotation ID th
 To get information about a specific annotation, use the following API request:
 
 ```bash
-curl -X 'GET' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
+curl -X 'GET' 'https://AXIOM_DOMAIN/v2/annotations/ANNOTATION_ID' \
   -H 'Authorization: Bearer API_TOKEN'
 ```
 
-In the code above, replace the following:
-- Replace `ANNOTATION_ID` with the ID of the annotation.
-- Replace `API_TOKEN` with your Axiom API token.
+<Info>
+<ReplaceDomain />
+Replace `ANNOTATION_ID` with the ID of the annotation.
+<ReplaceToken />
+</Info>
 
-Example response:
+**Example response**
 
 ```bash
 {
@@ -185,7 +194,7 @@ For more information on these fields, see [Annotation object](#annotation-object
 To change an existing annotation, use the following API request:
 
 ```bash
-curl -X 'PUT' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
+curl -X 'PUT' 'https://AXIOM_DOMAIN/v2/annotations/ANNOTATION_ID' \
   -H 'Authorization: Bearer API_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -193,12 +202,14 @@ curl -X 'PUT' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
   }'
 ```
 
-- In the code above, replace the following:
-    - Replace `ANNOTATION_ID` with the ID of the annotation. For more information about how to determine the annotation ID, see [Get information about annotations](#get-information-about-annotations).
-    - Replace `API_TOKEN` with your Axiom API token.
-- In the payload, specify the properties of the annotation that you want to change. The example above adds an `endTime` field to the annotation created above. For more information on the allowed fields, see [Annotation object](#annotation-object).
+<Info>
+<ReplaceDomain />
+Replace `ANNOTATION_ID` with the ID of the annotation. For more information about how to determine the annotation ID, see [Get information about annotations](#get-information-about-annotations).
+<ReplaceToken />
+In the payload, specify the properties of the annotation that you want to change. The example above adds an `endTime` field to the annotation created above. For more information on the allowed fields, see [Annotation object](#annotation-object).
+</Info>
 
-Example response:
+**Example response**
 
 ```bash
 {
@@ -218,13 +229,15 @@ Example response:
 To delete an existing annotation, use the following API request:
 
 ```bash
-curl -X 'DELETE' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
+curl -X 'DELETE' 'https://AXIOM_DOMAIN/v2/annotations/ANNOTATION_ID' \
   -H 'Authorization: Bearer API_TOKEN' \
 ```
 
-In the code above, replace the following:
-- Replace `ANNOTATION_ID` with the ID of the annotation. For more information about how to determine the annotation ID, see [Get information about annotations](#get-information-about-annotations).
-- Replace `API_TOKEN` with your Axiom API token.
+<Info>
+<ReplaceDomain />
+Replace `ANNOTATION_ID` with the ID of the annotation. For more information about how to determine the annotation ID, see [Get information about annotations](#get-information-about-annotations).
+<ReplaceToken />
+</Info>
 
 ## Annotation object
 
@@ -256,7 +269,7 @@ The example below demonstrates how annotations help you troubleshoot issues in y
 Use the following API request to create an annotation:
 
 ```bash
-curl -X 'POST' 'https://api.axiom.co/v2/annotations' \
+curl -X 'POST' 'https://AXIOM_DOMAIN/v2/annotations' \
   -H 'Authorization: Bearer API_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -269,7 +282,10 @@ curl -X 'POST' 'https://api.axiom.co/v2/annotations' \
   }'
 ```
 
-In the code above, replace `API_TOKEN` with your Axiom API token.
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
 
 ### Create a monitor
 
