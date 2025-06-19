@@ -1,0 +1,161 @@
+---
+title: toarray
+description: 'This page explains how to use the toarray function in APL.'
+---
+
+Use the `toarray` function in APL to convert a dynamic-typed input—such as a bag, property bag, or JSON array—into a regular array. This is helpful when you want to process the elements individually with array functions like `array_length`, `array_index_of`, or `mv-expand`.
+
+You typically use `toarray` when working with semi-structured data, especially after parsing JSON from log fields or external sources. It lets you access and manipulate nested collections using standard array operations.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk, multivalue fields are native, and many SPL commands like `mvexpand`, `mvindex`, and `mvcount` operate directly on them. In APL, dynamic fields can also contain multivalue data, but you need to explicitly convert them to arrays using `toarray` before applying array functions.
+
+<CodeGroup>
+```sql Splunk example
+... | eval methods=split("GET,POST,PUT", ",") | mvcount(methods)
+````
+
+```kusto APL equivalent
+print methods = dynamic(["GET", "POST", "PUT"])
+| extend method_count = array_length(toarray(methods))
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not support arrays natively. You typically store lists as JSON and use JSON functions to manipulate them. In APL, you can parse JSON into dynamic values and use `toarray` to convert those into arrays for further processing.
+
+<CodeGroup>
+```sql SQL example
+SELECT JSON_ARRAY_LENGTH('["GET","POST","PUT"]')
+```
+
+```kusto APL equivalent
+print methods = dynamic(["GET", "POST", "PUT"])
+| extend method_count = array_length(toarray(methods))
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+toarray(value)
+```
+
+### Parameters
+
+| Name  | Type    | Description                              |
+| ----- | ------- | ---------------------------------------- |
+| value | dynamic | A JSON array, property bag, or bag value |
+
+### Returns
+
+An array containing the elements of the dynamic input. If the input is already an array, the result is identical. If the input is a property bag, it returns an array of values. If the input is not coercible to an array, the result is an empty array.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You want to analyze what HTTP methods users used in recent requests. The method field sometimes stores multiple methods in a JSON array string.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where _time > ago(1d)
+| extend methods = toarray(parse_json('["GET", "POST", "PUT"]'))
+| mv-expand methods
+| summarize count() by methods
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20_time%20%3E%20ago%281d%29%20%7C%20extend%20methods%20%3D%20toarray%28parse_json%28'['GET'%2C%20'POST'%2C%20'PUT']'%29%29%20%7C%20mv-expand%20methods%20%7C%20summarize%20count%28%29%20by%20methods%22%7D)
+
+**Output**
+
+| methods | count\_ |
+| ------- | ------- |
+| GET     | 1234    |
+| POST    | 1102    |
+| PUT     | 234     |
+
+This query shows how often each HTTP method occurs across requests that store them as a JSON array string.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You want to extract and analyze services involved in traces, where `service.name` is embedded in a JSON array in a custom field.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where _time > ago(1h)
+| extend service_list = toarray(parse_json('["frontend", "cartservice", "checkoutservice"]'))
+| mv-expand service_list
+| summarize span_count = count() by service_list
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20_time%20%3E%20ago%281h%29%20%7C%20extend%20service_list%20%3D%20toarray%28parse_json%28'['frontend'%2C%20'cartservice'%2C%20'checkoutservice']'%29%29%20%7C%20mv-expand%20service_list%20%7C%20summarize%20span_count%20%3D%20count%28%29%20by%20service_list%22%7D)
+
+**Output**
+
+| service\_list   | span\_count |
+| --------------- | ----------- |
+| frontend        | 540         |
+| cartservice     | 422         |
+| checkoutservice | 319         |
+
+This query expands a JSON array of services and counts their usage across traces.
+
+</Tab>
+<Tab title="Security logs">
+
+You want to analyze the number of user actions by grouping over URIs extracted from a nested list stored as JSON in the `uri` field.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where _time > ago(2d)
+| extend uri_array = toarray(parse_json('["/login", "/checkout", "/cart"]'))
+| mv-expand uri_array
+| summarize hits = count() by uri_array
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20_time%20%3E%20ago%282d%29%20%7C%20extend%20uri_array%20%3D%20toarray%28parse_json%28'['/login'%2C%20'/checkout'%2C%20'/cart']'%29%29%20%7C%20mv-expand%20uri_array%20%7C%20summarize%20hits%20%3D%20count%28%29%20by%20uri_array%22%7D)
+
+**Output**
+
+| uri\_array | hits |
+| ---------- | ---- |
+| /login     | 1840 |
+| /checkout  | 920  |
+| /cart      | 702  |
+
+This example demonstrates how to analyze access patterns when URIs are embedded in array-formatted fields.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [parse\_json](/apl/utility-functions/parse_json): Converts a string containing JSON into a dynamic-typed value. Use it before `toarray` when your data is in string form.
+* [mv-expand](/apl/row-shaping/mv-expand): Expands an array or bag into multiple rows. Use it after `toarray` to work with individual elements.
+* [array\_length](/apl/array-functions/array_length): Returns the number of elements in an array. Use it with `toarray` to count values.
+* [array\_index\_of](/apl/array-functions/array_index_of): Finds the index of a value in an array. Use it when searching for specific elements.
+* [bag\_keys](/apl/bag-and-property-bag-functions/bag_keys): Returns an array of property names from a bag. Use it as an alternative to `toarray` when you want the keys instead of values.

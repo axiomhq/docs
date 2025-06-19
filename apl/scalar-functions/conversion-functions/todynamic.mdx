@@ -1,0 +1,148 @@
+---
+title: todynamic
+description: 'This page explains how to use the todynamic function in APL.'
+---
+
+Use the `todynamic` function to parse a string as a dynamic value, such as a JSON object or array. This function is especially useful when your dataset contains structured data in string format and you want to access nested elements, iterate over arrays, or use dynamic-aware functions.
+
+You often find `todynamic` helpful when working with logs, telemetry, or security events that encode rich metadata or nested attributes in stringified JSON. By converting these strings into dynamic values, you can query, filter, and transform the nested fields using APL’s built-in support for dynamic types.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk automatically interprets structured JSON data and allows you to use dot notation directly on fields, without explicit conversion. In APL, you need to explicitly cast a JSON string into a dynamic value using `todynamic`.
+
+<CodeGroup>
+```sql Splunk example
+... | eval json_field = json_extract(raw_field, "$.key")
+````
+
+```kusto APL equivalent
+... | extend json_field = todynamic(raw_field).key
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In standard SQL, you typically use `JSON_VALUE`, `JSON_QUERY`, or `CAST(... AS JSON)` to access structured content in string format. In APL, use `todynamic` to convert a string to a dynamic value that supports dot notation and further manipulation.
+
+<CodeGroup>
+```sql SQL example
+SELECT JSON_VALUE(raw_column, '$.key') AS value FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs'] 
+| extend value = todynamic(raw_column).key
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+todynamic(value)
+```
+
+### Parameters
+
+| Name  | Type   | Description                                           |
+| ----- | ------ | ----------------------------------------------------- |
+| value | string | A string representing a JSON-encoded object or array. |
+
+### Returns
+
+A dynamic value. If the input is not a valid JSON string, the function returns `null`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Convert stringified JSON in logs to access nested fields like geo-location or request metadata.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend metadata = todynamic(uri)
+| project _time, id, status, ['geo.city'], ['geo.country'], url_path = metadata.path
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend metadata%20%3D%20todynamic(uri) %7C project \_time%2C id%2C status%2C %5B%27geo.city%27%5D%2C %5B%27geo.country%27%5D%2C url\_path%20%3D%20metadata.path%22%7D)
+
+**Output**
+
+| \_time               | id      | status | geo.city | geo.country | url\_path      |
+| -------------------- | ------- | ------ | -------- | ----------- | -------------- |
+| 2025-06-17T09:00:00Z | user123 | 200    | Berlin   | DE          | /products/view |
+
+This query assumes that the `uri` field contains a JSON string such as `{"path": "/products/view"}`. The `todynamic` function converts the string into a dynamic object, allowing access to its properties.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Access structured span attributes stored as JSON strings for detailed trace analysis.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend span_data = todynamic(kind)
+| project _time, trace_id, span_id, ['service.name'], duration, span_type = span_data.type
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) %7C extend span\_data%20%3D%20todynamic(kind) %7C project \_time%2C trace\_id%2C span\_id%2C %5B%27service.name%27%5D%2C duration%2C span\_type%20%3D%20span\_data.type%22%7D)
+
+**Output**
+
+| \_time               | trace\_id | span\_id | service.name    | duration | span\_type |
+| -------------------- | --------- | -------- | --------------- | -------- | ---------- |
+| 2025-06-17T10:05:00Z | abcdef    | 123456   | checkoutservice | 00:00:01 | server     |
+
+This example assumes the `kind` field contains a JSON object like `{"type": "server"}`. After conversion with `todynamic`, you can extract the `type` field for reporting.
+
+</Tab>
+<Tab title="Security logs">
+
+Parse JSON-encoded HTTP request data to analyze security-relevant access patterns.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend request = todynamic(uri)
+| project _time, id, method, request_path = request.path, status, ['geo.country']
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend request%20%3D%20todynamic(uri) %7C project \_time%2C id%2C method%2C request\_path%20%3D%20request.path%2C status%2C %5B%27geo.country%27%5D%22%7D)
+
+**Output**
+
+| \_time               | id      | method | request\_path | status | geo.country |
+| -------------------- | ------- | ------ | ------------- | ------ | ----------- |
+| 2025-06-17T11:15:00Z | user789 | GET    | /admin/login  | 403    | US          |
+
+In this case, the `uri` field is a JSON string like `{"path": "/admin/login"}`. `todynamic` allows you to extract `path` to identify suspicious request routes.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [parse\_json](/apl/utility-functions/parse_json): Similar to `todynamic`, but typically used to parse JSON directly inside expressions. `todynamic` is more idiomatic when casting a column.
+* [parse\_path](/apl/string-functions/parse_path): Extracts components of a URL path. Use it when `uri` is a URL rather than a JSON object.
+* [bag\_unpack](/apl/dynamic-functions/bag_unpack): Extracts key/value pairs from a dynamic object into separate columns. Use it after `todynamic` when flattening JSON objects.
+* [isnull](/apl/scalar-functions/isnull): Use to check whether `todynamic` returned `null` due to malformed JSON.
+* [tostring](/apl/scalar-functions/tostring): Converts a dynamic or other type back into a string. Use after `todynamic` if you need to output text.
