@@ -77,21 +77,19 @@ You want to analyze what HTTP methods users used in recent requests. The method 
 
 ```kusto
 ['sample-http-logs']
-| where _time > ago(1d)
 | extend methods = toarray(parse_json('["GET", "POST", "PUT"]'))
-| mv-expand methods
-| summarize count() by methods
+| project _time, methods
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20_time%20%3E%20ago%281d%29%20%7C%20extend%20methods%20%3D%20toarray%28parse_json%28'['GET'%2C%20'POST'%2C%20'PUT']'%29%29%20%7C%20mv-expand%20methods%20%7C%20summarize%20count%28%29%20by%20methods%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20methods%20%3D%20toarray(parse_json('%5B'GET'%2C%20'POST'%2C%20'PUT'%5D'))%20%7C%20project%20_time%2C%20methods%22%7D)
 
 **Output**
 
-| methods | count_ |
+| _time | methods |
 | ------- | ------- |
-| GET     | 1234    |
-| POST    | 1102    |
-| PUT     | 234     |
+| Jun 24, 09:28:10     | ["GET", "POST", "PUT"]    |
+| Jun 24, 09:28:10    | ["GET", "POST", "PUT"]    |
+| Jun 24, 09:28:10     | ["GET", "POST", "PUT"]     |
 
 This query shows how often each HTTP method occurs across requests that store them as a JSON array string.
 
