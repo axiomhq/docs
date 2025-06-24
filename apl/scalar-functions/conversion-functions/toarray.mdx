@@ -66,89 +66,29 @@ toarray(value)
 
 An array containing the elements of the dynamic input. If the input is already an array, the result is identical. If the input is a property bag, it returns an array of values. If the input is not coercible to an array, the result is an empty array.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-You want to analyze what HTTP methods users used in recent requests. The method field sometimes stores multiple methods in a JSON array string.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend methods = toarray(parse_json('["GET", "POST", "PUT"]'))
-| project _time, methods
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20methods%20%3D%20toarray(parse_json('%5B'GET'%2C%20'POST'%2C%20'PUT'%5D'))%20%7C%20project%20_time%2C%20methods%22%7D)
-
-**Output**
-
-| _time | methods |
-| ------- | ------- |
-| Jun 24, 09:28:10     | ["GET", "POST", "PUT"]    |
-| Jun 24, 09:28:10    | ["GET", "POST", "PUT"]    |
-| Jun 24, 09:28:10     | ["GET", "POST", "PUT"]     |
-
-This query shows how often each HTTP method occurs across requests that store them as a JSON array string.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-You want to extract and analyze services involved in traces, where `service.name` is embedded in a JSON array in a custom field.
+You want to convert a string to an array because you want to pass the result to a function that accepts arrays, such as `array_concat`.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| where _time > ago(1h)
-| extend service_list = toarray(parse_json('["frontend", "cartservice", "checkoutservice"]'))
-| mv-expand service_list
-| summarize span_count = count() by service_list
+| extend service_list = toarray('123')
+| extend json_list = parse_json('["frontend", "cartservice", "checkoutservice"]')
+| extend combined_list = array_concat(service_list, json_list)
+| project _time, combined_list
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20_time%20%3E%20ago%281h%29%20%7C%20extend%20service_list%20%3D%20toarray%28parse_json%28'['frontend'%2C%20'cartservice'%2C%20'checkoutservice']'%29%29%20%7C%20mv-expand%20service_list%20%7C%20summarize%20span_count%20%3D%20count%28%29%20by%20service_list%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20service_list%20%3D%20toarray('123')%20%7C%20extend%20json_list%20%3D%20parse_json('%5B%5C"frontend%5C"%2C%20%5C"cartservice%5C"%2C%20%5C"checkoutservice%5C"%5D')%20%7C%20extend%20combined_list%20%3D%20array_concat(service_list%2C%20json_list)%20%7C%20project%20_time%2C%20combined_list%22%7D)
 
 **Output**
 
-| service_list   | span_count |
-| --------------- | ----------- |
-| frontend        | 540         |
-| cartservice     | 422         |
-| checkoutservice | 319         |
-
-This query expands a JSON array of services and counts their usage across traces.
-
-</Tab>
-<Tab title="Security logs">
-
-You want to analyze the number of user actions by grouping over URIs extracted from a nested list stored as JSON in the `uri` field.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where _time > ago(2d)
-| extend uri_array = toarray(parse_json('["/login", "/checkout", "/cart"]'))
-| mv-expand uri_array
-| summarize hits = count() by uri_array
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20_time%20%3E%20ago%282d%29%20%7C%20extend%20uri_array%20%3D%20toarray%28parse_json%28'['/login'%2C%20'/checkout'%2C%20'/cart']'%29%29%20%7C%20mv-expand%20uri_array%20%7C%20summarize%20hits%20%3D%20count%28%29%20by%20uri_array%22%7D)
-
-**Output**
-
-| uri_array | hits |
-| ---------- | ---- |
-| /login     | 1840 |
-| /checkout  | 920  |
-| /cart      | 702  |
-
-This example demonstrates how to analyze access patterns when URIs are embedded in array-formatted fields.
-
-</Tab>
-</Tabs>
+| _time | combined_list |
+| ------- | ------- |
+| Jun 24, 09:28:10     | ["123", "frontend", "cartservice", "checkoutservice"]    |
+| Jun 24, 09:28:10     | ["123", "frontend", "cartservice", "checkoutservice"]    |
+| Jun 24, 09:28:10     | ["123", "frontend", "cartservice", "checkoutservice"]    |
 
 ## List of related functions
 

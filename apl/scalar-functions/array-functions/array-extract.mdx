@@ -59,7 +59,7 @@ print arr=dynamic(["a", "b", "c", "d", "e"])
 ### Syntax
 
 ```kusto
-array_extract(sourceArray, startIndex, length)
+array_extract(sourceArray, regex)
 ```
 
 ### Parameters
@@ -67,88 +67,33 @@ array_extract(sourceArray, startIndex, length)
 | Name          | Type      | Description                                                  |
 | ------------- | --------- | ------------------------------------------------------------ |
 | `sourceArray` | `dynamic` | The array to extract from.                                   |
-| `startIndex`  | `int`     | The 0-based index to start extraction from.                  |
-| `length`      | `int`     | The number of elements to include in the extracted subarray. |
+| `regex`  | `int`     | The 0-based index to start extraction from.                  |
 
 ### Returns
 
 A dynamic array containing the extracted elements. If the range exceeds the bounds of the array, only the elements within bounds are returned. If `startIndex` is beyond the array length, an empty array is returned.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `array_extract` to inspect a moving window of request durations grouped by user ID. This helps you analyze performance outliers across request sequences.
+Use `array_extract` to 
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize durations=make_list(req_duration_ms) by id
-| extend sorted=sort_array(durations, 'desc')
-| extend top_3=array_extract(sorted, 0, 3)
+| extend extracted_value = array_extract(dynamic([{'id': 1, 'value': true}, {'id': 2, 'value': false}]), @'$[*].value')
+| project _time, extracted_value
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%3Dmake_list%28req_duration_ms%29%20by%20id%20%7C%20extend%20sorted%3Dsort_array%28durations%2C%20'desc'%29%20%7C%20extend%20top_3%3Darray_extract%28sorted%2C%200%2C%203%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20extracted_value%20%3D%20array_extract(dynamic(%5B%7B'id'%3A%201%2C%20'value'%3A%20true%7D%2C%20%7B'id'%3A%202%2C%20'value'%3A%20false%7D%5D)%2C%20%40'%24%5B*%5D.value')%20%7C%20project%20_time%2C%20extracted_value%22%7D)
 
 **Output**
 
-| id    | durations             | sorted                | top_3           |
-| ----- | --------------------- | --------------------- | ---------------- |
-| user1 | [200, 120, 300, 150] | [300, 200, 150, 120] | [300, 200, 150] |
-
-This query extracts the top three longest request durations per user.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `array_extract` to focus on the longest spans of a trace to identify performance bottlenecks.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| summarize spans=make_list(duration) by trace_id
-| extend sorted=sort_array(spans, 'desc')
-| extend slowest_2=array_extract(sorted, 0, 2)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20spans%3Dmake_list%28duration%29%20by%20trace_id%20%7C%20extend%20sorted%3Dsort_array%28spans%2C%20'desc'%29%20%7C%20extend%20slowest_2%3Darray_extract%28sorted%2C%200%2C%202%29%22%7D)
-
-**Output**
-
-| trace_id | spans                            | sorted                           | slowest_2                    |
-| --------- | -------------------------------- | -------------------------------- | ----------------------------- |
-| abc123    | [00:00:01.200, 00:00:00.900, …] | [00:00:01.200, 00:00:00.900, …] | [00:00:01.200, 00:00:00.900] |
-
-This example slices the top two longest spans from each trace for targeted diagnostics.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `array_extract` to retrieve the first few URIs accessed during a security incident to detect potentially suspicious patterns.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize uris=make_list(uri) by id
-| extend first_uris=array_extract(uris, 0, 2)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20uris%3Dmake_list%28uri%29%20by%20id%20%7C%20extend%20first_uris%3Darray_extract%28uris%2C%200%2C%202%29%22%7D)
-
-**Output**
-
-| id    | uris                               | first_uris           |
-| ----- | ---------------------------------- | --------------------- |
-| user1 | ['/admin', '/login', '/settings'] | ['/admin', '/login'] |
-
-This query extracts the first two accessed URIs per user session for early threat detection.
-
-</Tab>
-</Tabs>
+| _time | extracted_value |
+| ------- | ------- |
+| Jun 24, 09:28:10     | ["true", "false"]    |
+| Jun 24, 09:28:10     | ["true", "false"]    |
+| Jun 24, 09:28:10     | ["true", "false"]    |
 
 ## List of related functions
 
