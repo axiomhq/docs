@@ -65,79 +65,29 @@ todynamic(value)
 
 A dynamic value. If the input is not a valid JSON string, the function returns `null`.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Convert stringified JSON in logs to access nested fields like geo-location or request metadata.
+You want to find events that match certain criteria such as URI and status code. The criteria are stored in a stringified dictionary.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend metadata = todynamic(uri)
-| project _time, id, status, ['geo.city'], ['geo.country'], url_path = metadata.path
+| extend criteria = '{"uri": "/api/v1/customer/services", "status": "200"}'
+| extend metadata = todynamic(criteria)
+| where uri == metadata.uri and status == metadata.status
+| project _time, id
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend metadata%20%3D%20todynamic(uri) %7C project _time%2C id%2C status%2C %5B%27geo.city%27%5D%2C %5B%27geo.country%27%5D%2C url_path%20%3D%20metadata.path%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20criteria%20%3D%20'%7B%5C"uri%5C"%3A%20%5C"%2Fapi%2Fv1%2Fcustomer%2Fservices%5C"%2C%20%5C"status%5C"%3A%20%5C"200%5C"%7D'%20%7C%20extend%20metadata%20%3D%20todynamic(criteria)%20%7C%20where%20uri%20%3D%3D%20metadata.uri%20and%20status%20%3D%3D%20metadata.status%20%7C%20project%20_time%2C%20id%22%7D)
 
 **Output**
 
-| _time               | id      | status | geo.city | geo.country | url_path      |
-| -------------------- | ------- | ------ | -------- | ----------- | -------------- |
-| 2025-06-17T09:00:00Z | user123 | 200    | Berlin   | DE          | /products/view |
-
-This query assumes that the `uri` field contains a JSON string such as `{"path": "/products/view"}`. The `todynamic` function converts the string into a dynamic object, allowing access to its properties.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Access structured span attributes stored as JSON strings for detailed trace analysis.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend span_data = todynamic(kind)
-| project _time, trace_id, span_id, ['service.name'], duration, span_type = span_data.type
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) %7C extend span_data%20%3D%20todynamic(kind) %7C project _time%2C trace_id%2C span_id%2C %5B%27service.name%27%5D%2C duration%2C span_type%20%3D%20span_data.type%22%7D)
-
-**Output**
-
-| _time               | trace_id | span_id | service.name    | duration | span_type |
-| -------------------- | --------- | -------- | --------------- | -------- | ---------- |
-| 2025-06-17T10:05:00Z | abcdef    | 123456   | checkoutservice | 00:00:01 | server     |
-
-This example assumes the `kind` field contains a JSON object like `{"type": "server"}`. After conversion with `todynamic`, you can extract the `type` field for reporting.
-
-</Tab>
-<Tab title="Security logs">
-
-Parse JSON-encoded HTTP request data to analyze security-relevant access patterns.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend request = todynamic(uri)
-| project _time, id, method, request_path = request.path, status, ['geo.country']
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend request%20%3D%20todynamic(uri) %7C project _time%2C id%2C method%2C request_path%20%3D%20request.path%2C status%2C %5B%27geo.country%27%5D%22%7D)
-
-**Output**
-
-| _time               | id      | method | request_path | status | geo.country |
-| -------------------- | ------- | ------ | ------------- | ------ | ----------- |
-| 2025-06-17T11:15:00Z | user789 | GET    | /admin/login  | 403    | US          |
-
-In this case, the `uri` field is a JSON string like `{"path": "/admin/login"}`. `todynamic` allows you to extract `path` to identify suspicious request routes.
-
-</Tab>
-</Tabs>
+| _time | id |
+| ------- | ------- |
+| Jun 24, 09:28:10     | 2f2e5c40-1094-4237-a124-ec50fab7e726    |
+| Jun 24, 09:28:10    | 0f9724cb-fa9a-4a2f-bdf6-5c32b2f22efd    |
+| Jun 24, 09:28:10     | a516c4e9-2ed9-4fb9-a191-94e2844e9b2a     |
 
 ## List of related functions
 
