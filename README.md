@@ -5,7 +5,7 @@ The repo is based on the Mintlify framework and the content is in Markdown forma
 ## Setup
 
 1. Install the latest LTS version of [Node.js](https://nodejs.org/en/download/package-manager).
-2. Install [Vale](https://vale.sh/vale-cli/installation/).
+2. Install [Vale](https://vale.sh/docs/install).
 3. Fork this repo, and then clone it. For more information, see the [GitHub documentation](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project).
 4. Go to the root folder in your terminal, and run the following to install Node dependencies:
 
@@ -61,9 +61,9 @@ We value your input and invite you to help us make the Axiom documentation even 
 1. Rate pages. Hit the 👍/👎 button on any page to let us know what you like and what you don’t.
 2. Leave feedback. Click **Raise issue** on any documentation page to create a GitHub issue where you can share thoughts and suggestions.
 3. Suggest edits. Found a typo or outdated information? Click **Suggest edits** directly on the page.
-4. Contribute content. If you have in-depth knowledge or unique use cases, we encourage you to contribute by writing new sections or enhancing existing ones. Before contributing, please read the [contribution guidelines](/.github/CONTRIBUTING.md) and the [code of conduct](/.github/CODE_OF_CONDUCT.md).
+4. Contribute content. If you have in-depth knowledge or unique use cases, we encourage you to contribute by writing new sections or enhancing existing ones. Before contributing, please read the [Contribution guidelines](/.github/CONTRIBUTING.md) and the [Code of conduct](/.github/CODE_OF_CONDUCT.md).
 
 ## Troubleshooting
 
-- If the local build fails, run `mintlify install` to re-install dependencies.
-- If a page loads as a 404, make sure you run the local build in the root folder where the file `mint.json` is present.
+- If the local build fails, run `npm run mintlify install` to re-install dependencies.
+- If a page loads as a 404, make sure you run the local build in the root folder where the file `docs.json` is present.

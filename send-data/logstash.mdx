@@ -1,12 +1,16 @@
 ---
 title: 'Send data from Logstash to Axiom'
 description: 'This step-by-step guide helps you collect, and parse logs from your logstash processing pipeline into Axiom'
+overview: 'Server-side data processing pipeline for ingesting data from multiple sources'
 sidebarTitle: Logstash
 tags:
-  ['axiom documentation', 'documentation', 'axiom', 'guide', 'logs', 'logstash', 'logstash logs', 'grok filter', 'mutate filter', 'drop filter', 'clone filter', 'geoip filter']
+  ['logstash', 'axiom documentation', 'documentation', 'axiom', 'guide', 'logs', 'logstash logs', 'grok filter', 'mutate filter', 'drop filter', 'clone filter', 'geoip filter']
+logoId: 'logstash'
 ---
 
-## Logstash
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 Logstash is an open-source log aggregation, transformation tool, and server-side data processing pipeline that simultaneously ingests data from many sources. With Logstash, you can collect, parse, send, and store logs for future use on Axiom.
 
@@ -16,13 +20,9 @@ It can read data from various `input` sources, filter data for the specified con
 
 Logstash sits between your data and where you want to keep it.
 
-## Installation
-
-Visit the [Logstash download page](https://www.elastic.co/downloads/logstash) to install Logstash on your system.
-
-Specify the `org-id` header if you are using personal token. However, it’s best to use an API token to avoid the need to set the `org-id` header.
-
-Learn more about [API and personal tokens](/reference/tokens)
+<Prerequisites />
+{/* list separator */}
+- Visit the [Logstash download page](https://www.elastic.co/downloads/logstash) to install Logstash on your system.
 
 ## Configuration
 
@@ -53,13 +53,17 @@ input{
 }
 output{
   opensearch{
-    hosts => ["https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic"]
-    # api_key should be your API token
+    hosts => ["https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic"]
     user => "axiom"
-    password => "$TOKEN"
+    password => "API_TOKEN"
   }
 }
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ## Combining filters with conditionals on Logstash events
 
@@ -85,11 +89,11 @@ filter {
   grok {
     match => { "message" => "%{COMBINEDAPACHELOG}" }
   }
-  
+
   date {
     match => [ "timestamp" , "dd/MMM/yyyy:HH:mm:ss Z" ]
   }
-  
+
   mutate {
     add_field => { "foo" => "Hello Axiom, from Logstash" }
     remove_field => [ "axiom", "logging" ]
@@ -98,13 +102,17 @@ filter {
 
 output{
   opensearch{
-    hosts => ["https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic"]
-    # password should be your API token
+    hosts => ["https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic"]
     user => "axiom"
-    password => "$TOKEN"
+    password => "API_TOKEN"
   }
 }
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 This configuration parses Apache log data by matching the pattern of `COMBINEDAPACHELOG`.
 
@@ -133,13 +141,17 @@ filter {
 
 output{
   opensearch{
-    hosts => ["https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic"]
-    # password should be your API token
+    hosts => ["https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic"]
     user => "axiom"
-    password => "$TOKEN"
+    password => "API_TOKEN"
   }
 }
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 This configuration renames the field `hostname` to `host`, converts the `response` field value to an integer, changes the `method` field to uppercase, and removes the `request` and `httpversion` fields.
 
@@ -165,13 +177,17 @@ filter {
 
 output{
   opensearch{
-    hosts => ["https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic"]
-    # password should be your API token
+    hosts => ["https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic"]
     user => "axiom"
-    password => "$TOKEN"
+    password => "API_TOKEN"
   }
 }
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 This configuration drops all events of type `syslog` with severity `debug`.
 
@@ -197,13 +213,17 @@ filter {
 
 output{
   opensearch{
-    hosts => ["https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic"]
-    # password should be your API token
+    hosts => ["https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic"]
     user => "axiom"
-    password => "$TOKEN"
+    password => "API_TOKEN"
   }
 }
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 This configuration creates a new event named `cloned_event` that is a clone of the original event.
 
@@ -229,12 +249,16 @@ filter {
 
 output{
   opensearch{
-    hosts => ["https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic"]
-    # password should be your API token
+    hosts => ["https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic"]
     user => "axiom"
-    password => "$TOKEN"
+    password => "API_TOKEN"
   }
 }
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 This configuration adds geographical location data for the IP address in the `ip` field. Note that you may need to specify the path to the GeoIP database file in the plugin configuration, depending on your setup.

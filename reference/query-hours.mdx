@@ -1,12 +1,11 @@
 ---
-title: 'Manage GB-hours for query execution'
-description: "Learn how to calculate and manage query compute resources in GB-hours to optimize usage within Axiom."
-sidebarTitle: Costs
+title: 'Query costs'
+description: "This page explains how to calculate and manage query compute resources in GB-hours to optimize usage within Axiom."
 tags:
     ['query', 'gb hours']
 ---
 
-We measure the resources used to execute queries in terms of GB-hours.
+Axiom measures the resources used to execute queries in terms of GB-hours.
 
 ## What GB-hours are
 
@@ -19,33 +18,43 @@ Axiom uses serverless computing to execute queries efficiently. The consumption 
 - Time: The duration (in milliseconds) for which the serverless function is running to execute your query.
 - Memory allocation: The amount of memory (in GB) allocated to the serverless function during execution.
 
+## What counts as a query
+
+In calculating query costs, Axiom considers any request that queries your data as a query. For example, the following all count as queries:
+
+- You initiate a query in the Axiom user interface.
+- You query your data with an API token or a personal access token.
+- Your match monitor runs a query to determine if any new events match your criteria.
+
+Each query is charged at the same rate, irrespective of its origin.
+
+Each monitor run counts towards your query costs. For this reason, the frequency (how often the monitor runs) can have a slight effect on query costs.
+
 ## Run queries and understand costs
 
 When you run queries on Axiom, the cost in GB-hours is determined by the shape and size of the events in your dataset and the volume of events scanned to return a query result. After executing a query, you can find the associated query cost in the response header labeled as `X-Axiom-Query-Cost-Gbms`.
 
 ## Determine query cost
 
-1. Go to an API testing tool like Postman.
+Send a `POST` request to the [Run query](/restapi/endpoints/queryApl) endpoint with the following configuration:
 
-2. Send a `POST` request `https://api.axiom.co/v1/datasets/_apl?format=tabular` or `https://api.axiom.co/v1/datasets/_apl?format=legacy` with the following configuration:
+- `Content-Type` header with the value `application/json`.
+- `Authorization` header with the value `Bearer API_TOKEN`. Replace `API_TOKEN` with your Axiom API token.
+- In the body of your request, enter your query in JSON format. For example:
 
-    - `Content-Type` header with the value `application/json`.
-    - `Authorization` header with the value `Bearer API_TOKEN`. Replace `API_TOKEN` with your Axiom API token.
-    - In the body of your request, enter your query in JSON format. For example:
+    ```json
+    {
+      "apl": "telegraf | count",
+      "startTime": "2024-01-11T19:25:00Z",
+      "endTime": "2024-02-13T19:25:00Z"
+    }
+    ```
 
-        ```json
-        {
-          "apl": "telegraf | count",
-          "startTime": "2024-01-11T19:25:00Z",
-          "endTime": "2024-02-13T19:25:00Z"
-        }
-        ```
+    `apl` specifies the Axiom Processing Language (APL) query to run. In this case, `"telegraf | count"` indicates that you query the `telegraf` dataset and use the `count` operator to aggregate the data.
 
-        `apl` specifies the Axiom Processing Language (APL) query to run. In this case, `"telegraf | count"` indicates that you query the `telegraf` dataset and use the `count` operator to aggregate the data.
+    `startTime` and `endTime` define the time range of your query. In this case, `"2024-01-11T19:25:00Z"` is the start time, and `"2024-02-13T19:25:00Z"` is the end time, both in ISO 8601 format. This time range limits the query to events recorded within these specific dates and times.
 
-        `startTime` and `endTime` define the time range of your query. In this case, `"2024-01-11T19:25:00Z"` is the start time, and `"2024-02-13T19:25:00Z"` is the end time, both in ISO 8601 format. This time range limits the query to events recorded within these specific dates and times.
-
-3. In the response to your request, the information about the query cost in GB-milliseconds is in the `X-Axiom-Query-Cost-Gbms` header.
+In the response to your request, the information about the query cost in GB-milliseconds is in the `X-Axiom-Query-Cost-Gbms` header.
 
 ## Example of GB-hour calculation
 
@@ -54,3 +63,25 @@ As an example, a typical query analyzing 1 million events might consume approxim
 ## Plan and GB-hours allowance
 
 Your GB-hours allowance depends on your pricing plan. To learn more about the plan offerings and find the one that best suits your needs, see [Axiom Pricing](https://axiom.co/pricing).
+
+## Optimize queries to lower costs
+
+This section explains ways you can optimize your queries to save on query costs. For more information optimizing your queries for performance, see [Optimize performance](/reference/performance).
+
+### Optimize the order of field-specific filters
+
+Field-specific filters narrow your query results to events where a field has a given value. For example, the APL query `where ["my-field"] == "axiom"` filters for events where the `my-field` field takes the value `axiom`.
+
+Include field-specific filters near the beginning of your query for modest savings in query costs. For more information, see [Poor filter order in queries](/reference/performance#poor-filter-order-in-queries)
+
+### Optimize `search` operator and non-field-specific filters
+
+Non-field-specific filters narrow your query results by searching across multiple datasets and fields for a given value. Examples of non-field-specific filters are the `search` operator and equivalent expressions such as `where * contains` or `where * has`.
+
+Using non-field-specific filters can have a significant impact on query costs. For more information, see [Use the `search` operator efficiently](/apl/tabular-operators/search-operator#use-the-search-operator-efficiently) and [Regular expressions when simple filters suffice](/reference/performance#regular-expressions-when-simple-filters-suffice).
+
+## Optimize dashboard refresh rates
+
+Each time your dashboard refreshes, it runs a query on your data which results in query costs. Selecting a short refresh rate (such as 15s) for a long time range (such as 90 days) means that your dashboard frequently runs large queries in the background.
+
+To optimize query costs, choose a refresh rate that is appropriate for the time range of your dashboard. For more information, see [Select refresh rate](/dashboards/configure#select-refresh-rate).

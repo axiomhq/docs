@@ -1,27 +1,33 @@
 ---
 title: 'Send data from Elastic Beats to Axiom'
 description: 'Collect metrics and logs from elastic beats, and monitor them with Axiom.'
+overview: 'Lightweight data shippers for various types of operational data'
 sidebarTitle: Elastic Beats
 tags:
-  ['axiom documentation', 'documentation', 'axiom', 'elastic beats', 'logs', 'metrics', 'elasticsearch']
+  ['elasticsearch', 'axiom documentation', 'documentation', 'axiom', 'elastic beats', 'logs', 'metrics']
+logoId: 'elastic'
+isPopular: true
+popularityOrder: 7
 ---
+
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 [Elastic Beats](https://www.elastic.co/beats/) serves as a lightweight platform for data shippers that transfer information from the source to Axiom and other tools based on the configuration. Before shipping data, it collects metrics and logs from different sources, which later are deployed to your Axiom deployments.
 
 There are different [Elastic Beats](https://www.elastic.co/beats/) you could use to ship logs. Axiom’s documentation provides a detailed step by step procedure on how to use each Beats.
-
-You'd need to specify the `org-id` header if you are using personal token, it’s best to use an API token to avoid the need to specify the `org-id` header.
-
-Learn more about [API and Personal Token](/reference/tokens)
-
-You get a `400` if you use the field name `_time` when using the [Elastic Search endpoint](/send-data/elastic-beats). Axiom accepts many date strings and timestamps without knowing the format in advance, including Unix Epoch, RFC3339, and ISO 8601.
 
 <Note>
 To ensure compatibility with Axiom, use the following versions:
 - For Elastic Beats log shippers such as Filebeat, Metricbeat, Heartbeat, Auditbeat, and Packetbeat, use their open-source software (OSS) version 8.12.1 or lower.
 - For Winlogbeat, use the OSS version 7.17.22 or lower.
 - For Journalbeat, use the OSS version 7.15.2 or lower.
+
+If you get a 400 error when you use the field name `_time` or when you override the [`timestamp` field](/reference/field-restrictions), use the query parameter `?timestamp-field` to set a field as the time field.
 </Note>
+
+<Prerequisites />
 
 ## Filebeat
 
@@ -51,11 +57,15 @@ filebeat.inputs:
     paths:
       - $PATH_TO_LOG_FILE
 output.elasticsearch:
-  hosts: ['https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic']
-  # Replace with Axiom API token
-  api_key: 'axiom:$TOKEN'
+  hosts: ['https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic']
+  api_key: 'axiom:API_TOKEN'
   allow_older_versions: true
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ## Metricbeat
 
@@ -70,7 +80,6 @@ Visit the [MetricBeat OSS download page](https://www.elastic.co/downloads/beats/
 ### Configuration
 
 ```yaml
-metricbeat.modules:
 setup.ilm.enabled: false
 metricbeat.config.modules:
   path:
@@ -85,18 +94,22 @@ metricbeat.modules:
     - memory
     - network
 output.elasticsearch:
-  hosts: ["https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic"]
+  hosts: ["https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic"]
   # Specify Axiom API token
-  api_key: 'axiom:$TOKEN'
+  api_key: 'axiom:API_TOKEN'
   allow_older_versions: true
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ### Send AWS RDS metric set to Axiom
 
 The RDS metric set enables you to monitor your AWS RDS service. [RDS metric set](https://www.elastic.co/guide/en/beats/metricbeat/current/metricbeat-metricset-aws-rds.html) fetches a set of metrics from Amazon RDS and Amazon Aurora DB. With Amazon RDS, users can monitor network throughput, I/O for read, write, and/or metadata operations, client connections, and burst credit balances for their DB instances and send the data to Axiom.
 
 ```yaml
-metricbeat.modules:
 setup.ilm.enabled: false
 metricbeat.config.modules:
   path:
@@ -111,10 +124,15 @@ metricbeat.modules:
   session_token: '<session_token>'
   # Add other AWS configurations if needed
 output.elasticsearch:
-  hosts: ["https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic"]
-  api_key: 'axiom:$TOKEN'
+  hosts: ["https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic"]
+  api_key: 'axiom:API_TOKEN'
   allow_older_versions: true
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ## Winlogbeat
 
@@ -161,11 +179,16 @@ logging.files:
   path: C:\ProgramData\Winlogbeat\Logs
 logging.level: info
 output.elasticsearch:
-  hosts: ['https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic']
+  hosts: ['https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic']
   # token should be an API token
-  api_key: 'axiom:$TOKEN'
+  api_key: 'axiom:API_TOKEN'
   allow_older_versions: true
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 #### Validate configuration
 
@@ -210,15 +233,20 @@ winlogbeat.event_logs:
     ignore_older: 72h
 
 output.elasticsearch:
-  hosts: ['https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic']
+  hosts: ['https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic']
   protocol: "https"
   ssl.verification_mode: "full"
   # token should be an API token
-  api_key: 'axiom:$TOKEN'
+  api_key: 'axiom:API_TOKEN'
   allow_older_versions: true
 ```
 
-- Start Winlogbeat: You can start Winlogbeat from the command line by running `.\winlogbeat.exe -c winlogbeat.yml` in the Winlogbeat installation directory.
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+You can start Winlogbeat from the command line by running `.\winlogbeat.exe -c winlogbeat.yml` in the Winlogbeat installation directory.
 
 ### Add verification modes and processors
 
@@ -232,9 +260,9 @@ winlogbeat.event_logs:
   - name: System
 
 output.elasticsearch:
-  hosts: ['https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic']
+  hosts: ['https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic']
   # token should be an API token
-  api_key: 'axiom:$TOKEN'
+  api_key: 'axiom:API_TOKEN'
   allow_older_versions: true
   ssl.verification_mode: "certificate"
 
@@ -251,7 +279,12 @@ logging.files:
   permissions: 0600
 ```
 
-- Start Winlogbeat: You can start Winlogbeat from the command line by running `.\winlogbeat.exe -c winlogbeat.yml` in the Winlogbeat installation directory.
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+You can start Winlogbeat from the command line by running `.\winlogbeat.exe -c winlogbeat.yml` in the Winlogbeat installation directory.
 
 For more information on Winlogbeat event logs, visit the Winlogbeat [documentation](https://www.elastic.co/guide/en/beats/winlogbeat/current/index.html).
 
@@ -302,11 +335,16 @@ heartbeat.monitors:
     id: my-http-service
     name: My HTTP Service
 output.elasticsearch:
-  hosts: ['https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic']
+  hosts: ['https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic']
   # token should be an API token
-  api_key: 'axiom:$TOKEN'
+  api_key: 'axiom:API_TOKEN'
   allow_older_versions: true
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ## Auditbeat
 
@@ -345,11 +383,16 @@ auditbeat.modules:
       - /bin
       - /usr/local/sbin
 output.elasticsearch:
-  hosts: ['https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic']
+  hosts: ['https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic']
   # token should be an API token
-  api_key: 'axiom:$TOKEN'
+  api_key: 'axiom:API_TOKEN'
   allow_older_versions: true
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ## Packetbeat
 
@@ -431,11 +474,16 @@ protocols:
   mongodb:
     ports: [27017]
 output.elasticsearch:
-  hosts: ['https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic']
+  hosts: ['https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic']
   # api_key should be your API token
-  api_key: 'axiom:$TOKEN'
+  api_key: 'axiom:API_TOKEN'
   allow_older_versions: true
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 For more information on configuring Packetbeats, visit the [documentation](https://www.elastic.co/guide/en/beats/packetbeat/current/configuring-howto-packetbeat.html).
 
@@ -471,10 +519,15 @@ journalbeat.inputs:
     - "container.image.tag=redis"
     - "process.name=redis"
 output.elasticsearch:
-  hosts: ['https://api.axiom.co:443/v1/datasets/$DATASET_NAME/elastic']
+  hosts: ['https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic']
   # token should be an API token
-  api_key: 'axiom:$TOKEN'
+  api_key: 'axiom:API_TOKEN'
   allow_older_versions: true
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 For more information on configuring Journalbeat, visit the [documentation](https://www.elastic.co/guide/en/beats/journalbeat/current/configuration-journalbeat-options.html).

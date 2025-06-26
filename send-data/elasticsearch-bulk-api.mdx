@@ -1,10 +1,16 @@
 ---
 title: 'Send data from Elastic Bulk API to Axiom'
 description: 'This step-by-step guide will help you get started with migrating from Elasticsearch to Axiom using the Elastic Bulk API'
+overview: 'API for efficient indexing of large amounts of data in Elasticsearch'
 sidebarTitle: Elastic Bulk API
 tags:
-    ['axiom documentation', 'documentation', 'axiom', 'elastic bulk api', 'logs', 'metrics', 'elasticsearch']
+    ['elasticsearch', 'axiom documentation', 'documentation', 'axiom', 'elastic bulk api', 'logs', 'metrics']
+logoId: 'elastic'
 ---
+
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 Axiom is a log management platform that offers an Elasticsearch Bulk API emulation to facilitate migration from Elasticsearch or integration with tools that support the Elasticsearch Bulk API.
 
@@ -17,6 +23,8 @@ The Elasticsearch Bulk API expects the timestamp to be formatted as `@timestamp`
 {"@timestamp": "2024-01-07T12:00:00Z", "message": "axiom elastic bulk", "severity": "INFO"}
 ```
 
+<Prerequisites />
+
 ## Send logs to Axiom using the Elasticsearch Bulk API and Go
 
 To send logs to Axiom using the Elasticsearch Bulk API and Go, use the `net/http` package to create and send the HTTP request.
@@ -26,7 +34,7 @@ To send logs to Axiom using the Elasticsearch Bulk API and Go, use the `net/http
 The data needs to be formatted as per the Bulk API’s requirements. Here’s a simple example of how to prepare your data:
 
 ```json
-data := 
+data :=
 {"index": {"_index": "myindex", "_id": "1"}}
 {"@timestamp": "2023-06-06T12:00:00Z", "message": "axiom elastic bulk", "severity": "INFO"}
 {"index": {"_index": "myindex", "_id": "2"}}
@@ -56,13 +64,13 @@ func main() {
 `)
 
 	// Create a new request using http
-	req, err := http.NewRequest("POST", "https://api.axiom.co:443/v1/datasets/$DATASET/elastic/_bulk", bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", "https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic/_bulk", bytes.NewBuffer(data))
 	if err != nil {
 		log.Fatalf("Error creating request: %v", err)
 	}
 
 	// Add authorization header to the request
-	req.Header.Add("Authorization", "Bearer $API_TOKEN")
+	req.Header.Add("Authorization", "Bearer API_TOKEN")
 	req.Header.Add("Content-Type", "application/x-ndjson")
 
 	// Send request using http.Client
@@ -82,7 +90,12 @@ func main() {
 }
 ```
 
-## Send logs to Axiom using the Elasticsearch Bulk API and Python 
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+## Send logs to Axiom using the Elasticsearch Bulk API and Python
 
 To send logs to Axiom using the Elasticsearch Bulk API and Python, use the built-in `requests` library.
 
@@ -115,11 +128,11 @@ data = """
 """
 
 # Replace these with your actual dataset name and API token
-dataset = "$DATASET"
-api_token = "$API_TOKEN"
+dataset = "DATASET_NAME"
+api_token = "API_TOKEN"
 
 # The URL for the bulk API
-url = f'https://api.axiom.co:443/v1/datasets/{dataset}/elastic/_bulk'
+url = f'https://AXIOM_DOMAIN:443/v1/datasets/{dataset}/elastic/_bulk'
 
 try:
     response = requests.post(
@@ -144,6 +157,11 @@ else:
     except json.JSONDecodeError:
         print(response.text)
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ## Send logs to Axiom using the Elasticsearch Bulk API and JavaScript
 
@@ -170,10 +188,10 @@ Obtain an Axiom [API token](/reference/tokens) for the Authorization header, and
 const axios = require('axios');
 
 // Axiom elastic API URL
-const AxiomApiUrl = 'https://api.axiom.co:443/v1/datasets/$DATASET/elastic/_bulk';
+const AxiomApiUrl = 'https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic/_bulk';
 
 // Your Axiom API token
-const AxiomToken = '$API_TOKEN';
+const AxiomToken = 'API_TOKEN';
 
 // The logs data retrieved from Elasticsearch
 const logs = [
@@ -187,7 +205,7 @@ const logs = [
 const data = logs.map(log => JSON.stringify(log)).join('\n') + '\n';
 
 axios.post(AxiomApiUrl, data, {
-    headers: { 
+    headers: {
         'Content-Type': 'application/x-ndjson',
         'Authorization': `Bearer ${AxiomToken}`
     }
@@ -200,6 +218,11 @@ axios.post(AxiomApiUrl, data, {
     console.error('Error:', error.response ? error.response.data : error.message);
 });
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ## Send logs to Axiom using the Elasticsearch Bulk API and PHP
 
@@ -227,12 +250,12 @@ require 'vendor/autoload.php';
 use GuzzleHttp\Client;
 
 $client = new Client([
-    'base_uri' => 'https://api.axiom.co:443/v1/datasets/$DATASET/elastic/_bulk',  // Update with your Axiom host
+    'base_uri' => 'https://AXIOM_DOMAIN:443/v1/datasets/DATASET_NAME/elastic/_bulk',  // Update with your Axiom host
     'timeout'  => 2.0,
 ]);
 
 // Your Axiom API token
-$AxiomToken = '$API_TOKEN';
+$AxiomToken = 'API_TOKEN';
 
 // The logs data retrieved from Elasticsearch
 // Note: Replace this with your actual code to retrieve logs from Elasticsearch
@@ -274,3 +297,8 @@ try {
     echo "Error: " . $e->getMessage();
 }
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>

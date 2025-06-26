@@ -1,12 +1,15 @@
 ---
 title: 'Send OpenTelemetry data from a Django app to Axiom'
 description: 'This guide explains how to send OpenTelemetry data from a Django app to Axiom using the Python OpenTelemetry SDK.'
-sidebarTitle: Django Using OTel
-tags:
-    ['guides', 'django']
+overview: 'Django framework with OpenTelemetry integration'
+sidebarTitle: Django
+tags: ['guides', 'django', 'otel', 'opentelemetry', 'python']
+logoId: 'openTelemetry'
 ---
 
 import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 <Prerequisites />
 {/* list separator */}
@@ -73,7 +76,7 @@ from opentelemetry.instrumentation.django import DjangoInstrumentor
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'your_project_name.settings')
-    
+
     # Initialize OpenTelemetry instrumentation
     DjangoInstrumentor().instrument()
 
@@ -114,10 +117,10 @@ provider = TracerProvider(resource=resource)
 
 # Configure the OTLP/HTTP Span Exporter with necessary headers and endpoint
 otlp_exporter = OTLPSpanExporter(
-    endpoint="https://api.axiom.co/v1/traces",
+    endpoint="https://AXIOM_DOMAIN/v1/traces",
     headers={
-        "Authorization": "Bearer YOUR_API_TOKEN",  # Replace with your actual API token
-        "X-Axiom-Dataset": "YOUR_DATASET_NAME"    # Replace with your dataset name
+        "Authorization": "Bearer API_TOKEN",  # Replace with your actual API token
+        "X-Axiom-Dataset": "DATASET_NAME"    # Replace with your dataset name
     }
 )
 
@@ -131,6 +134,11 @@ trace.set_tracer_provider(provider)
 # Define a tracer for external use
 tracer = trace.get_tracer("your-service-name")
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ### Use the tracer in your views
 
@@ -202,33 +210,38 @@ Manual instrumentation in Python with OpenTelemetry involves adding code to crea
 
 1. Install necessary OpenTelemetry packages to enable manual tracing capabilities in your Django app.
 
-```py
-pip install django opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http opentelemetry-instrumentation-django
-```
+    ```py
+    pip install django opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http opentelemetry-instrumentation-django
+    ```
 
 2. Set up OpenTelemetry in your Django project to manually trace app activities.
 
-```py
-# otel_config.py
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    ```py
+    # otel_config.py
+    from opentelemetry import trace
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-def configure_opentelemetry():
-    resource = Resource(attributes={"service.name": "your-django-app"})
-    trace.set_tracer_provider(TracerProvider(resource=resource))
-    otlp_exporter = OTLPSpanExporter(
-        endpoint="https://api.axiom.co/v1/traces",
-        headers={"Authorization": "Bearer YOUR_API_TOKEN", "X-Axiom-Dataset": "YOUR_DATASET_NAME"}
-    )
-    span_processor = BatchSpanProcessor(otlp_exporter)
-    trace.get_tracer_provider().add_span_processor(span_processor)
-    return trace.get_tracer(__name__)
+    def configure_opentelemetry():
+        resource = Resource(attributes={"service.name": "your-django-app"})
+        trace.set_tracer_provider(TracerProvider(resource=resource))
+        otlp_exporter = OTLPSpanExporter(
+            endpoint="https://AXIOM_DOMAIN/v1/traces",
+            headers={"Authorization": "Bearer API_TOKEN", "X-Axiom-Dataset": "DATASET_NAME"}
+        )
+        span_processor = BatchSpanProcessor(otlp_exporter)
+        trace.get_tracer_provider().add_span_processor(span_processor)
+        return trace.get_tracer(__name__)
 
-tracer = configure_opentelemetry()
-```
+    tracer = configure_opentelemetry()
+    ```
+
+    <Info>
+    <ReplaceDomain />
+    <ReplaceDatasetToken />
+    </Info>
 
 3. Configure OpenTelemetry to your Django settings to capture telemetry data upon app startup.
 
@@ -287,32 +300,37 @@ Automatic instrumentation in Django with OpenTelemetry simplifies the process of
 
 1. Install required packages that support automatic instrumentation.
 
-```bash
-pip install django opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http opentelemetry-instrumentation-django
-```
+    ```bash
+    pip install django opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http opentelemetry-instrumentation-django
+    ```
 
 2. Automatically configure OpenTelemetry to trace Django app operations without manual span management.
 
-```py
-# otel_config.py
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.django import DjangoInstrumentor
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    ```py
+    # otel_config.py
+    from opentelemetry import trace
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    from opentelemetry.instrumentation.django import DjangoInstrumentor
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-def configure_opentelemetry():
-    resource = Resource(attributes={"service.name": "your-django-app"})
-    trace.set_tracer_provider(TracerProvider(resource=resource))
-    otlp_exporter = OTLPSpanExporter(
-        endpoint="https://api.axiom.co/v1/traces",
-        headers={"Authorization": "Bearer YOUR_API_TOKEN", "X-Axiom-Dataset": "YOUR_DATASET_NAME"}
-    )
-    span_processor = BatchSpanProcessor(otlp_exporter)
-    trace.get_tracer_provider().add_span_processor(span_processor)
-    DjangoInstrumentor().instrument()
-```
+    def configure_opentelemetry():
+        resource = Resource(attributes={"service.name": "your-django-app"})
+        trace.set_tracer_provider(TracerProvider(resource=resource))
+        otlp_exporter = OTLPSpanExporter(
+            endpoint="https://AXIOM_DOMAIN/v1/traces",
+            headers={"Authorization": "Bearer API_TOKEN", "X-Axiom-Dataset": "DATASET_NAME"}
+        )
+        span_processor = BatchSpanProcessor(otlp_exporter)
+        trace.get_tracer_provider().add_span_processor(span_processor)
+        DjangoInstrumentor().instrument()
+    ```
+
+    <Info>
+    <ReplaceDomain />
+    <ReplaceDatasetToken />
+    </Info>
 
 3. Initialize OpenTelemetry in Django to capture telemetry data from all HTTP requests automatically.
 

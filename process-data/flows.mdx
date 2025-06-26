@@ -6,7 +6,7 @@ description: 'This page explains how to set up a flow to filter, shape, and rout
 import Prerequisites from "/snippets/minimal-prerequisites.mdx"
 
 <Note>
-    Flow is currently in preview. To try it out, [sign up for a free preview](https://app.axiom.co/flows).
+    Flow is currently in private preview. To try it out, [sign up for a free preview](https://app.axiom.co/flows).
 </Note>
 
 A flow is a way to filter, shape, and route data from an Axiom dataset to a destination that you choose. This page explains how to set up a flow.
@@ -15,12 +15,12 @@ A flow is a way to filter, shape, and route data from an Axiom dataset to a dest
 {/* list separator */}
 - Set up a destination. For more information, see [Destinations](/process-data/destinations).
 
-## Set up a flow
+## Set up a flow configuration
 
-To set up a flow:
-1. Click the [Flows](https://app.axiom.co/flows) tab. Axiom displays the list of flows you have created.
-2. In the top right, click **New flow**.
-3. In the **Source** section, specify the source dataset and the transformation in an APL query. For example, the following APL query selects events from a `cloudflare-logpush` dataset and reduces them by removing a set of fields, before enriching with a new field.
+To set up a flow configuration:
+1. Click the [Flows](https://app.axiom.co/flows) tab. Axiom displays the list of flow configurations you have created.
+1. In the top right, click **New configuration**.
+1. In the **Source** section, specify the source dataset and the transformation in an APL query. For example, the following APL query selects events from a `cloudflare-logpush` dataset and reduces them by removing a set of fields, before enriching with a new field.
 
     ```kusto
     ['cloudflare-logpush']
@@ -33,31 +33,39 @@ To set up a flow:
 
     <Note>
     If you only specify the name of the dataset in the query, Axiom routes all events to the destination.
+
+    In the APL query, you can only use filters (such as `where` and `search`) and column transformations (such as `project` and `extend`).
     </Note>
 
-4. Click **Preview** to check whether the query you specified transforms your data as desired. The **Input event** section displays the original data stored in Axiom. The **Output event** section displays the transformed data that Axiom sends to the destination. The original data in the Axiom dataset isn’t affected by the transformation.
-5. In the **Destinations** section, click **Add destination**, and then select the destination where you want to route data. To add several destinations, click **+** in the top right corner.
-6. In the top right, click **Create**.
+1. Click **Preview** to check whether the query you specified transforms your data as desired. The **Input event** section displays the original data stored in Axiom. The **Output event** section displays the transformed data that Axiom sends to the destination. The original data in the Axiom dataset isn’t affected by the transformation.
+1. In the **Destination** section, click **Add a destination**, and then select an existing destination where you want to route data or click **Create new destination**.
+1. In the top right, click **Create**.
 
-<Frame>
-    <video autoPlay muted loop playsInline className="w-full aspect-video" src="/doc-assets/videos/flows.mp4"></video>
-</Frame>
+After creating a flow configuration, create a flow by selecting one of the following:
+- **Continuous flow**
+- **One-time flow**
 
-After creating a flow, you can choose from three flow types: one-time, scheduled, and continuous flows.
+## Create continuous flow
 
-<Note>
-    Flow is currently in preview, with support for one-time flows.
-</Note>
+Continuous flows are continuously running operations that process your incoming data and route the outputs to a destination in real-time.
 
-### One-time flow
+1. Click the **Flows** tab. Axiom displays the list of flow configurations you have created. Select the flow configuration that you want to use for creating a continuous flow.
+1. In the top right, click **Create flow** and select **Continuous flow**.
+1. Click **Create flow**.
 
-One-time flows route data to configured destinations when you manually initiate a replay.
+As a result, Axiom starts running the query on all incoming data and routes the results of the query to the destination.
 
-To set up a replay:
+## Create one-time flow
 
-1. Click the **Flows** tab. Axiom displays the list of flows you have created. Select the flow that you want to replay.
-2. In the top right, click **Run replay**.
-3. Specify the time range for events you want to replay.
-4. Click **Replay flow**.
+One-time flows are one-off operations that process past data for a specific time range and route the output to a destination.
 
-As a result, Axiom runs the query on the source data for the specified time range, and then routes the results of the query to the destination.
+1. Click the **Flows** tab. Axiom displays the list of flow configurations you have created. Select the flow configuration that you want to use for creating a one-time flow.
+1. In the top right, click **Create flow** and select **One-time flow**.
+1. Specify the time range for events you want to process.
+1. Click **Create flow**.
+
+As a result, Axiom runs the query on the source data for the specified time range and routes the results of the query to the destination.
+
+### Delivery rate of continuous flows
+
+The delivery rate of a continuous flow currently depends on the rate at which you ingest data into the source dataset. For example, if you set up a continuous flow and ingest data at a rate of 1TB/day to the source dataset, Axiom processes events within a few seconds after ingest. If you ingest data to the source at a rate of 10GB/day, it can take several minutes for events to arrive. There is currently no maximum wait time for events to be processed by a continuous flow. As Flow progresses through the preview stage, Axiom will establish and refine maximum wait times.
