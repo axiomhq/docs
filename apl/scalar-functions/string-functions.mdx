@@ -1,7 +1,7 @@
 ---
 title: 'String functions'
 description: 'Learn how to use and combine different string functions in APL'
-sidebarTitle: String
+sidebarTitle: Overview
 tags:
   ['axiom documentation', 'documentation', 'axiom', 'string functions', 'countof', 'coalesce', 'extract', 'extract all', 'format url', 'isempty', 'indexof', 'parse json', 'parse url', 'replace', 'reverse', 'strcat', 'strlen']
 ---
@@ -38,14 +38,14 @@ tags:
 | [strcmp()](#strcmp)                                 | Compares two strings.                                                                                                      |
 | [strlen()](#strlen)                                 | Returns the length, in characters, of the input string.                                                                    |
 | [strrep()](#strrep)                                 | Repeats given string provided number of times (default = 1).                                                               |
-| [substring()](#substring)                           | Extracts a substring from a source string starting from some index to the end of the string.                               |
+| [substring()](#substring)                           | Extracts a substring from a source string.                                                                                 |
 | [toupper()](#toupper)                               | Converts a string to upper case.                                                                                           |
 | [tolower()](#tolower)                               | Converts a string to lower case.                                                                                           |
 | [trim()](#trim)                                     | Removes all leading and trailing matches of the specified cutset.                                                          |
 | [trim_regex()](#trim-regex)                         | Removes all leading and trailing matches of the specified regular expression.                                              |
 | [trim_end()](#trim-end)                             | Removes trailing match of the specified cutset.                                                                            |
 | [trim_end_regex()](#trim-end-regex)                 | Removes trailing match of the specified regular expression.                                                                |
-| [trim_start()](#trim-start)                         | Removes leading match of the specified cutset.                                                                 |
+| [trim_start()](#trim-start)                         | Removes leading match of the specified cutset.                                                                             |
 | [trim_start_regex()](#trim-start-regex)             | Removes leading match of the specified regular expression.                                                                 |
 | [url_decode()](#url-decode)                         | The function converts encoded URL into a regular URL representation.                                                       |
 | [url_encode()](#url-encode)                         | The function converts characters of the input URL into a format that can be transmitted over the Internet.                 |
@@ -245,7 +245,7 @@ Retrieve all substrings matching a regular expression from a source string. Opti
 | **name**      | **type**       | **description**                                                                                                                                            | **Required or Optional** |
 | ------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
 | regex         | **expression** | A regular expression containing between one and 16 capture groups. Examples of a valid regex: @"(\d+)". Examples of an invalid regex: @"\d+"                 | Required                 |
-| captureGroups | **array**      | A dynamic array constant that indicates the capture group to extract. Valid values are from 1 to the number of capturing groups in the regular expression. | optional                 |
+| captureGroups | **array**      | A dynamic array constant that indicates the capture group to extract. Valid values are from 1 to the number of capturing groups in the regular expression. | Required                 |
 | source        | **string**     | A string to search                                                                                                                                         | Required                 |
 
 ### Returns
@@ -271,6 +271,13 @@ extract_all(regex, [captureGroups,] source)
 ```kusto
 extract_all(@"(\w)(\w+)(\w)", dynamic([1,3]), content_type) == [["t", "t"],["c","v"]]
 ```
+
+```kusto
+['sample-http-logs']
+| project extract_match = extract_all(@"(\w)(\w+)(\w)", pack_array(), content_type)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20project%20extract_match%20%3D%20extract_all(%40%5C%22(%5C%5Cw)(%5C%5Cw%2B)(%5C%5Cw)%5C%22%2C%20pack_array()%2C%20content_type)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
 
 ## format_bytes()
 
@@ -1049,7 +1056,7 @@ project repeat_string = strrep( "axiom", 3, "::" )
 
 ## substring()
 
-Extracts a substring from a source string starting from some index to the end of the string.
+Extracts a substring from a source string.
 
 ### Arguments
 

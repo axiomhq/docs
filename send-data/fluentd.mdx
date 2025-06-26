@@ -10,19 +10,20 @@ isPopular: true
 popularityOrder: 12
 ---
 
-## Fluentd
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDataset from "/snippets/replace-dataset.mdx"
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 Fluentd is an open-source log collector that allows you to collect, aggregate, process, analyze, and route log files.
 
 With Fluentd, you can collect logs from multiple sources and ship it instantly into Axiom
 
+<Prerequisites />
+
 ## Installation
 
 Visit the [Fluentd download page](https://www.fluentd.org/download) to install Fluentd on your system.
-
-You'd need to specify the org-id header if you are using personal token, it’s best to use an API token to avoid the need to specify the org-id header.
-
-Learn more about [API and personal token](/reference/tokens)
 
 ## Configuration
 
@@ -49,9 +50,9 @@ The example below shows a Fluentd configuration that sends data to Axiom using t
 <match *.**>
   @type http
 
-  endpoint https://api.axiom.co/v1/datasets/$DATASET_NAME/ingest
+  endpoint https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest
   # Authorization Bearer should be an ingest token
-  headers {"Authorization": "Bearer <your-token>"}
+  headers {"Authorization": "Bearer API_TOKEN"}
   json_array false
   open_timeout 3
 
@@ -64,6 +65,11 @@ The example below shows a Fluentd configuration that sends data to Axiom using t
   </buffer>
 </match>
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ## Configuring Fluentd using the OpenSearch output plugin
 
@@ -86,9 +92,9 @@ The example below shows a Fluentd configuration that sends data to Axiom using t
   @log_level info
   include_tag_key true
   include_timestamp true
-  host "#{ENV['FLUENT_OPENSEARCH_HOST']  || 'api.axiom.co'}"
+  host "#{ENV['FLUENT_OPENSEARCH_HOST']  || 'AXIOM_DOMAIN'}"
   port "#{ENV['FLUENT_OPENSEARCH_PORT'] || '443'}"
-  path "#{ENV['FLUENT_OPENSEARCH_PATH']|| '/v1/datasets/$DATASET_NAME/elastic'}"
+  path "#{ENV['FLUENT_OPENSEARCH_PATH']|| '/v1/datasets/DATASET_NAME/elastic'}"
   scheme "#{ENV['FLUENT_OPENSEARCH_SCHEME'] || 'https'}"
   ssl_verify "#{ENV['FLUENT_OPENSEARCH_SSL_VERIFY'] || 'true'}"
   ssl_version "#{ENV['FLUENT_OPENSEARCH_SSL_VERSION'] || 'TLSv1_2'}"
@@ -97,6 +103,11 @@ The example below shows a Fluentd configuration that sends data to Axiom using t
   index_name "#{ENV['FLUENT_OPENSEARCH_INDEX_NAME'] || 'fluentd'}"
 </match>
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDataset />
+</Info>
 
 ## Configure buffer interval with filter patterns
 
@@ -145,9 +156,9 @@ The example below shows a Fluentd configuration to hold logs in memory with spec
   @log_level info
   include_tag_key true
   include_timestamp true
-  host "#{ENV['FLUENT_OPENSEARCH_HOST']  || 'api.axiom.co'}"
+  host "#{ENV['FLUENT_OPENSEARCH_HOST']  || 'AXIOM_DOMAIN'}"
   port "#{ENV['FLUENT_OPENSEARCH_PORT'] || '443'}"
-  path "#{ENV['FLUENT_OPENSEARCH_PATH']|| '/v1/datasets/$DATASET_NAME/elastic'}"
+  path "#{ENV['FLUENT_OPENSEARCH_PATH']|| '/v1/datasets/DATASET_NAME/elastic'}"
   scheme "#{ENV['FLUENT_OPENSEARCH_SCHEME'] || 'https'}"
   ssl_verify "#{ENV['FLUENT_OPENSEARCH_SSL_VERIFY'] || 'true'}"
   ssl_version "#{ENV['FLUENT_OPENSEARCH_SSL_VERSION'] || 'TLSv1_2'}"
@@ -165,6 +176,11 @@ The example below shows a Fluentd configuration to hold logs in memory with spec
   </buffer>
 </match>
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDataset />
+</Info>
 
 ## Collect and send PHP logs to Axiom
 
@@ -193,9 +209,9 @@ The example below shows a Fluentd configuration that sends PHP data to Axiom.
   @log_level info
   include_tag_key true
   include_timestamp true
-  host "#{ENV['FLUENT_OPENSEARCH_HOST']  || 'api.axiom.co'}"
+  host "#{ENV['FLUENT_OPENSEARCH_HOST']  || 'AXIOM_DOMAIN'}"
   port "#{ENV['FLUENT_OPENSEARCH_PORT'] || '443'}"
-  path "#{ENV['FLUENT_OPENSEARCH_PATH']|| '/v1/datasets/$DATASET_NAME/elastic'}"
+  path "#{ENV['FLUENT_OPENSEARCH_PATH']|| '/v1/datasets/DATASET_NAME/elastic'}"
   scheme "#{ENV['FLUENT_OPENSEARCH_SCHEME'] || 'https'}"
   ssl_verify "#{ENV['FLUENT_OPENSEARCH_SSL_VERIFY'] || 'true'}"
   ssl_version "#{ENV['FLUENT_OPENSEARCH_SSL_VERSION'] || 'TLSv1_2'}"
@@ -213,6 +229,11 @@ The example below shows a Fluentd configuration that sends PHP data to Axiom.
   </buffer>
 </match>
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDataset />
+</Info>
 
 ## Collect and send Scala logs to Axiom
 
@@ -237,7 +258,7 @@ The example below shows a Fluentd configuration that sends Scala data to Axiom
 # Send Scala logs using HTTP plugin to Axiom
 <match scala.logs>
   @type http
-  endpoint "#{ENV['FLUENT_HTTP_ENDPOINT'] || 'https://api.axiom.co/v1/datasets/$DATASET_NAME/ingest'}"
+  endpoint "#{ENV['FLUENT_HTTP_ENDPOINT'] || 'https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest'}"
   headers {"Authorization": "Bearer #{ENV['FLUENT_HTTP_TOKEN'] || '<your-token>'}"}
   <format>
     @type json
@@ -253,6 +274,11 @@ The example below shows a Fluentd configuration that sends Scala data to Axiom
   </buffer>
 </match>
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDataset />
+</Info>
 
 ## Send virtual machine logs to Axiom using the HTTP output plugin
 
@@ -284,10 +310,10 @@ The example below shows a Fluentd configuration that sends data from your virtua
   @id out_http_axiom
   @log_level info
   endpoint "#{ENV['AXIOM_URL'] || 'https://api.axiom.co'}"
-  path "/v1/datasets/${AXIOM_DATASET_NAME}/ingest"
+  path "/v1/datasets/DATASET_NAME/ingest"
   ssl_verify "#{ENV['AXIOM_SSL_VERIFY'] || 'true'}"
   <headers>
-    Authorization "Bearer ${AXIOM_API_TOKEN}"
+    Authorization "Bearer API_TOKEN"
     Content-Type "application/json"
   </headers>
   <format>
@@ -302,6 +328,10 @@ The example below shows a Fluentd configuration that sends data from your virtua
   </buffer>
 </match>
 ```
+
+<Info>
+<ReplaceDatasetToken />
+</Info>
 
 The example below shows a Fluentd configuration that sends data from your virtual machine to Axiom using the `nginx` source type.
 
@@ -331,10 +361,10 @@ The example below shows a Fluentd configuration that sends data from your virtua
   @id out_http_axiom
   @log_level info
   endpoint "#{ENV['AXIOM_URL'] || 'https://api.axiom.co'}"
-  path "/v1/datasets/${AXIOM_DATASET_NAME}/ingest"
+  path "/v1/datasets/DATASET_NAME/ingest"
   ssl_verify "#{ENV['AXIOM_SSL_VERIFY'] || 'true'}"
   <headers>
-    Authorization "Bearer ${AXIOM_API_TOKEN}"
+    Authorization "Bearer API_TOKEN"
     Content-Type "application/json"
   </headers>
   <format>
@@ -349,3 +379,7 @@ The example below shows a Fluentd configuration that sends data from your virtua
   </buffer>
 </match>
 ```
+
+<Info>
+<ReplaceDatasetToken />
+</Info>

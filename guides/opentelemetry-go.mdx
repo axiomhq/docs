@@ -2,10 +2,13 @@
 title: 'OpenTelemetry using Golang'
 description: 'This guide explains how to configure a Go app using the Go OpenTelemetry SDK to send telemetry data to Axiom.'
 overview: 'Go language with OpenTelemetry for distributed tracing'
-sidebarTitle: Golang using OTel
+sidebarTitle: Golang
 tags: ['guides', 'golang', 'go', 'otel', 'opentelemetry']
 logoId: 'openTelemetry'
 ---
+
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 OpenTelemetry offers a [single set of APIs and libraries](https://opentelemetry.io/docs/languages/go/instrumentation/) that standardize how you collect and transfer telemetry data. This guide focuses on setting up OpenTelemetry in a Go app to send traces to Axiom.
 
@@ -221,8 +224,8 @@ import (
 const (
    serviceName           = "axiom-go-otel" // Name of the service for tracing.
    serviceVersion        = "0.1.0" // Version of the service.
-   otlpEndpoint          = "api.axiom.co" // OTLP collector endpoint.
-   bearerToken           = "Bearer $API_TOKEN" // Authorization token.
+   otlpEndpoint          = "AXIOM_DOMAIN" // OTLP collector endpoint.
+   bearerToken           = "Bearer API_TOKEN" // Authorization token.
    deploymentEnvironment = "production" // Deployment environment.
 )
 
@@ -247,7 +250,7 @@ func InstallExportPipeline(ctx context.Context) (func(context.Context) error, er
        otlptracehttp.WithEndpoint(otlpEndpoint),
        otlptracehttp.WithHeaders(map[string]string{
            "Authorization":   bearerToken,
-           "X-AXIOM-DATASET": "$DATASET_NAME",
+           "X-AXIOM-DATASET": "DATASET_NAME",
        }),
        otlptracehttp.WithTLSClientConfig(&tls.Config{}),
    )
@@ -271,6 +274,11 @@ func InstallExportPipeline(ctx context.Context) (func(context.Context) error, er
    return tracerProvider.Shutdown, nil // Returns a function to shut down the tracer provider.
 }
 ```
+
+<Info>
+<ReplaceDatasetToken />
+<ReplaceDomain />
+</Info>
 
 ## Run the app
 

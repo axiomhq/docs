@@ -7,13 +7,14 @@ tags: ['guides', 'cloudflare worker', 'otel', 'opentelemetry']
 logoId: 'cloudflareWorkers'
 ---
 
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+
 This guide demonstrates how to configure OpenTelemetry in Cloudflare Workers to send telemetry data to Axiom using the [OTel CF Worker package](https://github.com/evanderkoogh/otel-cf-workers).
 
-## Prerequisites
-
-- [Create an Axiom account](https://app.axiom.co/).
-- [Create a dataset in Axiom](/reference/settings#data) where you will send your data.
-- [Create an API token in Axiom with permissions to query and ingest data](/reference/settings#access-overview).
+<Prerequisites />
+{/* list separator */}
 - Create a Cloudflare account.
 - [Install Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/), the CLI tool for Cloudflare.
 
@@ -58,7 +59,7 @@ const handler = {
 const config: ResolveConfigFn = (env: Env, _trigger) => {
   return {
     exporter: {
-      url: 'https://api.axiom.co/v1/traces',
+      url: 'https://AXIOM_DOMAIN/v1/traces',
       headers: {
         'Authorization': `Bearer ${env.AXIOM_API_TOKEN}`,
         'X-Axiom-Dataset': `${env.AXIOM_DATASET}`
@@ -70,6 +71,10 @@ const config: ResolveConfigFn = (env: Env, _trigger) => {
 
 export default instrument(handler, config);
 ```
+
+<Info>
+<ReplaceDomain />
+</Info>
 
 ## Wrangler Configuration (`wrangler.toml`)
 
@@ -86,9 +91,13 @@ main = "index.ts"
 
 # Define environment variables here
 [vars]
-AXIOM_API_TOKEN = "$API_TOKEN" # Replace $API_TOKEN with your actual Axiom API token
-AXIOM_DATASET = "$DATASET" # Replace $DATASET with your actual Axiom dataset name
+AXIOM_API_TOKEN = "API_TOKEN"
+AXIOM_DATASET = "DATASET_NAME"
 ```
+
+<Info>
+<ReplaceDatasetToken />
+</Info>
 
 ## Install Dependencies
 
@@ -250,26 +259,30 @@ Automatic instrumentation uses the **`@microlabs/otel-cf-workers`** package to a
 
 Wrap your Cloudflare Workers script with the `instrument` function from the **`@microlabs/otel-cf-workers`** package. This automatically instruments incoming requests and outbound fetch calls.
 
-```js
-import { instrument } from '@microlabs/otel-cf-workers';
+    ```js
+    import { instrument } from '@microlabs/otel-cf-workers';
 
-export default instrument(yourHandler, yourConfig);
-```
+    export default instrument(yourHandler, yourConfig);
+    ```
 
 2. Configuration: Provide configuration details, including how to export telemetry data and service metadata to Axiom as part of the `instrument` function call.
 
-```js
-const config = (env) => ({
-  exporter: {
-    url: 'https://api.axiom.co/v1/traces',
-    headers: {
-      'Authorization': `Bearer ${env.AXIOM_API_TOKEN}`,
-      'X-Axiom-Dataset': `${env.AXIOM_DATASET}`
-    },
-  },
-  service: { name: 'axiom-cloudflare-workers' },
-});
-```
+    ```js
+    const config = (env) => ({
+      exporter: {
+        url: 'https://AXIOM_DOMAIN/v1/traces',
+        headers: {
+          'Authorization': `Bearer ${env.AXIOM_API_TOKEN}`,
+          'X-Axiom-Dataset': `${env.AXIOM_DATASET}`
+        },
+      },
+      service: { name: 'axiom-cloudflare-workers' },
+    });
+    ```
+
+    <Info>
+    <ReplaceDomain />
+    </Info>
 
 After instrumenting your Worker script, the `@microlabs/otel-cf-workers` package takes care of tracing automatically.
 
