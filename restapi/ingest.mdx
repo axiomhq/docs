@@ -1,65 +1,53 @@
 ---
-title: "Send data via Axiom API"
-description: "Learn how to send and load data into Axiom using the API."
+title: "Send data to Axiom via API"
+description: "This page explains how to send to Axiom using the API."
 sidebarTitle: Send data
 tags: ['axiom documentation', 'documentation', 'axiom', 'axiom api', 'rest api', 'rest', 'authorization', 'headers', 'send data', 'ingesting', 'json', 'arrays', 'nested arrays', 'objects', 'strings', 'csv', 'response']
 ---
 
-This API allows you to send and load data into Axiom. You can use different methods to ingest logs depending on your requirements and log format.
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 
-## Authorization and headers
+The Axiom REST API accepts the following data formats:
 
-The only expected header is `Authorization: Bearer` which is your to token to authenticate the request. For more information, see [Tokens](/reference/tokens).
+- [JSON](#send-data-in-json-format)
+- [NDJSON](#send-data-in-ndjson-format)
+- [CSV](#send-data-in-csv-format)
 
-## Using Axiom JS library to ingest data
+This page explains how to send data to Axiom via cURL commands in each of these formats, and how to send data with the [Axiom Node.js library](#send-data-with-axiom-node-js).
 
-Axiom maintains the [axiom-js](https://github.com/axiomhq/axiom-js) to provide official Javascript bindings for the Axiom API.
+For more information on other ingest options, see [Send data](send-data/ingest).
 
-Install using `npm install`:
+For an introduction to the basics of the Axiom API and to the authentication options, see [Introduction to Axiom API](/restapi/introduction).
 
-```shell
-npm install @axiomhq/js
-```
+The API requests on this page use the ingest data endpoint. For more information, see the [API reference](/restapi/endpoints/ingestIntoDataset).
 
-If you use the [Axiom CLI](https://github.com/axiomhq/cli), run `eval $(axiom config export -f)` to configure your environment variables.
+<Prerequisites />
 
-Otherwise, create an [API token](/reference/tokens) and export it as `AXIOM_TOKEN`.
+## Send data in JSON format
 
-You can also configure the client using options passed to the constructor of the Client:
+To send data to Axiom in JSON format:
+1. Encode the events as JSON objects.
+1. Enter the array of JSON objects into the body of the API request.
+1. Optional: In the body of the request, set optional parameters such as `timestamp-field` and `timestamp-format`. For more information, see the [ingest data API reference](/restapi/endpoints/ingestIntoDataset).
+1. Set the `Content-Type` header to `application/json`.
+1. Set the `Authorization` header to `Bearer API_TOKEN`.
+1. Send the POST request to `https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest`.
 
-```ts
-const client = new Client({
-    token: process.env.AXIOM_TOKEN
-});
-```
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
-Create and use a client like this:
+### Example with grouped events
 
-```ts
-import { Axiom } from '@axiomhq/js';
+The following example request contains grouped events. The structure of the JSON payload has the scheme of `[ { "labels": { "key1": "value1", "key2": "value2" } }, ]` where the array contains one or more JSON objects describing events.
 
-
-async function main() {
-    const axiom = new Axiom({
-        token: process.env.AXIOM_TOKEN
-    });
-
-    await axiom.ingest('my-dataset', [{ foo: 'bar' }]);
-
-    const res = await axiom.query(`['my-dataset'] | where foo == 'bar' | limit 100`);
-}
-```
-
-These examples send an API event to Axiom. Before getting started with Axiom API, you need to create a [Dataset](/reference/datasets) and [API Token](/reference/tokens).
-
-## Ingest Events using JSON
-
-The following example request contains grouped events. The structure of the `JSON` payload should have the scheme of `[ { "labels": { "key1": "value1", "key2": "value12" } }, ]`, in which the array comprises of one or more JSON objects describing Events.
-
-### Example Request using JSON
+**Example request**
 
 ```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_name}/ingest' \
+curl -X 'POST' 'https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest' \
   -H 'Authorization: Bearer API_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '[
@@ -74,9 +62,12 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_name}/ingest' \
       ]'
 ```
 
-### Example Response
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
-A successful POST Request returns a `200` response code JSON with details:
+**Example response**
 
 ```json
 {
@@ -85,144 +76,200 @@ A successful POST Request returns a `200` response code JSON with details:
     "failures": [],
     "processedBytes": 219,
     "blocksCreated": 0,
-    "walLength": 8
+    "walLength": 2
 }
 ```
 
-### Example Request using Nested Arrays
+### Example with nested arrays
+
+**Example request**
 
 ```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_name}/ingest' \
-  -H 'Authorization: Bearer API_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '[
-        {
-        "axiom": [{
-            "logging":[{
-                "observability":[{
-                    "location":[{
-                        "credentials":[{
-                            "datasets":[{
-                                "first_name":"axiom",
-                                "last_name":"logging",
-                                "location":"global"
+curl -X 'POST' 'https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest' \
+    -H 'Authorization: Bearer API_TOKEN' \
+    -H 'Content-Type: application/json' \
+    -d '[
+            {
+            "axiom": [{
+                "logging":[{
+                    "observability":[{
+                        "location":[{
+                            "credentials":[{
+                                "datasets":[{
+                                    "first_name":"axiom",
+                                    "last_name":"logging",
+                                    "location":"global"
+                                }],
+                                "work":[{
+                                    "details":"https://app.axiom.co/",
+                                    "tutorials":"https://www.axiom.co/blog",
+                                    "changelog":"https://www.axiom.co/changelog",
+                                    "documentation": "https://www.axiom.co/docs"
+                                }]
                             }],
-                            "work":[{
-                                "details":"https://app.axiom.co/",
-                                "tutorials":"https://www.axiom.co/blog",
-                                "changelog":"https://www.axiom.co/changelog",
-                                "documentation": "https://www.axiom.co/docs"
-                            }]
-                        }],
-                        "social_media":[{
-                            "details":[{
-                                "twitter":"https://twitter.com/AxiomFM",
-                                "linkedin":"https://linkedin.com/company/axiomhq",
-                                "github":"https://github.com/axiomhq"
-                            }],
-                            "features":[{
-                                "datasets":"view logs",
-                                "stream":"live_tail",
-                                "explorer":"queries"
+                            "social_media":[{
+                                "details":[{
+                                    "twitter":"https://twitter.com/AxiomFM",
+                                    "linkedin":"https://linkedin.com/company/axiomhq",
+                                    "github":"https://github.com/axiomhq"
+                                }],
+                                "features":[{
+                                    "datasets":"view logs",
+                                    "stream":"live_tail",
+                                    "explorer":"queries"
+                                }]
                             }]
                         }]
+                    }],
+                    "logs":[{
+                        "apl": "functions"
                     }]
                 }],
-                "logs":[{
-                    "apl": "functions"
-                }]
-            }],
-            "storage":[{}]
-        }]}
-      ]'
+                "storage":[{}]
+            }]}
+        ]'
 ```
 
-### Example Response
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
-A successful POST Request returns a `200` response code JSON with details:
+**Example response**
 
 ```json
 {
-  "ingested":1,
-  "failed":0,
-  "failures":[],
-  "processedBytes":1509,
-  "blocksCreated":0,
-  "walLength":6
+    "ingested":1,
+    "failed":0,
+    "failures":[],
+    "processedBytes":1587,
+    "blocksCreated":0,
+    "walLength":3
 }
 ```
 
-### Example Request using Objects, Strings, and Arrays
+### Example with objects, strings, and arrays
+
+**Example request**
 
 ```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_name}/ingest' \
-  -H 'Authorization: Bearer API_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '[{ "axiom": {
-    "logging": {
-        "observability": [
-            { "apl": 23, "function": "tostring" },
-            { "apl": 24, "operator": "summarize" }
-        ],
-        "axiom": [
-            { "stream": "livetail", "datasets": [4, 0, 16], "logging": "observability", "metrics": 8, "dashboard": 10, "alerting": "kubernetes" }
-        ]
-    },
-    "apl": {
-        "reference":
-            [[80, 12], [30, 40]]
+curl -X 'POST' 'https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest' \
+    -H 'Authorization: Bearer API_TOKEN' \
+    -H 'Content-Type: application/json' \
+    -d '[{ "axiom": {
+        "logging": {
+            "observability": [
+                { "apl": 23, "function": "tostring" },
+                { "apl": 24, "operator": "summarize" }
+            ],
+            "axiom": [
+                { "stream": "livetail", "datasets": [4, 0, 16], "logging": "observability", "metrics": 8, "dashboard": 10, "alerting": "kubernetes" }
+            ]
+        },
+        "apl": {
+            "reference":
+                [[80, 12], [30, 40]]
+        }
     }
-  }
-}]'
+    }]'
 ```
 
-### Example Response
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
-A successful POST Request returns a `200` response code JSON with details:
+**Example response**
 
 ```json
 {
-  "ingested":1,
-  "failed":0,
-  "failures":[],
-  "processedBytes":432,
-  "blocksCreated":0,
-  "walLength":7
+    "ingested":1,
+    "failed":0,
+    "failures":[],
+    "processedBytes":432,
+    "blocksCreated":0,
+    "walLength":4
 }
 ```
 
-### Example Response
+## Send data in NDJSON format
 
-A successful POST Request returns a `200` response code JSON with details:
+To send data to Axiom in NDJSON format:
+1. Encode the events as JSON objects.
+1. Enter each JSON object in a separate line into the body of the API request.
+1. Optional: In the body of the request, set optional parameters such as `timestamp-field` and `timestamp-format`. For more information, see the [ingest data API reference](/restapi/endpoints/ingestIntoDataset).
+1. Set the `Content-Type` header to either `application/json` or `application/x-ndjson`.
+1. Set the `Authorization` header to `Bearer API_TOKEN`. Replace `API_TOKEN` with the Axiom API token you have generated. 
+1. Send the POST request to `https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest`. Replace `DATASET_NAME` with the name of the Axiom dataset where you want to send data.
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+**Example request**
+
+```bash
+curl -X 'POST' 'https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest' \
+    -H 'Authorization: Bearer API_TOKEN' \
+    -H 'Content-Type: application/x-ndjson' \
+    -d '{"id":1,"name":"machala"}
+        {"id":2,"name":"axiom"}
+        {"id":3,"name":"apl"}
+        {"index": {"_index": "products"}}
+        {"timestamp": "2016-06-06T12:00:00+02:00", "attributes": {"key1": "value1","key2": "value2"}}
+        {"queryString": "count()"}'
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+**Example response**
 
 ```json
 {
     "ingested": 6,
     "failed": 0,
     "failures": [],
-    "processedBytes": 236,
+    "processedBytes": 266,
     "blocksCreated": 0,
     "walLength": 6
 }
 ```
 
-## Ingest Events using CSV
+## Send data in CSV format
 
-The following example request contains events. The structure of the `CSV` payload uses a comma to separate values `'value1, value2, value3'`.
+To send data to Axiom in JSON format:
+1. Encode the events in CSV format. The first line specifies the field names separated by commas. Subsequent new lines specify the values separated by commas.
+1. Enter the CSV representation in the body of the API request.
+1. Optional: In the body of the request, set optional parameters such as `timestamp-field` and `timestamp-format`. For more information, see the [ingest data API reference](/restapi/endpoints/ingestIntoDataset).
+1. Set the `Content-Type` header to `text/csv`.
+1. Set the `Authorization` header to `Bearer API_TOKEN`. Replace `API_TOKEN` with the Axiom API token you have generated. 
+1. Send the POST request to `https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest`. Replace `DATASET_NAME` with the name of the Axiom dataset where you want to send data.
 
-### Example Request using CSV
+<Info>
+<ReplaceDatasetToken />
+<ReplaceDomain />
+</Info>
+
+**Example request**
 
 ```bash
-curl -X 'POST' 'https://api.axiom.co/v1/datasets/{dataset_name}/ingest' \
-      -H 'Authorization: Bearer API_TOKEN' \
-      -H 'Content-Type: text/csv' \
-      -d 'user, name
-         foo, bar'
+curl -X 'POST' 'https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest' \
+    -H 'Authorization: Bearer API_TOKEN' \
+    -H 'Content-Type: text/csv' \
+    -d 'user, name
+        foo, bar'
 ```
 
-### Example Response
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
-A successful POST Request returns a 200 response code JSON with details:
+**Example response**
 
 ```json
 {
@@ -235,4 +282,24 @@ A successful POST Request returns a 200 response code JSON with details:
 }
 ```
 
-Datasets names are usually case sensitive, Dataset names must be between 1-128 characters, and may only contain ASCII alphanumeric characters and the '-' character.
+## Send data with Axiom Node.js
+
+1. [Install and configure](/guides/javascript#use-axiomhq-js) the Axiom Node.js library.
+1. Encode the events as JSON objects.
+1. Pass the dataset name and the array of JSON objects to the `axiom.ingest` function.
+
+    ```ts
+    axiom.ingest('DATASET_NAME', [{ foo: 'bar' }]);
+    await axiom.flush();
+    ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+For more information on other libraries you can use to query data, see [Send data](send-data/ingest).
+
+## What’s next
+
+After ingesting data to Axiom, you can [query it via API](/restapi/query) or the [Axiom app UI](/query-data/explore).

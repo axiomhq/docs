@@ -7,15 +7,14 @@ tags: ['guides', 'laravel', 'php']
 logoId: 'laravel'
 ---
 
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
 import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 This guide explains integrating Axiom as a logging solution in a Laravel app. Using Axiom’s capabilities with a custom log channel, you can efficiently send your app’s logs to Axiom for storage, analysis, and monitoring. This integration uses Monolog, Laravel’s underlying logging library, to create a custom logging handler that forwards logs to Axiom.
 
-## Prerequisites
-
-- [Create an Axiom account](https://app.axiom.co/).
-- [Create a dataset in Axiom](/reference/settings#data) where you will send your data.
-- [Create an API token in Axiom with permissions to query and ingest data](/reference/settings#access-overview).
+<Prerequisites />
+{/* list separator */}
 - PHP development [environment](https://www.php.net/manual/en/install.php)
 - [Composer](https://laravel.com/docs/11.x/installation) installed on your system
 - Laravel app setup
@@ -134,11 +133,15 @@ The `default` configuration specifies the primary channel Laravel uses for loggi
 LOG_CHANNEL=axiom
 AXIOM_API_TOKEN=API_TOKEN
 AXIOM_DATASET=DATASET_NAME
+AXIOM_URL=AXIOM_DOMAIN
 LOG_LEVEL=debug
 LOG_DEPRECATIONS_CHANNEL=null
 ```
 
+<Info>
 <ReplaceDatasetToken />
+<ReplaceDomain />
+</Info>
 
 ### Deprecations log channel
 
@@ -170,6 +173,7 @@ The heart of the `logging.php` file lies within the **`channels`** array where y
             'with' => [
                 'apiToken' => env('AXIOM_API_TOKEN'),
                 'dataset' => env('AXIOM_DATASET'),
+                'axiomUrl' => env('AXIOM_URL'),
             ],
         ],
 ```
@@ -251,11 +255,12 @@ class AxiomHandler extends AbstractProcessingHandler
         parent::__construct($level, $bubble);
         $this->apiToken = $apiToken;
         $this->dataset = $dataset;
+        $this->axiomUrl = $axiomUrl;
     }
 
     private function initializeCurl(): \CurlHandle
     {
-        $endpoint = "https://api.axiom.co/v1/datasets/{$this->dataset}/ingest";
+        $endpoint = "https://{$this->axiomUrl}/v1/datasets/{$this->dataset}/ingest";
         $ch = curl_init($endpoint);
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

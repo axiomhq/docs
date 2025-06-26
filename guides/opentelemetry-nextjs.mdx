@@ -2,7 +2,7 @@
 title: 'OpenTelemetry using Next.js'
 description: 'This guide demonstrates how to configure OpenTelemetry in a Next.js app to send telemetry data to Axiom.'
 overview: 'Next.js with OpenTelemetry for full-stack tracing'
-sidebarTitle: Next.js using OTel
+sidebarTitle: Next.js
 tags: ['guides', 'nextjs', 'opentelemetry', 'otel']
 logoId: 'openTelemetry'
 ---
@@ -45,7 +45,7 @@ export function register() {
     spanProcessors: [
       new SimpleSpanProcessor(
         new OTLPTraceExporter({
-          url: 'https://api.axiom.co/v1/traces',
+          url: `https://${process.env.AXIOM_DOMAIN}/v1/traces`,
           headers: {
             Authorization: `Bearer ${process.env.API_TOKEN}`,
             'X-Axiom-Dataset': `${process.env.DATASET_NAME}`,
@@ -57,11 +57,12 @@ export function register() {
 }
 ```
 
-Add the `API_TOKEN` and `DATASET_NAME` environment variables to your `.env` file. For example:
+Add the `API_TOKEN`, `DATASET_NAME`, and `AXIOM_DOMAIN` environment variables to your `.env` file. For example:
 
 ```bash
 API_TOKEN=xaat-123
 DATASET_NAME=my-dataset
+AXIOM_DOMAIN=api.axiom.co
 ```
 
 ### Initial setup without @vercel/otel
@@ -88,7 +89,7 @@ export function register() {
     }),
     spanProcessor: new SimpleSpanProcessor(
       new OTLPTraceExporter({
-        url: 'https://api.axiom.co/v1/traces',
+        url: `https://${process.env.AXIOM_DOMAIN}/v1/traces`,
         headers: {
           Authorization: `Bearer ${process.env.API_TOKEN}`,
           'X-Axiom-Dataset': process.env.DATASET_NAME,
@@ -290,7 +291,7 @@ export function register() {
     resource: new Resource({ [SEM_RESOURCE_ATTRIBUTES.SERVICE_NAME]: 'nextjs-app' }),
     spanProcessor: new BatchSpanProcessor(
       new OTLPTraceExporter({
-        url: 'https://api.axiom.co/v1/traces',
+        url: `https://${process.env.AXIOM_DOMAIN}/v1/traces`,
         headers: {
           Authorization: `Bearer ${process.env.API_TOKEN}`,
           'X-Axiom-Dataset': `${process.env.DATASET_NAME}`,
