@@ -9,7 +9,7 @@ import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
 
 Map fields are a special type of field that can hold a collection of nested key-value pairs within a single field. You can think of the content of a map field as a JSON object.
 
-Axiom automatically creates map fields in datasets that use [OpenTelemetry](/send-data/opentelemetry) and you can create them yourself.
+Axiom automatically creates map fields in datasets that use [OpenTelemetry](/send-data/opentelemetry) and you can create map fields yourself in any dataset.
 
 ## Benefits and drawbacks of map fields
 
@@ -39,19 +39,6 @@ The example query below uses the `http.protocol` property inside the `attributes
 ```
 
 [Run in playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7b%22apl%22%3a%22%5b%27otel-demo-traces%27%5d%5cn%7c%20where%20%5b%27attributes.custom%27%5d%5b%27http.protocol%27%5d%20%3d%3d%20%27HTTP%2f1.1%27%22%2c%22queryOptions%22%3a%7b%22quickRange%22%3a%2230d%22%7d%7d)
-
-## Access properties of nested maps
-
-To access the properties of nested maps, use dot notation, index notation, or a mix of the two. If you use index notation for an entity, enclose the entity name in quotation marks (`'` or `"`) and square brackets (`[]`). For example:
-- `where map_field.property1.property2 == 14`
-- `where ['map_field'].property1.property2 == 14`
-- `where ['map_field']['property1']['property2'] == 14`
-
-If an entity name has spaces (` `), dots (`.`), or dashes (`-`), you can only use index notation for that entity. You can use dot notation for the other entities. For example:
-- `where ['map.field']['property.name1']['property.name2'] == 14`
-- `where ['map.field'].property1.property2 == 14`
-
-For more information, see [Entity names](/apl/entities/entity-names#quote-identifiers).
 
 ## Create map fields using UI
 
@@ -93,3 +80,65 @@ To view map fields:
 - **MAPPED** means that the field was previously an ordinary field but at some point its parent was changed to a map field. Axiom adds new events to the field as an attribute of the parent map field. Events you ingested before the change retain the ordinary structure.
 - **UNUSED** means that the field is configured as a map field but you haven’t yet ingested data into it. Once ingested, data within this field won’t count toward your field limit.
 - **REMOVED** means that the field was configured as a map field but at some point it was changed to an ordinary field. Axiom adds new events to the field as usual. Events you ingested before the change retain the map structure. To fully remove this field, first [trim your dataset](/reference/datasets#trim-dataset) to remove the time period when map data was ingested, and then [vacuum the fields](/reference/datasets#vacuum-fields).
+
+## Access properties of nested maps
+
+To access the properties of nested maps, use index notation, dot notation, or a mix of the two. If you use index notation for an entity, enclose the entity name in quotation marks (`'` or `"`) and square brackets (`[]`). For example:
+- `where ['map_field']['property1']['property2'] == 14`
+- `where map_field.property1.property2 == 14`
+- `where ['map_field'].property1.property2 == 14`
+
+If an entity name has spaces (` `), dots (`.`), or dashes (`-`), you can only use index notation for that entity. You can use dot notation for the other entities. For example:
+- `where ['map.field']['property.name1']['property.name2'] == 14`
+- `where ['map.field'].property1.property2 == 14`
+
+<Note>
+In OTel traces, custom attributes are located in the `attributes.custom` map field. You can access them as `['attributes.custom']['header.Accept']`, for example. In this case, you don’t access the `Accept` field nested within the `header` field. What actually happens is that you access the field named `header.Accept` within the `attributes.custom` map field.
+</Note>
+
+For more information on quoting field names, see [Entity names](/apl/entities/entity-names#quote-identifiers).
+
+## Map fields and flattened fields
+
+Within a dataset, the same fields can exist as flattened fields and as subfields of a map field.
+
+For example, consider the following:
+
+1. `geo` is initially not a map field.
+1. You ingest the following:
+
+    ```json
+    {
+      "geo": {
+        "city": "Paris",
+        "country": "France"
+      }
+    }
+    ```
+
+    This adds two flattened fields to the dataset that you can access as `['geo.city']` or `['geo.country']`.
+
+1. You change `geo` to a map field through the UI or the API.
+1. You ingest the following:
+
+    ```json
+    {
+      "geo": {
+        "city": "Paris",
+        "country": "France"
+      }
+    }
+    ```
+
+    You use the same ingest JSON as before, but this adds the new subfields to the `geo` parent map field. You can access the subfields as `['geo']['city']` and `['geo']['country']`.
+
+Axiom treats the flattened fields (`['geo.city']` and `['geo.country']`) and the subfields of the map field (`['geo']['city']` and `['geo']['country']`) as separate fields and doesn’t maintain a relationship between them.
+
+<Note>
+Queries using `['geo.city']` access a field literally named `geo.city`, while `['geo']['city']` accesses the `city` key inside a `geo` map. These references are not equivalent.
+</Note>
+
+To avoid confusion:
+
+- Choose either a flattened or map-based structure when designing your schema.
+- Be explicit in queries about which fields to include or exclude.
