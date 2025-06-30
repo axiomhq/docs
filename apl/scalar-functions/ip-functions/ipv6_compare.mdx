@@ -1,0 +1,160 @@
+---
+title: ipv6_compare
+description: 'This page explains how to use the ipv6_compare function in APL.'
+---
+
+Use the `ipv6_compare` function to compare two IPv6 addresses and determine their relative order. This function helps you evaluate whether one address is less than, equal to, or greater than another. It returns `-1`, `0`, or `1` accordingly.
+
+You can use `ipv6_compare` in scenarios where IPv6 addresses are relevant, such as sorting traffic logs, grouping metrics by address ranges, or identifying duplicate or misordered entries. It’s especially useful in network observability and security use cases where working with IPv6 is common.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL does not have a built-in function for directly comparing IPv6 addresses. Users often work around this limitation by converting the addresses into a comparable numeric format using external scripts or custom commands.
+
+<CodeGroup>
+```sql Splunk example
+| eval ip1 = "2001:db8::1", ip2 = "2001:db8::2"
+| eval comparison = if(ip1 == ip2, 0, if(ip1 < ip2, -1, 1))
+````
+
+```kusto APL equivalent
+print comparison = ipv6_compare('2001:db8::1', '2001:db8::2')
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not natively support IPv6 comparisons. Typically, users must store IPv6 addresses as strings or binary values and write custom logic to compare them.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE
+  WHEN ip1 = ip2 THEN 0
+  WHEN ip1 < ip2 THEN -1
+  ELSE 1
+END AS comparison
+FROM my_table
+```
+
+```kusto APL equivalent
+print comparison = ipv6_compare('2001:db8::1', '2001:db8::2')
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+ipv6_compare(ipv6_1, ipv6_2)
+```
+
+### Parameters
+
+| Name     | Type   | Description                         |
+| -------- | ------ | ----------------------------------- |
+| `ipv6_1` | string | The first IPv6 address to compare.  |
+| `ipv6_2` | string | The second IPv6 address to compare. |
+
+### Returns
+
+An integer that represents the result of the comparison:
+
+* `-1` if `ipv6_1` is less than `ipv6_2`
+* `0` if `ipv6_1` is equal to `ipv6_2`
+* `1` if `ipv6_1` is greater than `ipv6_2`
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `ipv6_compare` to identify whether requests from certain IPv6 addresses fall into specific ranges or appear out of expected order.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend comparison = ipv6_compare('2001:db8::1', '2001:db8::abcd')
+| project _time, uri, method, status, comparison
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend comparison = ipv6\_compare('2001\:db8::1', '2001\:db8::abcd') %7C project \_time, uri, method, status, comparison%22%7D)
+
+**Output**
+
+| \_time               | uri         | method | status | comparison |
+| -------------------- | ----------- | ------ | ------ | ---------- |
+| 2025-06-29T22:10:00Z | /products/1 | GET    | 200    | -1         |
+
+This example compares two static IPv6 addresses and attaches the result to each row for further filtering or grouping.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `ipv6_compare` when your telemetry pipeline tracks source IPs and you want to compare or group spans based on those addresses.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend source_ip = '2001:db8::2', baseline_ip = '2001:db8::1'
+| extend ip_order = ipv6_compare(source_ip, baseline_ip)
+| project _time, trace_id, span_id, ['service.name'], ip_order
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) %7C extend source\_ip = '2001\:db8::2', baseline\_ip = '2001\:db8::1' %7C extend ip\_order = ipv6\_compare(source\_ip, baseline\_ip) %7C project \_time, trace\_id, span\_id, %5B%27service.name%27%5D, ip\_order%22%7D)
+
+**Output**
+
+| \_time               | trace\_id | span\_id | \['service.name'] | ip\_order |
+| -------------------- | --------- | -------- | ----------------- | --------- |
+| 2025-06-29T22:20:00Z | abc123    | def456   | frontend          | 1         |
+
+This query checks whether the span’s IP is greater than a known reference, allowing you to monitor shifts in traffic routing.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `ipv6_compare` to flag access from unexpected IP address ranges or monitor changes in traffic patterns.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '401'
+| extend is_suspicious = ipv6_compare('2001:db8::dead', '2001:db8::1') == 1
+| project _time, id, uri, status, is_suspicious
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C where status == '401' %7C extend is\_suspicious = ipv6\_compare('2001\:db8::dead', '2001\:db8::1') == 1 %7C project \_time, id, uri, status, is\_suspicious%22%7D)
+
+**Output**
+
+| \_time               | id     | uri    | status | is\_suspicious |
+| -------------------- | ------ | ------ | ------ | -------------- |
+| 2025-06-29T22:45:00Z | user42 | /login | 401    | true           |
+
+This query identifies whether unauthorized requests come from higher-than-expected IPv6 ranges.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [ipv6\_is\_match](/apl/ip-functions/ipv6_is_match): Checks if an IPv6 address matches a given subnet. Use it for range filtering instead of sorting or comparison.
+* [ipv6\_is\_private](/apl/ip-functions/ipv6_is_private): Determines whether an IPv6 address is in a private range. Use this to filter non-public traffic.
+* [ipv6\_parse](/apl/ip-functions/ipv6_parse): Converts a string to a structured IPv6 representation. Use it before other operations that require normalized input.
+* [ipv6\_extract\_segment](/apl/ip-functions/ipv6_extract_segment): Extracts a specific segment of an IPv6 address. Use this when grouping or filtering by address parts.
+* [ipv4\_compare](/apl/ip-functions/ipv4_compare): Works the same way as `ipv6_compare` but for IPv4 addresses. Use it when your data contains IPv4 instead of IPv6.

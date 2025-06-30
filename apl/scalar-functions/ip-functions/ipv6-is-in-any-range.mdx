@@ -1,0 +1,158 @@
+---
+title: ipv6_is_in_any_range
+description: 'This page explains how to use the ipv6_is_in_any_range function in APL.'
+---
+
+Use the `ipv6_is_in_any_range` function to determine whether a given IPv6 address belongs to any of a specified set of IPv6 CIDR ranges. This function is particularly useful in log enrichment, threat detection, and network analysis tasks that involve validating or filtering IP addresses against allowlists or blocklists.
+
+You can use this function to:
+- Detect whether traffic originates from known internal or external networks.
+- Match IPv6 addresses against predefined address ranges for compliance or security auditing.
+- Filter datasets based on whether requesters fall into allowed or disallowed IP zones.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk doesn’t offer a built-in function that directly checks if an IP falls within a list of CIDR ranges. Typically, SPL users must write custom logic using `cidrmatch()` repeatedly or rely on lookup tables.
+
+<CodeGroup>
+```sql Splunk example
+| eval is_internal = if(cidrmatch("2001:db8::/32", ip), "true", "false")
+````
+
+```kusto APL equivalent
+ipv6_is_in_any_range('2001:db8::1', dynamic(['2001:db8::/32']))
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t natively support IPv6-aware CIDR range checks. Such functionality usually requires user-defined functions or external extensions.
+
+<CodeGroup>
+```sql SQL example
+-- Typically handled via stored procedures or UDFs in extended SQL environments
+SELECT ip, is_in_range(ip, '2001:db8::/32') FROM traffic_logs
+```
+
+```kusto APL equivalent
+ipv6_is_in_any_range('2001:db8::1', dynamic(['2001:db8::/32']))
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+ipv6_is_in_any_range(ipv6_address, ipv6_ranges)
+```
+
+### Parameters
+
+| Name           | Type            | Description                                               |
+| -------------- | --------------- | --------------------------------------------------------- |
+| `ipv6_address` | `string`        | An IPv6 address in standard format (e.g., `2001:db8::1`). |
+| `ipv6_ranges`  | `dynamic array` | A JSON array of IPv6 CIDR strings to compare against.     |
+
+### Returns
+
+A `bool` value:
+
+* `true` if the given IPv6 address is within any of the provided CIDR ranges.
+* `false` otherwise.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You want to detect HTTP requests from a specific internal IPv6 block within a dataset.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where ipv6_is_in_any_range(id, dynamic(['2001:db8::/32', 'fd00::/8']))
+| project _time, id, uri, method, status
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | where ipv6\_is\_in\_any\_range(id%2C dynamic%28%5B%272001%3Adb8%3A%3A%2F32%27%2C%20%27fd00%3A%3A%2F8%27%5D%29) | project \_time%2C id%2C uri%2C method%2C status%22%7D)
+
+**Output**
+
+| \_time               | id              | uri          | method | status |
+| -------------------- | --------------- | ------------ | ------ | ------ |
+| 2025-06-30T01:00:00Z | 2001\:db8::1234 | /api/login   | POST   | 200    |
+| 2025-06-30T01:01:00Z | fd00::abcd      | /healthcheck | GET    | 204    |
+
+This query filters HTTP logs to only show requests coming from IPv6 addresses in specific internal ranges.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You want to identify spans from frontend services that originated from specific IPv6 ranges.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ipv6_is_in_any_range(trace_id, dynamic(['2001:db8::/32']))
+| where ['service.name'] == 'frontend'
+| project _time, span_id, trace_id, duration, ['service.name']
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) | where ipv6\_is\_in\_any\_range(trace\_id%2C dynamic%28%5B%272001%3Adb8%3A%3A%2F32%27%5D%29) | where %5B%27service.name%27%5D == 'frontend' | project \_time%2C span\_id%2C trace\_id%2C duration%2C %5B%27service.name%27%5D%22%7D)
+
+**Output**
+
+| \_time               | span\_id | trace\_id    | duration | service.name |
+| -------------------- | -------- | ------------ | -------- | ------------ |
+| 2025-06-30T00:45:00Z | abc123   | 2001\:db8::1 | 120ms    | frontend     |
+
+This query helps identify frontend trace data that originated from a defined IPv6 range.
+
+</Tab>
+<Tab title="Security logs">
+
+You want to monitor unauthorized IPv6 traffic from blocked ranges.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where ipv6_is_in_any_range(id, dynamic(['::ffff:0:0/96', 'fc00::/7']))
+| where status == '403'
+| project _time, id, uri, method, status
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | where ipv6\_is\_in\_any\_range(id%2C dynamic%28%5B%27%3A%3Affff%3A0%3A0%2F96%27%2C%20%27fc00%3A%3A%2F7%27%5D%29) | where status == '403' | project \_time%2C id%2C uri%2C method%2C status%22%7D)
+
+**Output**
+
+| \_time               | id              | uri          | method | status |
+| -------------------- | --------------- | ------------ | ------ | ------ |
+| 2025-06-30T03:12:00Z | ::ffff:10.0.0.1 | /admin/panel | GET    | 403    |
+
+This query identifies blocked access attempts originating from IPv6 ranges typically associated with internal or translated addresses.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [ipv4\_is\_in\_any\_range](/apl/ip-functions/ipv4_is_in_any_range): Use this function when working with IPv4 addresses instead of IPv6.
+* [parse\_ipv6](/apl/ip-functions/parse_ipv6): Converts a string to an IPv6 object. Use this when you need to normalize or validate IPv6 addresses before comparison.
+* [ipv6\_compare](/apl/ip-functions/ipv6_compare): Compares two IPv6 addresses. Use this for sorting or deduplication rather than range matching.
+* [ipv6\_extract\_segments](/apl/ip-functions/ipv6_extract_segments): Extracts individual segments of an IPv6 address. Use this for detailed address analysis or reporting.
+* [ipv6\_is\_match](/apl/ip-functions/ipv6_is_match): Checks whether an IPv6 address matches a specific range. Use this if you need to test against a single CIDR block.

@@ -1,0 +1,180 @@
+---
+title: format_ipv4_mask
+description: 'This page explains how to use the format_ipv4_mask function in APL.'
+---
+
+Use the `format_ipv4_mask` function to convert an IPv4 network prefix length (also known as CIDR notation) into its corresponding subnet mask in dotted decimal format. This function is helpful when you need to normalize or display IP-related data in a more readable or standardized format, especially when analyzing logs, network traffic, or security events.
+
+For example, `format_ipv4_mask(24)` returns `'255.255.255.0'`.
+
+You can use this function when:
+
+- Translating CIDR ranges from logs into subnet masks for readability.
+- Correlating prefix lengths with firewall or access control policies.
+- Transforming telemetry or observability data that includes prefix lengths.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL does not provide a native function to convert prefix lengths into IPv4 subnet masks. You typically write custom lookup tables or evaluation expressions. In contrast, APL provides a built-in `format_ipv4_mask` function that simplifies this operation.
+
+<CodeGroup>
+```sql Splunk example
+| eval subnet_mask=case(
+    cidr==8, "255.0.0.0",
+    cidr==16, "255.255.0.0",
+    cidr==24, "255.255.255.0",
+    cidr==32, "255.255.255.255"
+)
+````
+
+```kusto APL equivalent
+datatable(cidr:int)
+[
+  8,
+  16,
+  24,
+  32
+]
+| extend subnet_mask = format_ipv4_mask(cidr)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not include a built-in function to convert CIDR prefix lengths into dotted decimal subnet masks. You typically write user-defined functions (UDFs) or use external logic. APL simplifies this with the native `format_ipv4_mask` function.
+
+<CodeGroup>
+```sql SQL example
+-- Pseudocode with a case statement or a UDF
+SELECT cidr,
+       CASE cidr
+         WHEN 24 THEN '255.255.255.0'
+         WHEN 16 THEN '255.255.0.0'
+         ELSE 'unknown'
+       END AS subnet_mask
+FROM ip_ranges;
+```
+
+```kusto APL equivalent
+datatable(cidr:int)
+[
+  16,
+  24
+]
+| extend subnet_mask = format_ipv4_mask(cidr)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+format_ipv4_mask(prefixLength)
+```
+
+### Parameters
+
+| Name           | Type  | Description                                                                        |
+| -------------- | ----- | ---------------------------------------------------------------------------------- |
+| `prefixLength` | `int` | The number of bits used in the network prefix. Must be between 0 and 32 inclusive. |
+
+### Returns
+
+A `string` representing the dotted decimal subnet mask corresponding to the given prefix length.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You want to convert CIDR notations from HTTP logs into human-readable subnet masks for diagnostics or reporting.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend prefixLength = 24
+| extend subnet_mask = format_ipv4_mask(prefixLength)
+| project _time, uri, method, status, subnet_mask
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C extend prefixLength = 24 %7C extend subnet\_mask = format\_ipv4\_mask(prefixLength) %7C project \_time, uri, method, status, subnet\_mask%22%7D)
+
+**Output**
+
+| \_time               | uri       | method | status | subnet\_mask  |
+| -------------------- | --------- | ------ | ------ | ------------- |
+| 2025-06-30T10:01:12Z | /api/user | GET    | 200    | 255.255.255.0 |
+
+This query assigns a static `/24` prefix length and uses `format_ipv4_mask` to convert it to a dotted decimal mask for easier understanding during log reviews.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You want to normalize CIDR fields that indicate the internal network segment where a trace originated.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend prefixLength = 16
+| extend subnet_mask = format_ipv4_mask(prefixLength)
+| project _time, ['service.name'], kind, status_code, subnet_mask
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D) %7C extend prefixLength = 16 %7C extend subnet\_mask = format\_ipv4\_mask(prefixLength) %7C project \_time, \['service.name'], kind, status\_code, subnet\_mask%22%7D)
+
+**Output**
+
+| \_time               | \['service.name'] | kind   | status\_code | subnet\_mask |
+| -------------------- | ----------------- | ------ | ------------ | ------------ |
+| 2025-06-30T09:58:00Z | frontend          | server | 200          | 255.255.0.0  |
+
+This query interprets a prefix length from tracing metadata, allowing engineers to better understand internal routing and infrastructure zones.
+
+</Tab>
+<Tab title="Security logs">
+
+You want to classify request sources based on subnet masks to match firewall rules during a security audit.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend prefixLength = 32
+| extend subnet_mask = format_ipv4_mask(prefixLength)
+| project _time, id, status, ['geo.country'], subnet_mask
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C extend prefixLength = 32 %7C extend subnet\_mask = format\_ipv4\_mask(prefixLength) %7C project \_time, id, status, \['geo.country'], subnet\_mask%22%7D)
+
+**Output**
+
+| \_time               | id      | status | \['geo.country'] | subnet\_mask    |
+| -------------------- | ------- | ------ | ---------------- | --------------- |
+| 2025-06-30T11:20:05Z | user-97 | 403    | US               | 255.255.255.255 |
+
+This query shows how to translate a `/32` CIDR prefix (single host) into a subnet mask, helping you validate strict allow/deny rules during a security investigation.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [format\_ipv4()](/apl/string-functions/format_ipv4): Converts a 32-bit unsigned integer to an IPv4 address string. Use it when your input is a raw numeric IP instead of a prefix length.
+* [parse\_ipv4()](/apl/string-functions/parse_ipv4): Parses an IPv4 string into a numeric representation. Use it when you want to do arithmetic or masking on IP addresses.
+* [ipv4\_is\_in\_range()](/apl/ip-functions/ipv4_is_in_range): Checks whether an IPv4 address falls within a given range. Use it when you need to filter or classify IPs against subnets.
+* [ipv4\_subnet()](/apl/ip-functions/ipv4_subnet): Returns the network portion of an IP address given a prefix length. Use it when you want to group traffic or logs by subnet.
+* [format\_ipv6\_mask()](/apl/ip-functions/format_ipv6_mask): Similar to `format_ipv4_mask`, but for IPv6. Use it when handling IPv6 network data.
