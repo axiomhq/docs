@@ -66,90 +66,25 @@ format_ipv4_mask(ip [, prefix])
 
 A string representing the IPv4 address in CIDR notation if the conversion succeeds. If the conversion fails, the function returns an empty string.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
-
-Use `format_ipv4_mask` to group requests by subnet and analyze access patterns by network range.
+## Example
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
 | extend subnet = format_ipv4_mask('192.168.1.54', 24)
-| summarize count() by subnet
+| project _time, subnet
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend subnet %3D format_ipv4_mask('192.168.1.54'%2C 24) %7C summarize count() by subnet%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20subnet%20%3D%20format_ipv4_mask('192.168.1.54'%2C%2024)%20%7C%20project%20_time%2C%20subnet%22%7D)
 
 **Output**
 
-| subnet         | count |
+| _time         | subnet |
 | -------------- | ----- |
-| 192.168.1.0/24 | 125   |
-
-This query formats a sample IP into CIDR form and aggregates HTTP request counts by subnet.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `format_ipv4_mask` to tag service spans with subnet identifiers, especially for identifying internal versus external traffic ranges.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend client_ip = '10.0.14.52'
-| extend client_subnet = format_ipv4_mask(client_ip, 16)
-| summarize count() by client_subnet, ['service.name']
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) %7C extend client_ip %3D '10.0.14.52' %7C extend client_subnet %3D format_ipv4_mask(client_ip%2C 16) %7C summarize count() by client_subnet%2C %5B%27service.name%27%5D%22%7D)
-
-**Output**
-
-| client_subnet | service.name          | count |
-| -------------- | --------------------- | ----- |
-| 10.0.0.0/16    | productcatalogservice | 40    |
-
-This query creates a client subnet tag from an IP and summarizes trace spans per subnet and service.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `format_ipv4_mask` to detect unusual request volumes from specific subnets, helping identify possible coordinated attacks or misconfigured clients.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend source_ip = '172.16.5.4'
-| extend subnet = format_ipv4_mask(source_ip, 20)
-| summarize count() by subnet, status
-| where count_ > 100
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend source_ip %3D '172.16.5.4' %7C extend subnet %3D format_ipv4_mask(source_ip%2C 20) %7C summarize count() by subnet%2C status %7C where count_ > 100%22%7D)
-
-**Output**
-
-| subnet        | status | count |
-| ------------- | ------ | ----- |
-| 172.16.0.0/20 | 403    | 230   |
-
-This query identifies subnets generating large volumes of forbidden requests.
-
-</Tab>
-</Tabs>
+| 1Jun 30, 11:11:46 | 192.168.1.0/24   |
 
 ## List of related functions
-
-- [parse_ipv4](/apl/network-functions/parse_ipv4): Converts a string representation of an IPv4 address into its numeric form. Use it when you need to perform bitwise operations or comparisons.
-- [ipv4_is_match](/apl/network-functions/ipv4_is_match): Checks if an IPv4 address matches a specific CIDR subnet. Use it for filtering IPs within subnets.
-- [format_ipv4](/apl/network-functions/format_ipv4): Converts a numeric IPv4 address into its string format. Use it when formatting addresses without applying a mask.
-- [extract_ipv4](/apl/network-functions/extract_ipv4): Extracts IPv4 addresses from a string. Useful when working with unstructured text fields.
-- [ipv4_compare](/apl/network-functions/ipv4_compare): Compares two IPv4 addresses. Use it to determine ordering or equality between IPs.
 
 - [format_ipv4](/apl/scalar-functions/ip-functions/format-ipv4): Converts a 32-bit unsigned integer to an IPv4 address string. Use it when your input is a raw numeric IP instead of a prefix length.
 - [parse_ipv4](/apl/scalar-functions/ip-functions/parse-ipv4): Parses an IPv4 string into a numeric representation. Use it when you want to do arithmetic or masking on IP addresses.
