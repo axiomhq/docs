@@ -65,35 +65,7 @@ A `bool` value:
 - `true` if the IPv6 address is within the specified CIDR range.
 - `false` otherwise.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
-
-Use this function to determine if incoming HTTP requests originate from a known IPv6 subnet.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend inRange = ipv6_is_in_range(id, '2001:db8::/32')
-| where inRange
-| project _time, id, uri, method, geo.country
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend inRange %3D ipv6_is_in_range(id%2C '2001%3Adb8%3A%3A%2F32') %7C where inRange %7C project _time%2C id%2C uri%2C method%2C geo.country%22%7D)
-
-**Output**
-
-| _time               | id                   | uri           | method | geo.country |
-| -------------------- | -------------------- | ------------- | ------ | ----------- |
-| 2025-06-28T14:52:01Z | 2001:db8::1a2b:3c4d | /api/products | GET    | US          |
-| 2025-06-28T14:53:45Z | 2001:db8::9a8b:7c6d | /api/cart     | POST   | US          |
-
-This example filters HTTP logs to show only those with IPv6 addresses in the `2001:db8::/32` CIDR block.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
+## Example
 
 Use this function to isolate internal service calls originating from a designated IPv6 block.
 
@@ -101,49 +73,18 @@ Use this function to isolate internal service calls originating from a designate
 
 ```kusto
 ['otel-demo-traces']
-| extend inRange = ipv6_is_in_range(trace_id, 'fd00::/8')
-| where inRange
-| project _time, trace_id, span_id, ['service.name'], duration
+| extend inRange = ipv6_is_in_range('fd00::a1b2', 'fd00::/8')
+| project _time, span_id, ['service.name'], duration, inRange
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) %7C extend inRange %3D ipv6_is_in_range(trace_id%2C 'fd00%3A%3A%2F8') %7C where inRange %7C project _time%2C trace_id%2C span_id%2C %5B%27service.name%27%5D%2C duration%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20inRange%20%3D%20ipv6_is_in_range('fd00%3A%3Aa1b2'%2C%20'fd00%3A%3A%2F8')%20%7C%20project%20_time%2C%20span_id%2C%20%5B'service.name'%5D%2C%20duration%2C%20inRange%22%7D)
 
 **Output**
 
-| _time               | trace_id  | span_id | ['service.name'] | duration   |
-| -------------------- | ---------- | -------- | ----------------- | ---------- |
-| 2025-06-28T11:20:00Z | fd00::a1b2 | span-124 | frontend          | 00:00:02.4 |
-| 2025-06-28T11:21:03Z | fd00::bbcc | span-209 | cartservice       | 00:00:01.1 |
-
-This example checks whether traces originated from internal addresses in the `fd00::/8` range, often reserved for local communications.
-
-</Tab>
-<Tab title="Security logs">
-
-Use this function to detect potentially malicious access attempts from suspicious IPv6 ranges.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend isMalicious = ipv6_is_in_range(id, '2001:dead:beef::/48')
-| where isMalicious
-| summarize count() by uri, method
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C extend isMalicious %3D ipv6_is_in_range(id%2C '2001%3Adead%3Abeef%3A%3A%2F48') %7C where isMalicious %7C summarize count()%20by%20uri%2C%20method%22%7D)
-
-**Output**
-
-| uri              | method | count_ |
-| ---------------- | ------ | ------- |
-| /admin/login     | POST   | 7       |
-| /api/user/delete | DELETE | 3       |
-
-This example flags suspicious requests from a known problematic IPv6 CIDR range and summarizes their frequency by endpoint.
-
-</Tab>
-</Tabs>
+| _time               | span_id | ['service.name'] | duration   | inRange |
+| -------------------- | -------- | ----------------- | ---------- | ---------- |
+| 2025-06-28T11:20:00Z | span-124 | frontend          | 00:00:02.4 | true |
+| 2025-06-28T11:21:03Z | span-209 | cartservice       | 00:00:01.1 | true |
 
 ## List of related functions
 

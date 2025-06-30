@@ -74,85 +74,26 @@ A boolean value:
 - `true` if the `ipv6_address` belongs to the specified `ipv6_subnet`.
 - `false` otherwise.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Filter requests that originate from a known IPv6 subnet.
+Identify requests that originate from a known IPv6 subnet.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend is_internal = ipv6_is_match(id, '2001:db8::/32')
-| where is_internal
-| project _time, id, uri, method, status
+| extend isInternal = ipv6_is_match('2001:db8:abcd::1', '2001:db8::/32')
+| project _time, uri, method, status, isInternal
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C extend is_internal%20%3D%20ipv6_is_match(id%2C%20'2001%3Adb8%3A%3A%2F32') %7C where is_internal %7C project _time%2C id%2C uri%2C method%2C status%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20isInternal%20%3D%20ipv6_is_match('2001%3Adb8%3Aabcd%3A%3A1'%2C%20'2001%3Adb8%3A%3A%2F32')%20%7C%20project%20_time%2C%20uri%2C%20method%2C%20status%2C%20isInternal%22%7D)
 
 **Output**
 
-| _time               | id                 | uri         | method | status |
+| _time               | uri         | method | status | isInternal
 | -------------------- | ------------------ | ----------- | ------ | ------ |
-| 2025-06-28T13:04:10Z | 2001:db8:abcd::1 | /health     | GET    | 200    |
-| 2025-06-28T13:05:22Z | 2001:db8:beef::2 | /api/orders | POST   | 201    |
-
-This query identifies log entries where the request ID is an IPv6 address within the `2001:db8::/32` range.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Isolate span activity from a simulated IPv6-enabled service mesh.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend is_mesh = ipv6_is_match(span_id, '2001:db8:ac10::/40')
-| where is_mesh
-| project _time, span_id, trace_id, ['service.name'], kind, status_code
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D) %7C extend is_mesh%20%3D%20ipv6_is_match(span_id%2C%20'2001%3Adb8%3Aac10%3A%3A%2F40') %7C where is_mesh %7C project _time%2C span_id%2C trace_id%2C%20%5B'service.name'%5D%2C kind%2C status_code%22%7D)
-
-**Output**
-
-| _time               | span_id              | trace_id | service.name    | kind   | status_code |
-| -------------------- | --------------------- | --------- | --------------- | ------ | ------------ |
-| 2025-06-28T14:10:44Z | 2001:db8:ac10::beef | abc123efg | frontend        | server | OK           |
-| 2025-06-28T14:11:22Z | 2001:db8:ac10::dead | xyz456hij | checkoutservice | client | OK           |
-
-This query selects spans whose `span_id` resembles IPv6 addresses in a specific subnet, simulating trace analysis from a mesh network layer.
-
-</Tab>
-<Tab title="Security logs">
-
-Detect suspicious traffic patterns originating from a specific IPv6 subnet.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend is_suspicious = ipv6_is_match(id, 'fd00:1337::/48')
-| where is_suspicious
-| summarize count() by uri, status, ['geo.country']
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C extend is_suspicious%20%3D%20ipv6_is_match(id%2C%20'fd00%3A1337%3A%3A%2F48') %7C where is_suspicious %7C summarize count()%20by%20uri%2C%20status%2C%20%5B'geo.country'%5D%22%7D)
-
-**Output**
-
-| uri             | status | geo.country | count |
-| --------------- | ------ | ----------- | ----- |
-| /admin/login    | 401    | ZZ          | 22    |
-| /api/deleteUser | 403    | ZZ          | 12    |
-
-This query identifies requests coming from the `fd00:1337::/48` subnet and aggregates by URI and status code, highlighting suspicious endpoints and access attempts.
-
-</Tab>
-</Tabs>
+| 2025-06-28T13:04:10Z | /health     | GET    | 200    | true |
+| 2025-06-28T13:05:22Z | /api/orders | POST   | 201    | true |
 
 ## List of related functions
 

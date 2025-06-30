@@ -72,82 +72,27 @@ A `bool` value:
 - `true` if the given IPv6 address is within any of the provided CIDR ranges.
 - `false` otherwise.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-You want to detect HTTP requests from a specific internal IPv6 block within a dataset.
+You want to detect HTTP requests from a specific internal IPv6 block.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| where ipv6_is_in_any_range(id, dynamic(['2001:db8::/32', 'fd00::/8']))
-| project _time, id, uri, method, status
+| extend inRange = ipv6_is_in_any_range('2001:db8::1234', dynamic(['2001:db8::/32', 'fd00::/8']))
+| project _time, uri, method, status, inRange
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | where ipv6_is_in_any_range(id%2C dynamic%28%5B%272001%3Adb8%3A%3A%2F32%27%2C%20%27fd00%3A%3A%2F8%27%5D%29) | project _time%2C id%2C uri%2C method%2C status%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20inRange%20%3D%20ipv6_is_in_any_range('2001%3Adb8%3A%3A1234'%2C%20dynamic(%5B'2001%3Adb8%3A%3A%2F32'%2C%20'fd00%3A%3A%2F8'%5D))%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20method%2C%20status%2C%20inRange%22%7D)
 
 **Output**
 
-| _time               | id              | uri          | method | status |
-| -------------------- | --------------- | ------------ | ------ | ------ |
-| 2025-06-30T01:00:00Z | 2001:db8::1234 | /api/login   | POST   | 200    |
-| 2025-06-30T01:01:00Z | fd00::abcd      | /healthcheck | GET    | 204    |
+| _time               | uri          | method | status | inRange
+| -------------------- | ------------ | ------ | ------ | --- |
+| 2025-06-30T01:00:00Z | /api/login   | POST   | 200    | true |
+| 2025-06-30T01:01:00Z | /healthcheck | GET    | 204    | true |
 
-This query filters HTTP logs to only show requests coming from IPv6 addresses in specific internal ranges.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-You want to identify spans from frontend services that originated from specific IPv6 ranges.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ipv6_is_in_any_range(trace_id, dynamic(['2001:db8::/32']))
-| where ['service.name'] == 'frontend'
-| project _time, span_id, trace_id, duration, ['service.name']
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) | where ipv6_is_in_any_range(trace_id%2C dynamic%28%5B%272001%3Adb8%3A%3A%2F32%27%5D%29) | where %5B%27service.name%27%5D == 'frontend' | project _time%2C span_id%2C trace_id%2C duration%2C %5B%27service.name%27%5D%22%7D)
-
-**Output**
-
-| _time               | span_id | trace_id    | duration | service.name |
-| -------------------- | -------- | ------------ | -------- | ------------ |
-| 2025-06-30T00:45:00Z | abc123   | 2001:db8::1 | 120ms    | frontend     |
-
-This query helps identify frontend trace data that originated from a defined IPv6 range.
-
-</Tab>
-<Tab title="Security logs">
-
-You want to monitor unauthorized IPv6 traffic from blocked ranges.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where ipv6_is_in_any_range(id, dynamic(['::ffff:0:0/96', 'fc00::/7']))
-| where status == '403'
-| project _time, id, uri, method, status
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | where ipv6_is_in_any_range(id%2C dynamic%28%5B%27%3A%3Affff%3A0%3A0%2F96%27%2C%20%27fc00%3A%3A%2F7%27%5D%29) | where status == '403' | project _time%2C id%2C uri%2C method%2C status%22%7D)
-
-**Output**
-
-| _time               | id              | uri          | method | status |
-| -------------------- | --------------- | ------------ | ------ | ------ |
-| 2025-06-30T03:12:00Z | ::ffff:10.0.0.1 | /admin/panel | GET    | 403    |
-
-This query identifies blocked access attempts originating from IPv6 ranges typically associated with internal or translated addresses.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 
