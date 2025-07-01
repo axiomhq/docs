@@ -1,0 +1,157 @@
+---
+title: array_sort_desc
+description: 'This page explains how to use the array_sort_desc function in APL.'
+---
+
+Use the `array_sort_desc` function in APL to sort the elements of an array in descending order. This function is especially useful when working with numerical data or categorical data where you want to prioritize higher values first—such as showing the longest durations, highest response times, or most severe error codes at the top of an array.
+
+You can use `array_sort_desc` in scenarios where ordering matters within grouped aggregations, such as collecting response times per user or span durations per trace, and then sorting them to identify the highest or most impactful values.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk does not have a direct equivalent to `array_sort_desc`, but similar outcomes can be achieved using `mvsort` with a custom sort order (and sometimes `reverse`). In APL, `array_sort_desc` explicitly performs a descending sort on array elements, making it more straightforward.
+
+<CodeGroup>
+```sql Splunk example
+... | stats list(duration) as durations by id
+... | eval durations=reverse(mvsort(durations))
+````
+
+```kusto APL equivalent
+['otel-demo-traces']
+| summarize durations=make_list(duration) by trace_id
+| extend durations=array_sort_desc(durations)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not support arrays or array functions natively. You typically use window functions or subqueries to order values. In APL, you can work with arrays directly and apply `array_sort_desc` to sort them.
+
+<CodeGroup>
+```sql SQL example
+SELECT trace_id, ARRAY_AGG(duration ORDER BY duration DESC) AS durations
+FROM traces
+GROUP BY trace_id;
+```
+
+```kusto APL equivalent
+['otel-demo-traces']
+| summarize durations=make_list(duration) by trace_id
+| extend durations=array_sort_desc(durations)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+array_sort_desc(array)
+```
+
+### Parameters
+
+| Name  | Type  | Required | Description                                           |
+| ----- | ----- | -------- | ----------------------------------------------------- |
+| array | array | ✔️       | The input array whose elements are sorted descending. |
+
+### Returns
+
+If the input is a valid array, the function returns a new array with its elements sorted in descending order. If the array is empty or contains incompatible types, it returns an empty array.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use this function to identify the slowest request durations per user from HTTP logs.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize durations=make_list(req_duration_ms) by id
+| extend top_durations=array_sort_desc(durations)
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C summarize durations%3Dmake\_list(req\_duration\_ms) by id %7C extend top\_durations%3Darray\_sort\_desc(durations)%22%7D)
+
+**Output**
+
+| id     | durations           | top\_durations      |
+| ------ | ------------------- | ------------------- |
+| user-1 | \[104, 87, 129, 46] | \[129, 104, 87, 46] |
+| user-2 | \[80, 120, 98]      | \[120, 98, 80]      |
+
+The query collects request durations per user and then sorts them so the longest durations appear first.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use this function to sort span durations per trace to find the slowest spans.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| summarize durations=make_list(duration) by trace_id
+| extend sorted_durations=array_sort_desc(durations)
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D) %7C summarize durations%3Dmake\_list(duration) by trace\_id %7C extend sorted\_durations%3Darray\_sort\_desc(durations)%22%7D)
+
+**Output**
+
+| trace\_id | durations                  | sorted\_durations          |
+| --------- | -------------------------- | -------------------------- |
+| abcd1234  | \[120ms, 80ms, 300ms]      | \[300ms, 120ms, 80ms]      |
+| efgh5678  | \[60ms, 45ms, 100ms, 30ms] | \[100ms, 60ms, 45ms, 30ms] |
+
+The query organizes span durations from highest to lowest for each trace to help detect performance bottlenecks.
+
+</Tab>
+<Tab title="Security logs">
+
+Use this function to sort the status codes associated with user activity to identify abnormal patterns (e.g. many 500 errors).
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize status_codes=make_list(tolong(status)) by id
+| extend sorted_status=array_sort_desc(status_codes)
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C summarize status\_codes%3Dmake\_list(tolong(status)) by id %7C extend sorted\_status%3Darray\_sort\_desc(status\_codes)%22%7D)
+
+**Output**
+
+| id     | status\_codes         | sorted\_status        |
+| ------ | --------------------- | --------------------- |
+| user-1 | \[200, 403, 500]      | \[500, 403, 200]      |
+| user-2 | \[404, 200, 404, 401] | \[404, 404, 401, 200] |
+
+The query helps investigate accounts generating frequent errors or suspicious patterns based on HTTP status codes.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [array\_sort\_asc](/apl/array-functions/array_sort_asc): Sorts an array in ascending order. Use this when you want to prioritize smaller values first.
+* [make\_list](/apl/aggregation-functions/make_list): Aggregates values into an array. Use it to create arrays before applying `array_sort_desc`.
+* [array\_length](/apl/array-functions/array_length): Returns the number of elements in an array. Useful for measuring the size of arrays before or after sorting.
+* [array\_slice](/apl/array-functions/array_slice): Extracts a range of elements from an array. Use it after sorting to get the top N or bottom N values.
+* [array\_index\_of](/apl/array-functions/array_index_of): Returns the index of a value in an array. Useful after sorting to locate specific elements.

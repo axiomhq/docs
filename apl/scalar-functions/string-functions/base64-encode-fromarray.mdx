@@ -1,0 +1,162 @@
+---
+title: base64_encode_fromarray
+description: 'This page explains how to use the base64_encode_fromarray function in APL.'
+---
+
+Use the `base64_encode_fromarray` function to convert a sequence of bytes into a Base64-encoded string. This function is useful when you need to transform binary data into a textual representation for safe storage, logging, or transmission—especially over protocols that require plain-text formats.
+
+You can apply this function when working with IP addresses, file contents, or any byte array that needs to be encoded for use in logs or APIs. It accepts a byte array and returns the Base64-encoded string representation of that array.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk doesn’t provide a native function to directly encode an array of bytes into Base64 in SPL. You would typically write a custom script using an external command or use `eval` with a helper function in an app context.
+
+<CodeGroup>
+```sql Splunk example
+| eval encoded=custom_base64_encode(byte_array_field)
+````
+
+```kusto APL equivalent
+datatable(bytes: dynamic)
+[
+  dynamic([192, 168, 1, 1])
+]
+| extend encoded = base64_encode_fromarray(bytes)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t define a built-in standard for Base64 encoding from an array of bytes. This is usually handled via vendor-specific functions (e.g., `TO_BASE64()` in MySQL, or `encode()` in PostgreSQL).
+
+<CodeGroup>
+```sql SQL example
+SELECT TO_BASE64(BINARY 'data') AS encoded;
+```
+
+```kusto APL equivalent
+datatable(bytes: dynamic)
+[
+  dynamic([192, 168, 1, 1])
+]
+| extend encoded = base64_encode_fromarray(bytes)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+base64_encode_fromarray(array)
+```
+
+### Parameters
+
+| Name  | Type    | Required | Description                                                             |
+| ----- | ------- | -------- | ----------------------------------------------------------------------- |
+| array | dynamic | ✔️       | A dynamic array of integers between 0 and 255 representing byte values. |
+
+### Returns
+
+If successful, returns a string representing the Base64-encoded version of the input byte array. If the input is not a valid array of bytes, the result is an empty string.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use this function to encode request metadata for logging or comparison with external systems that require Base64-encoded fields.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend ip_bytes = dynamic([192, 168, 0, 1])
+| extend encoded_ip = base64_encode_fromarray(ip_bytes)
+| project _time, id, method, uri, encoded_ip
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | extend ip\_bytes = dynamic(\[192, 168, 0, 1]) | extend encoded\_ip = base64\_encode\_fromarray(ip\_bytes) | project \_time, id, method, uri, encoded\_ip%22%7D)
+
+**Output**
+
+| \_time               | id      | method | uri       | encoded\_ip |
+| -------------------- | ------- | ------ | --------- | ----------- |
+| 2025-06-25T08:00:00Z | user123 | GET    | /api/data | wKgA        |
+
+Encodes a hardcoded byte representation of an IP address into Base64 for easy string-based comparison or logging.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Encode trace identifiers or service-specific byte arrays into Base64 for downstream ingestion or correlation.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend trace_id_bytes = extract_all(@'..', trace_id)
+| extend trace_id_array = range(0, strlen(trace_id)-1) 
+                           | extend val = toint(strcat('0x', substring(trace_id, index*2, 2))) 
+                           | summarize make_list(val)
+| extend encoded_trace_id = base64_encode_fromarray(trace_id_array)
+| project _time, trace_id, ['service.name'], encoded_trace_id
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) | extend trace\_id\_bytes = extract\_all(@%27..%27, trace\_id) | extend trace\_id\_array = range(0, strlen(trace\_id)-1) | extend val = toint(strcat(%270x%27, substring(trace\_id, index\*2, 2))) | summarize make\_list(val) | extend encoded\_trace\_id = base64\_encode\_fromarray(trace\_id\_array) | project \_time, trace\_id, \['service.name'], encoded\_trace\_id%22%7D)
+
+**Output**
+
+| \_time               | trace\_id                        | \['service.name'] | encoded\_trace\_id       |
+| -------------------- | -------------------------------- | ----------------- | ------------------------ |
+| 2025-06-25T08:00:00Z | f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6 | checkoutservice   | 8aKyxNXm96i5wNHi86S1xg== |
+
+Transforms a trace ID into a Base64-encoded string to support interop with telemetry pipelines or identifiers stored in external formats.
+
+</Tab>
+<Tab title="Security logs">
+
+Encode sensitive session IDs or IP addresses before storing them in logs or comparing across systems that use Base64 formats.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend session_bytes = dynamic([10, 20, 30, 40])
+| extend session_token = base64_encode_fromarray(session_bytes)
+| where status == '403'
+| project _time, id, uri, session_token
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | extend session\_bytes = dynamic(\[10, 20, 30, 40]) | extend session\_token = base64\_encode\_fromarray(session\_bytes) | where status == %27403%27 | project \_time, id, uri, session\_token%22%7D)
+
+**Output**
+
+| \_time               | id      | uri          | session\_token |
+| -------------------- | ------- | ------------ | -------------- |
+| 2025-06-25T09:12:00Z | user456 | /admin/panel | ChQeKA==       |
+
+Encodes a mock session ID into Base64 format before logging it, helping to anonymize sensitive information while preserving structure.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [base64\_decode\_tobytes](/apl/string-functions/base64_decode_tobytes): Converts a Base64-encoded string back into a byte array. Use this when decoding data received from external sources.
+* [format\_ipv4\_mask](/apl/ip-functions/format_ipv4_mask): Formats a raw IPv4 address with an optional prefix into CIDR notation. Use when dealing with IP-to-string transformations.
+* [tostring](/apl/type-functions/tostring): Converts a dynamic value into a string. Use it for general-purpose conversions, but not for Base64 encoding.
+* [parse\_ipv4](/apl/ip-functions/parse_ipv4): Parses a string representation of an IP address into its numeric form. Use this before encoding or masking IP addresses.
+* [array\_concat](/apl/array-functions/array_concat): Concatenates arrays of bytes or values. Use this when building byte arrays for Base64 encoding.
