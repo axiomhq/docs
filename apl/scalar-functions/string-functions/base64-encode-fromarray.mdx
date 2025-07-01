@@ -88,11 +88,11 @@ Use this function to encode request metadata for logging or comparison with exte
 | project _time, id, method, uri, encoded_ip
 ```
 
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | extend ip\_bytes = dynamic(\[192, 168, 0, 1]) | extend encoded\_ip = base64\_encode\_fromarray(ip\_bytes) | project \_time, id, method, uri, encoded\_ip%22%7D)
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | extend ip_bytes = dynamic([192, 168, 0, 1]) | extend encoded_ip = base64_encode_fromarray(ip_bytes) | project _time, id, method, uri, encoded_ip%22%7D)
 
 **Output**
 
-| \_time               | id      | method | uri       | encoded\_ip |
+| _time               | id      | method | uri       | encoded_ip |
 | -------------------- | ------- | ------ | --------- | ----------- |
 | 2025-06-25T08:00:00Z | user123 | GET    | /api/data | wKgA        |
 
@@ -115,11 +115,11 @@ Encode trace identifiers or service-specific byte arrays into Base64 for downstr
 | project _time, trace_id, ['service.name'], encoded_trace_id
 ```
 
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) | extend trace\_id\_bytes = extract\_all(@%27..%27, trace\_id) | extend trace\_id\_array = range(0, strlen(trace\_id)-1) | extend val = toint(strcat(%270x%27, substring(trace\_id, index\*2, 2))) | summarize make\_list(val) | extend encoded\_trace\_id = base64\_encode\_fromarray(trace\_id\_array) | project \_time, trace\_id, \['service.name'], encoded\_trace\_id%22%7D)
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) | extend trace_id_bytes = extract_all(@%27..%27, trace_id) | extend trace_id_array = range(0, strlen(trace_id)-1) | extend val = toint(strcat(%270x%27, substring(trace_id, index*2, 2))) | summarize make_list(val) | extend encoded_trace_id = base64_encode_fromarray(trace_id_array) | project _time, trace_id, ['service.name'], encoded_trace_id%22%7D)
 
 **Output**
 
-| \_time               | trace\_id                        | \['service.name'] | encoded\_trace\_id       |
+| _time               | trace_id                        | ['service.name'] | encoded_trace_id       |
 | -------------------- | -------------------------------- | ----------------- | ------------------------ |
 | 2025-06-25T08:00:00Z | f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6 | checkoutservice   | 8aKyxNXm96i5wNHi86S1xg== |
 
@@ -140,11 +140,11 @@ Encode sensitive session IDs or IP addresses before storing them in logs or comp
 | project _time, id, uri, session_token
 ```
 
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | extend session\_bytes = dynamic(\[10, 20, 30, 40]) | extend session\_token = base64\_encode\_fromarray(session\_bytes) | where status == %27403%27 | project \_time, id, uri, session\_token%22%7D)
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | extend session_bytes = dynamic([10, 20, 30, 40]) | extend session_token = base64_encode_fromarray(session_bytes) | where status == %27403%27 | project _time, id, uri, session_token%22%7D)
 
 **Output**
 
-| \_time               | id      | uri          | session\_token |
+| _time               | id      | uri          | session_token |
 | -------------------- | ------- | ------------ | -------------- |
 | 2025-06-25T09:12:00Z | user456 | /admin/panel | ChQeKA==       |
 
@@ -155,8 +155,8 @@ Encodes a mock session ID into Base64 format before logging it, helping to anony
 
 ## List of related functions
 
-* [base64\_decode\_tobytes](/apl/string-functions/base64_decode_tobytes): Converts a Base64-encoded string back into a byte array. Use this when decoding data received from external sources.
-* [format\_ipv4\_mask](/apl/ip-functions/format_ipv4_mask): Formats a raw IPv4 address with an optional prefix into CIDR notation. Use when dealing with IP-to-string transformations.
+* [base64_decode_tobytes](/apl/string-functions/base64_decode_tobytes): Converts a Base64-encoded string back into a byte array. Use this when decoding data received from external sources.
+* [format_ipv4_mask](/apl/ip-functions/format_ipv4_mask): Formats a raw IPv4 address with an optional prefix into CIDR notation. Use when dealing with IP-to-string transformations.
 * [tostring](/apl/type-functions/tostring): Converts a dynamic value into a string. Use it for general-purpose conversions, but not for Base64 encoding.
-* [parse\_ipv4](/apl/ip-functions/parse_ipv4): Parses a string representation of an IP address into its numeric form. Use this before encoding or masking IP addresses.
-* [array\_concat](/apl/array-functions/array_concat): Concatenates arrays of bytes or values. Use this when building byte arrays for Base64 encoding.
+* [parse_ipv4](/apl/ip-functions/parse_ipv4): Parses a string representation of an IP address into its numeric form. Use this before encoding or masking IP addresses.
+* [array_concat](/apl/array-functions/array_concat): Concatenates arrays of bytes or values. Use this when building byte arrays for Base64 encoding.
