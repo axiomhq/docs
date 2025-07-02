@@ -19,7 +19,7 @@ If you want to contribute but don’t know where to start, browse the open issue
 ## Guidelines for authors
 
 - In your contributions, comply with the [Google style guide](https://developers.google.com/style). Use Vale to check your contribution for stylistic consistency.
-- Before starting work on an issue, search the repo for open or closed pull requests (PRs) that relate to your submission to avoid duplicate effort. 
+- Before starting work on an issue, search the repo for open or closed pull requests (PRs) that relate to your submission to avoid duplicate effort.
 - Associate each PR with a specific Issue. If an issue doesn’t exist, create it first.
 - Only create a PR if you intend to merge it soon. If your work isn’t ready for review, keep it as a branch.
 - When you create a PR, add a descriptive title that starts with an action verb (add, update, fix, etc.). Reference all supporting material in the description to make the reviewer’s task easier.
