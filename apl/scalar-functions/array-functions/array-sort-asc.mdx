@@ -70,81 +70,30 @@ array_sort_asc(array)
 
 A new array that contains the same elements as the input array, sorted in ascending order. If the input is not an array, the function returns an empty array.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
-
-Sort request durations in ascending order to analyze latency distributions.
+## Example
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| where isnotempty(req_duration_ms)
-| summarize durations = make_list(req_duration_ms)
-| extend sorted_durations = array_sort_asc(durations)
+| project sort = array_sort_asc(dynamic(['x', 'a', 'm', 'o', 'i']))
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C where isnotempty(req_duration_ms) %7C summarize durations = make_list(req_duration_ms) %7C extend sorted_durations = array_sort_asc(durations)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20project%20sort%20%3D%20array_sort_asc(dynamic(%5B'x'%2C%20'a'%2C%20'm'%2C%20'o'%2C%20'i'%5D))%22%7D)
 
 **Output**
 
-| durations        | sorted_durations |
-| ---------------- | ----------------- |
-| [200, 120, 350] | [120, 200, 350]  |
-
-The query collects request durations and returns a sorted version of the list to help with percentile or latency threshold analysis.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Sort span durations to observe timing patterns within a trace group.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where isnotempty(duration)
-| summarize durations = make_list(toint(duration)) by ['service.name']
-| extend sorted_durations = array_sort_asc(durations)
+```json
+[
+  [
+    "a",
+    "i",
+    "m",
+    "o",
+    "x"
+  ]
+]
 ```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) %7C where isnotempty(duration) %7C summarize durations = make_list(toint(duration)) by %5B%27service.name%27%5D %7C extend sorted_durations = array_sort_asc(durations)%22%7D)
-
-**Output**
-
-| service.name | durations           | sorted_durations   |
-| ------------ | ------------------- | ------------------- |
-| frontend     | [3100, 1200, 5600] | [1200, 3100, 5600] |
-
-The query shows how span durations for each service are sorted to better analyze processing time distributions.
-
-</Tab>
-<Tab title="Security logs">
-
-Sort HTTP status codes to detect frequency or anomalies in ordered responses.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize status_codes = make_list(tolong(status)) by id
-| extend sorted_status_codes = array_sort_asc(status_codes)
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) %7C summarize status_codes = make_list(tolong(status)) by id %7C extend sorted_status_codes = array_sort_asc(status_codes)%22%7D)
-
-**Output**
-
-| id      | status_codes    | sorted_status_codes |
-| ------- | ---------------- | --------------------- |
-| user123 | [500, 200, 404] | [200, 404, 500]      |
-
-This query helps security analysts quickly review the HTTP status patterns encountered by each user.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

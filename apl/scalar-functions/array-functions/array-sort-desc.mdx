@@ -71,82 +71,30 @@ array_sort_desc(array)
 
 If the input is a valid array, the function returns a new array with its elements sorted in descending order. If the array is empty or contains incompatible types, it returns an empty array.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
-
-Use this function to identify the slowest request durations per user from HTTP logs.
+## Example
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize durations=make_list(req_duration_ms) by id
-| extend top_durations=array_sort_desc(durations)
+| project sort = array_sort_desc(dynamic(['x', 'a', 'm', 'o', 'i']))
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C summarize durations%3Dmake_list(req_duration_ms) by id %7C extend top_durations%3Darray_sort_desc(durations)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20project%20sort%20%3D%20array_sort_desc(dynamic(%5B'x'%2C%20'a'%2C%20'm'%2C%20'o'%2C%20'i'%5D))%22%7D)
 
 **Output**
 
-| id     | durations           | top_durations      |
-| ------ | ------------------- | ------------------- |
-| user-1 | [104, 87, 129, 46] | [129, 104, 87, 46] |
-| user-2 | [80, 120, 98]      | [120, 98, 80]      |
-
-The query collects request durations per user and then sorts them so the longest durations appear first.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use this function to sort span durations per trace to find the slowest spans.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| summarize durations=make_list(duration) by trace_id
-| extend sorted_durations=array_sort_desc(durations)
+```json
+[
+  [
+    "x",
+    "o",
+    "m",
+    "i",
+    "a"
+  ]
+]
 ```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D) %7C summarize durations%3Dmake_list(duration) by trace_id %7C extend sorted_durations%3Darray_sort_desc(durations)%22%7D)
-
-**Output**
-
-| trace_id | durations                  | sorted_durations          |
-| --------- | -------------------------- | -------------------------- |
-| abcd1234  | [120ms, 80ms, 300ms]      | [300ms, 120ms, 80ms]      |
-| efgh5678  | [60ms, 45ms, 100ms, 30ms] | [100ms, 60ms, 45ms, 30ms] |
-
-The query organizes span durations from highest to lowest for each trace to help detect performance bottlenecks.
-
-</Tab>
-<Tab title="Security logs">
-
-Use this function to sort the status codes associated with user activity to identify abnormal patterns (e.g. many 500 errors).
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize status_codes=make_list(tolong(status)) by id
-| extend sorted_status=array_sort_desc(status_codes)
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C summarize status_codes%3Dmake_list(tolong(status)) by id %7C extend sorted_status%3Darray_sort_desc(status_codes)%22%7D)
-
-**Output**
-
-| id     | status_codes         | sorted_status        |
-| ------ | --------------------- | --------------------- |
-| user-1 | [200, 403, 500]      | [500, 403, 200]      |
-| user-2 | [404, 200, 404, 401] | [404, 404, 401, 200] |
-
-The query helps investigate accounts generating frequent errors or suspicious patterns based on HTTP status codes.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 
