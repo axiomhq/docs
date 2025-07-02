@@ -72,10 +72,7 @@ base64_encode_fromarray(array)
 
 If successful, returns a string representing the Base64-encoded version of the input byte array. If the input is not a valid array of bytes, the result is an empty string.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Example
 
 Use this function to encode request metadata for logging or comparison with external systems that require Base64-encoded fields.
 
@@ -88,70 +85,15 @@ Use this function to encode request metadata for logging or comparison with exte
 | project _time, id, method, uri, encoded_ip
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | extend ip_bytes = dynamic([192, 168, 0, 1]) | extend encoded_ip = base64_encode_fromarray(ip_bytes) | project _time, id, method, uri, encoded_ip%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20ip_bytes%20%3D%20dynamic(%5B192%2C%20168%2C%200%2C%201%5D)%20%7C%20extend%20encoded_ip%20%3D%20base64_encode_fromarray(ip_bytes)%20%7C%20project%20_time%2C%20id%2C%20method%2C%20uri%2C%20encoded_ip%22%7D)
 
 **Output**
 
 | _time               | id      | method | uri       | encoded_ip |
 | -------------------- | ------- | ------ | --------- | ----------- |
-| 2025-06-25T08:00:00Z | user123 | GET    | /api/data | wKgA        |
+| 2025-06-25T08:00:00Z | user123 | GET    | /api/data | wKgAAQ==    |
 
 Encodes a hardcoded byte representation of an IP address into Base64 for easy string-based comparison or logging.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Encode trace identifiers or service-specific byte arrays into Base64 for downstream ingestion or correlation.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend trace_id_bytes = extract_all(@'..', trace_id)
-| extend trace_id_array = range(0, strlen(trace_id)-1) 
-                           | extend val = toint(strcat('0x', substring(trace_id, index*2, 2))) 
-                           | summarize make_list(val)
-| extend encoded_trace_id = base64_encode_fromarray(trace_id_array)
-| project _time, trace_id, ['service.name'], encoded_trace_id
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D) | extend trace_id_bytes = extract_all(@%27..%27, trace_id) | extend trace_id_array = range(0, strlen(trace_id)-1) | extend val = toint(strcat(%270x%27, substring(trace_id, index*2, 2))) | summarize make_list(val) | extend encoded_trace_id = base64_encode_fromarray(trace_id_array) | project _time, trace_id, ['service.name'], encoded_trace_id%22%7D)
-
-**Output**
-
-| _time               | trace_id                        | ['service.name'] | encoded_trace_id       |
-| -------------------- | -------------------------------- | ----------------- | ------------------------ |
-| 2025-06-25T08:00:00Z | f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6 | checkoutservice   | 8aKyxNXm96i5wNHi86S1xg== |
-
-Transforms a trace ID into a Base64-encoded string to support interop with telemetry pipelines or identifiers stored in external formats.
-
-</Tab>
-<Tab title="Security logs">
-
-Encode sensitive session IDs or IP addresses before storing them in logs or comparing across systems that use Base64 formats.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend session_bytes = dynamic([10, 20, 30, 40])
-| extend session_token = base64_encode_fromarray(session_bytes)
-| where status == '403'
-| project _time, id, uri, session_token
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D) | extend session_bytes = dynamic([10, 20, 30, 40]) | extend session_token = base64_encode_fromarray(session_bytes) | where status == %27403%27 | project _time, id, uri, session_token%22%7D)
-
-**Output**
-
-| _time               | id      | uri          | session_token |
-| -------------------- | ------- | ------------ | -------------- |
-| 2025-06-25T09:12:00Z | user456 | /admin/panel | ChQeKA==       |
-
-Encodes a mock session ID into Base64 format before logging it, helping to anonymize sensitive information while preserving structure.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 
