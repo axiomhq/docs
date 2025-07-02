@@ -8,7 +8,7 @@ Axiom helps you leverage the power of timestamped event data. Axiom believes tha
 
 This page explains how you can leverage the power of event data for the product analytics use case.
 
-In product analytics, the ability to harness and interpret data effectively can determine the success of a product. Axiom offers a new approach to product analytics by leveraging the power of timestamped event data. This unique capability enables organizations to gain actionable insights, optimize user experiences, and drive product innovation.
+In product analytics, the ability to harness and interpret data effectively can determine the success of a product. Axiom allows product analytics to leverage the power of timestamped event data and easily read every single event. This unique capability enables organizations to gain actionable insights, optimize user experiences, and drive product innovation.
 
 ## Why event data matters in product analytics
 
@@ -22,11 +22,41 @@ Event data captures the actions and interactions users have with a product over 
 
 The following key features make Axiom perfect for product analytics:
 
-- **Real-time event monitoring:** Axiom’s ability to ingest and process data in real-time means you can monitor user activity as it happens. This empowers product managers to act quickly in response to anomalies or unexpected usage patterns, reducing downtime and improving user satisfaction.
-- **Unified data platform:** Axiom eliminates data silos by integrating event data from diverse sources into a single, cohesive platform. Whether your data originates from web applications, mobile apps, or third-party tools, Axiom ensures seamless access and analysis.
+- **Real-time event monitoring:** Axiom’s ability to ingest and process data in real-time means you can monitor user activity as it happens. This empowers product managers to act quickly in response to anomalies or unexpected usage patterns, reducing downtime and improving user satisfaction. For example:
+
+    - Track whether feature flags are toggling as expected.
+    - Watch for broken signup flows or onboarding drop-offs immediately after a deploy.
+    - Monitor if newly launched features are generating engagement.
+
+- **Unified data platform:** Axiom eliminates data silos by integrating event data from diverse sources into a single, cohesive platform. Axiom stores system telemetry alongside product analytics data. This eliminates the traditional separation between “user behavior” tools and “engineering” tools, and this convergence unlocks powerful debugging and insight scenarios:
+
+    - Correlate frontend feature usage with backend latency.
+    - View conversion funnel stages alongside HTTP error logs.
+    - Link user drop-off to infrastructure anomalies.
+
 - **Advanced query capabilities:** With a robust query language, Axiom enables product teams to dive deep into data analysis. Perform detailed segmentation, drill down into specific user journeys, and uncover insights that would otherwise remain hidden.
 - **Custom dashboards and visualizations:** Intuitive dashboards and customizable visualizations make it easy for product managers to communicate insights to stakeholders. Axiom’s visual tools enhance collaboration and decision-making.
 - **Scalable infrastructure:** As your product grows, so does the volume of event data. Axiom’s architecture is built to scale effortlessly, ensuring that your analytics remain robust and reliable, even with massive datasets.
+
+## Standard patterns for product data: Segment compatibility
+
+Axiom supports event ingestion via widely adopted patterns such as the [Segment specification](https://segment.com/docs/connections/spec/):
+
+- **`identify`** associates events with known users.
+- **`track`** records user interactions like button clicks or page views.
+- **`group`** associates users with organizations or accounts.
+
+Axiom is compatible with these conventions used by popular tools like Mixpanel, Amplitude, June, and RudderStack.
+
+This approach gives product teams a familiar and low-friction way to onboard their analytics events, and the foundation for querying user behavior via APL (Axiom Processing Language).
+
+For example, the APL query below filters tracked events by name:
+
+```kusto
+['segment-frontend-prod']
+| where event == "Button Clicked"
+| summarize count() by userId, bin(_time, 1h)
+```
 
 ## Enhance product analytics with Axiom
 
@@ -36,6 +66,52 @@ Axiom helps you make the most of your event data in the following product analyt
 - **Retention and churn analysis:** Leverage event data to identify patterns in user retention and predict potential churn, enabling proactive interventions.
 - **Funnel optimization:** Analyze user journeys through critical funnels, such as sign-ups or purchases, to pinpoint drop-off points and optimize conversion rates.
 - **A/B testing:** Compare user interactions across different test groups to validate hypotheses and make data-driven decisions.
+
+## Use cases: from funnels to retention
+
+Here are some ways product teams use Axiom:
+
+### Feature adoption tracking
+
+Measure which users are engaging with newly released features.
+
+```kusto
+['segment-frontend-prod']
+| where event == "Feature Used" and properties.featureName == "AI Chat"
+| summarize count() by userId, bin(_time, 1h)
+```
+
+### Retention and churn analysis
+
+Analyze returning users over time:
+
+```kusto
+['segment-frontend-prod']
+| where event == "Logged In"
+| summarize sessions = count(), users = dcount(userId) by bin(_time, 1w)
+```
+
+### Funnel diagnostics
+
+Trace where users drop off between signup, onboarding, and first value.
+
+```kusto
+['segment-frontend-prod']
+| where event in ("Signed Up", "Completed Onboarding", "Created Project")
+| project userId, event, _time
+| sort by userId, _time
+```
+
+### A/B test measurement
+
+Compare experiment cohorts based on downstream engagement:
+
+```kusto
+['segment-frontend-prod']
+| where properties.experimentGroup == "variant_a"
+| where event == "Clicked Upgrade"
+| summarize conversions = dcount(userId)
+```
 
 ## Why choose Axiom for product analytics
 
