@@ -5,15 +5,10 @@ The repo is based on the Mintlify framework and the content is in Markdown forma
 ## Setup
 
 1. Install the latest LTS version of [Node.js](https://nodejs.org/en/download/package-manager).
-2. Install [Vale](https://vale.sh/docs/install).
-3. Fork this repo, and then clone it. For more information, see the [GitHub documentation](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project).
-4. Go to the root folder in your terminal, and run the following to install Node dependencies:
-
-    ```
-    npm i
-    ```
-
-5. Run the following in your terminal to sync the Vale style packages.
+1. Install [Vale](https://vale.sh/docs/install).
+1. Install [Mint CLI](https://mintlify.com/docs/installation).
+1. Fork this repo, and then clone it. For more information, see the [GitHub documentation](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project).
+1. Run the following in your terminal to sync the Vale style packages.
 
     ```
     vale sync
@@ -29,7 +24,7 @@ Optional: install the following VS Code extensions:
 Run the following in your terminal to build the documentation locally:
 
 ```
-npm run mintlify dev
+mint dev
 ```
 
 ## Check for broken links
@@ -37,7 +32,7 @@ npm run mintlify dev
 Run the following in your terminal to check for broken links:
 
 ```
-npm run mintlify broken-links
+mint broken-links
 ```
 
 ## Ensure consistent style
@@ -65,5 +60,5 @@ We value your input and invite you to help us make the Axiom documentation even 
 
 ## Troubleshooting
 
-- If the local build fails, run `npm run mintlify install` to re-install dependencies.
+- If the local build fails, run `mint update`.
 - If a page loads as a 404, make sure you run the local build in the root folder where the file `docs.json` is present.
