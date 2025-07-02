@@ -5,11 +5,12 @@ description: "Learn how to manage Axiom datasets via API."
 ---
 
 import Prerequisites from "/snippets/minimal-prerequisites.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+import ReplaceToken from "/snippets/replace-token.mdx"
 
 This page explains how to manage datasets programmatically via the API.
 
 <Prerequisites />
-{/* list separator */}
 - [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete datasets.
 - In the code samples below, replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
 
@@ -18,7 +19,7 @@ This page explains how to manage datasets programmatically via the API.
 To create a dataset, send a POST request to the `datasets` endpoint. In the body of the request, specify the name and the description of the dataset. For example:
 
 ```bash
-curl -X 'POST' 'https://api.axiom.co/v2/datasets' \
+curl -X 'POST' 'https://AXIOM_DOMAIN/v2/datasets' \
 -H 'Content-Type: application/json' \
 -H 'Authorization: Bearer API_TOKEN' \
 -d '{
@@ -27,14 +28,23 @@ curl -X 'POST' 'https://api.axiom.co/v2/datasets' \
   }'
 ```
 
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
+
 The example response contains the dataset ID that you can later use to access the dataset programmatically.
 
 ```json
 {
-  "created": "2024-04-20T02:35:14.137Z",
+  "canWrite": true,
+  "created": "2025-07-02T09:40:53.327Z",
   "description": "This is a test dataset.",
   "id": "test_dataset",
+  "mapFields": null,
   "name": "test_dataset",
+  "retentionDays": 0,
+  "useRetentionPeriod": false,
   "who": ""
 }
 ```
@@ -48,28 +58,41 @@ For more information, see the [API reference](/restapi/endpoints/createDataset).
 To get information about all the datasets in your Axiom organization, send a GET request to the `datasets` endpoint. For example:
 
 ```bash
-curl -X 'GET' 'https://api.axiom.co/v2/datasets' \
+curl -X 'GET' 'https://AXIOM_DOMAIN/v2/datasets' \
 -H 'Content-Type: application/json' \
 -H 'Authorization: Bearer API_TOKEN'
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
 
 The example response is a list of dataset objects. Each object contains a unique dataset ID that you can later use to access the dataset programmatically.
 
 ```json
 [
     {
-    "created": "2024-04-20T02:35:14.137Z",
-    "description": "This is a test dataset.",
-    "id": "test_dataset1",
-    "name": "test_dataset1",
-    "who": ""
+        "canWrite": true,
+        "created": "2025-05-26T09:39:47.909Z",
+        "description": "This is a test dataset.",
+        "id": "test_dataset1",
+        "mapFields": null,
+        "name": "test_dataset1",
+        "retentionDays": 0,
+        "useRetentionPeriod": false,
+        "who": ""
     },
     {
-    "created": "2024-04-20T02:35:24.137Z",
-    "description": "This is another test dataset.",
-    "id": "test_dataset2",
-    "name": "test_dataset2",
-    "who": ""
+        "canWrite": true,
+        "created": "2025-07-02T09:40:53.327Z",
+        "description": "This is another test dataset.",
+        "id": "test_dataset2",
+        "mapFields": null,
+        "name": "test_dataset2",
+        "retentionDays": 0,
+        "useRetentionPeriod": false,
+        "who": ""
     }
 ]
 ```
@@ -81,7 +104,7 @@ For more information, see the [API reference](/restapi/endpoints/getDatasets).
 To get information about a specific dataset, send a GET request to the `datasets/ID` endpoint where `ID` is the unique ID of the dataset. For example:
 
 ```bash
-curl -X 'GET' 'https://api.axiom.co/v2/datasets/test_dataset' \
+curl -X 'GET' 'https://AXIOM_DOMAIN/v2/datasets/test_dataset' \
 -H 'Content-Type: application/json' \
 -H 'Authorization: Bearer API_TOKEN'
 ```
@@ -89,15 +112,17 @@ curl -X 'GET' 'https://api.axiom.co/v2/datasets/test_dataset' \
 Example response:
 
 ```json
-[
-    {
-    "created": "2024-04-20T02:35:14.137Z",
-    "description": "This is a test dataset.",
-    "id": "test_dataset",
-    "name": "test_dataset",
-    "who": ""
-    },
-]
+{
+  "canWrite": true,
+  "created": "2025-07-02T09:40:53.327Z",
+  "description": "This is a test dataset.",
+  "id": "test_dataset",
+  "mapFields": null,
+  "name": "test_dataset",
+  "retentionDays": 0,
+  "useRetentionPeriod": false,
+  "who": ""
+}
 ```
 
 For more information, see the [API reference](/restapi/endpoints/getDataset).
@@ -107,7 +132,7 @@ For more information, see the [API reference](/restapi/endpoints/getDataset).
 To update a dataset, send a PUT request to the `datasets/ID` endpoint where `ID` is the unique ID of the dataset. In the body of the request, specify the properties you want to update. For example:
 
 ```bash
-curl -X 'PUT' 'https://api.axiom.co/v2/datasets/test_dataset' \
+curl -X 'PUT' 'https://AXIOM_DOMAIN/v2/datasets/test_dataset' \
 -H 'Content-Type: application/json' \
 -H 'Authorization: Bearer API_TOKEN' \
 -d '{
@@ -119,10 +144,14 @@ Example response:
 
 ```json
 {
-  "created": "2024-04-20T02:35:14.137Z",
+  "canWrite": true,
+  "created": "2025-07-02T09:40:53.327Z",
   "description": "This is a production dataset.",
   "id": "test_dataset",
+  "mapFields": null,
   "name": "test_dataset",
+  "retentionDays": 0,
+  "useRetentionPeriod": false,
   "who": ""
 }
 ```
@@ -134,7 +163,7 @@ For more information, see the [API reference](/restapi/endpoints/updateDataset).
 To delete a dataset, send a DELETE request to the `datasets/ID` endpoint where `ID` is the unique ID of the dataset. For example:
 
 ```bash
-curl -X 'DELETE' 'https://api.axiom.co/v2/datasets/test_dataset' \
+curl -X 'DELETE' 'https://AXIOM_DOMAIN/v2/datasets/test_dataset' \
 -H 'Content-Type: application/json' \
 -H 'Authorization: Bearer API_TOKEN'
 ```
