@@ -1,8 +1,7 @@
 ---
 title: 'Query costs'
 description: "This page explains how to calculate and manage query compute resources in GB-hours to optimize usage within Axiom."
-tags:
-    ['query', 'gb hours']
+keywords: ['query', 'gb hours']
 ---
 
 Axiom measures the resources used to execute queries in terms of GB-hours.
@@ -36,27 +35,25 @@ When you run queries on Axiom, the cost in GB-hours is determined by the shape a
 
 ## Determine query cost
 
-1. Go to an API testing tool like Postman.
+Send a `POST` request to the [Run query](/restapi/endpoints/queryApl) endpoint with the following configuration:
 
-2. Send a `POST` request `https://api.axiom.co/v1/datasets/_apl?format=tabular` or `https://api.axiom.co/v1/datasets/_apl?format=legacy` with the following configuration:
+- `Content-Type` header with the value `application/json`.
+- `Authorization` header with the value `Bearer API_TOKEN`. Replace `API_TOKEN` with your Axiom API token.
+- In the body of your request, enter your query in JSON format. For example:
 
-    - `Content-Type` header with the value `application/json`.
-    - `Authorization` header with the value `Bearer API_TOKEN`. Replace `API_TOKEN` with your Axiom API token.
-    - In the body of your request, enter your query in JSON format. For example:
+    ```json
+    {
+      "apl": "telegraf | count",
+      "startTime": "2024-01-11T19:25:00Z",
+      "endTime": "2024-02-13T19:25:00Z"
+    }
+    ```
 
-        ```json
-        {
-          "apl": "telegraf | count",
-          "startTime": "2024-01-11T19:25:00Z",
-          "endTime": "2024-02-13T19:25:00Z"
-        }
-        ```
+    `apl` specifies the Axiom Processing Language (APL) query to run. In this case, `"telegraf | count"` indicates that you query the `telegraf` dataset and use the `count` operator to aggregate the data.
 
-        `apl` specifies the Axiom Processing Language (APL) query to run. In this case, `"telegraf | count"` indicates that you query the `telegraf` dataset and use the `count` operator to aggregate the data.
+    `startTime` and `endTime` define the time range of your query. In this case, `"2024-01-11T19:25:00Z"` is the start time, and `"2024-02-13T19:25:00Z"` is the end time, both in ISO 8601 format. This time range limits the query to events recorded within these specific dates and times.
 
-        `startTime` and `endTime` define the time range of your query. In this case, `"2024-01-11T19:25:00Z"` is the start time, and `"2024-02-13T19:25:00Z"` is the end time, both in ISO 8601 format. This time range limits the query to events recorded within these specific dates and times.
-
-3. In the response to your request, the information about the query cost in GB-milliseconds is in the `X-Axiom-Query-Cost-Gbms` header.
+In the response to your request, the information about the query cost in GB-milliseconds is in the `X-Axiom-Query-Cost-Gbms` header.
 
 ## Example of GB-hour calculation
 

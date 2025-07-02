@@ -3,14 +3,17 @@ title: 'Send data from Kubernetes Cluster to Axiom'
 description: 'This step-by-step guide helps you ingest logs from your Kubernetes cluster into Axiom using the DaemonSet configuration.'
 overview: 'Container orchestration platform for automating application deployment'
 sidebarTitle: Kubernetes
-tags:
-  ['kubernetes', 'axiom documentation', 'documentation', 'axiom', 'guide', 'logs', 'kubernetes logs', 'daemonset', 'filebeat']
+keywords: ['kubernetes', 'axiom documentation', 'documentation', 'axiom', 'guide', 'logs', 'kubernetes logs', 'daemonset', 'filebeat']
 logoId: 'kubernetes'
 ---
 
 import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
 
 Axiom makes it easy to collect, analyze, and monitor logs from your Kubernetes clusters. Integrate popular tools like Filebeat, Vector, or Fluent Bit with Axiom to send your cluster logs.
+
+<Prerequisites />
 
 ## Send Kubernetes Cluster logs to Axiom using Filebeat
 
@@ -110,11 +113,11 @@ spec:
             - -e
           env:
             - name: AXIOM_HOST
-              value: https://api.axiom.co:443
+              value: AXIOM_DOMAIN
             - name: AXIOM_DATASET_NAME
-              value: my-dataset
+              value: DATASET_NAME
             - name: AXIOM_API_TOKEN
-              value: xaat-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+              value: API_TOKEN
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
@@ -176,26 +179,10 @@ spec:
     type: RollingUpdate
 ```
 
-
-### Configure environment
-
-In the configuration above, configure your environment variables:
-
-```yaml
-env:
-  - name: AXIOM_HOST
-    value: https://api.axiom.co:443
-  - name: AXIOM_DATASET_NAME
-    value: my-dataset
-  - name: AXIOM_API_TOKEN
-    value: xaat-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
-
-Replace the following:
-
-- `AXIOM_HOST` is the URL of the Axiom API. Enter `https://api.axiom.co:443`.
-- `AXIOM_DATASET_NAME` is your [dataset](/reference/datasets) name.
-- `AXIOM_API_TOKEN` is your Axiom API token. To create an API key, see [Access settings](/reference/settings).
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 After editing your values, apply the changes to your cluster using `kubectl apply -f daemonset.yaml`
 
@@ -289,11 +276,11 @@ spec:
             - /etc/vector/
           env:
             - name: AXIOM_HOST
-              value: https://api.axiom.co:443
+              value: AXIOM_DOMAIN
             - name: AXIOM_DATASET_NAME
-              value: my-dataset
+              value: DATASET_NAME
             - name: AXIOM_API_TOKEN
-              value: xaat-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+              value: API_TOKEN
             - name: VECTOR_SELF_NODE_NAME
               valueFrom:
                 fieldRef:
@@ -348,25 +335,10 @@ spec:
     type: RollingUpdate
 ```
 
-### Configure environment
-
-In the above configuration, configure your environment variables:
-
-```yaml
-env:
-  - name: AXIOM_HOST
-    value: https://api.axiom.co:443
-  - name: AXIOM_DATASET_NAME
-    value: my-dataset
-  - name: AXIOM_API_TOKEN
-    value: xaat-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
-
-Replace the following:
-
-- `AXIOM_HOST` is the URL of the Axiom API. Enter `https://api.axiom.co:443`.
-- `AXIOM_DATASET_NAME` is your [dataset](/reference/datasets) name.
-- `AXIOM_API_TOKEN` is your Axiom API token. To create an API key, see [Access settings](/reference/settings).
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 After editing your values, apply the changes to your cluster using `kubectl apply -f daemonset.yaml`
 
@@ -452,7 +424,7 @@ data:
     [OUTPUT]
         Name            http
         Match           *
-        Host            api.axiom.co
+        Host            ${AXIOM_HOST}
         Port            443
         URI             /v1/datasets/${AXIOM_DATASET_NAME}/ingest
         Header          Authorization Bearer ${AXIOM_API_TOKEN}
@@ -491,10 +463,12 @@ spec:
         - name: fluent-bit
           image: fluent/fluent-bit:1.9.9
           env:
+            - name: AXIOM_HOST
+              value: AXIOM_DOMAIN
             - name: AXIOM_DATASET_NAME
-              value: my-dataset
+              value: DATASET_NAME
             - name: AXIOM_API_TOKEN
-              value: xaat-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+              value: API_TOKEN
           volumeMounts:
             - name: config
               mountPath: /fluent-bit/etc/fluent-bit.conf
@@ -520,18 +494,9 @@ spec:
       terminationGracePeriodSeconds: 10
 ```
 
-### Configure environment
-
-In the above configuration, configure your environment variables:
-
-```yaml
-env:
-  - name: AXIOM_DATASET_NAME
-    value: DATASET_NAME
-  - name: AXIOM_API_TOKEN
-    value: API_TOKEN
-```
-
+<Info>
+<ReplaceDomain />
 <ReplaceDatasetToken />
+</Info>
 
 After editing your values, apply the changes to your cluster using `kubectl apply -f daemonset.yaml`

@@ -3,10 +3,12 @@ title: 'OpenTelemetry using .NET'
 description: 'This guide explains how to configure a .NET app using the .NET OpenTelemetry SDK to send telemetry data to Axiom.'
 overview: '.NET with OpenTelemetry for enhanced observability'
 sidebarTitle: .NET
-tags: ['guides', '.NET', 'dotnet', 'OpenTelemetry', 'otel']
+keywords: ['guides', '.NET', 'dotnet', 'OpenTelemetry', 'otel']
 logoId: 'openTelemetry'
 ---
 
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 import Prerequisites from "/snippets/standard-prerequisites.mdx"
 
 OpenTelemetry provides a [unified approach to collecting telemetry data](https://opentelemetry.io/docs/languages/net/) from your .NET applications. This guide explains how to configure OpenTelemetry in a .NET application to send telemetry data to Axiom using the OpenTelemetry SDK.
@@ -126,7 +128,7 @@ int RollDice()
 
 ## Exporter
 
-The `tracing.cs` file sets up the OpenTelemetry instrumentation. It configures the OTLP (OpenTelemetry Protocol) exporters for traces and initializes the ASP.NET  SDK with automatic instrumentation capabilities.
+The `tracing.cs` file sets up the OpenTelemetry instrumentation. It configures the OTLP (OpenTelemetry Protocol) exporters for traces and initializes the ASP.NET SDK with automatic instrumentation capabilities.
 
 ```csharp
 using OpenTelemetry;
@@ -162,9 +164,9 @@ public static class TracingConfiguration
             .AddHttpClientInstrumentation() // Add automatic instrumentation for HttpClient requests
             .AddOtlpExporter(options => // Configure the OTLP exporter
             {
-                options.Endpoint = new Uri("https://api.axiom.co/v1/traces"); // Set the endpoint for the exporter
+                options.Endpoint = new Uri("https://AXIOM_DOMAIN/v1/traces"); // Set the endpoint for the exporter
                 options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf; // Set the protocol
-                options.Headers = "Authorization=Bearer API_TOKEN, X-Axiom-Dataset=DATASET"; // Update API token and dataset
+                options.Headers = "Authorization=Bearer API_TOKEN, X-Axiom-Dataset=DATASET_NAME"; // Update API token and dataset
             })
             .Build(); // Build the tracer provider
     }
@@ -178,11 +180,11 @@ public static class TracingConfiguration
 }
 ```
 
-In the `tracing.cs` file, make the following changes:
-
-- Replace the value of the `serviceName` variable with the name of the service you want to trace. This is used for identifying and categorizing trace data, particularly in systems with multiple services.
-- Replace `API_TOKEN` with your Axiom API key.
-- Replace `DATASET_NAME` with the name of the Axiom dataset where you want to send data.
+<Info>
+Replace the value of the `serviceName` variable with the name of the service you want to trace. This is used for identifying and categorizing trace data, particularly in systems with multiple services.
+<ReplaceDatasetToken />
+<ReplaceDomain />
+</Info>
 
 ## Run the instrumented application
 
@@ -211,7 +213,6 @@ The data can then be further viewed and analyzed in the traces dashboard, provid
 1. Log into your Axiom account, select **Dashboards**, and click on the traces dashboard named after your dataset.
 
 2. View the dashboard which displays your total traces, incoming spans, average span duration, errors, slowest operations, and top 10 span errors across services.
-
 
 ## Send data from an existing .NET project
 
@@ -247,18 +248,22 @@ Automatic instrumentation uses the OpenTelemetry SDK and additional libraries to
 
 1. Configure OpenTelemetry SDK. Use the OpenTelemetry SDK to configure automatic instrumentation in your application. This typically involves setting up a `TracerProvider` in your `program.cs` or startup configuration, which automatically captures telemetry data from supported libraries.
 
-```csharp
-Sdk.CreateTracerProviderBuilder()
-    .AddAspNetCoreInstrumentation()
-    .AddHttpClientInstrumentation()
-    .AddOtlpExporter(options =>
-    {
-        options.Endpoint = new Uri("https://api.axiom.co/v1/traces");
-        // Replace API_TOKEN and DATASET_NAME with your actual API token and dataset name
-        options.Headers = $"Authorization=Bearer API_TOKEN, X-Axiom-Dataset=DATASET_NAME";
-    })
-    .Build();
-```
+    ```csharp
+    Sdk.CreateTracerProviderBuilder()
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = new Uri("https://AXIOM_DOMAIN/v1/traces");
+            options.Headers = $"Authorization=Bearer API_TOKEN, X-Axiom-Dataset=DATASET_NAME";
+        })
+        .Build();
+    ```
+
+    <Info>
+    <ReplaceDatasetToken />
+    <ReplaceDomain />
+    </Info>
 
 2. Install and configure additional OpenTelemetry instrumentation packages as needed, based on the technologies your application uses. For example, to automatically trace SQL database queries, you might add the corresponding database instrumentation package.
 
@@ -267,7 +272,6 @@ Sdk.CreateTracerProviderBuilder()
 ## Reference
 
 ### List of OpenTelemetry trace fields
-
 
 | Field Category                          | Field Name                                    | Description |
 |-----------------------------------------|-----------------------------------------------|-------------|
@@ -313,8 +317,6 @@ Sdk.CreateTracerProviderBuilder()
 |                                         | scope.name                                    | Name of the scope for the operation, e.g., OpenTelemetry.Instrumentation.AspNetCore. |
 |                                         | scope.version                                 | Version of the scope, e.g., 1.0.0.0. |
 
-
-
 ### List of imported libraries
 
 ### OpenTelemetry
@@ -345,7 +347,7 @@ Designed for .NET applications, this package integrates OpenTelemetry with the .
 
 `<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.1" />`
 
-This package is  designed for instrumenting ASP.NET Core applications. It automatically collects telemetry data about incoming requests and responses. This is important for monitoring the performance and reliability of web applications and APIs built with ASP.NET Core.
+This package is designed for instrumenting ASP.NET Core applications. It automatically collects telemetry data about incoming requests and responses. This is important for monitoring the performance and reliability of web applications and APIs built with ASP.NET Core.
 
 ### OpenTelemetry.Instrumentation.Http
 
