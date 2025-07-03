@@ -19,11 +19,8 @@ export const Survey = () => {
                 },
                 "hideTitle": true,
                 "autoClose": 3000,
-                // showOnce: true,
-                // doNotShowAfterSubmit: true,
-            },
-            hiddenFields: {
-                "origin": ref,
+                "showOnce": true,
+                "doNotShowAfterSubmit": true,
             },
         };
     }, []);
