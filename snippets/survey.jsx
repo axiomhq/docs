@@ -15,7 +15,7 @@ export const Survey = () => {
             popup: {
                 open: {
                     trigger: 'time',
-                    ms: 1, // 10 seconds
+                    ms: 10000, // 10 seconds
                 },
                 "hideTitle": true,
                 "autoClose": 3000,
