@@ -46,11 +46,18 @@ Axiom supports event ingestion via widely adopted patterns such as the [Segment 
 - **`track`** records user interactions like button clicks or page views.
 - **`group`** associates users with organizations or accounts.
 
-Axiom is compatible with these conventions used by popular tools like Mixpanel, Amplitude, June, and RudderStack.
+These event types are foundational to many analytics workflows and are supported by tools like Mixpanel, Amplitude, June, and RudderStack. Axiom’s compatibility with this ecosystem enables product teams to reuse existing instrumentation patterns and schemas with minimal changes.
 
-This approach gives product teams a familiar and low-friction way to onboard their analytics events, and the foundation for querying user behavior via APL (Axiom Processing Language).
+### How Axiom receives Segment events
 
-For example, the APL query below filters tracked events by name:
+To send Segment data to Axiom:
+
+1. Create an [HTTP destionation](/process-data/destinations/http) in Axiom.
+1. Add a webhook destination in Segment. For more information, see the [Segment documentation](https://segment.com/docs/connections/destinations/catalog/webhooks/).
+
+Segment sends event payloads to Axiom in JSON format. Axiom stores each incoming payload as a structured event, preserving keys such as `event`, `userId`, `traits`, `properties`, and `_time` (automatically inferred or provided). No custom transformation is required. Segment’s default schema maps naturally into Axiom’s JSON ingestion pipeline.
+
+After sending events to Axiom, query them using APL. For example, to count “Button Clicked” events per user by hour:
 
 ```kusto
 ['segment-frontend-prod']
@@ -91,7 +98,7 @@ Analyze returning users over time:
 | summarize sessions = count(), users = dcount(userId) by bin(_time, 1w)
 ```
 
-### Funnel diagnostics
+### Data for funnel diagnostics
 
 Trace where users drop off between signup, onboarding, and first value.
 
