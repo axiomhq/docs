@@ -21,3 +21,30 @@ if (document.querySelector("#sidebar a")) {
         logoLink.setAttribute("href", "https://axiom.co/");
     }
 }
+
+// Add docs satisfaction survey to each page.
+const scriptId = 'tally-embed';
+if (!document.getElementById(scriptId)) {
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = 'https://tally.so/widgets/embed.js';
+    script.async = true;
+    document.body.appendChild(script);
+}
+
+window.TallyConfig = {
+    formId: 'nWbloa',
+    popup: {
+        open: {
+            trigger: 'time',
+            ms: 10000, // 10 seconds
+        },
+        "hideTitle": true,
+        "autoClose": 3000,
+        "showOnce": true,
+        "doNotShowAfterSubmit": true,
+        "hiddenFields": {
+            ref: window.location.href,
+        },
+    },
+};
