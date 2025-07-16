@@ -25,23 +25,23 @@ Axiom is optimized for storing and querying timestamped event data. However, cer
 
 ### Problem
 
-A “kitchen-sink” dataset is one in which events from multiple, unrelated applications or services get lumped together, often resulting in:
+A “kitchen-sink” dataset is one in which events from multiple, unrelated apps or services get lumped together, often resulting in:
 
-- **Excessive width (too many columns)**: Adding more and more unique fields bloats the schema, reducing query throughput.
+- **Excessive width (too many fields)**: Adding more and more unique fields bloats the schema, reducing query throughput.
 - **Mixed data types in the same field**: For example, some events store `user_id` as a string, while others store it as a number in the same `user_id` field.
-- **Unrelated schemas in a single dataset**: Columns that make sense for one app might be `null` or typed differently for another.
+- **Unrelated schemas in a single dataset**: Fields that make sense for one app might be `null` or typed differently for another.
 
 These issues reduce compression efficiency and force Axiom to scan more data than necessary.
 
 ### Why it matters
 
-- **Slower queries**: Each query must scan wider blocks of data and handle inconsistent column types.
+- **Slower queries**: Each query must scan wider blocks of data and handle inconsistent field types.
 - **Higher resource usage**: Wide schemas reduce row packing in blocks, harming throughput and potentially raising costs.
-- **Harder data exploration**: When fields differ drastically between events, discovering the correct columns or shaping queries becomes more difficult.
+- **Harder data exploration**: When fields differ drastically between events, discovering the correct fields or shaping queries becomes more difficult.
 
 ### How to fix it
 
-- **Keep datasets narrowly focused:** Group data from the same application or service in its own dataset. For example, keep `k8s_logs` separate from `web_traffic`.
+- **Keep datasets narrowly focused:** Group data from the same app or service in its own dataset. For example, keep `k8s_logs` separate from `web_traffic`.
 - **Avoid mixing data types for the same field:** Enforce consistent types during ingest. If a field is numeric, always send numeric values.
 - **Consider using map fields:** If you have sparse or high-cardinality nested data, consider storing it in a single map (object) field instead of flattening every key. This reduces the total number of top-level fields. Axiom’s [map fields](/apl/data-types/map-fields#map-fields) are optimized for large objects.
 
@@ -60,9 +60,9 @@ Axiom’s `_time` index is critical for query performance. Ideally, incoming eve
 ### How to fix it
 
 - **Minimize backfill:** Try to ingest events close to their actual creation time whenever possible. Ingest events close to the time they occur.
-- **Backfill in dedicated batches:** If you must backfill older data, do it in dedicated batches that do not mix with live data.
+- **Backfill in dedicated batches:** If you must backfill older data, do it in dedicated batches that don’t mix with live data.
 - **Use discrete backfill intervals:** When backfilling data, ingest one segment at a time (for example, day-by-day).
-- **Avoid wide time ranges in a single batch:** If you are sending data for a 24-hour period, avoid mixing in data that is weeks or months older.
+- **Avoid wide time ranges in a single batch:** If you are sending data for a 24-hour period, avoid mixing in data that’s weeks or months older.
 - **Be aware of ingestion concurrency:** Avoid mixing brand-new events with extremely old events in the same ingest request.
 
 <Note>
@@ -90,7 +90,7 @@ Scoping the number of fields in a dataset below a few thousand can help you achi
 
 ### Problem
 
-Axiom’s core optimizations rely on `_time` for indexing and time-based queries. If you store event timestamps in a different field (for example, `timestamp` or `created_at`) and use that field in time filters, Axiom’s time-based optimizations will not be leveraged.
+Axiom’s core optimizations rely on `_time` for indexing and time-based queries. If you store event timestamps in a different field (for example, `timestamp` or `created_at`) and use that field in time filters, you can’t leverage Axiom’s time-based optimizations.
 
 ### Why it matters
 
@@ -111,14 +111,14 @@ A single field sometimes stores different data types across events (for instance
 
 ### Why it matters
 
-- **Reduced compression**: Storing multiple types in the same column (variant column) is less efficient than storing a single type.
+- **Reduced compression**: Storing multiple types in the same field (variant field) is less efficient than storing a single type.
 - **Complex queries**: You might need frequent casting or conditional logic in queries (`tostring()` calls, etc.).
 
 ### How to fix it
 
 - **Standardize your types at ingest:** If a field is semantically an integer, always send it as an integer.
-- **Use consistent schemas across services:** If multiple applications write to the same dataset, agree on a schema and data types.
-- **Perform corrections at the source:** If you discover your data has been mixed historically, stop ingesting mismatched types. Over time, new blocks will reflect the corrected types even though historical blocks remain mixed.
+- **Use consistent schemas across services:** If multiple apps write to the same dataset, agree on a schema and data types.
+- **Perform corrections at the source:** If you discover your data has been mixed historically, stop ingesting mismatched types. Over time, new blocks reflect the corrected types even though historical blocks remain mixed.
 
 ## Overly wide queries returning more fields than needed
 
@@ -160,12 +160,12 @@ By default, Axiom’s query engine projects all fields (`project *`) for each ma
 
 ### Problem
 
-Regular expressions (`matches`, `regex`) can be powerful, but they are also expensive to evaluate, especially on large datasets.
+Regular expressions (`matches`, `regex`) can be powerful, but they’re also expensive to evaluate, especially on large datasets.
 
 ### Why it matters
 
 - **High CPU usage**: Regex filters require complex per-row matching.
-- **Slower queries**: Large swaths of data are scanned with less efficient matching.
+- **Slower queries**: Axiom scans large swaths of data with less efficient matching.
 
 ### How to fix it
 
@@ -213,12 +213,12 @@ Some ingestion pipelines place large JSON payloads into a string field, deferrin
 ### Why it matters
 
 - **Repeated parsing overhead**: You pay a performance penalty on each query.
-- **Limited indexing**: Axiom can’t index nested fields if they are only known at query time.
+- **Limited indexing**: Axiom can’t index nested fields if they’re only known at query time.
 
 ### How to fix it
 
-- **Ingest as map fields:** Axiom’s new [map column type](/apl/data-types/map-fields#map-fields) can store object fields column by column, preserving structure and optimizing for nested queries. This allows indexing of specific nested keys.
-- **Extract top-level fields where possible:** If a certain nested field is frequently used for filtering or grouping, consider promoting it to its own top-level column (for faster scanning and filtering).
+- **Ingest as map fields:** Axiom’s new [map field type](/apl/data-types/map-fields#map-fields) can store object fields column by column, preserving structure and optimizing for nested queries. This allows indexing of specific nested keys.
+- **Extract top-level fields where possible:** If a certain nested field is frequently used for filtering or grouping, consider promoting it to its own top-level field (for faster scanning and filtering).
 - **Avoid `parse_json()` in query:** If your JSON can’t be flattened entirely, ingest it into a map field. Then query subfields directly:
     
     ```kusto
@@ -255,7 +255,7 @@ You can create virtual fields (for example, `extend converted = toint(some_field
     | where mixed_user_id contains "123"
     ```
     
-    The filter automatically matches string values in mixed columns.
+    The filter automatically matches string values in mixed fields.
     
 - **Reserve virtual fields for truly dynamic or derived logic**
     
@@ -266,7 +266,7 @@ You can create virtual fields (for example, `extend converted = toint(some_field
 
 ### Problem
 
-Axiom’s query engine does not currently reorder your `where` clauses optimally. This means the sequence of filters in your query can matter.
+Axiom’s query engine doesn’t currently reorder your `where` clauses optimally. This means the sequence of filters in your query can matter.
 
 ### Why it matters
 
