@@ -1,0 +1,87 @@
+---
+title: "Measure"
+description: "Learn how to measure the quality of your AI capabilities by running evaluations against ground truth data."
+keywords: ["ai engineering", "rudder", "measure", "evals", "evaluation", "scoring", "graders"]
+---
+
+import { Badge } from "/snippets/badge.jsx";
+import { definitions } from '/snippets/definitions.mdx';
+
+<Warning>
+The evaluation framework described here is in active development. Axiom is working with design partners to shape what’s built. [Contact Axiom](https://www.axiom.co/contact) to get early access and join a small group of teams shaping these tools.
+</Warning>
+
+The **Measure** stage is where you quantify the quality and effectiveness of your AI <Tooltip tip={definitions.Capability}>capability</Tooltip>. Instead of relying on anecdotal checks, this stage uses a systematic process called an <Tooltip tip={definitions.Eval}>eval</Tooltip> to score your capability's performance against a known set of correct examples (<Tooltip tip={definitions.GroundTruth}>ground truth</Tooltip>). This provides a data-driven benchmark to ensure a capability is ready for production and to track its quality over time.
+
+## The `Eval` function
+
+<Badge>Coming soon</Badge> The primary tool for the Measure stage is the `Eval` function, which will be available in the `@axiomhq/ai/evals` package. It provides a simple, declarative way to define a test suite for your capability directly in your codebase.
+
+An `Eval` is structured around a few key parameters:
+
+* `data`: An async function that returns your `collection` of `{ input, expected }` pairs, which serve as your ground truth.
+* `task`: The function that executes your AI capability, taking an `input` and producing an `output`.
+* `scorers`: An array of `grader` functions that score the `output` against the `expected` value.
+* `threshold`: A score between 0 and 1 that determines the pass/fail condition for the evaluation.
+
+Here is an example of a complete evaluation suite:
+
+```typescript
+// evals/text-match.eval.ts
+
+import { Levenshtein } from 'autoevals';
+import { Eval } from '@axiomhq/ai';
+
+Eval('text-match-eval', {
+  // 1. Your ground truth dataset
+  data: async () => {
+    return [
+      {
+        input: 'test',
+        expected: 'hi, test!',
+      },
+      {
+        input: 'foobar',
+        expected: 'hello, foobar!',
+      },
+    ];
+  },
+
+  // 2. The task that runs your capability
+  task: async (input: string) => {
+    return `hi, ${input}!`;
+  },
+
+  // 3. The scorers that grade the output
+  scorers: [Levenshtein],
+
+  // 4. The pass/fail threshold for the scores
+  threshold: 1,
+});
+```
+
+## Grading with scorers
+
+<Badge>Coming soon</Badge> A <Tooltip tip={definitions.Grader}>grader</Tooltip> is a function that scores a capability's output. Axiom will provide a library of built-in scorers for common tasks (e.g., checking for semantic similarity, factual correctness, or JSON validity). You can also provide your own custom functions to measure domain-specific logic. Each scorer receives the `input`, the generated `output`, and the `expected` value, and must return a score.
+
+## Running evaluations
+
+<Badge>Coming soon</Badge> You will run your evaluation suites from your terminal using the `axiom` CLI.
+
+```bash
+axiom run evals/text-match.eval.ts
+```
+
+This command will execute the specified test file using `vitest` in the background. Note that `vitest` will be a peer dependency for this functionality.
+
+## Analyzing results in the console
+
+<Badge>Coming soon</Badge> When you run an <Tooltip tip={definitions.Eval}>eval</Tooltip>, the Axiom SDK captures a detailed OpenTelemetry trace for the entire run. This includes parent spans for the evaluation suite and child spans for each individual test case, task execution, and scorer result. These traces are enriched with `eval.*` attributes, allowing you to deeply analyze results in the Axiom Console.
+
+The Console will feature leaderboards and comparison views to track score progression across different versions of a capability, helping you verify that your changes are leading to measurable improvements.
+
+## What's next?
+
+Once your capability meets your quality benchmarks in the Measure stage, it's ready to be deployed. The next step is to monitor its performance with real-world traffic.
+
+Learn more about this step of the Rudder workflow in the [Observe](/ai-engineering/observe) docs.
