@@ -4,6 +4,9 @@ description: "Recommended patterns for reliably sending high-volume telemetry to
 keywords: ["architecture", "opentelemetry", "vector", "collector", "agent", "aggregator", "scalability", "resilience", "patterns", "otel"]
 ---
 
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+
 Successfully adopting a new platform at scale requires a robust and reliable data collection strategy. In complex distributed systems, how you collect and forward telemetry is as important as the platform that analyzes it.
 
 While Axiom is flexible and supports dozens of [methods](/send-data/methods), there is a confident, battle-tested recommendation for large-scale environments. This guide outlines Axiom’s recommended architectural patterns using two popular tools: the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) and [Vector](https://vector.dev/).
@@ -113,34 +116,32 @@ Axiom natively supports the OpenTelemetry Line Protocol (OTLP). Configuring the 
 {/* TODO: Check configuration for OpenTelemetry Collector */}
 
 **Example Collector Configuration (`otel-collector-config.yaml`):**
+
 ```yaml
-receivers:
-  otlp:
-    protocols:
-      grpc:
-      http:
-
-processors:
-  batch:
-
 exporters:
   otlphttp:
-    endpoint: "https://api.axiom.co"
+    compression: gzip
+    endpoint: https://AXIOM_DOMAIN
     headers:
-      "Authorization": "Bearer ${AXIOM_TOKEN}"
-      "X-Axiom-Dataset": "${AXIOM_DATASET}"
+      authorization: Bearer API_TOKEN
+      x-axiom-dataset: DATASET_NAME
 
 service:
   pipelines:
-    logs:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [otlphttp]
     traces:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [otlphttp]
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlphttp
 ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
 ### Vector
 
@@ -156,22 +157,25 @@ Vector has a [native sink](https://vector.dev/docs/reference/configuration/sinks
 {/* TODO: Check configuration for Vector */}
 
 **Example Vector Configuration (`vector.toml`):**
+
 ```toml
-[sources.my_app]
-  type = "http_server"
-  # ... other source configurations
+[sources.VECTOR_SOURCE_ID]
+type = "file"
+include = ["PATH_TO_LOGS"]
 
-[sinks.axiom]
-  # required
-  type = "axiom"
-  inputs = ["my_app"] # a list of component IDs that feed this sink
-  dataset = "${AXIOM_DATASET}"
-  token = "${AXIOM_TOKEN}"
-
-  # optional
-  # endpoint = "https://api.axiom.co"
-  # compression = "gzip"
+[sinks.SINK_ID]
+type = "axiom"
+inputs = ["VECTOR_SOURCE_ID"]
+token = "API_TOKEN"
+dataset = "DATASET_NAME"
 ```
+
+<Info>
+Replace `VECTOR_SOURCE_ID` with the Vector source ID.
+Replace `PATH_TO_LOGS` with the path to the log files. For example, `/var/log/**/*.log`.
+Replace `SINK_ID` with the sink ID.
+<ReplaceDatasetToken />
+</Info>
 
 ---
 
