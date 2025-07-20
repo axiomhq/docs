@@ -50,20 +50,70 @@ The Axiom AI SDK is built on the OpenTelemetry standard and requires a configure
 
 Here is a standard configuration for a Node.js environment:
 
+<CodeGroup>
+
+```bash pnpm
+pnpm i \
+  dotenv \
+  @opentelemetry/exporter-trace-otlp-http \
+  @opentelemetry/resources \
+  @opentelemetry/sdk-node \
+  @opentelemetry/sdk-trace-node \
+  @opentelemetry/semantic-conventions \
+  @opentelemetry/api
+```
+
+```bash npm
+npm i \
+  dotenv \
+  @opentelemetry/exporter-trace-otlp-http \
+  @opentelemetry/resources \
+  @opentelemetry/sdk-node \
+  @opentelemetry/sdk-trace-node \
+  @opentelemetry/semantic-conventions \
+  @opentelemetry/api
+```
+
+```bash yarn
+yarn add \
+  dotenv \
+  @opentelemetry/exporter-trace-otlp-http \
+  @opentelemetry/resources \
+  @opentelemetry/sdk-node \
+  @opentelemetry/sdk-trace-node \
+  @opentelemetry/semantic-conventions \
+  @opentelemetry/api
+```
+
+```bash bun
+bun add \
+  dotenv \
+  @opentelemetry/exporter-trace-otlp-http \
+  @opentelemetry/resources \
+  @opentelemetry/sdk-node \
+  @opentelemetry/sdk-trace-node \
+  @opentelemetry/semantic-conventions \
+  @opentelemetry/api
+```
+
+</CodeGroup>
+
 ```typescript
 // src/instrumentation.ts
 
 import 'dotenv/config'; // Make sure to load environment variables
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { initAxiomAI, tracer } from '@axiomhq/ai';
+import { initAxiomAI } from '@axiomhq/ai';
+
+const tracer = trace.getTracer("my-tracer");
 
 // Configure the NodeSDK to export traces to your Axiom dataset
 const sdk = new NodeSDK({
-  resource: new Resource({
+  resource: resourceFromAttributes({
     [ATTR_SERVICE_NAME]: 'my-ai-app', // Replace with your service name
   }),
   spanProcessor: new SimpleSpanProcessor(
