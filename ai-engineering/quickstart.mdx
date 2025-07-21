@@ -1,0 +1,155 @@
+---
+title: "Quickstart"
+description: "Install and configure the Axiom AI SDK to begin capturing telemetry from your generative AI applications."
+keywords: ["ai engineering", "getting started", "install", "setup", "configuration", "opentelemetry"]
+---
+
+This guide provides the steps to install and configure the [`@axiomhq/ai`](https://github.com/axiomhq/ai) SDK. Once configured, you can follow the Rudder workflow to create, measure, observe, and iterate on your AI capabilities.
+
+## Prerequisites
+
+Before you begin, ensure you have the following:
+
+* An Axiom **account**. Create one [here](https://www.axiom.co/register).
+* An Axiom **dataset**. Create one [here](https://app.axiom.co/datasets).
+* An Axiom **API token**. Create one [here](https://app.axiom.co/settings/api-tokens).
+
+## Installation
+
+Install the Axiom AI SDK into your TypeScript project using your preferred package manager.
+
+<CodeGroup>
+
+```bash pnpm
+pnpm i @axiomhq/ai
+```
+
+```bash npm
+npm i @axiomhq/ai
+```
+
+```bash yarn
+yarn add @axiomhq/ai
+```
+
+```bash bun
+bun add @axiomhq/ai
+```
+
+</CodeGroup>
+
+The SDK is open source. You can view the source code and examples in the [axiomhq/ai GitHub repository](https://github.com/axiomhq/ai).
+
+<Note>
+The `@axiomhq/ai` package also includes the `axiom` command-line interface (CLI) for managing your AI assets, which will be used in later stages of the Rudder workflow.
+</Note>
+
+## Configuration
+
+The Axiom AI SDK is built on the OpenTelemetry standard and requires a configured tracer to send data to Axiom. This is typically done in a dedicated instrumentation file that is loaded before the rest of your application.
+
+Here is a standard configuration for a Node.js environment:
+
+<CodeGroup>
+
+```bash pnpm
+pnpm i \
+  dotenv \
+  @opentelemetry/exporter-trace-otlp-http \
+  @opentelemetry/resources \
+  @opentelemetry/sdk-node \
+  @opentelemetry/sdk-trace-node \
+  @opentelemetry/semantic-conventions \
+  @opentelemetry/api
+```
+
+```bash npm
+npm i \
+  dotenv \
+  @opentelemetry/exporter-trace-otlp-http \
+  @opentelemetry/resources \
+  @opentelemetry/sdk-node \
+  @opentelemetry/sdk-trace-node \
+  @opentelemetry/semantic-conventions \
+  @opentelemetry/api
+```
+
+```bash yarn
+yarn add \
+  dotenv \
+  @opentelemetry/exporter-trace-otlp-http \
+  @opentelemetry/resources \
+  @opentelemetry/sdk-node \
+  @opentelemetry/sdk-trace-node \
+  @opentelemetry/semantic-conventions \
+  @opentelemetry/api
+```
+
+```bash bun
+bun add \
+  dotenv \
+  @opentelemetry/exporter-trace-otlp-http \
+  @opentelemetry/resources \
+  @opentelemetry/sdk-node \
+  @opentelemetry/sdk-trace-node \
+  @opentelemetry/semantic-conventions \
+  @opentelemetry/api
+```
+
+</CodeGroup>
+
+```typescript
+// src/instrumentation.ts
+
+import 'dotenv/config'; // Make sure to load environment variables
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+import { initAxiomAI } from '@axiomhq/ai';
+
+const tracer = trace.getTracer("my-tracer");
+
+// Configure the NodeSDK to export traces to your Axiom dataset
+const sdk = new NodeSDK({
+  resource: resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: 'my-ai-app', // Replace with your service name
+  }),
+  spanProcessor: new SimpleSpanProcessor(
+    new OTLPTraceExporter({
+      url: `https://api.axiom.co/v1/traces`,
+      headers: {
+        Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+        'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
+      },
+    }),
+  ),
+});
+
+// Start the SDK
+sdk.start();
+
+// Initialize the Axiom AI SDK with the configured tracer
+initAxiomAI({ tracer });
+```
+
+## Environment variables
+
+Your Axiom credentials and any frontier model API keys should be stored as environment variables. Create a `.env` file in the root of your project:
+
+```bash
+# Axiom Credentials
+AXIOM_TOKEN="<YOUR_AXIOM_API_TOKEN>"
+AXIOM_DATASET="<YOUR_AXIOM_DATASET_NAME>"
+
+# Frontier Model API Keys
+OPENAI_API_KEY="<YOUR_OPENAI_API_KEY>"
+GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"
+```
+
+## What's next?
+
+Now that your application is configured to send telemetry to Axiom, the next step is to start instrumenting your AI model calls.
+
+Learn more about that in the [Observe](/ai-engineering/observe) page of the Rudder workflow.
