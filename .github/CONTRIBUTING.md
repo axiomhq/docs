@@ -32,7 +32,7 @@ If you want to contribute but don’t know where to start, browse the open issue
 - When you review a PR, use GitHub suggestions for changes where discussion is necessary. For major changes or uncontroversial smaller fixes, commit directly to the branch.
 - Let the original creator merge the PR. The reviewer only approves or asks for changes.
 - In your comments, be kind, considerate, and constructive.
-- If a comment does not apply to the review of the PR, post it on the related issue.
+- If a comment doesn’t apply to the review of the PR, post it on the related issue.
 
 ## Commits
 
