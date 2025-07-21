@@ -1,6 +1,6 @@
 # Contribution guidelines
 
-We encourage you to participate in this documentation project. We appreciate your help in making Axiom as easy to understand and work with as possible.
+Axiom encourages you to participate in this documentation project. The community appreciates your help in making Axiom as easy to understand and work with as possible.
 
 To contribute, fork this repo, and then clone it. For more information, see the [GitHub documentation](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project).
 
