@@ -1,0 +1,57 @@
+---
+title: "Iterate"
+description: "Learn how to iterate on your AI capabilities by using production data and evaluation scores to drive improvements."
+keywords: ["ai engineering", "rudder", "iterate", "improvement", "a/b testing", "champion challenger"]
+---
+
+import { Badge } from "/snippets/badge.jsx";
+import { definitions } from '/snippets/definitions.mdx';
+
+<Warning>
+The iteration workflow described here is in active development. Axiom is working with design partners to shape what’s built. [Contact Axiom](https://www.axiom.co/contact) to get early access and join a small group of teams shaping these tools.
+</Warning>
+
+The **Iterate** stage is where the Rudder workflow comes full circle. It's the process of taking the real-world performance data from the [Observe](/ai-engineering/observe) stage and the quality benchmarks from the [Measure](/ai-engineering/measure) stage, and using them to make concrete improvements to your AI <Tooltip tip={definitions.Capability}>capability</Tooltip>. This creates a cycle of continuous, data-driven enhancement.
+
+## Identifying opportunities for improvement
+
+Iteration begins with insight. The telemetry you gather while observing your capability in production is a goldmine for finding areas to improve. By analyzing traces in the Axiom Console, you can:
+
+* Find real-world user inputs that caused your capability to fail or produce low-quality output.
+* Identify high-cost or high-latency interactions that could be optimized.
+* Discover common themes in user feedback that point to systemic weaknesses.
+
+These examples can be used to create a new, more robust <Tooltip tip={definitions.Collection}>collection</Tooltip> of <Tooltip tip={definitions.GroundTruth}>ground truth</Tooltip> data for offline testing.
+
+## Testing changes against ground truth
+
+<Badge>Coming soon</Badge> Once you've created a new version of your `Prompt` object, you need to verify that it's actually an improvement. The best way to do this is to run an "offline evaluation"—testing your new version against the same ground truth collection you used in the **Measure** stage.
+
+The Axiom Console will provide views to compare these evaluation runs side-by-side:
+
+* **A/B Comparison Views:** See the outputs of two different prompt versions for the same input, making it easy to spot regressions or improvements.
+* **Leaderboards:** Track evaluation scores across all versions of a capability to see a clear history of its quality over time.
+
+This ensures you can validate changes with data before they ever reach your users.
+
+## Deploying with confidence
+
+<Badge>Coming soon</Badge> After a new version of your capability has proven its superiority in offline tests, you can deploy it with confidence. The Rudder workflow will support a champion/challenger pattern, where you can deploy a new "challenger" version to run in shadow mode against a portion of production traffic. This allows for a final validation on real-world data without impacting the user experience.
+
+Once you're satisfied with the challenger's performance, you can promote it to become the new "champion" using the SDK's `deploy` function.
+
+```typescript
+import { axiom } from './axiom-client';
+
+// Promote a new version of a prompt to the production environment
+await axiom.prompts.deploy('prompt_123', {
+  environment: 'production',
+  version: '1.1.0',
+});
+```
+
+## What's next?
+
+By completing the Iterate stage, you have closed the loop. Your improved capability is now in production, and you can return to the **Observe** stage to monitor its performance and identify the next opportunity for improvement.
+
+This cycle of creating, measuring, observing, and iterating is the core of the Rudder workflow, enabling you to build better AI systems, backed by data.
