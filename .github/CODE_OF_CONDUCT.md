@@ -1,3 +1,5 @@
+{/* vale off */}
+
 # Contributor covenant code of conduct
 
 ## Our pledge
