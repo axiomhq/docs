@@ -1,0 +1,144 @@
+---
+title: "Observe"
+description: "Learn how to observe your deployed AI capabilities in production using Axiom's AI SDK to capture telemetry."
+keywords: ["ai engineering", "rudder", "observe", "telemetry", "withspan", "opentelemetry"]
+---
+
+import { Badge } from "/snippets/badge.jsx";
+
+The **Observe** stage is about understanding how your deployed generative AI capabilities perform in the real world. After creating and evaluating a capability, observing its production behavior is crucial for identifying unexpected issues, tracking costs, and gathering the data needed for future improvements.
+
+## Capturing telemetry with the `@axiomhq/ai` SDK
+
+The foundation of the Observe stage is Axiom's SDK, which integrates with your app to capture detailed OpenTelemetry traces for every AI interaction.
+
+<Info>
+The initial release of `@axiomhq/ai` is focused on providing deep integration with TypeScript applications, particularly those using Vercel's AI SDK to interact with frontier models.
+</Info>
+
+### Instrumenting AI SDK calls
+
+The easiest way to get started is by wrapping your existing AI model client. The `@axiomhq/ai` package provides helper functions for popular libraries like Vercel's AI SDK.
+
+The `wrapAISDKModel` function takes an existing AI model object and returns an instrumented version that will automatically generate trace data for every call.
+
+```typescript
+// src/shared/gemini.ts
+
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { wrapAISDKModel } from '@axiomhq/ai';
+
+const geminiProvider = createGoogleGenerativeAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
+// Wrap the model to enable automatic tracing
+export const geminiFlash = wrapAISDKModel(geminiProvider('gemini-2.5-flash-preview-04-17'));
+```
+
+
+### Adding context with `withSpan`
+
+While `wrapAISDKModel` handles the automatic instrumentation, the `withSpan` function allows you to add crucial business context to your traces. It creates a parent span around your LLM call and attaches metadata about the `capability` and `step` being executed.
+
+```typescript
+// src/app/page.tsx
+
+import { withSpan } from '@axiomhq/ai';
+import { generateText } from 'ai';
+import { geminiFlash } from '@/shared/gemini';
+
+export default async function Page() {
+  const userId = 123;
+
+  // Use withSpan to define the capability and step
+  const res = await withSpan({ capability: 'get_capital', step: 'generate_answer' }, (span) => {
+    // You have access to the OTel span to add custom attributes
+    span.setAttribute('user_id', userId);
+
+    return generateText({
+      model: geminiFlash, // Use the wrapped model
+      messages: [
+        {
+          role: 'user',
+          content: 'What is the capital of Spain?',
+        },
+      ],
+    });
+  });
+
+  return <p>{res.text}</p>;
+}
+```
+
+
+## Setting up instrumentation
+
+The Axiom AI SDK is built on the OpenTelemetry standard. To send traces, you need to configure a Node.js or edge-compatible tracer that exports data to Axiom.
+
+### Configuring the tracer
+
+You must configure an OTLP trace exporter pointing to your Axiom instance. This is typically done in a dedicated instrumentation file that is loaded before your application starts.
+
+```typescript
+// src/instrumentation.node.ts
+
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { Resource } from '@opentelemetry/resources';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+import { initAxiomAI, tracer } from '@axiomhq/ai';
+
+// Configure the SDK to export traces to Axiom
+const sdk = new NodeSDK({
+  resource: new Resource({
+    [ATTR_SERVICE_NAME]: 'nextjs-otel-example',
+  }),
+  spanProcessor: new SimpleSpanProcessor(
+    new OTLPTraceExporter({
+      url: `https://api.axiom.co/v1/traces`,
+      headers: {
+        Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+        'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
+      },
+    }),
+  ),
+});
+sdk.start();
+
+// Initialize the Axiom AI SDK with the tracer
+initAxiomAI({ tracer });
+```
+
+
+Your Axiom credentials (`AXIOM_TOKEN` and `AXIOM_DATASET`) should be set as environment variables.
+
+## Understanding your AI telemetry
+
+Once instrumented, every LLM call will send a detailed span to your Axiom dataset. These spans are enriched with standardized `gen_ai.*` attributes that make your AI interactions easy to query and analyze.
+
+Key attributes include:
+
+* `gen_ai.capability.name`: The high-level capability name you defined in `withSpan`.
+* `gen_ai.step.name`: The specific step within the capability.
+* `gen_ai.request.model`: The model requested for the completion.
+* `gen_ai.response.model`: The model that actually fulfilled the request.
+* `gen_ai.usage.input_tokens`: The number of tokens in the prompt.
+* `gen_ai.usage.output_tokens`: The number of tokens in the generated response.
+* `gen_ai.prompt`: The full, rendered prompt or message history sent to the model (as a JSON string).
+* `gen_ai.completion`: The full response from the model, including tool calls (as a JSON string).
+* `gen_ai.response.finish_reasons`: The reason the model stopped generating tokens (e.g., `stop`, `tool-calls`).
+
+## Visualizing traces in the console
+
+Visualizing and making sense of this telemetry data is a core part of the Axiom Console experience.
+
+* <Badge>Coming soon</Badge> A dedicated **AI Trace Waterfall** view will visualize single and multi-step LLM workflows, with clear input/output inspection at each stage.
+* <Badge>Coming soon</Badge> A pre-built **Gen AI OTel Dashboard** will automatically appear for any dataset receiving AI telemetry. It will feature elements for tracking cost per invocation, time-to-first-token, call counts by model, and error rates.
+
+## What's next?
+
+Now that you are capturing and analyzing production telemetry, the next step is to use these insights to improve your capability.
+
+Learn more in the [Iterate](/ai-engineering/iterate) page.
