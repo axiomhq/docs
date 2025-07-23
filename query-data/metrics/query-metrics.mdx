@@ -1,0 +1,336 @@
+---
+title: Query metrics
+description: This page explains how to query OpenTelemetry metrics.
+---
+
+In Axiom, you can use two query languages:
+- Axiom Processing Language (APL) lets you query datasets with events, OTel logs, and OTel traces. For more information, see [Introduction to APL](/apl/introduction).
+- AxQL lets you query OTel metrics. This page explains how to use AxQL.
+
+AxQL is a metric-focused query language that combines the simplicity of APL with the expressive power of PromQL. It enables effective querying, transformation, and aggregation of metric data, supporting diverse observability use cases. It addresses the shortcomings of existing metric query languages, which are either overly complex or too rigidly tied to specific storage formats.
+
+AxQL is a superset of PromQL. Existing PromQL expressions can be translated to AxQL for quick onboarding and greater flexibility. For more information, see [Migrate metrics to Axiom](/query-data/metrics/migrate-metrics).
+
+<Info>
+Support for OTel metrics is currently in public preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
+</Info>
+
+## Limitations
+
+The current implementation of AxQL comes with the following limitations:
+
+- You can query single metrics.
+TODO other limitations?
+
+## Concepts
+
+- **Dataset:** A group of related metrics.
+- **Metric:** One-dimensional time series data.
+- **Tag:** Key-value pair identifying a series.
+- **Series:** A unique combination of a metric and tag set.
+
+## Query structure
+
+A typical AxQL query contains the following:
+
+1. **Source**: Defines dataset, metric, and optional time range
+1. **Filter**: Applies conditions to series via tags
+1. **Transformation** can be the following:
+    - **Mapping:** Maps the data to a new value.
+    - **Aggregation:** Aggregates the data over a given time to a single value.
+    - **Grouping:** Groups the data by a set of tags, combining overlapping values.
+    - **Bucketing:** A two-dimensional transformation that combines the time and tag dimension.
+
+**Example:**
+
+```kusto
+k8s:cpu_usage[1h..]
+| where namespace == "prod"
+| align avg(5m)
+```
+
+### Elements of queries
+
+The following explains each element of an AxQL query.
+
+For an overview of all the functions in AxQL, see [AxQL functions reference](/query-data/metrics/functions).
+
+To learn more about the language features of AxQL, see [Language features](#language-features).
+
+### Source
+
+Specify data source and optional time bounds.
+
+```kusto
+<dataset>:<metric>[<time range>][ as <alias>]
+```
+
+- **dataset**: Name of the dataset.
+- **metric**: Name of the metric.
+- **time range**: Optional: The time range of the query. For more information, see [Time ranges](#time-ranges).
+- **alias**: Optional: Renames the metric for later use.
+
+**Examples:**
+
+```kusto
+k8s:cpu_usage[1h..]
+k8s:cpu_usage[2h..5m]
+k8s:cpu_usage["2025-03-01T13:00:00Z"..+1h] as usage
+```
+
+### Filter
+
+Use `where` or `filter` to filter series based on tag values. `where` and `filter` are identical.
+
+```kusto
+| where <tag> <operator> <value>
+```
+
+Operators:
+
+- `==`
+- `!=`
+- `<`
+- `>`
+- `<=`
+- `>=`
+- `in`
+- `and`
+- `or`
+- `not`
+
+The value must be one of the [supported data types](#data-types).
+
+**Example:**
+
+```kusto
+| where project == /.*metrics.*/ and code in [200, 201]
+```
+
+### Mapping
+
+Transform individual values or series.
+
+**Data Mappings:**
+
+```kusto
+| map rate
+| map + 5
+| map fill(0)
+| map < 0.4
+| map wasm::my_module::fn(1, 2)
+```
+
+**Series Mappings:**
+
+```kusto
+| as new_name
+| replace hostname ~ s/(.*?)\..*/$1/
+| remove old_tag
+```
+
+### Aggregation
+
+Use `align` to aggregate over time windows.
+
+```kusto
+| align <agg_fn>(<window>[, <step>])
+```
+
+Supported functions:
+- `avg`
+- `sum`
+- `min`
+- `max`
+- `count`
+- `wasm::*`
+
+**Example:**
+
+```kusto
+| align avg(5m)
+| align count(1h)
+```
+
+### Grouping
+
+Use `group by` to combine series by tags.
+
+```kusto
+| group by <tag1>, <tag2> using <agg_fn>
+```
+
+**Examples:**
+
+```kusto
+| group by project using sum
+| group using count
+```
+
+### Bucketing
+
+Used for histogram-like transformations.
+
+```kusto
+| bucket by <tags> using <function>(<window>)
+```
+
+**Example:**
+
+```kusto
+| bucket by method using histogram(5m)
+```
+
+## Other operations
+
+### Compute
+
+Combines multiple metrics in one query block.
+
+```kusto
+{
+  <subquery1>;
+  <subquery2>;
+}
+| compute <name> using <operator>
+```
+
+**Example:**
+
+```kusto
+{
+  dataset:requests_total | where code >= 400 | group by path using sum;
+  dataset:requests_total | group by path using sum;
+}
+| compute error_rate using /
+| align avg(5m)
+```
+
+### Join
+
+Pull tags from another series.
+
+```kusto
+| join <tag(s)> from <source> by <key>
+```
+
+**Example:**
+
+```kusto
+test:kube_pod_status_ready | group by pod using sum
+| join created_by_kind from test:kube_pod_info by pod
+```
+
+## Language features
+
+### Data types
+
+- Strings: `"string"`
+- Integers: `42`
+- Floats: `3.14`
+- Booleans: `true`, `false`
+- Regex: `/.*metrics.*/`
+- Sets: `[value1, value2]`
+
+### Identifier naming rules
+
+Valid identifier names in AxQL follow these rules:
+
+- Between 1 and 1024 characters long.
+- Allowed characters:
+    - Alphanumeric characters (letters and digits)
+    - Underscore (`_`)
+    - Space (` `)
+    - Dot (`.`)
+    - Dash (`-`)
+
+Identifier names are case-sensitive. Axiom doesn’t recommend the use of spaces (` `) and dashes (`-`) in identifier names.
+
+### Quote identifiers
+
+Quote an identifier in your AxQL query if any of the following is true:
+
+- The identifier name contains at least one of the following special characters:
+    - Space (` `)
+    - Dash (`-`)
+- The identifier name is identical to one of the reserved keywords of the APL query language. For example, `project` or `where`.
+
+If any of the above is true, you must quote the identifier by enclosing it in backticks (`\``). For example, ``my-field``.
+
+If none of the above is true, you don’t need to quote the identifier in your AxQL query. For example, `myfield`. In this case, quoting the identifier name is optional.
+
+### Variables
+
+Use `$name` to reference query parameters.
+
+```kusto
+| align avg($step, 1h)
+```
+
+### Modifiers
+
+Modifiers appear at the top of a query.
+
+```kusto
+set strict;
+set warn=types;
+set edition=2025;
+#! wasm=module:file.wasm
+#! query=step:relative_time
+```
+
+## Set directives
+
+Define settings or named values at the top of a file.
+
+**Syntax:**
+
+```kusto
+set variable = value;
+```
+
+TODO explain modifiers
+
+### Time ranges
+
+```kusto
+[<start>..<end>?]
+```
+
+Define time ranges with the following:
+
+- **Start time:**: Inclusive beginning of the time range.
+- **End time:** Optional, exclusive end of the time range. If you don’t specify the end time, Axiom uses the current time.
+
+Separate the start and the end times with `..`.
+
+Time can be defined in one of the following ways:
+
+- Relative time. The time unit can be one of the following:
+    - `ms` for milliseconds (will be rounded to seconds)
+    - `s` for seconds
+    - `m` for minutes
+    - `h` for hours
+    - `d` for days
+    - `w` for weeks
+    - `M` for months
+    - `y` for years
+    Examples: `-1h`, `+5m`
+- Unix epoch timestamp in seconds. For example: `1723982394`
+- An RFC3339 timestamp. For example: `2025-03-01T13:00:00Z`
+
+**Examples:**
+
+```kusto
+// One hour ago until now
+[1h..]
+
+// One hour after a Unix timestamp
+[1747077736092..+1h]
+
+// One hour before a Unix timestamp
+[-1h..1747077736092]
+
+// One hour before a RFC3339 date
+[-1h..2025-03-01T13:00:00Z]
+```
