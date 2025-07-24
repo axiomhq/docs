@@ -55,8 +55,6 @@ This example queries the `k8s` dataset’s `cpu_usage` metric one hour before th
 
 The following explains each element of an AxQL query.
 
-For an overview of all the functions in AxQL, see [AxQL functions reference](/query-data/metrics/functions).
-
 To learn more about the language features of AxQL, see [Language features](#language-features).
 
 ### Source
@@ -254,7 +252,7 @@ Currently, only the `histogram` function is supported.
 | bucket by project, namespace using histogram(5m)
 
 // Bucket over the `project` and `namespace` tags using a custom aggregation function from WASM
-| bucket by project, namespace using wasm::ai::my_function(5m)
+| bucket by project, namespace using wasm::my_module::my_function(5m)
 ```
 
 ## Other operations
@@ -332,31 +330,59 @@ Use `format` as the last operator in your query to format the results.
 
 ## Modifiers
 
+Modifiers are declarations at the beginning of a query that can:
+- Configure query settings
+- Define query parameters
+- Import custom functions
 
+### Query settings
 
-### Settings
-
-Use the `set` command to define settings at the beginning of a query.
+Use the `set` command to configure settings at the beginning of a query.
 
 **Syntax:**
 
 ```kusto
-set <modifier>[=<value>];
+set <query_settings>[=<value>];
 ```
 
-Available modifiers:
+Available query settings:
 
-**Example:**
+- `strict`: Use strict mode for production queries where it is crucial to get the correct information.
+- `warn`: Define whether you want to see warning to improve your query. 
+- `behavior`: Allow conversion of non-string data to string data. This is useful for cross-compiling Prometheus queries that treat everything as a string.
+- `edition`: Define the edition of AxQL your query uses.
+
+**Examples:**
 
 ```kusto
+// Use strict mode
 set strict;
+
+// Warn for possible type conflicts
 set warn=types;
+
+// Warn for possible performance issues
+set warn=performance;
+
+// Warn for idiomatic issues
+set warn=ideomatic;
+
+// Allow conversion of non-string data to string data
+set behaviour=regexp-string-conversion;
+
+// Define the edition of AxQL your query uses
 set edition=2025;
 ```
 
 ### Query parameters
 
 Define query parameters at the beginning of a query.
+
+**Syntax:**
+
+```kusto
+#! query=<query_parameter>:<type>
+```
 
 **Example:**
 
@@ -376,12 +402,34 @@ To reference the query parameters in your query, use the dollar sign (`$`).
 
 ### Custom functions
 
-To import custom functions to your query, use the `wasm` command.
+To import custom functions to your query, use the `wasm` command. You can import modules from WASM files you have previously uploaded to Axiom.
+
+**Syntax:**
 
 ```kusto
-// Load wasm module that was uploaded to Axiom in their org
-#! wasm=ai_module:do-ai-stuff.wasm 
-#! wasm=other_module:do-non-ai-stuff.wasm 
+#! wasm=<module_name>:<file_name>
+```
+
+**Example:**
+
+```kusto
+// Import the module named `my_module` from the `ai_functions.wasm` file
+#! wasm=my_module:ai_functions.wasm 
+```
+
+To reference custom functions in your query, use the following syntax:
+
+**Syntax:**
+
+```kusto
+wasm::<module_name>::<function_name>
+```
+
+**Example:**
+
+```kusto
+// Bucket over the `project` and `namespace` tags using a custom aggregation function from WASM
+| bucket by project, namespace using wasm::my_module::my_function(5m)
 ```
 
 ## Language features
