@@ -72,6 +72,43 @@ export default async function Page() {
 }
 ```
 
+### Instrumenting tool calls with `wrapTool`
+
+For many AI capabilities, the LLM call is only part of the story. If your capability uses tools to interact with external data or services, observing the performance and outcome of those tools is critical. The Axiom AI SDK provides the `wrapTool` and `wrapTools` functions to automatically instrument your Vercel AI SDK tool definitions.
+
+The `wrapTool` helper takes your tool's name and its definition and returns an instrumented version. This wrapper creates a dedicated child span for every tool execution, capturing its arguments, output, and any errors.
+
+```typescript
+// src/app/generate-text/page.tsx
+import { tool } from 'ai';
+import { z } from 'zod';
+import { wrapTool } from '@axiomhq/ai';
+
+// ...
+
+// In your generateText call, provide wrapped tools
+const { text, toolResults } = await generateText({
+  model: geminiFlash,
+  messages: // ...,
+  tools: {
+    // Wrap each tool with its name
+    findDirections: wrapTool(
+      'findDirections', // The name of the tool
+      tool({
+        description: 'Find directions to a location',
+        inputSchema: z.object({
+          from: z.string(),
+          to: z.string(),
+        }),
+        execute: async (params) => {
+          // Your tool logic here...
+          return { directions: `To get from ${params.from} to ${params.to}, use a teleporter.` };
+        },
+      })
+    )
+  }
+});
+```
 
 ## Setting up instrumentation
 
@@ -100,6 +137,9 @@ Key attributes include:
 * `gen_ai.prompt`: The full, rendered prompt or message history sent to the model (as a JSON string).
 * `gen_ai.completion`: The full response from the model, including tool calls (as a JSON string).
 * `gen_ai.response.finish_reasons`: The reason the model stopped generating tokens (e.g., `stop`, `tool-calls`).
+* **`gen_ai.tool.name`**: The name of the executed tool.
+* **`gen_ai.tool.arguments`**: The arguments passed to the tool (as a JSON string).
+* **`gen_ai.tool.message`**: The result returned by the tool (as a JSON string).
 
 ## Visualizing traces in the console
 
