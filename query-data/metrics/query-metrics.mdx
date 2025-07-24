@@ -19,8 +19,8 @@ Support for OTel metrics is currently in public preview. For more information, s
 
 The current implementation of AxQL comes with the following limitations:
 
-- You can query single metrics.
-TODO other limitations?
+- You can only query single metrics.
+- You can only use bucketing for histograms.
 
 ## Concepts
 
@@ -49,7 +49,9 @@ k8s:cpu_usage[1h..]
 | align avg(5m)
 ```
 
-### Elements of queries
+This example queries the `k8s` dataset’s `cpu_usage` metric one hour before the current time. It filters results to events where `namespace` is `prod` and aggregates events over 5-minute time windows.
+
+## Elements of queries
 
 The following explains each element of an AxQL query.
 
@@ -59,7 +61,9 @@ To learn more about the language features of AxQL, see [Language features](#lang
 
 ### Source
 
-Specify data source and optional time bounds.
+Specify the dataset, the metric, and optional time bounds.
+
+**Syntax:**
 
 ```kusto
 <dataset>:<metric>[<time range>][ as <alias>]
@@ -82,22 +86,18 @@ k8s:cpu_usage["2025-03-01T13:00:00Z"..+1h] as usage
 
 Use `where` or `filter` to filter series based on tag values. `where` and `filter` are identical.
 
+**Syntax:**
+
 ```kusto
 | where <tag> <operator> <value>
 ```
 
-Operators:
+Available operators:
 
-- `==`
-- `!=`
-- `<`
-- `>`
-- `<=`
-- `>=`
-- `in`
-- `and`
-- `or`
-- `not`
+- Equality: `==`, `!=`
+- Comparisons: `<`, `<=`, `>`, `>=`
+- Logical: `and`, `or`, `not`
+- Set: `in`
 
 The value must be one of the [supported data types](#data-types).
 
@@ -111,81 +111,159 @@ The value must be one of the [supported data types](#data-types).
 
 Transform individual values or series.
 
-**Data Mappings:**
+Available functions:
+
+| Function     | Description                                                  |
+|--------------|--------------------------------------------------------------|
+| `rate`       | Computes the per-second rate of change for a metric. |
+| `min`        | Returns the minimum value in the series.                     |
+| `max`        | Returns the maximum value in the series.                     |
+| `abs`        | Returns the absolute value of each data point.               |
+| `fill_prev`  | Fills missing values using the previous non-null value.      |
+| `fill_const` | Fills missing values with a constant.                        |
+
+**Examples for data mappings:**
 
 ```kusto
+// Calculate rate per second for the metric
 | map rate
-| map + 5
-| map fill(0)
+
+// Add 5 to each value
+| map  + 5
+
+// Fill empty values with the latest value
+| map fill_last
+
+// Fill empty values with zeros
+| map fill_const(0)
+
+// Set existing values to 0 if the value is < 0.4. Else set to 1.
 | map < 0.4
-| map wasm::my_module::fn(1, 2)
+
+// Transform data using a custom function from WASM
+| map wasm::my_module::my_function(1, 2, 3)
 ```
 
-**Series Mappings:**
+**Examples for series mappings:**
 
 ```kusto
-| as new_name
+// Rename the metric to `cpu_usage_rate`
+| as cpu_usage_rate
+
+// Rename the tag `load` to `cpu_load`
+| replace load=cpu_load
+
+// Replace the value of `hostname` using a regular expression
 | replace hostname ~ s/(.*?)\..*/$1/
-| remove old_tag
+
+// Create the new tag `core` by adding 1 to `gpu_core`
+| replace core = gpu_core + 1
+
+// Remove the tag `gpu_core`
+| remove gpu_core
 ```
 
 ### Aggregation
 
 Use `align` to aggregate over time windows.
 
+**Syntax:**
+
 ```kusto
-| align <agg_fn>(<window>[, <step>])
+| align <aggregation_function>(<time_window>[, <step>])
 ```
 
-Supported functions:
-- `avg`
-- `sum`
-- `min`
-- `max`
-- `count`
-- `wasm::*`
+Available aggregation functions:
 
-**Example:**
+| Function | Description                           |
+|----------|---------------------------------------|
+| `avg`    | Averages values in each interval.     |
+| `sum`    | Sums values in each interval.         |
+| `min`    | Takes the minimum value per interval. |
+| `max`    | Takes the maximum value per interval. |
+| `count`  | Counts non-null values per interval.  |
+
+**Examples:**
 
 ```kusto
+// Calculate the average over 5-minute time windows
 | align avg(5m)
+
+// Calculate the running average every minute with a lookback window of 5 minutes
+| align avg(5m, 1m)
+
+// Count the data points in the last hour
 | align count(1h)
+
+// Aggregate data using a custom function from WASM
+| align wasm::my_module::my_function(30s)
 ```
 
 ### Grouping
 
 Use `group by` to combine series by tags.
 
+**Syntax:**
+
 ```kusto
-| group by <tag1>, <tag2> using <agg_fn>
+| group [by <tag1>, <tag2>] using <aggregation_function>
 ```
+
+Available aggregation functions:
+
+| Function | Description                           |
+|----------|---------------------------------------|
+| `avg`    | Averages values in each interval.     |
+| `sum`    | Sums values in each interval.         |
+| `min`    | Takes the minimum value per interval. |
+| `max`    | Takes the maximum value per interval. |
+| `count`  | Counts non-null values per interval.  |
 
 **Examples:**
 
 ```kusto
-| group by project using sum
+// Calculate the number of series
 | group using count
+
+// Calculate the total number of nodes
+| group using sum
+
+// Group data by the `project` and `namespace` tags using the `sum` aggregation
+| group by project, namespace using sum
+
+// Group data by the `project` and `namespace` tags using a custom aggregation function from WASM
+| group by project, namespace using wasm::my_module::my_function(1, 2, 3)
 ```
 
 ### Bucketing
 
-Used for histogram-like transformations.
+Bucketing is a special case of grouping that combines the time and tag dimensions.
+
+**Syntax:**
 
 ```kusto
 | bucket by <tags> using <function>(<window>)
 ```
 
-**Example:**
+Currently, only the `histogram` function is supported.
+
+**Examples:**
 
 ```kusto
-| bucket by method using histogram(5m)
+// Bucket over the `project` and `namespace` tags using the histogram aggregation
+| bucket by project, namespace using histogram(5m)
+
+// Bucket over the `project` and `namespace` tags using a custom aggregation function from WASM
+| bucket by project, namespace using wasm::ai::my_function(5m)
 ```
 
 ## Other operations
 
 ### Compute
 
-Combines multiple metrics in one query block.
+Combine multiple metrics in one query block.
+
+**Syntax:**
 
 ```kusto
 {
@@ -195,12 +273,28 @@ Combines multiple metrics in one query block.
 | compute <name> using <operator>
 ```
 
+Available operators:
+
+| Operator | Description                       |
+|----------|-----------------------------------|
+| `+`      | Adds subquery results.               |
+| `-`      | Subtracts one subquery from another. |
+| `*`      | Multiplies subquery results.               |
+| `/`      | Divides one subquery by another.     |
+| `min`    | Minimum across result series.     |
+| `max`    | Maximum across result series.     |
+| `avg`    | Average across result series.     |
+
 **Example:**
 
 ```kusto
+// Return the average error rate over the past 5 minutes
 {
-  dataset:requests_total | where code >= 400 | group by path using sum;
-  dataset:requests_total | group by path using sum;
+ k8s-metrics-dev:http_requests_total
+ | where code >= 400
+ | group by method, path using sum;
+ k8s-metrics-dev:http_requests_total
+ | group by method, path using sum;
 }
 | compute error_rate using /
 | align avg(5m)
@@ -210,6 +304,8 @@ Combines multiple metrics in one query block.
 
 Pull tags from another series.
 
+**Syntax:**
+
 ```kusto
 | join <tag(s)> from <source> by <key>
 ```
@@ -217,8 +313,75 @@ Pull tags from another series.
 **Example:**
 
 ```kusto
-test:kube_pod_status_ready | group by pod using sum
+// Pull the `created_by_kind` tag from the `test` dataset’s `kube_pod_info` metric and join it with the `kube_pod_status_ready` metric using the `pod` field as the key
+test:kube_pod_status_ready
+| group by pod using sum;
 | join created_by_kind from test:kube_pod_info by pod
+```
+
+### Format
+
+Use `format` as the last operator in your query to format the results.
+
+**Example:**
+
+```kusto
+// Format HTTP requests into strings like `"GET[200]: /api/v1/metrics"`
+| format "{{.method}}{{.code}}: {{.path}}"
+```
+
+## Modifiers
+
+
+
+### Settings
+
+Use the `set` command to define settings at the beginning of a query.
+
+**Syntax:**
+
+```kusto
+set <modifier>[=<value>];
+```
+
+Available modifiers:
+
+**Example:**
+
+```kusto
+set strict;
+set warn=types;
+set edition=2025;
+```
+
+### Query parameters
+
+Define query parameters at the beginning of a query.
+
+**Example:**
+
+```kusto
+// Import the `step` query parameter with the type `relative_time`
+#! query=step:relative_time
+```
+
+To reference the query parameters in your query, use the dollar sign (`$`).
+
+**Example:**
+
+```kusto
+// Calculate the running average over a one-hour window, emitting every `step`
+| align avg($step, 1h)
+```
+
+### Custom functions
+
+To import custom functions to your query, use the `wasm` command.
+
+```kusto
+// Load wasm module that was uploaded to Axiom in their org
+#! wasm=ai_module:do-ai-stuff.wasm 
+#! wasm=other_module:do-non-ai-stuff.wasm 
 ```
 
 ## Language features
@@ -259,39 +422,9 @@ If any of the above is true, you must quote the identifier by enclosing it in ba
 
 If none of the above is true, you don’t need to quote the identifier in your AxQL query. For example, `myfield`. In this case, quoting the identifier name is optional.
 
-### Variables
-
-Use `$name` to reference query parameters.
-
-```kusto
-| align avg($step, 1h)
-```
-
-### Modifiers
-
-Modifiers appear at the top of a query.
-
-```kusto
-set strict;
-set warn=types;
-set edition=2025;
-#! wasm=module:file.wasm
-#! query=step:relative_time
-```
-
-## Set directives
-
-Define settings or named values at the top of a file.
+### Time ranges
 
 **Syntax:**
-
-```kusto
-set variable = value;
-```
-
-TODO explain modifiers
-
-### Time ranges
 
 ```kusto
 [<start>..<end>?]
@@ -322,7 +455,7 @@ Time can be defined in one of the following ways:
 **Examples:**
 
 ```kusto
-// One hour ago until now
+// One hour ago until the current time
 [1h..]
 
 // One hour after a Unix timestamp
@@ -331,6 +464,6 @@ Time can be defined in one of the following ways:
 // One hour before a Unix timestamp
 [-1h..1747077736092]
 
-// One hour before a RFC3339 date
+// One hour before an RFC3339 date
 [-1h..2025-03-01T13:00:00Z]
 ```
