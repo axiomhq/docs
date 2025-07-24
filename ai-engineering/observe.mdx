@@ -5,6 +5,7 @@ keywords: ["ai engineering", "rudder", "observe", "telemetry", "withspan", "open
 ---
 
 import { Badge } from "/snippets/badge.jsx";
+import AIEngineeringInstrumentationSnippet from '/snippets/ai-engineering-instrumentation.mdx'
 
 The **Observe** stage is about understanding how your deployed generative AI capabilities perform in the real world. After creating and evaluating a capability, observing its production behavior is crucial for identifying unexpected issues, tracking costs, and gathering the data needed for future improvements.
 
@@ -80,37 +81,7 @@ The Axiom AI SDK is built on the OpenTelemetry standard. To send traces, you nee
 
 You must configure an OTLP trace exporter pointing to your Axiom instance. This is typically done in a dedicated instrumentation file that is loaded before your application starts.
 
-```typescript
-// src/instrumentation.node.ts
-
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
-import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { initAxiomAI, tracer } from '@axiomhq/ai';
-
-// Configure the SDK to export traces to Axiom
-const sdk = new NodeSDK({
-  resource: new Resource({
-    [ATTR_SERVICE_NAME]: 'nextjs-otel-example',
-  }),
-  spanProcessor: new SimpleSpanProcessor(
-    new OTLPTraceExporter({
-      url: `https://api.axiom.co/v1/traces`,
-      headers: {
-        Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-        'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
-      },
-    }),
-  ),
-});
-sdk.start();
-
-// Initialize the Axiom AI SDK with the tracer
-initAxiomAI({ tracer });
-```
-
+<AIEngineeringInstrumentationSnippet />
 
 Your Axiom credentials (`AXIOM_TOKEN` and `AXIOM_DATASET`) should be set as environment variables.
 

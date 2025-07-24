@@ -4,6 +4,8 @@ description: "Install and configure the Axiom AI SDK to begin capturing telemetr
 keywords: ["ai engineering", "getting started", "install", "setup", "configuration", "opentelemetry"]
 ---
 
+import AIEngineeringInstrumentationSnippet from '/snippets/ai-engineering-instrumentation.mdx'
+
 This guide provides the steps to install and configure the [`@axiomhq/ai`](https://github.com/axiomhq/ai) SDK. Once configured, you can follow the Rudder workflow to create, measure, observe, and iterate on your AI capabilities.
 
 ## Prerequisites
@@ -98,41 +100,7 @@ bun add \
 
 </CodeGroup>
 
-```typescript
-// src/instrumentation.ts
-
-import 'dotenv/config'; // Make sure to load environment variables
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { resourceFromAttributes } from '@opentelemetry/resources';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
-import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { initAxiomAI } from '@axiomhq/ai';
-
-const tracer = trace.getTracer("my-tracer");
-
-// Configure the NodeSDK to export traces to your Axiom dataset
-const sdk = new NodeSDK({
-  resource: resourceFromAttributes({
-    [ATTR_SERVICE_NAME]: 'my-ai-app', // Replace with your service name
-  }),
-  spanProcessor: new SimpleSpanProcessor(
-    new OTLPTraceExporter({
-      url: `https://api.axiom.co/v1/traces`,
-      headers: {
-        Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-        'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
-      },
-    }),
-  ),
-});
-
-// Start the SDK
-sdk.start();
-
-// Initialize the Axiom AI SDK with the configured tracer
-initAxiomAI({ tracer });
-```
+<AIEngineeringInstrumentationSnippet />
 
 ## Environment variables
 
