@@ -23,7 +23,39 @@ The easiest way to get started is by wrapping your existing AI model client. The
 
 The `wrapAISDKModel` function takes an existing AI model object and returns an instrumented version that will automatically generate trace data for every call.
 
-```typescript
+<CodeGroup>
+
+```typescript OpenAI
+// src/shared/openai.ts
+
+import { createOpenAI } from '@ai-sdk/openai';
+import { wrapAISDKModel } from '@axiomhq/ai';
+
+const openaiProvider = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Wrap the model to enable automatic tracing
+export const gpt4o = wrapAISDKModel(openaiProvider('gpt-4o'));
+export const gpt4oMini = wrapAISDKModel(openaiProvider('gpt-4o-mini'));
+```
+
+```typescript Anthropic
+// src/shared/anthropic.ts
+
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { wrapAISDKModel } from '@axiomhq/ai';
+
+const anthropicProvider = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+// Wrap the model to enable automatic tracing
+export const claude35Sonnet = wrapAISDKModel(anthropicProvider('claude-3-5-sonnet-20241022'));
+export const claude35Haiku = wrapAISDKModel(anthropicProvider('claude-3-5-haiku-20241022'));
+```
+
+```typescript Google Gemini
 // src/shared/gemini.ts
 
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
@@ -34,9 +66,26 @@ const geminiProvider = createGoogleGenerativeAI({
 });
 
 // Wrap the model to enable automatic tracing
-export const geminiFlash = wrapAISDKModel(geminiProvider('gemini-2.5-flash-preview-04-17'));
+export const gemini20Flash = wrapAISDKModel(geminiProvider('gemini-2.0-flash-exp'));
+export const gemini15Pro = wrapAISDKModel(geminiProvider('gemini-1.5-pro'));
 ```
 
+```typescript Grok
+// src/shared/grok.ts
+
+import { createXai } from '@ai-sdk/xai';
+import { wrapAISDKModel } from '@axiomhq/ai';
+
+const grokProvider = createXai({
+  apiKey: process.env.XAI_API_KEY,
+});
+
+// Wrap the model to enable automatic tracing
+export const grokBeta = wrapAISDKModel(grokProvider('grok-beta'));
+export const grok2Mini = wrapAISDKModel(grokProvider('grok-2-mini'));
+```
+
+</CodeGroup>
 
 ### Adding context with `withSpan`
 
@@ -47,7 +96,7 @@ While `wrapAISDKModel` handles the automatic instrumentation, the `withSpan` fun
 
 import { withSpan } from '@axiomhq/ai';
 import { generateText } from 'ai';
-import { geminiFlash } from '@/shared/gemini';
+import { gpt4o } from '@/shared/openai';
 
 export default async function Page() {
   const userId = 123;
@@ -58,7 +107,7 @@ export default async function Page() {
     span.setAttribute('user_id', userId);
 
     return generateText({
-      model: geminiFlash, // Use the wrapped model
+      model: gpt4o, // Use the wrapped model
       messages: [
         {
           role: 'user',
@@ -83,13 +132,16 @@ The `wrapTool` helper takes your tool's name and its definition and returns an i
 import { tool } from 'ai';
 import { z } from 'zod';
 import { wrapTool } from '@axiomhq/ai';
-
-// ...
+import { generateText } from 'ai';
+import { gpt4o } from '@/shared/openai';
 
 // In your generateText call, provide wrapped tools
 const { text, toolResults } = await generateText({
-  model: geminiFlash,
-  messages: // ...,
+  model: gpt4o,
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'How do I get from Paris to Berlin?' },
+  ],
   tools: {
     // Wrap each tool with its name
     findDirections: wrapTool(
@@ -120,14 +172,14 @@ Here's how all three instrumentation functions work together in a single, real-w
 
 import { withSpan, wrapAISDKModel, wrapTool } from '@axiomhq/ai';
 import { generateText, tool } from 'ai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 
 // 1. Create and wrap the AI model client
-const geminiProvider = createGoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY,
+const openaiProvider = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
-const geminiFlash = wrapAISDKModel(geminiProvider('gemini-2.5-flash-preview-04-17'));
+const gpt4o = wrapAISDKModel(openaiProvider('gpt-4o'));
 
 // 2. Define and wrap your tool(s)
 const findDirectionsTool = wrapTool(
@@ -151,7 +203,7 @@ export default async function Page() {
     span.setAttribute('user_id', userId);
 
     return generateText({
-      model: geminiFlash, // Use the wrapped model
+      model: gpt4o, // Use the wrapped model
       messages: [
         { role: 'system', content: 'You are a helpful assistant.' },
         { role: 'user', content: 'How do I get from Paris to Berlin?' },
