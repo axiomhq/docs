@@ -9,7 +9,7 @@ In Axiom, you can use two query languages:
 
 AxQL is a metric-focused query language that combines the simplicity of APL with the expressive power of PromQL. It enables effective querying, transformation, and aggregation of metric data, supporting diverse observability use cases. It addresses the shortcomings of existing metric query languages, which are either overly complex or too rigidly tied to specific storage formats.
 
-AxQL is a superset of PromQL. Existing PromQL expressions can be translated to AxQL for quick onboarding and greater flexibility. For more information, see [Migrate metrics to Axiom](/query-data/metrics/migrate-metrics).
+AxQL is highly compatible with PromQL. Existing PromQL expressions can be translated to AxQL for quick onboarding and greater flexibility. For more information, see [Migrate metrics to Axiom](/query-data/metrics/migrate-metrics).
 
 <Info>
 Support for OTel metrics is currently in public preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
@@ -20,7 +20,6 @@ Support for OTel metrics is currently in public preview. For more information, s
 The current implementation of AxQL comes with the following limitations:
 
 - You can only query one dataset in a query.
-- You can only use bucketing for histograms.
 
 ## Concepts
 
@@ -111,14 +110,16 @@ Transform individual values or series.
 
 Available functions:
 
-| Function     | Description                                                  |
-|--------------|--------------------------------------------------------------|
-| `rate`       | Computes the per-second rate of change for a metric. |
-| `min`        | Returns the minimum value in the series.                     |
-| `max`        | Returns the maximum value in the series.                     |
-| `abs`        | Returns the absolute value of each data point.               |
-| `fill_prev`  | Fills missing values using the previous non-null value.      |
-| `fill_const` | Fills missing values with a constant.                        |
+| Function              | Description                                                      |
+|-----------------------|------------------------------------------------------------------|
+| `rate`                | Computes the per-second rate of change for a metric.             |
+| `min(arg)`            | Returns the minimum between the argument and the value.               |
+| `max(arg)`            | Returns the maximum between the argument and the value.               |
+| `abs`                 | Returns the absolute value of each data point.                   |
+| `fill_prev`           | Fills missing values using the previous non-null value.          |
+| `fill_const(arg)`     | Fills missing values with a constant.                            |
+| `+`, `-`, `*`, `/`    | Performs the respective mathematical calculation on each value.  |
+|  `>`, `<`, `>=`, `<=` | Sets the value to `1.0` if the condition is true, `0` otherwise. |
 
 **Examples for data mappings:**
 
@@ -172,8 +173,14 @@ Use `align` to aggregate over time windows.
 **Syntax:**
 
 ```kusto
+| align <aggregation_function>(<time_window>)
+```
+
+{/*
+```kusto
 | align <aggregation_function>(<time_window>[, <step>])
 ```
+*/}
 
 Available aggregation functions:
 
@@ -215,6 +222,8 @@ Use `group by` to combine series by tags.
 | group [by <tag1>, <tag2>] using <aggregation_function>
 ```
 
+If you don’t specify tags, Axiom aggregates all series into one group.
+
 Available aggregation functions:
 
 | Function | Description                           |
@@ -254,7 +263,12 @@ Bucketing is a special case of grouping that combines the time and tag dimension
 | bucket by <tags> using <function>(<window>)
 ```
 
-Currently, only the `histogram` function is supported.
+Available functions:
+
+| Function          | Description                                                             |  
+|-------------------|-------------------------------------------------------------------------|  
+| `histogram`             | Calculates a histogram over all values in the bucket. |  
+| `interpolate_histogram` | Interpolates a histogram from a histogram-type set of series.    |  
 
 **Examples:**
 
@@ -470,17 +484,14 @@ Valid identifier names in AxQL follow these rules:
     - Underscore (`_`)
     - Space (` `)
     - Dot (`.`)
-    - Dash (`-`)
 
-Identifier names are case-sensitive. Axiom doesn’t recommend the use of dashes (`-`) in identifier names.
+Identifier names are case-sensitive.
 
 ### Quote identifiers
 
 Quote an identifier in your AxQL query if any of the following is true:
 
-- The identifier name contains at least one of the following special characters:
-    - Space (` `)
-    - Dash (`-`)
+- The identifier name contains an unsupported character.
 - The identifier name is identical to one of the reserved keywords of the APL query language. For example, `by` or `where`.
 
 If any of the above is true, you must quote the identifier by enclosing it in backticks (`\``). For example, ``my-field``.
