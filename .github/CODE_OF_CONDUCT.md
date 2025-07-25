@@ -1,3 +1,5 @@
+{/* vale off */}
+
 # Contributor covenant code of conduct
 
 ## Our pledge
@@ -119,7 +121,7 @@ version 2.0, available at
 [https://www.contributor-covenant.org/version/2/0/code_of_conduct.html][v2.0].
 
 Community Impact Guidelines were inspired by 
-[Mozilla's code of conduct enforcement ladder][Mozilla CoC].
+[Mozilla’s code of conduct enforcement ladder][Mozilla CoC].
 
 For answers to common questions about this code of conduct, see the FAQ at
 [https://www.contributor-covenant.org/faq][FAQ]. Translations are available 

@@ -1,6 +1,6 @@
 # Contribution guidelines
 
-We encourage you to participate in this documentation project. We appreciate your help in making Axiom as easy to understand and work with as possible.
+Axiom encourages you to participate in this documentation project. The community appreciates your help in making Axiom as easy to understand and work with as possible.
 
 To contribute, fork this repo, and then clone it. For more information, see the [GitHub documentation](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project).
 
@@ -32,7 +32,7 @@ If you want to contribute but don’t know where to start, browse the open issue
 - When you review a PR, use GitHub suggestions for changes where discussion is necessary. For major changes or uncontroversial smaller fixes, commit directly to the branch.
 - Let the original creator merge the PR. The reviewer only approves or asks for changes.
 - In your comments, be kind, considerate, and constructive.
-- If a comment does not apply to the review of the PR, post it on the related issue.
+- If a comment doesn’t apply to the review of the PR, post it on the related issue.
 
 ## Commits
 
