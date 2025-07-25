@@ -19,7 +19,7 @@ Support for OTel metrics is currently in public preview. For more information, s
 
 The current implementation of AxQL comes with the following limitations:
 
-- You can only query single metrics.
+- You can only query one dataset in a query.
 - You can only use bucketing for histograms.
 
 ## Concepts
@@ -49,7 +49,7 @@ k8s:cpu_usage[1h..]
 | align avg(5m)
 ```
 
-This example queries the `k8s` dataset’s `cpu_usage` metric one hour before the current time. It filters results to events where `namespace` is `prod` and aggregates events over 5-minute time windows.
+This example queries the `k8s` dataset’s `cpu_usage` metric one hour before the current time. It filters results to events where `namespace` is `prod` and aggregates events over 5-minute time windows into their average value.
 
 ## Elements of queries
 
@@ -102,7 +102,7 @@ The value must be one of the [supported data types](#data-types).
 **Example:**
 
 ```kusto
-| where project == /.*metrics.*/ and code in [200, 201]
+| where project == /.*metrics.*/ and code >= 200 and code < 300
 ```
 
 ### Mapping
@@ -381,14 +381,14 @@ Define query parameters at the beginning of a query.
 **Syntax:**
 
 ```kusto
-#! query=<query_parameter>:<type>
+set query=<query_parameter>:<type>
 ```
 
 **Example:**
 
 ```kusto
 // Import the `step` query parameter with the type `relative_time`
-#! query=step:relative_time
+set query=step:relative_time
 ```
 
 To reference the query parameters in your query, use the dollar sign (`$`).
@@ -407,14 +407,14 @@ To import custom functions to your query, use the `wasm` command. You can import
 **Syntax:**
 
 ```kusto
-#! wasm=<module_name>:<file_name>
+set wasm=<module_name>:<file_name>
 ```
 
 **Example:**
 
 ```kusto
 // Import the module named `my_module` from the `ai_functions.wasm` file
-#! wasm=my_module:ai_functions.wasm 
+set wasm=my_module:ai_functions.wasm 
 ```
 
 To reference custom functions in your query, use the following syntax:
@@ -455,7 +455,7 @@ Valid identifier names in AxQL follow these rules:
     - Dot (`.`)
     - Dash (`-`)
 
-Identifier names are case-sensitive. Axiom doesn’t recommend the use of spaces (` `) and dashes (`-`) in identifier names.
+Identifier names are case-sensitive. Axiom doesn’t recommend the use of dashes (`-`) in identifier names.
 
 ### Quote identifiers
 
@@ -464,7 +464,7 @@ Quote an identifier in your AxQL query if any of the following is true:
 - The identifier name contains at least one of the following special characters:
     - Space (` `)
     - Dash (`-`)
-- The identifier name is identical to one of the reserved keywords of the APL query language. For example, `project` or `where`.
+- The identifier name is identical to one of the reserved keywords of the APL query language. For example, `by` or `where`.
 
 If any of the above is true, you must quote the identifier by enclosing it in backticks (`\``). For example, ``my-field``.
 
