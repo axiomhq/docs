@@ -1,0 +1,163 @@
+---
+title: range
+description: 'This page explains how to use the range function in APL.'
+---
+
+Use the `range` function in APL to generate a sequence of values across a numeric or time interval. You can use `range` to construct tables without referencing a dataset. This is especially helpful when you need to create synthetic data for visualizations, simulate values for testing, or build time series intervals for joining with real data.
+
+The function supports sequences of integers, real numbers, and timestamps. Each row in the resulting table represents one step in the generated range.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+APL’s `range` function is similar to using `makeresults` in combination with `streamstats` or generating time windows manually. However, `range` in APL offers a direct way to create sequences without needing a dataset as input.
+
+<CodeGroup>
+```sql Splunk example
+| makeresults count=10
+| streamstats count as x
+````
+
+```kusto APL equivalent
+range x from 1 to 10 step 1
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+APL’s `range` function replaces the need to use recursive Common Table Expressions (CTEs) in ANSI SQL to generate sequences. The syntax is simpler and does not require joins or unions.
+
+<CodeGroup>
+```sql SQL example
+WITH RECURSIVE seq AS (
+  SELECT 1 AS x
+  UNION ALL
+  SELECT x + 1 FROM seq WHERE x < 10
+)
+SELECT * FROM seq;
+```
+
+```kusto APL equivalent
+range x from 1 to 10 step 1
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+range <ColumnName> from <StartValue> to <EndValue> step <StepValue>
+```
+
+### Parameters
+
+| Name         | Type                         | Description                                                                    |
+| ------------ | ---------------------------- | ------------------------------------------------------------------------------ |
+| `ColumnName` | `string`                     | Name of the column to use in the output table.                                 |
+| `StartValue` | `int`, `real`, or `datetime` | First value in the generated sequence.                                         |
+| `EndValue`   | `int`, `real`, or `datetime` | Last value in the sequence. If `step` moves past this value, generation stops. |
+| `StepValue`  | `int`, `real`, or `timespan` | Amount by which the value is incremented for each row.                         |
+
+### Returns
+
+A table with one column named `<ColumnName>` and one row per step. The type of the column depends on the types of the start, end, and step values.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Create a reference table of durations to compare against HTTP request durations.
+
+**Query**
+
+```kusto
+range duration_threshold from 100 to 500 step 100
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range) duration_threshold from 100 to 500 step 100%22%7D)
+
+**Output**
+
+| duration_threshold |
+| ------------------- |
+| 100                 |
+| 200                 |
+| 300                 |
+| 400                 |
+| 500                 |
+
+This creates a list of duration thresholds that you can use in joins or comparisons to classify requests in the `['sample-http-logs']` dataset.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Generate a list of 15-second intervals over a specific hour to analyze service span density.
+
+**Query**
+
+```kusto
+range time_bucket from datetime(2025-07-29T12:00:00Z) to datetime(2025-07-29T13:00:00Z) step 15s
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range) time_bucket from datetime(2025-07-29T12%3A00%3A00Z) to datetime(2025-07-29T13%3A00%3A00Z) step 15s%22%7D)
+
+**Output**
+
+| time_bucket         |
+| -------------------- |
+| 2025-07-29T12:00:00Z |
+| 2025-07-29T12:00:15Z |
+| 2025-07-29T12:00:30Z |
+| ...                  |
+| 2025-07-29T12:59:45Z |
+
+This produces a time series that you can use to join with data in `['otel-demo-traces']` for visualizations or aggregations.
+
+</Tab>
+<Tab title="Security logs">
+
+Build a synthetic set of user IDs to use for access pattern lookups.
+
+**Query**
+
+```kusto
+range id from 1 to 5 step 1
+| extend id = strcat('user-', tostring(id))
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range) id from 1 to 5 step 1 | extend id = strcat('user-', tostring(id))%22%7D)
+
+**Output**
+
+| id     |
+| ------ |
+| user-1 |
+| user-2 |
+| user-3 |
+| user-4 |
+| user-5 |
+
+This creates a temporary table of synthetic user IDs that you can use to match or simulate logins in `['sample-http-logs']`.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [make_series](/apl/aggregation-functions/make_series): Creates a time series by aggregating values into buckets. Use `make_series` when working with grouped data over time intervals.
+- [extend](/apl/query-operators/extend): Adds new computed columns to a dataset. Use with `range` to derive additional values from a generated sequence.
+- [top](/apl/aggregation-functions/top): Returns the top N rows by some expression. Use it after `range` if you want only the highest N values from a generated sequence.
+- [summarize](/apl/query-operators/summarize): Aggregates data over groups. Combine with `range` to group generated intervals.
+- [join](/apl/query-operators/join): Merges rows from two tables. Use with `range` to match synthetic data against real datasets.
