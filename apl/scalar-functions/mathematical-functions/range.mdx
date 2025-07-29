@@ -3,9 +3,9 @@ title: range
 description: 'This page explains how to use the range function in APL.'
 ---
 
-Use the `range` function in APL to generate a sequence of values across a numeric or time interval. You can use `range` to construct tables without referencing a dataset. This is especially helpful when you need to create synthetic data for visualizations, simulate values for testing, or build time series intervals for joining with real data.
+Use the `range` function in APL to create a dynamic array of evenly spaced values. You can generate numeric, datetime, or timespan sequences that increase by a constant step, which defaults to 1 for numbers and 1 hour for time-based types. The function stops once the value exceeds the specified endpoint or the maximum result size.
 
-The function supports sequences of integers, real numbers, and timestamps. Each row in the resulting table represents one step in the generated range.
+`range` is useful when you want to produce test values, synthetic sequences, time intervals, or loop-like constructs without relying on input data. It helps you populate arrays that can be expanded or joined with real data for further analysis.
 
 ## For users of other query languages
 
@@ -14,7 +14,7 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-APL’s `range` function is similar to using `makeresults` in combination with `streamstats` or generating time windows manually. However, `range` in APL offers a direct way to create sequences without needing a dataset as input.
+In SPL, generating sequences often involves `makeresults` combined with `streamstats` or manual iteration logic. APL’s `range` function simplifies this by producing arrays of equally spaced values directly.
 
 <CodeGroup>
 ```sql Splunk example
@@ -23,7 +23,7 @@ APL’s `range` function is similar to using `makeresults` in combination with `
 ````
 
 ```kusto APL equivalent
-range x from 1 to 10 step 1
+print r = range(1, 10, 1)
 ```
 
 </CodeGroup>
@@ -31,7 +31,7 @@ range x from 1 to 10 step 1
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-APL’s `range` function replaces the need to use recursive Common Table Expressions (CTEs) in ANSI SQL to generate sequences. The syntax is simpler and does not require joins or unions.
+In ANSI SQL, generating a series of numbers usually involves recursive CTEs. APL’s `range` is more concise and efficient for creating sequences without writing complex recursion logic.
 
 <CodeGroup>
 ```sql SQL example
@@ -44,7 +44,7 @@ SELECT * FROM seq;
 ```
 
 ```kusto APL equivalent
-range x from 1 to 10 step 1
+print r = range(1, 10, 1)
 ```
 
 </CodeGroup>
@@ -57,106 +57,107 @@ range x from 1 to 10 step 1
 ### Syntax
 
 ```kusto
-range <ColumnName> from <StartValue> to <EndValue> step <StepValue>
+range(start, stop [, step])
 ```
 
 ### Parameters
 
-| Name         | Type                         | Description                                                                    |
-| ------------ | ---------------------------- | ------------------------------------------------------------------------------ |
-| `ColumnName` | `string`                     | Name of the column to use in the output table.                                 |
-| `StartValue` | `int`, `real`, or `datetime` | First value in the generated sequence.                                         |
-| `EndValue`   | `int`, `real`, or `datetime` | Last value in the sequence. If `step` moves past this value, generation stops. |
-| `StepValue`  | `int`, `real`, or `timespan` | Amount by which the value is incremented for each row.                         |
+| Name  | Type                                | Required | Description                                                               |
+| ----- | ----------------------------------- | -------- | ------------------------------------------------------------------------- |
+| start | scalar (number, datetime, timespan) | ✔️       | First value in the array.                                                 |
+| stop  | scalar (same type as `start`)       | ✔️       | Upper bound of the array. The last value is less than or equal to `stop`. |
+| step  | scalar (same type as `start`)       |          | Difference between values. Defaults to 1 (numeric) or 1h (time).          |
 
 ### Returns
 
-A table with one column named `<ColumnName>` and one row per step. The type of the column depends on the types of the start, end, and step values.
+A dynamic array that includes values starting at `start`, incremented by `step`, up to and including `stop` (if it aligns exactly with a step). The array truncates if it reaches the system limit of 1,048,576 elements.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-Create a reference table of durations to compare against HTTP request durations.
+Generate an array of durations to help classify HTTP request latencies.
 
 **Query**
 
 ```kusto
-range duration_threshold from 100 to 500 step 100
+print r = range(100, 500, 100)
+| project r
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range) duration_threshold from 100 to 500 step 100%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22print%20r%20%3D%20range(100%2C%20500%2C%20100)%20%7C%20project%20r%22%7D)
 
 **Output**
 
-| duration_threshold |
-| ------------------- |
-| 100                 |
-| 200                 |
-| 300                 |
-| 400                 |
-| 500                 |
+```json
+[
+  100,
+  200,
+  300,
+  400,
+  500
+]
+```
 
-This creates a list of duration thresholds that you can use in joins or comparisons to classify requests in the `['sample-http-logs']` dataset.
+This creates an array of thresholds that you can use to bucket or filter request durations in `['sample-http-logs']`.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-Generate a list of 15-second intervals over a specific hour to analyze service span density.
+Build a set of time intervals to align span activity over a fixed period.
 
 **Query**
 
 ```kusto
-range time_bucket from datetime(2025-07-29T12:00:00Z) to datetime(2025-07-29T13:00:00Z) step 15s
+print intervals = range(datetime(2025-07-29T12:00:00Z), datetime(2025-07-29T13:00:00Z), 15m)
+| project intervals
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range) time_bucket from datetime(2025-07-29T12%3A00%3A00Z) to datetime(2025-07-29T13%3A00%3A00Z) step 15s%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22print%20intervals%20%3D%20range(datetime(2025-07-29T12%3A00%3A00Z)%2C%20datetime(2025-07-29T13%3A00%3A00Z)%2C%2015m)%20%7C%20project%20intervals%22%7D)
 
 **Output**
 
-| time_bucket         |
-| -------------------- |
-| 2025-07-29T12:00:00Z |
-| 2025-07-29T12:00:15Z |
-| 2025-07-29T12:00:30Z |
-| ...                  |
-| 2025-07-29T12:59:45Z |
+```json
+[
+  "2025-07-29T12:00:00Z",
+  "2025-07-29T12:15:00Z",
+  "2025-07-29T12:30:00Z",
+  "2025-07-29T12:45:00Z",
+  "2025-07-29T13:00:00Z"
+]
+```
 
-This produces a time series that you can use to join with data in `['otel-demo-traces']` for visualizations or aggregations.
+This array helps divide the hour into 15-minute blocks for analyzing activity in `['otel-demo-traces']`.
 
 </Tab>
 <Tab title="Security logs">
 
-Build a synthetic set of user IDs to use for access pattern lookups.
+Create a list of expected hourly intervals to detect missing logs.
 
 **Query**
 
 ```kusto
-range id from 1 to 5 step 1
-| extend id = strcat('user-', tostring(id))
+print expected = range(datetime(2025-07-29T00:00:00Z), datetime(2025-07-29T05:00:00Z), 1h)
+| project expected
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22range) id from 1 to 5 step 1 | extend id = strcat('user-', tostring(id))%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22print%20expected%20%3D%20range(datetime(2025-07-29T00%3A00%3A00Z)%2C%20datetime(2025-07-29T05%3A00%3A00Z)%2C%201h)%20%7C%20project%20expected%22%7D)
 
 **Output**
 
-| id     |
-| ------ |
-| user-1 |
-| user-2 |
-| user-3 |
-| user-4 |
-| user-5 |
+```json
+[
+  "2025-07-29T00:00:00Z",
+  "2025-07-29T01:00:00Z",
+  "2025-07-29T02:00:00Z",
+  "2025-07-29T03:00:00Z",
+  "2025-07-29T04:00:00Z",
+  "2025-07-29T05:00:00Z"
+]
+```
 
-This creates a temporary table of synthetic user IDs that you can use to match or simulate logins in `['sample-http-logs']`.
+This produces an array of expected log collection times for the `['sample-http-logs']` dataset. You can join this with actual data to detect missing records.
 
 </Tab>
 </Tabs>
-
-## List of related functions
-
-- [extend](/apl/tabular-operators/extend-operator): Adds new computed columns to a dataset. Use with `range` to derive additional values from a generated sequence.
-- [join](/apl/tabular-operators/join-operator): Merges rows from two tables. Use with `range` to match synthetic data against real datasets.
-- [summarize](/apl/tabular-operators/summarize-operator): Aggregates data over groups. Combine with `range` to group generated intervals.
-- [top](/apl/tabular-operators/top-operator): Returns the top N rows by some expression. Use it after `range` if you want only the highest N values from a generated sequence.

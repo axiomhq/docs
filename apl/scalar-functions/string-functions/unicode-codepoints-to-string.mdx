@@ -76,19 +76,18 @@ Sometimes HTTP logs store user-agent strings or query parameters as numeric arra
 
 ```kusto
 ['sample-http-logs']
-| where status == '200'
 | extend codepoints = dynamic([72, 84, 84, 80])
 | extend decoded_method = unicode_codepoints_to_string(codepoints)
-| project _time, method, decoded_method
+| project _time, decoded_method
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27200%27%20%7C%20extend%20codepoints%20%3D%20dynamic%28%5B72%2C%2084%2C%2084%2C%2080%5D%29%20%7C%20extend%20decoded_method%20%3D%20unicode_codepoints_to_string%28codepoints%29%20%7C%20project%20_time%2C%20method%2C%20decoded_method%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20codepoints%20%3D%20dynamic(%5B72%2C%2084%2C%2084%2C%2080%5D)%20%7C%20extend%20decoded_method%20%3D%20unicode_codepoints_to_string(codepoints)%20%7C%20project%20_time%2C%20decoded_method%22%7D)
 
 **Output**
 
-| _time               | method | decoded_method |
-| -------------------- | ------ | --------------- |
-| 2025-07-29T14:12:00Z | GET    | HTTP            |
+| _time               | decoded_method |
+| -------------------- | --------------- |
+| 2025-07-29T14:12:00Z | HTTP            |
 
 This query decodes the static Unicode array `[72, 84, 84, 80]` into the string `'HTTP'`.
 
@@ -101,19 +100,19 @@ In tracing systems, service metadata might be emitted as numeric codes for effic
 
 ```kusto
 ['otel-demo-traces']
-| where ['service.name'] == 'checkoutservice'
+| where ['service.name'] == 'checkout'
 | extend trace_label_codepoints = dynamic([67, 72, 69, 67, 75])
 | extend decoded_label = unicode_codepoints_to_string(trace_label_codepoints)
 | project _time, trace_id, ['service.name'], decoded_label
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20where%20%5B%27service.name%27%5D%20%3D%3D%20%27checkoutservice%27%20%7C%20extend%20trace_label_codepoints%20%3D%20dynamic%28%5B67%2C%2072%2C%2069%2C%2067%2C%206B%5D%29%20%7C%20extend%20decoded_label%20%3D%20unicode_codepoints_to_string%28trace_label_codepoints%29%20%7C%20project%20_time%2C%20trace_id%2C%20%5B%27service.name%27%5D%2C%20decoded_label%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'checkout'%20%7C%20extend%20trace_label_codepoints%20%3D%20dynamic(%5B67%2C%2072%2C%2069%2C%2067%2C%2075%5D)%20%7C%20extend%20decoded_label%20%3D%20unicode_codepoints_to_string(trace_label_codepoints)%20%7C%20project%20_time%2C%20trace_id%2C%20%5B'service.name'%5D%2C%20decoded_label%22%7D)
 
 **Output**
 
 | _time               | trace_id        | ['service.name'] | decoded_label |
 | -------------------- | ---------------- | ----------------- | -------------- |
-| 2025-07-29T14:20:00Z | d4e9aefb8cc31b4d | checkoutservice   | CHECK          |
+| 2025-07-29T14:20:00Z | d4e9aefb8cc31b4d | checkout   | CHECK          |
 
 The query decodes a fixed array into the label `'CHECK'` to tag traces visually in dashboards.
 
@@ -126,13 +125,12 @@ Sometimes security tools emit obfuscated payloads as numeric arrays. You can dec
 
 ```kusto
 ['sample-http-logs']
-| where status == '403'
 | extend obfuscated_uri = dynamic([47, 108, 111, 103, 105, 110])
 | extend decoded_uri = unicode_codepoints_to_string(obfuscated_uri)
 | project _time, uri, decoded_uri
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27403%27%20%7C%20extend%20obfuscated_uri%20%3D%20dynamic%28%5B47%2C%20108%2C%20111%2C%20103%2C%20105%2C%20110%5D%29%20%7C%20extend%20decoded_uri%20%3D%20unicode_codepoints_to_string%28obfuscated_uri%29%20%7C%20project%20_time%2C%20uri%2C%20decoded_uri%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20obfuscated_uri%20%3D%20dynamic(%5B47%2C%20108%2C%20111%2C%20103%2C%20105%2C%20110%5D)%20%7C%20extend%20decoded_uri%20%3D%20unicode_codepoints_to_string(obfuscated_uri)%20%7C%20project%20_time%2C%20uri%2C%20decoded_uri%22%7D)
 
 **Output**
 
