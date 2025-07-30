@@ -29,32 +29,32 @@ For initial setup, choose one of the following options:
 To use the `@vercel/otel` package for easier setup, run the following command to install the dependencies:
 
 ```bash
-npm install @vercel/otel @opentelemetry/exporter-trace-otlp-http @opentelemetry/sdk-trace-node
+npm install @vercel/otel @opentelemetry/exporter-trace-otlp-http @opentelemetry/sdk-trace-node @opentelemetry/sdk-node @opentelemetry/resources
 ```
 
 Create an `instrumentation.ts` file in the root of your project with the following content:
 
 ```js
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
-import { registerOTel } from '@vercel/otel';
-
-export function register() {
-  registerOTel({
-    serviceName: 'nextjs-app',
-    spanProcessors: [
-      new SimpleSpanProcessor(
-        new OTLPTraceExporter({
-          url: `https://${process.env.AXIOM_DOMAIN}/v1/traces`,
-          headers: {
-            Authorization: `Bearer ${process.env.API_TOKEN}`,
-            'X-Axiom-Dataset': `${process.env.DATASET_NAME}`,
-          },
-        })
-      ),
-    ],
-  });
-}
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+import { Resource, resourceFromAttributes } from '@opentelemetry/resources';
+import { NodeSDK } from '@opentelemetry/sdk-node'
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node'
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
+ 
+const sdk = new NodeSDK({
+  resource: resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: 'nextjs-otel-example',
+  }) as Resource,
+  spanProcessor: new SimpleSpanProcessor(
+    new OTLPTraceExporter({
+      url: `https://${process.env.AXIOM_DOMAIN}/v1/traces`,
+      headers: {
+        Authorization: `Bearer ${process.env.API_TOKEN}`,
+        'X-Axiom-Dataset': `${process.env.DATASET_NAME}`,
+      },
+    })),
+})
+sdk.start()
 ```
 
 Add the `API_TOKEN`, `DATASET_NAME`, and `AXIOM_DOMAIN` environment variables to your `.env` file. For example:
@@ -116,11 +116,14 @@ DATASET_NAME=my-dataset
 In the `src/app/layout.tsx` file, import and call the `register` function from the `instrumentation` module:
 
 ```js
-import { register } from '../../instrumentation';
+import type { Metadata } from 'next';
 
-register();
+export const metadata: Metadata = {
+  title: 'Next.js with OpenTelemetry',
+  description: 'Next.js with OpenTelemetry',
+};
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>{children}</body>
