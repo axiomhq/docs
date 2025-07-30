@@ -1,1 +1,159 @@
-https://github.com/axiomhq/metrics/tree/main/lib/axql/tests/examples
+---
+title: Sample queries
+description: This page gives examples about how to query OTel metrics.
+---
+
+## Sum rate
+
+```kusto
+test:axiom_http_requests_total
+| where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
+| where code < 400
+| align rate(5m)
+| group by method, path, code using sum
+```
+
+## Average over time
+
+```kusto
+test-with-minus.com:axiomdb_transport_ingest_pressure as snot
+| where time_window == "1m"
+| where service == /axiomdb-[a-f]/
+| group using max
+| as cookie
+| map < 0.4
+| align avg(7d)
+| as cake
+```
+
+## Histogram
+
+```kusto
+test:axiom_http_request_duration_seconds_bucket
+| where code == /[123]../
+| bucket by method, path using interpolate_histogram(5m, 0.90, max, 0.99)
+```
+
+### Filtered histogram
+
+```kusto
+axiom-dev.metrics:axiomdb_transport_request_duration_seconds_bucket
+| filter status == /[123..]/
+| filter handler == /^ingest$/
+| filter le == /^0\.5/
+| map rate
+| align avg(30s)
+| group by handler, le using sum
+| bucket by handler using interpolate_histogram(30s, min, 0.5, max)
+```
+
+## Compute
+
+### Compute error rate
+
+```kusto
+{ 
+    test:axiom_http_request_duration_seconds_count
+    | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
+    | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
+    | where code >= 500 // note since things go through prom we currently store it as string but this is how we'd want this query to IO_WORKER
+    | align rate(5m)
+    | group using sum;
+    test:axiom_http_request_duration_seconds_count
+    | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
+    | where path == ".*(elastic/_bulk|ingest|(?:v1/(traces|logs|metrics))).*"
+    | align rate(5m)
+    | group using sum
+}
+| compute error_rate using /
+```
+
+### Compute running average
+
+```kusto
+{
+    test:metric_a
+    | align avg(1m, 5m); // emit every 1m running values over 5m
+    test:metric_a
+    | align avg(1m, 1h) // emit every 1m running values over 5m
+}
+| compute avg_over_time using /
+```
+
+## Join
+
+```kusto
+test:kube_pod_status_ready
+| group by pod using sum
+| join created_by_kind from test:kube_pod_info by pod
+```
+
+### Join with nesting
+
+```kusto
+test:kube_pod_status_ready
+| group by pod using sum
+| join node from test:kube_pod_info by pod
+| join internal_ip from test:kube_node_info by node
+```
+
+## Replace labels
+
+```kusto
+{
+    test:container_cpu_usage_seconds_total
+    | where namespace == /(axiom|cloud).*/
+    | where pod == /axiom-ingest-.*/
+    | group by pod using sum;
+    test:kube_pod_container_resource_requests
+    | where namespace == /(axiom|cloud).*/
+    | where pod == /axiom-ingest-.*/
+    | where resource == "cpu"
+    | group by pod using sum;
+}
+| compute cpu_usage using /
+| replace service = pod ~ s/(.+)-.+-.+/$1/
+| group by service using max
+```
+
+## Service Level Objectives (SLO)
+
+```kusto
+test-with-minus.com:axiomdb_transport_ingest_pressure
+| where time_window == "1m"
+| where service == /axiomdb-[a-f]/
+| group using max
+| map < 0.4
+| align avg(7d)
+```
+
+### SLO histogram
+
+```
+test:http_server_request_duration_seconds_bucket
+| bucket using interpolate_histogram(1m ,0.99)
+| map < 0.4
+| align avg(7d)
+```
+
+### SLO ingest rate
+
+```kusto
+{
+  `test`:axiom_http_requests_total
+  | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
+  | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/ 
+  | where code >= 500
+  | align rate(1h)
+  | group using sum;
+  
+  test:axiom_http_requests_total
+  | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
+  | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/ 
+  | align rate(1h)
+  | group using sum;
+}
+| compute error_rate using /
+| map < 0.2
+| align avg(7d, 1h)
+```
