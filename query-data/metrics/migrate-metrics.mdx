@@ -1,15 +1,44 @@
 ---
 title: Migrate to Axiom from PromQL
 description: This page explains how to migrate your PromQL queries to Axiom.
+sidebarTitle: Migrate
 ---
 
 ## Differences between AxQL and PromQL
 
-1) This which implies slightly different data modes - the biggest one here is that we have a much larger set of types where in prometheus everything is a 'string' and people use regexp for every filter. If a user CAN using OTEL so being concious about their types is important when querying
-2) Prometheus is icky with too many tags, we are not so PromQL makes liberal use of enrichment queries (joining tags from one series to another) we don't support this yet since it's not a OTEL pattern
-3) our histogram opperations allow to generate more then one series while the promql one is limited to one series per query
-There might be some other subtle differences I didn't think about or might not know about but that's the main things'\
-4) RegEx are a top level type for us, so escaping them is different while in PromQl they are strings and " needs escaping for us, since it's it's own type / needs escaping
+While AxQL and PromQL are both designed for querying metrics data, they differ in fundamental ways that impact how queries are written and interpreted. This section outlines the key differences to help you adapt PromQL workflows when migrating to Axiom.
+
+### Richer type system
+
+Prometheus treats all label values as strings, which often leads users to rely heavily on regular expressions for filtering. AxQL, by contrast, supports a broader and more expressive type system, including native types like numbers, booleans, and timestamps. This means you can write cleaner, type-aware queries and avoid the pitfalls of string-only comparisons.
+
+For OpenTelemetry (OTel) data, this difference means that AxQL preserves source types, enabling more accurate and efficient filtering and aggregation.
+
+### Labels versus fields
+
+PromQL is optimized for a sparse label space and performs poorly with high-cardinality label sets. This design limits how many dimensions can be encoded as labels.
+
+AxQL doesn’t impose the same restrictions. It encourages richer, high-cardinality data ingestion, allowing you to store and query more attributes per event without performance degradation.
+
+Additionally, PromQL users often use enrichment queries simulate dimensional joins and join label values from one series into another. AxQL doesn’t currently support this pattern because it diverges from OpenTelemetry semantics, which emphasize event-based modeling over metric enrichment.
+
+### Histogram behavior
+
+Histogram support differs significantly. In PromQL, histogram queries typically yield one time series per bucket or a single quantile series depending on the function.
+
+AxQL allows histogram operations that can output multiple series in a single query, providing greater flexibility for analyzing distributions or rendering percentile summaries directly.
+
+### Regular expression syntax
+
+In PromQL, regular expressions are written as string literals. This requires escaping special characters using double quotes and backslashes, which can be error-prone.
+
+AxQL treats regular expressions as a first-class type. They are written directly without string escaping, making them easier to use and less ambiguous.
+
+<Tip>
+Regex is a native type in AxQL. Denote regex using slash (`/`) instead of quotation marks (`'` or `"`).
+
+In regex, escape slash (`/`), but don’t escape quotation marks (`'` or `"`).
+</Tip>
 
 ## Examples
 
