@@ -1,0 +1,120 @@
+---
+title: Axiom MCP Server
+description: "This page explains how to get deeper insights with Axiom MCP Server."
+sidebarTitle: MCP
+---
+
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+
+Axiom MCP Server is a [Model Context Protocol](https://modelcontextprotocol.io/) server implementation that enables AI agents to query your data using Axiom Processing Language (APL).
+
+<Info>
+The Axiom MCP Server is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/mcp-server-axiom).
+</Info>
+
+## Current capabilities
+
+Axiom MCP Server is compatible with the [Claude desktop app](https://claude.ai/download).
+
+Axiom MCP Server supports the following MCP [tools](https://modelcontextprotocol.io/docs/concepts/tools):
+
+- `queryApl`: Execute APL queries against Axiom datasets
+- `listDatasets`: List available Axiom datasets
+- `getDatasetSchema`: Get dataset schema
+- `getSavedQueries`: Retrieve saved APL queries
+- `getMonitors`: List monitoring configurations
+- `getMonitorsHistory`: Get monitor execution history
+
+Axiom plans to support MCP [resources](https://modelcontextprotocol.io/docs/concepts/resources) and [prompts](https://modelcontextprotocol.io/docs/concepts/prompts) in the future.
+
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) and [send data to it](/send-data/methods).
+- [Create a Personal Access Tokens (PAT) in Axiom](/reference/tokens). The MCP Server doesn’t work with API tokens.
+- Install the [Claude desktop app](https://claude.ai/download).
+
+## Install
+
+Run the following to install the latest built binary from [GitHub](https://github.com/axiomhq/axiom-mcp/releases):
+
+```bash
+go install github.com/axiomhq/axiom-mcp@latest
+```
+
+## Configure
+
+Specify the authentication and configration details using one of the following methods:
+
+- Use a config file. For example:
+
+    ```bash config.txt
+    token PERSONAL_ACCESS_TOKEN
+    url https://AXIOM_DOMAIN
+    org-id ORG_ID
+    query-rate 1
+    query-burst 1
+    datasets-rate 1
+    datasets-burst 1
+    ```
+
+- Use command line flags. For example:
+    ```bash
+    axiom-mcp \
+    -token PERSONAL_ACCESS_TOKEN \
+    -url https://AXIOM_DOMAIN \
+    -org-id ORG_ID \
+    -query-rate 1 \
+    -query-burst 1 \
+    -datasets-rate 1 \
+    -datasets-burst 1
+    ```
+
+- Use environment variables. For example:
+    ```bash
+    export AXIOM_TOKEN=PERSONAL_ACCESS_TOKEN
+    export AXIOM_URL=https://AXIOM_DOMAIN
+    export AXIOM_ORG_ID=ORG_ID
+    export AXIOM_QUERY_RATE=1
+    export AXIOM_QUERY_BURST=1
+    export AXIOM_DATASETS_RATE=1
+    export AXIOM_DATASETS_BURST=1
+    ```
+
+<Info>
+Replace `PERSONAL_ACCESS_TOKEN` with the Axiom PAT token you have generated.
+
+Replace `ORG_ID` with the name of your Axiom organization. For more information, see [Determine organization ID
+](/docs/reference/tokens#determine-organization-id)
+
+<ReplaceDomain />
+</Info>
+
+## Usage
+
+1. Create a config file:
+```bash
+echo "token xaat-your-api-token" > config.txt
+```
+
+2. Configure the Claude app to use the MCP server:
+
+```bash
+code ~/Library/Application\ Support/Claude/claude_desktop_config.json
+```
+
+```json
+{
+  "mcpServers": {
+    "axiom": {
+      "command": "/path/to/your/axiom-mcp-binary",
+      "args" : ["--config", "/path/to/your/config.txt"],
+      "env": { // Alternatively, you can set the environment variables here
+        "AXIOM_TOKEN": "xaat-your-api-token",
+        "AXIOM_URL": "https://api.axiom.co",
+        "AXIOM_ORG_ID": "your-org-id"
+      }
+    }
+  }
+}
+```
