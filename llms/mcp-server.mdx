@@ -1,0 +1,132 @@
+---
+title: Axiom MCP Server
+description: "This page explains how to get deeper insights with Axiom MCP Server."
+sidebarTitle: MCP Server
+---
+
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+
+Axiom MCP Server is a [Model Context Protocol](https://modelcontextprotocol.io/) server implementation that enables AI agents to query your data using Axiom Processing Language (APL).
+
+<Info>
+The Axiom MCP Server is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/mcp-server-axiom).
+</Info>
+
+## Current capabilities
+
+Axiom MCP Server is compatible with the [Claude desktop app](https://claude.ai/download).
+
+Axiom MCP Server supports the following MCP [tools](https://modelcontextprotocol.io/docs/concepts/tools):
+
+- `queryApl`: Execute APL queries against Axiom datasets
+- `listDatasets`: List available Axiom datasets
+- `getDatasetSchema`: Get dataset schema
+- `getSavedQueries`: Retrieve saved APL queries
+- `getMonitors`: List monitoring configurations
+- `getMonitorsHistory`: Get monitor execution history
+
+Axiom plans to support MCP [resources](https://modelcontextprotocol.io/docs/concepts/resources) and [prompts](https://modelcontextprotocol.io/docs/concepts/prompts) in the future.
+
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) and [send data to it](/send-data/methods).
+- [Create a Personal Access Tokens (PAT) in Axiom](/reference/tokens). The MCP Server doesn’t work with API tokens.
+- Install the [Claude desktop app](https://claude.ai/download).
+
+## Install
+
+Run the following to install the latest built binary from [GitHub](https://github.com/axiomhq/axiom-mcp/releases):
+
+```bash
+go install github.com/axiomhq/axiom-mcp@latest
+```
+
+## Configure
+
+Configure the Claude app to use the MCP server in one of the following ways:
+
+- Use a [config file](#config-file)
+- Use [environment variables](#environment-variables)
+
+### Config file
+
+1. Create a config file where you specify the authentication and configuration details. For example:
+
+    ```bash config.txt
+    token PERSONAL_ACCESS_TOKEN
+    url https://AXIOM_DOMAIN
+    org-id ORG_ID
+    query-rate 1
+    query-burst 1
+    datasets-rate 1
+    datasets-burst 1
+    ```
+
+    <Info>
+    Replace `PERSONAL_ACCESS_TOKEN` with the Axiom PAT you have generated.
+
+    <ReplaceDomain />
+
+    Replace `ORG_ID` with the name of your Axiom organization. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+    </Info>
+
+    Optionally, configure the rate and the burst at the query and dataset levels.
+
+1. Add `axiom` to the `mcpServers` section of the Claude configuration file. If you use a Mac, the default path is `~/Library/Application Support/Claude/claude_desktop_config.json`.
+
+```json claude_desktop_config.json
+{
+  "mcpServers": {
+    "axiom": {
+      "command": "PATH_AXIOM_MCP_BINARY",
+      "args" : ["--config", "PATH_AXIOM_MCP_CONFIG"]
+    }
+  }
+}
+```
+
+<Info>
+Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of the Axiom MCP Server. By default, it’s `~/go/bin/axiom-mcp`.
+
+Replace `PATH_AXIOM_MCP_CONFIG` with the path the config file you have previously created.
+</Info>
+
+### Environment variables
+
+Add `axiom` to the `mcpServers` section of the Claude configuration file, and specify the authentication details using environment variables. If you use a Mac, the default path is `~/Library/Application Support/Claude/claude_desktop_config.json`. For example:
+
+```json claude_desktop_config.json
+{
+  "mcpServers": {
+    "axiom": {
+      "command": "PATH_AXIOM_MCP_BINARY",
+      "env": {
+        "AXIOM_TOKEN": "PERSONAL_ACCESS_TOKEN",
+        "AXIOM_URL": "https://AXIOM_DOMAIN",
+        "AXIOM_ORG_ID": "ORG_ID"
+      }
+    }
+  }
+}
+```
+
+<Info>
+Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of the Axiom MCP Server. By default, it’s `~/go/bin/axiom-mcp`.
+
+Replace `PERSONAL_ACCESS_TOKEN` with the Axiom PAT you have generated.
+
+<ReplaceDomain />
+
+Replace `ORG_ID` with the name of your Axiom organization. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+</Info>
+
+## Ask Claude about your data
+
+Ask Claude a question about your Axiom data. For example:
+
+- "List my datasets."
+- "Get the data schema for the dataset `logs`."
+- "Get the most common status codes in the last 30 minutes in the dataset `logs`."
+
+For more information about the types of questions the Axiom MCP Server can help you answer, see [Current capabilities](#current-capabilities).
