@@ -44,9 +44,14 @@ go install github.com/axiomhq/axiom-mcp@latest
 
 ## Configure
 
-Specify the authentication and configration details using one of the following methods:
+Configure the Claude app to use the MCP server in one of the following ways:
 
-- Use a config file. For example:
+- Use a [config file](#config-file)
+- Use [environment variables](#environment-variables)
+
+### Config file
+
+1. Create a config file where you specify the authentication and configuration details. For example:
 
     ```bash config.txt
     token PERSONAL_ACCESS_TOKEN
@@ -58,59 +63,45 @@ Specify the authentication and configration details using one of the following m
     datasets-burst 1
     ```
 
-- Use command line flags. For example:
-    ```bash
-    axiom-mcp \
-    -token PERSONAL_ACCESS_TOKEN \
-    -url https://AXIOM_DOMAIN \
-    -org-id ORG_ID \
-    -query-rate 1 \
-    -query-burst 1 \
-    -datasets-rate 1 \
-    -datasets-burst 1
-    ```
+    <Info>
+    Replace `PERSONAL_ACCESS_TOKEN` with the Axiom PAT you have generated.
 
-- Use environment variables. For example:
-    ```bash
-    export AXIOM_TOKEN=PERSONAL_ACCESS_TOKEN
-    export AXIOM_URL=https://AXIOM_DOMAIN
-    export AXIOM_ORG_ID=ORG_ID
-    export AXIOM_QUERY_RATE=1
-    export AXIOM_QUERY_BURST=1
-    export AXIOM_DATASETS_RATE=1
-    export AXIOM_DATASETS_BURST=1
-    ```
+    <ReplaceDomain />
 
-<Info>
-Replace `PERSONAL_ACCESS_TOKEN` with the Axiom PAT token you have generated.
+    Replace `ORG_ID` with the name of your Axiom organization. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+    </Info>
 
-Replace `ORG_ID` with the name of your Axiom organization. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id)
+    Optionally, configure the rate and the burst at the query and dataset levels.
 
-<ReplaceDomain />
-</Info>
+1. Add `axiom` to the `mcpServers` section of the Claude configuration file. If you use a Mac, the default path is `~/Library/Application Support/Claude/claude_desktop_config.json`.
 
-## Usage
-
-TODO test below
-
-1. Create a config file:
-```bash
-echo "token xaat-your-api-token" > config.txt
-```
-
-2. Configure the Claude app to use the MCP server:
-
-```bash
-code ~/Library/Application\ Support/Claude/claude_desktop_config.json
-```
-
-```json
+```json claude_desktop_config.json
 {
   "mcpServers": {
     "axiom": {
-      "command": "/path/to/your/axiom-mcp-binary",
-      "args" : ["--config", "/path/to/your/config.txt"],
-      "env": { // Alternatively, set the environment variables here
+      "command": "PATH_AXIOM_MCP_BINARY",
+      "args" : ["--config", "PATH_AXIOM_MCP_CONFIG"]
+    }
+  }
+}
+```
+
+<Info>
+Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of the Axiom MCP Server. By default, it’s `~/go/bin/axiom-mcp`.
+
+Replace `PATH_AXIOM_MCP_CONFIG` with the path the config file you have previously created.
+</Info>
+
+### Environment variables
+
+Add `axiom` to the `mcpServers` section of the Claude configuration file, and specify the authentication details using environment variables. If you use a Mac, the default path is `~/Library/Application Support/Claude/claude_desktop_config.json`. For example:
+
+```json claude_desktop_config.json
+{
+  "mcpServers": {
+    "axiom": {
+      "command": "PATH_AXIOM_MCP_BINARY",
+      "env": {
         "AXIOM_TOKEN": "PERSONAL_ACCESS_TOKEN",
         "AXIOM_URL": "https://AXIOM_DOMAIN",
         "AXIOM_ORG_ID": "ORG_ID"
@@ -119,3 +110,23 @@ code ~/Library/Application\ Support/Claude/claude_desktop_config.json
   }
 }
 ```
+
+<Info>
+Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of the Axiom MCP Server. By default, it’s `~/go/bin/axiom-mcp`.
+
+Replace `PERSONAL_ACCESS_TOKEN` with the Axiom PAT you have generated.
+
+<ReplaceDomain />
+
+Replace `ORG_ID` with the name of your Axiom organization. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+</Info>
+
+## Ask Claude
+
+Ask Claude a question about your Axiom data. For example:
+
+- "List my datasets."
+- "Get the data schema for the dataset `logs`."
+- "Get the most common status codes in the last 30 minutes in the dataset `logs`."
+
+For more information about the types of questions the Axiom MCP Server can help you answer, see [Current capabilities](#current-capabilities).
