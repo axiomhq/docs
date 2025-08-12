@@ -1,0 +1,157 @@
+---
+title: asinh
+description: 'This page explains how to use the asinh function in APL.'
+---
+
+The `asinh` function returns the inverse hyperbolic sine of a numeric expression.  
+You can use `asinh` when you want to transform data that follows a hyperbolic pattern or to solve equations involving hyperbolic functions.  
+It is particularly useful when working with data that covers a wide range of magnitudes, such as in signal processing, statistical modeling, or scientific measurements, because it handles both small and large values gracefully.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you can use the `asinh()` function in `eval` expressions to compute the inverse hyperbolic sine of a field or number. In APL, the `asinh` function works similarly, but you use it directly in the expression without the `eval` command.
+
+<CodeGroup>
+```sql Splunk example
+... | eval result=asinh(value)
+````
+
+```kusto APL equivalent
+datatable(value: real) [
+    -2.5, -1.0, 0.0, 1.0, 2.5
+]
+| extend result = asinh(value)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the inverse hyperbolic sine function is usually available as `ASINH()` in mathematical expressions. In APL, the name and usage are the same, but you use it in the pipeline syntax.
+
+<CodeGroup>
+```sql SQL example
+SELECT ASINH(value) AS result
+FROM my_table;
+```
+
+```kusto APL equivalent
+datatable(value: real) [
+    -2.5, -1.0, 0.0, 1.0, 2.5
+]
+| extend result = asinh(value)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+asinh(x)
+```
+
+### Parameters
+
+| Parameter | Type | Description                                                 |
+| --------- | ---- | ----------------------------------------------------------- |
+| `x`       | real | The value for which to compute the inverse hyperbolic sine. |
+
+### Returns
+
+A value of type `real` that represents the inverse hyperbolic sine of `x`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You can use `asinh` to normalize large variations in request durations, making it easier to visualize and compare outliers.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend norm_duration = asinh(req_duration_ms)
+| project _time, req_duration_ms, norm_duration, id, status
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | req_duration_ms | norm_duration | id      | status |
+| -------------------- | ----------------- | -------------- | ------- | ------ |
+| 2025-08-01T10:00:00Z | 10                | 2.998223       | user123 | 200    |
+| 2025-08-01T10:05:00Z | 1500              | 7.313220       | user456 | 500    |
+
+This query computes the inverse hyperbolic sine of each request duration, producing a normalized metric that compresses large spikes in values.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+When analyzing spans, you can use `asinh` to transform duration values, which helps when some spans are significantly longer than others.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend norm_duration = asinh(toint(duration / 1ms))
+| project _time, duration, norm_duration, ['service.name'], kind, status_code
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | duration | norm_duration | service.name    | kind     | status_code |
+| -------------------- | -------- | -------------- | --------------- | -------- | ------------ |
+| 2025-08-01T11:00:00Z | 2ms      | 1.443635       | frontend        | server   | 200          |
+| 2025-08-01T11:02:00Z | 1500ms   | 7.313220       | checkoutservice | internal | 500          |
+
+This query normalizes the `duration` field in milliseconds to reduce the effect of very large spans.
+
+</Tab>
+<Tab title="Security logs">
+
+For security-related requests, you can use `asinh` to transform duration data for anomaly detection, where very large durations can skew averages.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend norm_duration = asinh(req_duration_ms)
+| where status == '500'
+| project _time, req_duration_ms, norm_duration, id, uri, method, ['geo.city'], ['geo.country']
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | req_duration_ms | norm_duration | id      | uri    | method | geo.city | geo.country |
+| -------------------- | ----------------- | -------------- | ------- | ------ | ------ | -------- | ----------- |
+| 2025-08-01T12:00:00Z | 3000              | 8.699515       | user789 | /login | POST   | Berlin   | DE          |
+
+This query focuses on failed requests and normalizes their request durations, making it easier to identify anomalies in high-latency error events.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [acosh](/apl/scalar-functions/acosh): Returns the inverse hyperbolic cosine of a number. Use it for values ≥ 1.
+- [atanh](/apl/scalar-functions/atanh): Returns the inverse hyperbolic tangent of a number. Use it for values between −1 and 1.
+- [sinh](/apl/scalar-functions/sinh): Returns the hyperbolic sine of a number. Use it when you want the direct (not inverse) transformation.
+- [cosh](/apl/scalar-functions/cosh): Returns the hyperbolic cosine of a number. Useful for modeling exponential growth in hyperbolic contexts.
+- [tanh](/apl/scalar-functions/tanh): Returns the hyperbolic tangent of a number. Useful for compressing values into the range (−1, 1).

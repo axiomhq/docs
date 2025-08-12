@@ -1,0 +1,160 @@
+---
+title: atanh
+description: 'This page explains how to use the atanh function in APL.'
+---
+
+The `atanh` function returns the inverse hyperbolic tangent of a numeric expression. You can use it to transform values in datasets where you need to apply the inverse of the hyperbolic tangent operation, often for normalization or in statistical and mathematical modeling. This function is particularly useful when working with data that results from transformations in signal processing, logistic regression, or machine learning, and you need to reverse the transformation.
+
+The input value must be in the range -1 to 1 (exclusive). The function returns results in radians.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you can use the `atanh()` function in `eval` expressions to compute the inverse hyperbolic tangent. In APL, the `atanh` function works in a similar way, returning the inverse hyperbolic tangent of a numeric expression.
+
+<CodeGroup>
+```sql Splunk example
+... | eval result=atanh(value)
+````
+
+```kusto APL equivalent
+dataset
+| extend result=atanh(value)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the `ATANH()` function returns the inverse hyperbolic tangent of a numeric expression. APL’s `atanh` function works similarly, though the syntax for applying it in queries follows APL’s `extend` or `project` clauses.
+
+<CodeGroup>
+```sql SQL example
+SELECT ATANH(value) AS result
+FROM table
+```
+
+```kusto APL equivalent
+dataset
+| extend result=atanh(value)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+atanh(x)
+```
+
+### Parameters
+
+| Parameter | Type   | Description                                   |
+| --------- | ------ | --------------------------------------------- |
+| `x`       | `real` | A numeric expression in the range -1 < x < 1. |
+
+### Returns
+
+A `real` value representing the inverse hyperbolic tangent of the input, in radians.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You can use `atanh` in log analysis to transform normalized request durations back to a raw metric space for further statistical comparison.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend normalized_duration = req_duration_ms / 1000.0
+| where normalized_duration > -1 and normalized_duration < 1
+| extend inverse_transformed = atanh(normalized_duration)
+| project _time, req_duration_ms, inverse_transformed
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | req_duration_ms | inverse_transformed |
+| -------------------- | ----------------- | -------------------- |
+| 2025-08-11T12:00:00Z | 450               | 0.4236               |
+| 2025-08-11T12:01:00Z | 800               | 1.0986               |
+
+This example calculates the inverse hyperbolic tangent of normalized request durations, enabling comparison in a space where relationships are more linear.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You can use `atanh` in OpenTelemetry traces to reverse a transformation applied to span durations, restoring them to a scale needed for correlation with other performance metrics.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend normalized_duration = toreal(duration) / 5s
+| where normalized_duration > -1 and normalized_duration < 1
+| extend inverse_transformed = atanh(normalized_duration)
+| project _time, duration, inverse_transformed, ['service.name']
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | duration | inverse_transformed | service.name    |
+| -------------------- | -------- | -------------------- | --------------- |
+| 2025-08-11T12:00:00Z | 3.2s     | 0.8047               | frontend        |
+| 2025-08-11T12:01:00Z | 2.5s     | 0.5493               | checkoutservice |
+
+This example reverses a prior normalization of span durations to allow for direct analysis in original metric units.
+
+</Tab>
+<Tab title="Security logs">
+
+You can use `atanh` in security log analysis to transform normalized numeric indicators (for example, request rates) back to a more interpretable form.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize avg_duration_ms = avg(req_duration_ms) by geo_country = ['geo.country']
+| extend normalized_avg = avg_duration_ms / 2000.0
+| where normalized_avg > -1 and normalized_avg < 1
+| extend inverse_transformed = atanh(normalized_avg)
+| project geo_country, avg_duration_ms, inverse_transformed
+```
+
+[Run in Playground]
+
+**Output**
+
+| geo_country | avg_duration_ms | inverse_transformed |
+| ------------ | ----------------- | -------------------- |
+| US           | 780               | 0.3948               |
+| DE           | 1250              | 0.7580               |
+
+This example computes the inverse hyperbolic tangent of normalized average request durations by country, allowing security analysts to work with transformed data in a more meaningful range.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [tanh](/apl/math-functions/tanh): Returns the hyperbolic tangent of a number. Use it when you need to apply the transformation that `atanh` reverses.
+- [asin](/apl/math-functions/asin): Returns the inverse sine of a number. Use it for trigonometric calculations involving sine.
+- [acos](/apl/math-functions/acos): Returns the inverse cosine of a number. Use it for trigonometric calculations involving cosine.
+- [atan](/apl/math-functions/atan): Returns the arctangent of a number. Use it when working with tangent values rather than hyperbolic tangent.
+- [log](/apl/math-functions/log): Returns the logarithm of a number. Useful in other transformations or scaling operations.

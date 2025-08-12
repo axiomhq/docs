@@ -1,0 +1,151 @@
+---
+title: acosh
+description: 'This page explains how to use the acosh function in APL.'
+---
+
+The `acosh` function returns the inverse hyperbolic cosine (also known as the area hyperbolic cosine) of a numeric expression. It is useful when you need to transform data that follows a hyperbolic distribution or when working with mathematical models that require the inverse of the hyperbolic cosine function.
+
+You can use `acosh` in analytical queries that involve geometric calculations, certain physics models, or statistical data transformations where logarithmic and hyperbolic relationships are present. For example, you might use it to compute distances in hyperbolic space, model growth rates, or normalize performance metrics in log analysis.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you can use the `acosh()` function in `eval` to calculate the inverse hyperbolic cosine. In APL, the syntax is similar, but you write the function name in lowercase and apply it directly to the numeric expression.
+
+<CodeGroup>
+```sql Splunk example
+... | eval result=acosh(10)
+````
+
+```kusto APL equivalent
+print result=acosh(10)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the `ACOSH()` function works similarly to APL’s `acosh()` function, taking a single numeric argument and returning the inverse hyperbolic cosine. The key difference is that in APL you typically use it within a `print` or a projection in a query pipeline.
+
+<CodeGroup>
+```sql SQL example
+SELECT ACOSH(10) AS result
+```
+
+```kusto APL equivalent
+print result=acosh(10)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+acosh(x)
+```
+
+### Parameters
+
+| Parameter | Type | Description                                   |
+| --------- | ---- | --------------------------------------------- |
+| `x`       | real | A numeric value greater than or equal to `1`. |
+
+### Returns
+
+A `real` value that is the inverse hyperbolic cosine of `x`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You want to analyze HTTP request durations by applying the inverse hyperbolic cosine to the request duration in milliseconds. This can be useful in mathematical modeling where the data has hyperbolic characteristics.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend acosh_duration = acosh(req_duration_ms)
+| project _time, req_duration_ms, acosh_duration
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | req_duration_ms | acosh_duration |
+| -------------------- | ----------------- | --------------- |
+| 2025-08-12T10:00:00Z | 200               | 5.9915          |
+| 2025-08-12T10:00:01Z | 300               | 6.3969          |
+
+The query calculates the inverse hyperbolic cosine of the request durations and projects it alongside the original values for analysis.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You want to calculate the inverse hyperbolic cosine of span durations to transform the data for advanced statistical analysis.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend acosh_span = acosh(toint(duration / 1ms))
+| project _time, duration, acosh_span, ['service.name']
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | duration         | acosh_span | service.name    |
+| -------------------- | ---------------- | ----------- | --------------- |
+| 2025-08-12T10:05:00Z | 00:00:00.2500000 | 6.2146      | frontend        |
+| 2025-08-12T10:05:01Z | 00:00:00.5000000 | 6.9078      | checkoutservice |
+
+The query converts span durations to milliseconds, calculates the inverse hyperbolic cosine, and projects the results.
+
+</Tab>
+<Tab title="Security logs">
+
+You want to apply the inverse hyperbolic cosine to request durations from suspicious IP addresses to detect potential anomalies.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '403'
+| extend acosh_duration = acosh(req_duration_ms)
+| project _time, status, req_duration_ms, acosh_duration, uri, ['geo.country']
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | status | req_duration_ms | acosh_duration | uri           | geo.country |
+| -------------------- | ------ | ----------------- | --------------- | ------------- | ----------- |
+| 2025-08-12T10:10:00Z | 403    | 150               | 5.7038          | /admin        | US          |
+| 2025-08-12T10:10:01Z | 403    | 400               | 6.6846          | /secure/login | DE          |
+
+The query filters for forbidden requests (`403` status), calculates the inverse hyperbolic cosine of the request duration, and projects relevant fields for investigation.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [cosh](/apl/math-functions/cosh): Returns the hyperbolic cosine of a number. Use `cosh` when you want the direct hyperbolic cosine instead of its inverse.
+- [asinh](/apl/math-functions/asinh): Returns the inverse hyperbolic sine of a number. Use `asinh` for hyperbolic sine inversions.
+- [atanh](/apl/math-functions/atanh): Returns the inverse hyperbolic tangent of a number. Use `atanh` when working with ratios or normalized values in hyperbolic contexts.
+- [log](/apl/math-functions/log): Returns the natural logarithm of a number. `acosh` can be expressed in terms of logarithms, but `log` works directly for general exponential scaling.
+- [sqrt](/apl/math-functions/sqrt): Returns the square root of a number. `acosh` internally uses square root computations, but use `sqrt` when you only need root extraction.

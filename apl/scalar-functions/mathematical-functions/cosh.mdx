@@ -1,0 +1,152 @@
+---
+title: cosh
+description: 'This page explains how to use the cosh function in APL.'
+---
+
+The `cosh` function returns the hyperbolic cosine of a numeric expression. It is useful when you need to perform mathematical calculations involving hyperbolic functions, such as modeling waveforms, solving certain types of differential equations, or performing transformations in physics and engineering datasets.  
+In data analysis, you can use `cosh` to apply non-linear transformations to values, for example when preparing data for statistical modeling or normalizing certain numerical ranges.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you can compute the hyperbolic cosine using the `eval` command and the `cosh()` function in an expression. The behavior is similar in APL, but you call `cosh()` directly in the expression without the `eval` command.
+
+<CodeGroup>
+```sql Splunk example
+... | eval result=cosh(fieldname)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend result = cosh(req_duration_ms)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you can use the `COSH()` function in a `SELECT` statement. In APL, the usage is similar, but you work with pipelines and the `extend` operator to create new calculated columns.
+
+<CodeGroup>
+```sql SQL example
+SELECT COSH(req_duration_ms) AS result
+FROM sample_http_logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend result = cosh(req_duration_ms)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+cosh(number)
+```
+
+### Parameters
+
+| Parameter | Type | Description                                                    |
+| --------- | ---- | -------------------------------------------------------------- |
+| `number`  | real | The numeric expression to calculate the hyperbolic cosine for. |
+
+### Returns
+
+A value of type `real` representing the hyperbolic cosine of the input.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You can use `cosh` to transform numeric log data for analytical purposes, such as preparing request duration data for advanced mathematical modeling.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend transformed_duration = cosh(req_duration_ms)
+| project _time, req_duration_ms, transformed_duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20transformed_duration%20%3D%20cosh%28req_duration_ms%29%20%7C%20project%20_time%2C%20req_duration_ms%2C%20transformed_duration%22%7D)
+
+**Output**
+
+| _time               | req_duration_ms | transformed_duration |
+| -------------------- | ----------------- | --------------------- |
+| 2025-08-11T10:12:34Z | 5                 | 74.2099485248         |
+| 2025-08-11T10:13:02Z | 8                 | 1490.4791612522       |
+
+This query calculates the hyperbolic cosine of the `req_duration_ms` field for each request and returns the original and transformed values.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You can apply `cosh` to span durations to prepare them for further statistical modeling in distributed tracing data.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend transformed_duration = cosh(toint(duration))
+| project _time, duration, transformed_duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20transformed_duration%20%3D%20cosh%28toint%28duration%29%29%20%7C%20project%20_time%2C%20duration%2C%20transformed_duration%22%7D)
+
+**Output**
+
+| _time               | duration | transformed_duration |
+| -------------------- | -------- | --------------------- |
+| 2025-08-11T11:22:01Z | 00:00:04 | 27.3082328360         |
+| 2025-08-11T11:22:45Z | 00:00:07 | 548.3161232732        |
+
+This query converts the `duration` field to an integer (in seconds), calculates its hyperbolic cosine, and returns both the original and transformed values.
+
+</Tab>
+<Tab title="Security logs">
+
+In security log analysis, you can use `cosh` to transform numeric fields like request durations for anomaly detection.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '403'
+| extend transformed_duration = cosh(req_duration_ms)
+| project _time, id, status, req_duration_ms, transformed_duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20%3D%3D%20'403'%20%7C%20extend%20transformed_duration%20%3D%20cosh%28req_duration_ms%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20req_duration_ms%2C%20transformed_duration%22%7D)
+
+**Output**
+
+| _time               | id     | status | req_duration_ms | transformed_duration |
+| -------------------- | ------ | ------ | ----------------- | --------------------- |
+| 2025-08-11T12:01:14Z | u12345 | 403    | 6                 | 201.7156361225        |
+
+This query filters HTTP logs for requests with status `403`, calculates the hyperbolic cosine of the request duration, and displays the relevant fields.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [sin](/apl/math-functions/sin): Returns the sine of the specified angle. Use when you need standard trigonometric sine instead of a hyperbolic function.
+- [cos](/apl/math-functions/cos): Returns the cosine of the specified angle. Use for standard trigonometric cosine calculations.
+- [sinh](/apl/math-functions/sinh): Returns the hyperbolic sine of the specified number. Use when you need the hyperbolic counterpart to `sin`.
+- [tanh](/apl/math-functions/tanh): Returns the hyperbolic tangent of the specified number. Use when you need the hyperbolic counterpart to `tan`.
+- [exp](/apl/math-functions/exp): Returns `e` raised to the specified power. Use when you need exponential growth calculations, which are mathematically related to hyperbolic functions.

@@ -1,0 +1,162 @@
+---
+title: sinh
+description: 'This page explains how to use the sinh function in APL.'
+---
+
+The `sinh` function returns the hyperbolic sine of a numeric expression. Hyperbolic sine is defined mathematically as:
+
+```
+
+sinh(x) = (e^x – e^(–x)) / 2
+
+````
+
+Use `sinh` when you need to work with hyperbolic functions in mathematical, scientific, or engineering analyses. It is useful in scenarios such as:
+
+- Modeling waveforms or oscillations.
+- Performing geometric or trigonometric calculations in physics simulations.
+- Transforming data in machine learning or data analysis pipelines that involve hyperbolic functions.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you can calculate the hyperbolic sine using the `sinh()` function in `eval` expressions. In APL, `sinh` behaves the same way but is applied as a scalar function inside your expressions.
+
+<CodeGroup>
+```sql Splunk example
+... | eval result = sinh(2)
+````
+
+```kusto APL equivalent
+print result = sinh(2)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not define `sinh` as part of its standard functions. Many SQL dialects (such as PostgreSQL or MySQL) support it as a mathematical function. In APL, the syntax is simpler and directly applies `sinh` to your numeric expression.
+
+<CodeGroup>
+```sql SQL example
+SELECT SINH(2) AS result;
+```
+
+```kusto APL equivalent
+print result = sinh(2)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+sinh(x)
+```
+
+### Parameters
+
+| Parameter | Type   | Description                                           |
+| --------- | ------ | ----------------------------------------------------- |
+| `x`       | number | The numeric value to compute the hyperbolic sine for. |
+
+### Returns
+
+A `real` value representing the hyperbolic sine of the input.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You can use `sinh` to apply a mathematical transformation to a numeric log field, for example to amplify differences in HTTP request durations for anomaly detection.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend duration_sinh = sinh(req_duration_ms / 1000.0)
+| project _time, req_duration_ms, duration_sinh
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | req_duration_ms | duration_sinh |
+| -------------------- | ----------------- | -------------- |
+| 2025-08-10T12:00:00Z | 120               | 0.201336       |
+| 2025-08-10T12:01:00Z | 350               | 0.358357       |
+
+This query transforms request durations from milliseconds to seconds and computes their hyperbolic sine, making small differences in durations more distinguishable.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In OpenTelemetry traces, `sinh` can help scale span durations in a way that emphasizes longer-running spans for analysis.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend duration_ms = toreal(totimespan(duration)) / 1000000
+| extend duration_sinh = sinh(duration_ms / 1000.0)
+| project _time, service.name, span_id, duration_ms, duration_sinh
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | service.name          | span_id | duration_ms | duration_sinh |
+| -------------------- | --------------------- | -------- | ------------ | -------------- |
+| 2025-08-10T14:15:00Z | checkoutservice       | a1b2c3d4 | 250          | 0.252569       |
+| 2025-08-10T14:16:00Z | productcatalogservice | e5f6g7h8 | 800          | 0.888106       |
+
+The query calculates the hyperbolic sine of the span duration in seconds, making slow spans stand out more for further analysis.
+
+</Tab>
+<Tab title="Security logs">
+
+In security log analysis, you can use `sinh` to emphasize large deviations in request durations, which can help detect unusual activity.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '200'
+| extend duration_sinh = sinh(req_duration_ms / 1000.0)
+| project _time, id, uri, req_duration_ms, duration_sinh
+```
+
+[Run in Playground]
+
+**Output**
+
+| _time               | id     | uri       | req_duration_ms | duration_sinh |
+| -------------------- | ------ | --------- | ----------------- | -------------- |
+| 2025-08-10T15:00:00Z | u12345 | /login    | 500               | 0.521095       |
+| 2025-08-10T15:05:00Z | u54321 | /checkout | 1200              | 1.509461       |
+
+This query filters successful requests, computes their hyperbolic sine, and can help flag requests that are significantly slower than usual.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [cosh](/apl/math-functions/cosh): Returns the hyperbolic cosine of a numeric expression. Use when you need the even-function counterpart of `sinh`.
+- [tanh](/apl/math-functions/tanh): Returns the hyperbolic tangent of a numeric expression. Use when you want the ratio of `sinh` to `cosh`.
+- [sin](/apl/math-functions/sin): Returns the trigonometric sine of a numeric expression. Use for circular, not hyperbolic, calculations.
+- [exp](/apl/math-functions/exp): Returns `e` raised to a specified power. Useful for building your own hyperbolic functions manually.
+- [log](/apl/math-functions/log): Returns the logarithm of a number. Use when you need inverse operations to exponential calculations.
