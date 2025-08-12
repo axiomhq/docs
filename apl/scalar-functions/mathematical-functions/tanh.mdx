@@ -1,0 +1,160 @@
+---
+title: tanh
+description: 'This page explains how to use the tanh function in APL.'
+---
+
+The `tanh` function returns the hyperbolic tangent of a numeric expression. The hyperbolic tangent is a mathematical function that maps real numbers to a range between −1 and 1. You can use `tanh` to normalize values, transform skewed data into a bounded range, or apply non-linear scaling in analytics.
+
+`Tanh` is useful when you want to:
+
+- Smooth extreme values while keeping the sign of the original number.
+- Transform latency or duration metrics into a bounded range for comparison.
+- Apply mathematical models that require hyperbolic functions, such as in certain statistical or machine learning contexts.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `tanh()` function works in a similar way to APL’s `tanh`, returning the hyperbolic tangent of a number. The main difference is in the syntax for referencing fields and in how APL pipelines expressions.
+
+<CodeGroup>
+```sql Splunk example
+... | eval scaled_duration = tanh(req_duration_ms)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend scaled_duration = tanh(req_duration_ms)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not define a built-in `tanh` function in the standard, but many SQL dialects (such as PostgreSQL) include it. If available, `tanh` in SQL is used in a similar way to APL. The key difference is that APL uses a pipe-based syntax and direct field references without table aliases in expressions.
+
+<CodeGroup>
+```sql SQL example
+SELECT req_duration_ms, TANH(req_duration_ms) AS scaled_duration
+FROM sample_http_logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend scaled_duration = tanh(req_duration_ms)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+tanh(number)
+```
+
+### Parameters
+
+| Parameter | Type | Description                                                      |
+| --------- | ---- | ---------------------------------------------------------------- |
+| `number`  | real | The numeric value for which to calculate the hyperbolic tangent. |
+
+### Returns
+
+A `real` value between −1 and 1 representing the hyperbolic tangent of the input.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You can use `tanh` to scale request durations into a bounded range to make extreme latencies easier to compare visually.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend scaled_duration = tanh(req_duration_ms / 1000.0)
+| project _time, req_duration_ms, scaled_duration, status, method
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs']%20%7C%20extend%20scaled_duration%20%3D%20tanh%28req_duration_ms%20%2F%201000.0%29%20%7C%20project%20_time%2C%20req_duration_ms%2C%20scaled_duration%2C%20status%2C%20method%22%7D)
+
+**Output**
+
+| _time               | req_duration_ms | scaled_duration | status | method |
+| -------------------- | ----------------- | ---------------- | ------ | ------ |
+| 2025-08-12T10:00:00Z | 250               | 0.2449           | 200    | GET    |
+| 2025-08-12T10:00:01Z | 5000              | 0.9999           | 500    | POST   |
+| 2025-08-12T10:00:02Z | 1200              | 0.8336           | 200    | GET    |
+
+This example scales durations from milliseconds to seconds and applies `tanh` to normalize them, making extreme durations easier to compare.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You can use `tanh` to normalize span durations for different services, allowing for a consistent view across varying performance characteristics.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend scaled_duration = tanh(toreal(duration) / 1s)
+| project _time, ['service.name'], duration, scaled_duration, status_code
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces']%20%7C%20extend%20scaled_duration%20%3D%20tanh%28toreal%28duration%29%20%2F%201s%29%20%7C%20project%20_time%2C%20['service.name']%2C%20duration%2C%20scaled_duration%2C%20status_code%22%7D)
+
+**Output**
+
+| _time               | service.name          | duration | scaled_duration | status_code |
+| -------------------- | --------------------- | -------- | ---------------- | ------------ |
+| 2025-08-12T10:00:00Z | frontend              | 250ms    | 0.2449           | 200          |
+| 2025-08-12T10:00:01Z | checkoutservice       | 2s       | 0.9640           | 200          |
+| 2025-08-12T10:00:02Z | productcatalogservice | 5s       | 0.9999           | 500          |
+
+This example converts durations to seconds, applies `tanh`, and outputs a normalized value for easier service comparison.
+
+</Tab>
+<Tab title="Security logs">
+
+You can apply `tanh` to request durations in security-related HTTP logs to identify unusually long or short request times while bounding extreme outliers.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '403'
+| extend scaled_duration = tanh(req_duration_ms / 1000.0)
+| project _time, id, uri, req_duration_ms, scaled_duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs']%20%7C%20where%20status%20%3D%3D%20'403'%20%7C%20extend%20scaled_duration%20%3D%20tanh%28req_duration_ms%20%2F%201000.0%29%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20req_duration_ms%2C%20scaled_duration%22%7D)
+
+**Output**
+
+| _time               | id     | uri          | req_duration_ms | scaled_duration |
+| -------------------- | ------ | ------------ | ----------------- | ---------------- |
+| 2025-08-12T10:00:00Z | user42 | /admin/login | 1500              | 0.9051           |
+| 2025-08-12T10:00:01Z | user17 | /secure/data | 6000              | 0.9999           |
+
+This example filters for HTTP 403 (forbidden) requests, applies `tanh` to normalize request durations, and displays the scaled results for analysis.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [sin](/apl/math-functions/sin): Returns the sine of an angle. Use when you need trigonometric calculations rather than hyperbolic ones.
+- [cosh](/apl/math-functions/cosh): Returns the hyperbolic cosine of a number. Use alongside `tanh` for hyperbolic function computations.
+- [atanh](/apl/math-functions/atanh): Returns the inverse hyperbolic tangent. Use to reverse a `tanh` transformation.
+- [exp](/apl/math-functions/exp): Returns `e` raised to the specified power. Can be combined with hyperbolic functions for certain transformations.
+- [log](/apl/math-functions/log): Returns the logarithm of a number. Use when you need a different type of scale transformation.
