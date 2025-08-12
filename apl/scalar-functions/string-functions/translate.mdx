@@ -71,7 +71,7 @@ translate(searchList, replacementList, source)
 
 ### Returns
 
-A string with characters from `searchList` replaced by corresponding characters in `replacementList`. If a character in `searchList` has no corresponding entry in `replacementList`, it is removed from the result.
+A string with characters from `searchList` replaced by corresponding characters in `replacementList`. If `replacementList` is shorter than `searchList`, Axiom repeatedly uses the last character of `replacementList` to match the length of the search.
 
 ## Use case examples
 
@@ -84,7 +84,7 @@ Use `translate` to mask user IDs by replacing all lowercase letters with asteris
 
 ```kusto
 ['sample-http-logs']
-| extend masked_id = translate('abcdefghijklmnopqrstuvwxyz', '*', id)
+| extend masked_id = translate('0123456789abcdefghijklmnopqrstuvwxyz', '##########*', id)
 | project _time, id, masked_id
 ```
 
@@ -94,10 +94,10 @@ Use `translate` to mask user IDs by replacing all lowercase letters with asteris
 
 | _time               | id    | masked_id |
 | -------------------- | ----- | ---------- |
-| 2025-07-28T12:34:56Z | `e7a6e1b9-3503-4c5e-a873-8ae9ce35b986` | `*7*6*1*9-3503-4*5*-*873-8**9**35*986`    |
-| 2025-07-28T12:35:01Z | `8740fbec-8e85-42da-99f9-df96601a51af` | `8740****-8*85-42**-99*9-**96601*51**`   |
+| 2025-07-28T12:34:56Z | `bd6d8f17-2b8d-4b71-af20-f23dc8d20202` | `**#*#*##-#*#*-#*##-**##-*##**#*#####`    |
+| 2025-07-28T12:35:01Z | `1e317368-9ed4-4e8c-b535-b59a68ffda05` | `#*######-#**#-#*#*-*###-*##*##****##`   |
 
-This query masks alphabetic characters in the `id` field by turning them into asterisks, keeping numeric values unchanged.
+This query masks characters in the `id` field by replacing numbers with hashes and letters with asterisks.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
