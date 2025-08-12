@@ -1,31 +1,33 @@
----
+
 title: 'Enrich Axiom experience with AWS PrivateLink'
 description: 'This page explains how to enrich your Axiom experience with AWS PrivateLink.'
 sidebarTitle: AWS PrivateLink
----
 
-[AWS PrivateLink](https://aws.amazon.com/privatelink/) is a networking service provided by Amazon Web Services (AWS) that allows you to securely access services hosted on the AWS cloud over a private network connection. With AWS PrivateLink, you can access Axiom directly from your Amazon Virtual Private Cloud (VPC) without an internet gateway or NAT device, simplifying your network setup.
 
-This page explains how to connect to Axiom over AWS PrivateLink by setting up a VPC endpoint within AWS and configuring Axiom to use that endpoint.
+[AWS PrivateLink](https://aws.amazon.com/privatelink/) is a networking service provided by Amazon Web Services (AWS) that allows you to securely access services hosted on the AWS cloud over a private network connection. With AWS PrivateLink, you can access Axiom directly from your AWS without an internet gateway or NAT device, simplifying your network setup.
 
-<Note>
-Axiom exposes AWS PrivateLink endpoints in the `us-east-1` AWS region. To route traffic from other AWS regions, follow the [setup in `us-east-1`](#setup) and then [configure Amazon VPC peering](#configure-amazon-vpc-peering).
-</Note>
+## Cross-region support
+
+Axiom supports native cross-region PrivateLink over VPC peering for the following regions:
+
+US regions:
+- `us-east-1`
+- `us-east-2`
+- `us-west-1`
+- `us-west-2`
+
+EU regions:
+- `eu-west-1`
+- `eu-west-2`
+- `eu-west-3`
+- `eu-central-1`
+
+To connect to a region that isn’t listed above, [contact Axiom](https://axiom.co/contact).
 
 ## Setup
 
-1. Connect the AWS Console to region `us-east-1` and create a VPC. For more information, see the [AWS documentation](https://docs.aws.amazon.com/vpc/latest/privatelink/getting-started.html).
-1. Start creating a VPC endpoint. For more information, see the [AWS documentation](https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html#create-interface-endpoint-aws).
-1. In **Service category**, select **Other endpoint services**.
-1. In **Service name**, enter `com.amazonaws.vpce.us-east-1.vpce-svc-05a64735cdf68866b` to establish AWS PrivateLink for `api.axiom.co`.
-1. Click **Verify service**. If this doesn’t succeed, reach out to [Axiom Support](https://axiom.co/contact).
+1. In your VPC Console, go to **PrivateLink > Lattice > Endpoints**, and then click **Create endpoint**.
+1. Select **PrivateLink ready partner services**, and then enter `com.amazonaws.vpce.TARGET_REGION.vpce-svc-05a64735cdf68866b` as the service name. Replace `TARGET_REGION` with your target region.
+1. Under **Service Region**, turn on **Cross-region endpoint**, and then click **Verify service**.
 1. Select the VPC and subnets that you want to connect to the Axiom VPC service endpoint. Ensure that **Enable DNS name** is turned on and the security group accepts inbound traffic on TCP port `443`.
 1. Finish the setup and wait for the VPC endpoint to become available. This usually takes 10 minutes.
-
-## Configure Amazon VPC Peering
-
-To route traffic to Axiom’s PrivateLink offering in `us-east-1` from other AWS regions, use inter-region [Amazon VPC peering](https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html). Inter-region VPC peering allows you to establish connections between VPCs across different AWS regions. This allows VPC resources in different regions to communicate with each other using private IP addresses.
-
-After following the [setup in `us-east-1`](#setup), configure VPC peering to make the PrivateLink endpoint available in another region to send logs to Axiom over PrivateLink. For more information, see the [AWS documentation](https://docs.aws.amazon.com/vpc/latest/peering/working-with-vpc-peering.html).
-
-When configuring PrivateLink with VPC peering, Amazon Route 53 is useful for resolving private DNS hostnames within your VPCs. Amazon Route 53 allows you to create private hosted zones within your VPC. These private hosted zones allow you to use custom domain names for your resources, such as EC2 instances, ELB load balancers, or RDS instances, without exposing them to the public internet. For more information, see the [AWS documentation](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-private.html).
