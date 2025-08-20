@@ -9,17 +9,29 @@ import AIEngineeringInstrumentationSnippet from '/snippets/ai-engineering-instru
 
 The **Observe** stage is about understanding how your deployed generative AI capabilities perform in the real world. After creating and evaluating a capability, observing its production behavior is crucial for identifying unexpected issues, tracking costs, and gathering the data needed for future improvements.
 
-## Capturing telemetry with the `@axiomhq/ai` SDK
+## Pre-requisite: Setting up instrumentation
+
+The Axiom AI SDK is built on the OpenTelemetry standard. To send traces, you need to configure a Node.js or edge-compatible tracer that exports data to Axiom.
+
+### Configuring the tracer
+
+You must configure an OTLP trace exporter pointing to your Axiom instance. This is typically done in a dedicated instrumentation file that’s loaded before your application starts.
+
+<AIEngineeringInstrumentationSnippet />
+
+Be sure to define the `AXIOM_TOKEN` and `AXIOM_DATASET` environment variables in your `.env` file.
+
+## Capturing Gen AI telemetry with Axiom’s AI SDK
 
 The foundation of the Observe stage is Axiom’s SDK, which integrates with your app to capture detailed OpenTelemetry traces for every AI interaction.
 
 <Info>
-The initial release of `@axiomhq/ai` is focused on providing deep integration with TypeScript applications, particularly those using Vercel’s AI SDK to interact with frontier models.
+The initial release of Axiom’s AI SDK is focused on providing deep integration with TypeScript applications, particularly those using Vercel’s AI SDK to interact with frontier models.
 </Info>
 
 ### Instrumenting AI SDK calls
 
-The easiest way to get started is by wrapping your existing AI model client. The `@axiomhq/ai` package provides helper functions for popular libraries like Vercel’s AI SDK.
+The easiest way to get started is by wrapping your existing AI model client. Axiom’s AI SDK provides helper functions for popular libraries like Vercel’s [AI SDK](https://ai-sdk.dev/docs).
 
 The `wrapAISDKModel` function takes an existing AI model object and returns an instrumented version that will automatically generate trace data for every call.
 
@@ -29,7 +41,7 @@ The `wrapAISDKModel` function takes an existing AI model object and returns an i
 // src/shared/openai.ts
 
 import { createOpenAI } from '@ai-sdk/openai';
-import { wrapAISDKModel } from '@axiomhq/ai';
+import { wrapAISDKModel } from 'axiom/ai';
 
 const openaiProvider = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -44,7 +56,7 @@ export const gpt4oMini = wrapAISDKModel(openaiProvider('gpt-4o-mini'));
 // src/shared/anthropic.ts
 
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { wrapAISDKModel } from '@axiomhq/ai';
+import { wrapAISDKModel } from 'axiom/ai';
 
 const anthropicProvider = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -59,7 +71,7 @@ export const claude35Haiku = wrapAISDKModel(anthropicProvider('claude-3-5-haiku-
 // src/shared/gemini.ts
 
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { wrapAISDKModel } from '@axiomhq/ai';
+import { wrapAISDKModel } from 'axiom/ai';
 
 const geminiProvider = createGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -74,7 +86,7 @@ export const gemini15Pro = wrapAISDKModel(geminiProvider('gemini-1.5-pro'));
 // src/shared/grok.ts
 
 import { createXai } from '@ai-sdk/xai';
-import { wrapAISDKModel } from '@axiomhq/ai';
+import { wrapAISDKModel } from 'axiom/ai';
 
 const grokProvider = createXai({
   apiKey: process.env.XAI_API_KEY,
@@ -94,7 +106,7 @@ While `wrapAISDKModel` handles the automatic instrumentation, the `withSpan` fun
 ```typescript
 // src/app/page.tsx
 
-import { withSpan } from '@axiomhq/ai';
+import { withSpan } from 'axiom/ai';
 import { generateText } from 'ai';
 import { gpt4o } from '@/shared/openai';
 
@@ -131,7 +143,7 @@ The `wrapTool` helper takes your tool's name and its definition and returns an i
 // src/app/generate-text/page.tsx
 import { tool } from 'ai';
 import { z } from 'zod';
-import { wrapTool } from '@axiomhq/ai';
+import { wrapTool } from 'axiom/ai';
 import { generateText } from 'ai';
 import { gpt4o } from '@/shared/openai';
 
@@ -170,7 +182,7 @@ Here's how all three instrumentation functions work together in a single, real-w
 ```typescript
 // src/app/page.tsx
 
-import { withSpan, wrapAISDKModel, wrapTool } from '@axiomhq/ai';
+import { withSpan, wrapAISDKModel, wrapTool } from 'axiom/ai';
 import { generateText, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
@@ -224,18 +236,6 @@ This demonstrates the three key steps to rich observability:
 3. **`withSpan`**: Creates a parent span that ties everything together under a business capability
 </Accordion>
 
-## Setting up instrumentation
-
-The Axiom AI SDK is built on the OpenTelemetry standard. To send traces, you need to configure a Node.js or edge-compatible tracer that exports data to Axiom.
-
-### Configuring the tracer
-
-You must configure an OTLP trace exporter pointing to your Axiom instance. This is typically done in a dedicated instrumentation file that’s loaded before your application starts.
-
-<AIEngineeringInstrumentationSnippet />
-
-Set your Axiom credentials as environment variables `AXIOM_TOKEN` and `AXIOM_DATASET`.
-
 ## Understanding your AI telemetry
 
 Once instrumented, every LLM call will send a detailed span to your Axiom dataset. These spans are enriched with standardized `gen_ai.*` attributes that make your AI interactions easy to query and analyze.
@@ -259,8 +259,8 @@ Key attributes include:
 
 Visualizing and making sense of this telemetry data is a core part of the Axiom Console experience.
 
-* <Badge>Coming soon</Badge> A dedicated **AI Trace Waterfall** view will visualize single and multi-step LLM workflows, with clear input/output inspection at each stage.
-* <Badge>Coming soon</Badge> A pre-built **Gen AI OTel Dashboard** will automatically appear for any dataset receiving AI telemetry. It will feature elements for tracking cost per invocation, time-to-first-token, call counts by model, and error rates.
+* A dedicated **AI Trace Waterfall** view will visualize single and multi-step LLM workflows, with clear input/output inspection at each stage.
+* A pre-built **Gen AI OTel Dashboard** will automatically appear for any dataset receiving AI telemetry. It will feature elements for tracking cost per invocation, time-to-first-token, call counts by model, and error rates.
 
 ## What’s next?
 

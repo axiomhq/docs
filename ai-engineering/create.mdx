@@ -20,62 +20,70 @@ A typical `Prompt` object looks like this:
 ```typescript
 // src/prompts/email-summarizer.prompt.ts
 
-import { Type, type Prompt } from '@axiomhq/ai';
+import { 
+  experimental_Type,
+  type experimental_Prompt 
+} from 'axiom/ai';
 
 export const emailSummarizerPrompt = {
-  id: 'prompt_123',
-  name: 'Email Summarizer',
-  slug: 'email-summarizer',
-  version: '1.0.0',
-  environment: 'production',
+  name: "Email Summarizer",
+  slug: "email-summarizer",
+  version: "1.0.0",
+  model: "gpt-4o",
   messages: [
     {
-      role: 'system',
-      content: 'Summarize emails concisely, highlighting action items. The user is named {{ username }}.',
+      role: "system",
+      content:
+        `Summarize emails concisely, highlighting action items. 
+        The user is named {{ username }}.`,
     },
     {
-      role: 'user',
-      content: 'Please summarize this email: {{ email_content }}',
+      role: "user",
+      content: "Please summarize this email: {{ email_content }}",
     },
   ],
   arguments: {
-    username: Type.String(),
-    email_content: Type.String(),
+    username: experimental_Type.String(),
+    email_content: experimental_Type.String(),
   },
-} satisfies Prompt;
+} satisfies experimental_Prompt;
+
 ```
 
 ### Strongly-typed arguments with `Template`
 
-To ensure that prompts are used correctly, the `@axiomhq/ai` package includes a `Template` type system (exported as `Type`) for defining the schema of a prompt’s `arguments`. This provides type safety, autocompletion, and a clear, self-documenting definition of what data the prompt expects.
+To ensure that prompts are used correctly, the Axiom’s AI SDK includes a `Template` type system (exported as `Type`) for defining the schema of a prompt’s `arguments`. This provides type safety, autocompletion, and a clear, self-documenting definition of what data the prompt expects.
 
 The `arguments` object uses `Template` helpers to define the shape of the context:
 
 ```typescript
 // src/prompts/report-generator.prompt.ts
 
-import { Type, type Prompt } from '@axiomhq/ai';
+import { 
+  experimental_Type,
+  type experimental_Prompt
+} from 'axiom/ai';
 
 export const reportGeneratorPrompt = {
   // ... other properties
   arguments: {
-    company: Type.Object({
-      name: Type.String(),
-      isActive: Type.Boolean(),
-      departments: Type.Array(
-        Type.Object({
-          name: Type.String(),
-          budget: Type.Number(),
-        }),
+    company: experimental_Type.Object({
+      name: experimental_Type.String(),
+      isActive: experimental_Type.Boolean(),
+      departments: experimental_Type.Array(
+        experimental_Type.Object({
+          name: experimental_Type.String(),
+          budget: experimental_Type.Number(),
+        })
       ),
     }),
-    priority: Type.Union([
-      Type.Literal('high'),
-      Type.Literal('medium'),
-      Type.Literal('low')
+    priority: experimental_Type.Union([
+      experimental_Type.Literal("high"),
+      experimental_Type.Literal("medium"),
+      experimental_Type.Literal("low"),
     ]),
   },
-} satisfies Prompt;
+} satisfies experimental_Prompt;
 ```
 
 You can even infer the exact TypeScript type for a prompt’s context using the `InferContext` utility.
@@ -85,8 +93,10 @@ You can even infer the exact TypeScript type for a prompt’s context using the 
 Before using a prompt in your application, you can test it locally using the `parse` function. This function takes a `Prompt` object and a `context` object, rendering the templated messages to verify the output. This is a quick way to ensure your templating logic is correct.
 
 ```typescript
-import { parse } from '@axiomhq/ai';
-import { reportGeneratorPrompt } from './prompts/report-generator.prompt';
+import { experimental_parse } from 'axiom/ai';
+import { 
+  reportGeneratorPrompt
+} from './prompts/report-generator.prompt';
 
 const context = {
   company: {
@@ -101,7 +111,9 @@ const context = {
 };
 
 // Render the prompt with the given context
-const parsedPrompt = await parse(reportGeneratorPrompt, { context });
+const parsedPrompt = await experimental_parse(
+  reportGeneratorPrompt, { context }
+);
 
 console.log(parsedPrompt.messages);
 // [
