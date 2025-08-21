@@ -1,25 +1,45 @@
 ---
-title: 'Query costs'
-description: "This page explains how to calculate and manage query compute resources in GB-hours to optimize usage within Axiom."
+title: 'Optimize usage'
+description: "This page explains how to calculate and manage resources to optimize usage within Axiom."
 keywords: ['query', 'gb hours']
 ---
 
-{/* TODO: Rename this file it doesn’t reflect the content. */}
+## Optimize data loading
+
+When you send data via the [Ingest data](/restapi/endpoints/ingestIntoDataset) API endpoint, ingest volume is based on the uncompressed size of the HTTP request. In this case, body size dominates and metadata overhead is usually negligible.
+
+If you ingest data via API, using the CSV format comes with the following trade-offs:
+
+- **Pro:** CSV doesn’t repeat field names. This means lower ingest volume and lower ingest costs.
+- **Con:** Every value is a string. You need to do type casting at query time. This means higher cost and latency.
+- **Con:** Numbers as strings don’t compress well. This means higher storage and query costs.
+
+For higher volume, using a [dedicated ingestion method](/send-data/methods) is a better choice than sending data via API.
+
+## Optimize storage
+
+The amount of storage you use depends on the following:
+- The amount of data you ingest to Axiom.
+- The data retention period you specify.
+
+The data retention period defines how long Axiom stores your data. After this period, Axiom trims the data and it doesn’t count towards your storage costs. You can define a custom data retention period for each dataset. For more information, see [Specify data retention period](reference/datasets#specify-data-retention-period).
+
+## Optimize queries
 
 Axiom measures the resources used to execute queries in terms of GB-hours.
 
-## What GB-hours are
+### What GB-hours are
 
 When you run queries, your usage of the Axiom platform is measured in query-hours. The unit of this measurement is GB-hours which reflects the duration (measured in milliseconds) serverless functions are running to execute your query multiplied by the amount of memory (GB) allocated to execution. This metric is important for monitoring and managing your usage against the monthly allowance included in your plan.
 
-## How Axiom measures query-hours
+### How Axiom measures query-hours
 
 Axiom uses serverless computing to execute queries efficiently. The consumption of serverless compute resources is measured along two dimensions:
 
 - Time: The duration (in milliseconds) for which the serverless function is running to execute your query.
 - Memory allocation: The amount of memory (in GB) allocated to the serverless function during execution.
 
-## What counts as a query
+### What counts as a query
 
 In calculating query costs, Axiom considers any request that queries your data as a query. For example, the following all count as queries:
 
@@ -31,11 +51,11 @@ Each query is charged at the same rate, irrespective of its origin.
 
 Each monitor run counts towards your query costs. For this reason, the frequency (how often the monitor runs) can have a slight effect on query costs.
 
-## Run queries and understand costs
+### Run queries and understand costs
 
 When you run queries on Axiom, the cost in GB-hours is determined by the shape and size of the events in your dataset and the volume of events scanned to return a query result. After executing a query, you can find the associated query cost in the response header labeled as `X-Axiom-Query-Cost-Gbms`.
 
-## Determine query cost
+### Determine query cost
 
 Send a `POST` request to the [Run query](/restapi/endpoints/queryApl) endpoint with the following configuration:
 
@@ -57,31 +77,31 @@ Send a `POST` request to the [Run query](/restapi/endpoints/queryApl) endpoint w
 
 In the response to your request, the information about the query cost in GB-milliseconds is in the `X-Axiom-Query-Cost-Gbms` header.
 
-## Example of GB-hour calculation
+### Example of GB-hour calculation
 
 As an example, a typical query analyzing 1 million events might consume approximately 1 GB-second. There are 3,600 seconds in an hour which means that an organization can run 3,600 of these queries before reaching 1 GB-hour of query usage. This is an example and the actual usage depends on the complexity of the query and the input data.
 
-## Plan and GB-hours allowance
+### Plan and GB-hours allowance
 
 Your GB-hours allowance depends on your pricing plan. To learn more about the plan offerings and find the one that best suits your needs, see [Axiom Pricing](https://axiom.co/pricing).
 
-## Optimize queries to lower costs
+### Optimize queries to lower costs
 
 This section explains ways you can optimize your queries to save on query costs. For more information optimizing your queries for performance, see [Optimize performance](/reference/performance).
 
-### Optimize the order of field-specific filters
+#### Optimize the order of field-specific filters
 
 Field-specific filters narrow your query results to events where a field has a given value. For example, the APL query `where ["my-field"] == "axiom"` filters for events where the `my-field` field takes the value `axiom`.
 
 Include field-specific filters near the beginning of your query for modest savings in query costs. For more information, see [Poor filter order in queries](/reference/performance#poor-filter-order-in-queries)
 
-### Optimize `search` operator and non-field-specific filters
+#### Optimize `search` operator and non-field-specific filters
 
 Non-field-specific filters narrow your query results by searching across multiple datasets and fields for a given value. Examples of non-field-specific filters are the `search` operator and equivalent expressions such as `where * contains` or `where * has`.
 
 Using non-field-specific filters can have a significant impact on query costs. For more information, see [Use the `search` operator efficiently](/apl/tabular-operators/search-operator#use-the-search-operator-efficiently) and [Regular expressions when simple filters suffice](/reference/performance#regular-expressions-when-simple-filters-suffice).
 
-## Optimize dashboard refresh rates
+### Optimize dashboard refresh rates
 
 Each time your dashboard refreshes, it runs a query on your data which results in query costs. Selecting a short refresh rate (such as 15 seconds) for a long time range (such as 90 days) means that your dashboard frequently runs large queries in the background.
 
