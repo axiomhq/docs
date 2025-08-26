@@ -7,60 +7,159 @@ sidebarTitle: MCP Server
 import Prerequisites from "/snippets/minimal-prerequisites.mdx"
 import ReplaceDomain from "/snippets/replace-domain.mdx"
 import ReplaceToken from "/snippets/replace-token.mdx"
+import PrerequisiteToken from "snippets/prerequisite-token.mdx"
 
 Axiom MCP Server is a [Model Context Protocol](https://modelcontextprotocol.io/) server implementation that enables AI agents to query your data using Axiom Processing Language (APL).
+
+Deploy Axiom MCP Server either in a hosted environment or locally on your machine:
+- [Hosted setup](#hosted-setup) (Recommended)
+- [Local setup](#local-setup)
 
 ## Current capabilities
 
 Axiom MCP Server supports the following MCP [tools](https://modelcontextprotocol.io/docs/concepts/tools):
 
-- `queryApl`: Execute APL queries against Axiom datasets
-- `listDatasets`: List available Axiom datasets
 - `getDatasetSchema`: Get dataset schema
-- `getSavedQueries`: Retrieve saved APL queries
 - `getMonitors`: List monitoring configurations
 - `getMonitorsHistory`: Get monitor execution history
+- `getSavedQueries`: Retrieve saved APL queries
+- `listDatasets`: List available Axiom datasets
+- `queryApl`: Execute APL queries against Axiom datasets
 
-Axiom MCP Server also supports the following [prompts](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts):
+Axiom MCP Server supports the following MCP [prompts](https://modelcontextprotocol.io/docs/concepts/prompts):
 
-- `explore-unknown-dataset`: Exploration of an unknown dataset to understand its structure, content, and potential use cases
-- `detect-anomalies-in-events`: Generic anomaly detection using statistical analysis and pattern recognition across any dataset
 - `correlate-events-across-datasets`: Find patterns and correlations between events across multiple datasets
-- `monitor-health-analysis`: Comprehensive analysis of monitor health, alert patterns, and effectiveness
 - `data-quality-investigation`: Investigate data quality issues including missing data, inconsistencies, and collection problems
+- `detect-anomalies-in-events`: Generic anomaly detection using statistical analysis and pattern recognition across any dataset
 - `establish-performance-baseline`: Establish performance baselines for a dataset to enable effective monitoring and anomaly detection
+- `explore-unknown-dataset`: Exploration of an unknown dataset to understand its structure, content, and potential use cases
+- `monitor-health-analysis`: Comprehensive analysis of monitor health, alert patterns, and effectiveness
 
-Axiom MCP Server works with all AI agents that support MCP. This page gives examples about setting up the Axiom MCP Server with the [Claude desktop app](https://claude.ai/download).
+Axiom plans to support MCP [resources](https://modelcontextprotocol.io/docs/concepts/resources) in the future.
+
+Axiom MCP Server works with all AI agents that support MCP.
 
 <Prerequisites />
 - Set up an AI agent that supports MCP. For example, install the [Claude desktop app](https://claude.ai/download).
 
-## Install 
+## Hosted setup
 
-Using the MCP client, choose the option to add a remote MCP connection and provide the following details:
-- Name: Axiom
-- URL: https://mcp.axiom.co/mcp
+In your AI agent, add a remote MCP connection with the following details:
 
-For example, if using the Claude client and if you have a Pro or Team account with sufficient privileges, go to Settings > Connectors.
+- **Name:** `Axiom`
+- **Server URL:** `https://mcp.axiom.co/mcp`
 
-If using the Claude client and you do not have the option to add a Connector, add `axiom` to the `mcpServers` section of the Claude configuration file. If you use a Mac, the default path is `~/Library/Application Support/Claude/claude_desktop_config.json`.
+For AI agents that require server-sent events (SSE), use the server URL `https://mcp.axiom.co/sse`.
+
+For more information, see the documentation of your AI agent. For example:
+
+- [Claude desktop app](https://modelcontextprotocol.io/docs/tutorials/use-remote-mcp-server)
+- [Cursor](https://docs.cursor.com/en/context/mcp)
+
+When your AI agent first attempts to interact with Axiom MCP Server, authenticate the request in your browser. You can later revoke access on the Profile page of the Axiom web UI.
+
+## Local setup
+
+### Install
+
+Run the following to install the latest built binary from [GitHub](https://github.com/axiomhq/axiom-mcp/releases):
+
+```bash
+go install github.com/axiomhq/axiom-mcp@latest
+```
+
+<PrerequisiteToken />
+
+<Info>
+Axiom MCP Server is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/mcp-server-axiom).
+</Info>
+
+### Configure
+
+Configure your AI agent to use the MCP server in one of the following ways:
+
+- Use a [config file](#config-file)
+- Use [environment variables](#environment-variables)
+
+#### Config file
+
+1. Create a config file where you specify the authentication and configuration details. For example:
+
+    ```bash config.txt
+    token API_TOKEN
+    url https://AXIOM_DOMAIN
+    query-rate 1
+    query-burst 1
+    datasets-rate 1
+    datasets-burst 1
+    monitors-rate 1
+    monitors-burst 1
+    ```
+
+    <Info>
+    <ReplaceToken />
+
+    <ReplaceDomain />
+    </Info>
+
+    Optionally, configure the rate and the burst limits at the query, dataset, and monitor levels. The rate limit is the maximum number of requests that your AI agent can make per second. The burst limit is the maximum number of requests that your AI agent can make in a short period (burst) before the rate limit applies to further requests.
+
+1. In the settings of your AI agent, reference the binary file of Axiom MCP Server and the config file you have previously created.
+
+    For example, if you use the Claude desktop app, add `axiom` to the `mcpServers` section of the Claude configuration file. If you use a Mac, the default path is `~/Library/Application Support/Claude/claude_desktop_config.json`.
 
     ```json claude_desktop_config.json
     {
       "mcpServers": {
         "axiom": {
-          "command": "npx",
-          "args" : ["-y", "mcp-remote", "https://mcp.axiom.co/mcp"]
+          "command": "PATH_AXIOM_MCP_BINARY",
+          "args" : ["--config", "PATH_AXIOM_MCP_CONFIG"]
         }
       }
     }
     ```
 
-## Authenticate
+    <Info>
+    Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of Axiom MCP Server. By default, it’s `~/go/bin/axiom-mcp`.
 
-When your client first attempts to interact with the Axiom MCP server, your default browser will bring you to the Axiom login page to authenticate using OAuth 2.0. Authenticate to provide access. The client will only have access to the tools listed above.
+    Replace `PATH_AXIOM_MCP_CONFIG` with the path the config file you have previously created.
+    </Info>
 
-If you wish to revoke access, you can view and revoke active sessions at your Profile page in the Axiom Console.
+#### Environment variables
+
+In the settings of your AI agent, use environment variables to specify the authentication details and the binary file of Axiom MCP Server.
+
+For example, if you use the Claude desktop app, add `axiom` to the `mcpServers` section of the Claude configuration file. If you use a Mac, the default path is `~/Library/Application Support/Claude/claude_desktop_config.json`. For example:
+
+```json claude_desktop_config.json
+{
+  "mcpServers": {
+    "axiom": {
+      "command": "PATH_AXIOM_MCP_BINARY",
+      "env": {
+        "AXIOM_TOKEN": "API_TOKEN",
+        "AXIOM_URL": "https://AXIOM_DOMAIN",
+        "AXIOM_QUERY_RATE": "1",
+        "AXIOM_QUERY_BURST": "1",
+        "AXIOM_DATASETS_RATE": "1",
+        "AXIOM_DATASETS_BURST": "1",
+        "AXIOM_MONITORS_RATE": "1",
+        "AXIOM_MONITORS_BURST": "1"
+      }
+    }
+  }
+}
+```
+
+<Info>
+Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of Axiom MCP Server. By default, it’s `~/go/bin/axiom-mcp`.
+
+<ReplaceToken />
+
+<ReplaceDomain />
+</Info>
+
+Optionally, configure the rate and the burst limits at the query, dataset, and monitor levels. The rate limit is the maximum number of requests that your AI agent can make per second. The burst limit is the maximum number of requests that your AI agent can make in a short period (burst) before the rate limit applies to further requests.
 
 ## Ask your AI agent about your data
 
@@ -70,4 +169,4 @@ Ask your AI agent questions about your Axiom data. For example:
 - “Get the data schema for the dataset `logs`.”
 - “Get the most common status codes in the last 30 minutes in the dataset `logs`.”
 
-For more information about the types of questions the Axiom MCP Server can help you answer, see [Current capabilities](#current-capabilities).
+For more information about the types of questions Axiom MCP Server can help you answer, see [Current capabilities](#current-capabilities).
