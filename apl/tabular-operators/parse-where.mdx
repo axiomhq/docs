@@ -83,84 +83,26 @@ parse-where [kind=kind [flags=regexFlags]] expression with [*] stringConstant co
 
 The operator returns a table with the original columns and the newly extracted columns. Rows that do not match the parsing pattern are removed.
 
-## Use case examples
+## Use case example
 
-<Tabs>
-<Tab title="Log analysis">
-
-You want to extract the HTTP method and status code from request logs while ignoring rows that do not follow the expected format.
+You want to extract the HTTP method and status code from request logs while ignoring rows that don’t follow the expected format.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
+['http-logs']
 | parse-where uri with '/' method:string '/' * 'status=' status:string
 | project _time, method, status, uri
 ```
 
-
-
 **Output**
 
-| \_time               | method | status | uri                         |
+| _time               | method | status | uri                         |
 | -------------------- | ------ | ------ | --------------------------- |
 | 2025-09-01T12:00:00Z | GET    | 200    | /GET/api/items?status=200   |
 | 2025-09-01T12:00:05Z | POST   | 500    | /POST/api/orders?status=500 |
 
 This query extracts the method and status from the `uri` field and discards rows where the `uri` does not match the pattern.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-You want to extract the service name and status code from traces, ignoring any spans that do not contain both.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| parse-where ['service.name'] with service:string
-| parse-where status_code with status:string
-| project _time, trace_id, span_id, service, status
-```
-
-
-
-**Output**
-
-| _time               | trace_id | span_id | service         | status |
-| -------------------- | --------- | -------- | --------------- | ------ |
-| 2025-09-01T13:00:00Z | abc123    | span01   | frontend        | 200    |
-| 2025-09-01T13:00:01Z | def456    | span02   | checkoutservice | 500    |
-
-This query ensures that only spans with a valid service name and status code are included.
-
-</Tab>
-<Tab title="Security logs">
-
-You want to extract the user ID and HTTP status from logs to identify failed login attempts.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| parse-where uri with '/login?id=' id:string '&status=' status:string
-| where status != '200'
-| project _time, id, status, uri
-```
-
-
-
-**Output**
-
-| _time               | id      | status | uri                           |
-| -------------------- | ------- | ------ | ----------------------------- |
-| 2025-09-01T14:00:00Z | user123 | 401    | /login?id=user123\&status=401 |
-| 2025-09-01T14:05:00Z | user456 | 403    | /login?id=user456\&status=403 |
-
-This query extracts user IDs and statuses from login attempts and filters out successful logins.
-
-</Tab>
-</Tabs>
 
 ## List of related operators
 
