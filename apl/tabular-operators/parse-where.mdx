@@ -3,9 +3,9 @@ title: parse-where
 description: 'This page explains how to use the parse-where operator in APL.'
 ---
 
-The `parse-where` operator lets you extract structured values from a text expression and filter rows where the parsing succeeds. You use it when your data contains unstructured or semi-structured text, and you want to match and filter rows based on whether they fit a specific format. Unlike `parse`, which extracts fields into new columns, `parse-where` focuses on filtering rows without retaining the parsed values.
+The `parse-where` operator lets you extract values from a string expression based on a pattern and at the same time filter out rows that don’t match the pattern. This operator is useful when you want to ensure that your results contain only rows where the parsing succeeds, reducing the need for an additional filtering step.
 
-This operator is useful when you work with logs, traces, or event data that contain patterns such as HTTP requests, error messages, or identifiers. By applying `parse-where`, you can reduce large datasets to only the rows that match your format of interest.
+You can use `parse-where` when working with logs or event data that follow a known structure but may contain noise or irrelevant lines. For example, you can parse request logs to extract structured information like HTTP method, status code, or error messages, and automatically discard any rows that don’t match the format.
 
 ## For users of other query languages
 
@@ -14,16 +14,20 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, you use the `rex` command to extract fields from raw text and filter events. In APL, the `parse-where` operator serves a similar role, but instead of extracting values, it filters rows to those where parsing succeeds. You don’t need to keep the extracted fields if you only want to filter.
+In Splunk SPL, you use the `rex` command with the `max_match=1` option to extract fields and filter out non-matching events. In APL, `parse-where` provides the same functionality in a more direct way. Rows that do not match the pattern are automatically excluded.
 
 <CodeGroup>
 ```sql Splunk example
-... | rex field=_raw "uri=(?<endpoint>/api/[a-z]+)"
+... | rex field=log_line "\[(?<level>\w+)\] (?<message>.+)"
 ````
 
 ```kusto APL equivalent
-['sample-http-logs']
-| parse-where uri with '/api/' endpoint
+datatable(log_line:string)
+[
+    '[INFO] Service started',
+    'invalid line'
+]
+| parse-where log_line with '[', level:string, '] ', message:string
 ```
 
 </CodeGroup>
@@ -31,18 +35,24 @@ In Splunk SPL, you use the `rex` command to extract fields from raw text and fil
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In SQL, you often combine string functions with a `WHERE` clause to test patterns, for example with `LIKE` or `REGEXP`. In APL, you can achieve similar filtering with `parse-where`, which only keeps rows where the pattern match succeeds. Unlike SQL, you don’t have to write separate conditions—the operator handles both parsing and filtering.
+ANSI SQL does not have a direct equivalent to `parse-where`. You often use `LIKE` or `REGEXP` functions to test string patterns and then combine them with `CASE` expressions to extract substrings. In APL, `parse-where` simplifies this by combining extraction and filtering into one operator.
 
 <CodeGroup>
 ```sql SQL example
-SELECT *
-FROM sample_http_logs
-WHERE uri LIKE '/api/%'
+SELECT
+  REGEXP_SUBSTR(log_line, '\\[(\\w+)\\]', 1, 1) AS level,
+  REGEXP_SUBSTR(log_line, '\\] (.+)', 1, 1) AS message
+FROM logs
+WHERE log_line REGEXP '\\[(\\w+)\\] (.+)';
 ```
 
 ```kusto APL equivalent
-['sample-http-logs']
-| parse-where uri with '/api/' endpoint
+datatable(log_line:string)
+[
+    '[INFO] Service started',
+    'invalid line'
+]
+| parse-where log_line with '[', level:string, '] ', message:string
 ```
 
 </CodeGroup>
@@ -55,102 +65,106 @@ WHERE uri LIKE '/api/%'
 ### Syntax
 
 ```kusto
-T | parse-where Expression with * stringConstant columnName * [stringConstant columnName ...]
+parse-where [kind=kind [flags=regexFlags]] expression with [*] stringConstant columnName [:columnType] [*]
 ```
 
 ### Parameters
 
-| Parameter        | Type   | Description                                        |
-| ---------------- | ------ | -------------------------------------------------- |
-| `Expression`     | string | The text expression to parse.                      |
-| `stringConstant` | string | A fixed text value that defines the parse pattern. |
-| `columnName`     | string | A placeholder for the parsed value in the pattern. |
+| Parameter        | Description                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `kind`           | (Optional) Specifies the parsing method. The default is `simple`. You can also specify `regex` for regular expression parsing. |
+| `flags`          | (Optional) Regex flags to control the behavior of pattern matching. Used only with `kind=regex`.                               |
+| `expression`     | The string expression to parse.                                                                                                |
+| `stringConstant` | The constant parts of the pattern that must match exactly.                                                                     |
+| `columnName`     | The name of the column where the extracted value is stored.                                                                    |
+| `columnType`     | (Optional) The type of the extracted value (for example, `string`, `int`, `real`).                                             |
 
 ### Returns
 
-The operator returns only those rows where the expression matches the specified parse pattern. It does not keep or project the parsed values.
+The operator returns a table with the original columns and the newly extracted columns. Rows that do not match the parsing pattern are removed.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-When you analyze HTTP logs, you can use `parse-where` to filter only the rows where a URL matches a specific pattern.
+You want to extract the HTTP method and status code from request logs while ignoring rows that do not follow the expected format.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| parse-where uri with '/api/' endpoint
-| project _time, id, method, uri, status
+| parse-where uri with '/' method:string '/' * 'status=' status:string
+| project _time, method, status, uri
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20parse-where%20uri%20with%20'/api/'%20endpoint%20%7C%20project%20_time%2C%20id%2C%20method%2C%20uri%2C%20status%22%7D)
+
 
 **Output**
 
-| _time               | id     | method | uri           | status |
-| -------------------- | ------ | ------ | ------------- | ------ |
-| 2025-01-01T12:00:00Z | user42 | GET    | /api/products | 200    |
-| 2025-01-01T12:01:00Z | user17 | POST   | /api/cart     | 201    |
+| \_time               | method | status | uri                         |
+| -------------------- | ------ | ------ | --------------------------- |
+| 2025-09-01T12:00:00Z | GET    | 200    | /GET/api/items?status=200   |
+| 2025-09-01T12:00:05Z | POST   | 500    | /POST/api/orders?status=500 |
 
-This query keeps only log entries where the `uri` field starts with `/api/`.
+This query extracts the method and status from the `uri` field and discards rows where the `uri` does not match the pattern.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-In traces, you can use `parse-where` to filter spans whose service name follows a particular prefix.
+You want to extract the service name and status code from traces, ignoring any spans that do not contain both.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| parse-where ['service.name'] with 'frontend' suffix
-| project _time, trace_id, span_id, ['service.name'], duration
+| parse-where ['service.name'] with service:string
+| parse-where status_code with status:string
+| project _time, trace_id, span_id, service, status
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20parse-where%20%5B'service.name'%5D%20with%20'frontend'%20suffix%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20%5B'service.name'%5D%2C%20duration%22%7D)
+
 
 **Output**
 
-| _time               | trace_id | span_id | service.name  | duration         |
-| -------------------- | --------- | -------- | ------------- | ---------------- |
-| 2025-01-01T12:00:00Z | abc123    | span01   | frontend      | 00:00:01.2000000 |
-| 2025-01-01T12:00:01Z | def456    | span02   | frontendproxy | 00:00:00.5000000 |
+| _time               | trace_id | span_id | service         | status |
+| -------------------- | --------- | -------- | --------------- | ------ |
+| 2025-09-01T13:00:00Z | abc123    | span01   | frontend        | 200    |
+| 2025-09-01T13:00:01Z | def456    | span02   | checkoutservice | 500    |
 
-This query filters spans where the `service.name` starts with `frontend`.
+This query ensures that only spans with a valid service name and status code are included.
 
 </Tab>
 <Tab title="Security logs">
 
-In security analysis, you can filter logs to only those where the request URI matches a suspicious pattern.
+You want to extract the user ID and HTTP status from logs to identify failed login attempts.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| parse-where uri with '/admin/' path
-| project _time, id, method, uri, status, ['geo.country']
+| parse-where uri with '/login?id=' id:string '&status=' status:string
+| where status != '200'
+| project _time, id, status, uri
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20parse-where%20uri%20with%20'/admin/'%20path%20%7C%20project%20_time%2C%20id%2C%20method%2C%20uri%2C%20status%2C%20%5B'geo.country'%5D%22%7D)
+
 
 **Output**
 
-| _time               | id     | method | uri           | status | geo.country |
-| -------------------- | ------ | ------ | ------------- | ------ | ----------- |
-| 2025-01-01T13:00:00Z | user99 | GET    | /admin/login  | 403    | US          |
-| 2025-01-01T13:05:00Z | user22 | POST   | /admin/config | 500    | DE          |
+| _time               | id      | status | uri                           |
+| -------------------- | ------- | ------ | ----------------------------- |
+| 2025-09-01T14:00:00Z | user123 | 401    | /login?id=user123\&status=401 |
+| 2025-09-01T14:05:00Z | user456 | 403    | /login?id=user456\&status=403 |
 
-This query keeps only suspicious requests that access admin endpoints.
+This query extracts user IDs and statuses from login attempts and filters out successful logins.
 
 </Tab>
 </Tabs>
 
 ## List of related operators
 
-- [parse](/apl/tabular-operators/parse-operator): Extracts structured data into columns instead of filtering rows. Use it when you want to keep the parsed values.
-- [extract](/apl/scalar-functions/extract-function): Extracts data from text using regular expressions. Use it when you need flexible pattern matching and want to capture values.
-- [where](/apl/tabular-operators/where-operator): Filters rows based on Boolean expressions. Use it for direct conditions instead of pattern parsing.
-- [search](/apl/tabular-operators/search-operator): Searches across multiple columns for specific text. Use it for broader keyword searches.
-- [project](/apl/tabular-operators/project-operator): Selects and computes specific columns. Use it after filtering to refine the result set.
+- [extend](/apl/tabular-operators/extend-operator): Adds calculated columns. Use when parsing is not required but you want to create new derived columns.
+- [parse](/apl/tabular-operators/parse-operator): Extracts values from a string expression without filtering out non-matching rows. Use when you want to keep all rows, including those that fail to parse.
+- [project](/apl/tabular-operators/project-operator): Selects and computes columns without parsing. Use when you want to transform data rather than extract values.
+- [where](/apl/tabular-operators/where-operator): Filters rows based on conditions. Use alongside parsing functions if you want more control over filtering logic.

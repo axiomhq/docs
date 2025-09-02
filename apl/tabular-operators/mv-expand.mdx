@@ -55,20 +55,28 @@ CROSS JOIN UNNEST(request_uris) AS t(value)
 ### Syntax
 
 ```kusto
-T | mv-expand ColumnName [to typeof(DataType)] [limit=N]
+mv-expand [kind=(bag|array)] [with_itemindex=IndexFieldName] FieldName [to typeof(Typename)] [limit Rowlimit]
+```
+
+### Example
+
+```kusto
+mv-expand kind=array tags to typeof(string) limit 1000
 ```
 
 ### Parameters
 
-| Parameter             | Description                                                                     |
-| --------------------- | ------------------------------------------------------------------------------- |
-| `ColumnName`          | The name of the column that contains a dynamic array or property bag to expand. |
-| `to typeof(DataType)` | Optional. Converts each expanded element to the specified type.                 |
-| `limit=N`             | Optional. Limits the number of expanded rows per record.                        |
+| Parameter                        | Description                                                                            |
+| -------------------------------- | -------------------------------------------------------------------------------------- |
+| `kind`             | Optional. Specifies whether the column is a bag (object) or an array. Defaults to `array`. |
+| `with_itemindex=IndexFieldName` | Optional. Outputs an additional column with the zero-based index of the expanded item. |
+| `FieldName`                     | Required. The name of the column that contains an array or object to expand.           |
+| `to typeof(Typename)`            | Optional. Converts each expanded element to the specified type.                        |
+| `limit Rowlimit`                 | Optional. Limits the number of expanded rows per record.                               |
 
 ### Returns
 
-The operator returns a table where each element of the expanded column is placed in its own row. Other columns are duplicated for each expanded row.
+The operator returns a table where each element of the expanded array or each property of the expanded object is placed in its own row. Other columns are duplicated for each expanded row.
 
 ## Use case examples
 
@@ -160,8 +168,6 @@ This query expands the `id` array into rows and counts how often each user ID ap
 
 ## List of related operators
 
-- [expand](/apl/tabular-operators/expand-operator): Expands JSON objects into rows. Use it when you want to expand structured data, not arrays.
 - [project](/apl/tabular-operators/project-operator): Selects or computes columns. Use it when you want to reshape data, not expand arrays.
 - [summarize](/apl/tabular-operators/summarize-operator): Aggregates data across rows. Use it after expanding arrays to compute statistics.
 - [top](/apl/tabular-operators/top-operator): Returns the top N rows by expression. Use it after expansion to find the most frequent values.
-- [parse_json](/apl/scalar-functions/parse-json-function): Converts JSON strings to dynamic objects. Use it before `mv-expand` when working with string-encoded arrays.

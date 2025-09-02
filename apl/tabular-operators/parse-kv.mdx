@@ -3,9 +3,9 @@ title: parse-kv
 description: 'This page explains how to use the parse-kv operator in APL.'
 ---
 
-The `parse-kv` operator extracts key–value pairs from text into structured columns. Use this operator when your dataset contains unstructured or semi-structured logs where information is embedded in free-form text, such as query strings, headers, or attributes. Instead of manually parsing substrings, `parse-kv` automatically splits the input into keys and values based on delimiters that you specify.
+The `parse-kv` operator parses key-value pairs from a string field into individual columns. You use it when your data is stored in a single string that contains structured information, such as `key=value` pairs. With `parse-kv`, you can extract the values into separate columns to make them easier to query, filter, and analyze.
 
-You find this operator useful in scenarios such as analyzing log entries with embedded metadata, extracting attributes from OpenTelemetry spans, or parsing security event messages where structured fields are embedded inside a single string.
+This operator is useful in scenarios where logs, traces, or security events contain metadata encoded as key-value pairs. Instead of manually splitting strings, you can use `parse-kv` to transform the data into a structured format.
 
 ## For users of other query languages
 
@@ -14,17 +14,19 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, you typically use the `kv` or `extract` command to pull key–value fields from raw events. In APL, `parse-kv` serves the same purpose but offers explicit control over delimiters and the ability to map extracted keys into new columns.
+In Splunk, you often use the `kv` or `extract` commands to parse key-value pairs from raw log data. In APL, you achieve similar functionality with the `parse-kv` operator. The difference is that `parse-kv` explicitly lets you define which keys to extract and what delimiters to use.
 
 <CodeGroup>
-
 ```sql Splunk example
-... | kv pairdelim=" " kvdelim="="
+... | kv pairdelim=";" kvdelim="=" keys="key1,key2,key3"
 ````
 
 ```kusto APL equivalent
-['sample-http-logs']
-| extend parsed = parse-kv('uri', pair_delimiter='&', kv_delimiter='=')
+datatable(data:string)
+[
+  'key1=a;key2=b;key3=c'
+]
+| parse-kv data as (key1, key2, key3) with (pair_delimiter=';', kv_delimiter='=')
 ```
 
 </CodeGroup>
@@ -32,20 +34,23 @@ In Splunk SPL, you typically use the `kv` or `extract` command to pull key–val
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-ANSI SQL does not include a built-in function to parse arbitrary key–value pairs from text. You typically rely on `SUBSTRING`, `SPLIT`, or regular expressions. In APL, `parse-kv` encapsulates this functionality in one operator, making key–value extraction more concise and efficient.
+ANSI SQL does not have a direct equivalent of `parse-kv`. Typically, you would use string functions such as `SUBSTRING` or `SPLIT_PART` to manually extract key-value pairs. In APL, `parse-kv` simplifies this process by automatically extracting multiple keys in one step.
 
 <CodeGroup>
-
 ```sql SQL example
 SELECT
-  SUBSTRING_INDEX(SUBSTRING_INDEX(uri, '&', 1), '=', -1) AS key1,
-  SUBSTRING_INDEX(SUBSTRING_INDEX(uri, '&', 2), '=', -1) AS key2
-FROM logs
+  SUBSTRING_INDEX(SUBSTRING_INDEX(data, ';', 1), '=', -1) as key1,
+  SUBSTRING_INDEX(SUBSTRING_INDEX(data, ';', 2), '=', -1) as key2,
+  SUBSTRING_INDEX(SUBSTRING_INDEX(data, ';', 3), '=', -1) as key3
+FROM logs;
 ```
 
 ```kusto APL equivalent
-['sample-http-logs']
-| extend parsed = parse-kv('uri', pair_delimiter='&', kv_delimiter='=')
+datatable(data:string)
+[
+  'key1=a;key2=b;key3=c'
+]
+| parse-kv data as (key1, key2, key3) with (pair_delimiter=';', kv_delimiter='=')
 ```
 
 </CodeGroup>
@@ -58,103 +63,106 @@ FROM logs
 ### Syntax
 
 ```kusto
-parse-kv(Expression [, pair_delimiter [, kv_delimiter [, quote_delimiter]]])
+parse-kv Expression as (KeysList) with (pair_delimiter = PairDelimiter, kv_delimiter = KvDelimiter [, options...])
 ```
 
 ### Parameters
 
-| Parameter         | Type     | Description                                                                          |
-| ----------------- | -------- | ------------------------------------------------------------------------------------ |
-| `Expression`      | `string` | The string expression that contains key–value pairs.                                 |
-| `pair_delimiter`  | `string` | Character that separates key–value pairs. Default is a space (`' '`).                |
-| `kv_delimiter`    | `string` | Character that separates keys from values. Default is `'='`.                         |
-| `quote_delimiter` | `string` | Character that surrounds values with spaces or special characters. Default is `'"'`. |
+| Parameter        | Description                                                                     |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `Expression`     | The string expression that contains the key-value pairs.                        |
+| `KeysList`       | A list of keys to extract into separate columns.                                |
+| `pair_delimiter` | A character or string that separates key-value pairs (for example, `;` or `,`). |
+| `kv_delimiter`   | A character or string that separates keys and values (for example, `=` or `:`). |
+| `options`        | Additional parsing options, such as case sensitivity.                           |
 
 ### Returns
 
-A dynamic object containing the extracted key–value pairs. You can project individual keys as new columns or keep the object for further processing.
+A dataset where each specified key is extracted into its own column with the corresponding value. If a key is missing in the original string, the column is empty for that row.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-You can extract query parameters from HTTP request URIs to analyze how users interact with your service.
+When analyzing HTTP logs, you might encounter a field where request metadata is encoded as key-value pairs. You can extract values like status and duration for easier analysis.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend kv = parse-kv(uri, pair_delimiter='&', kv_delimiter='=')
-| project _time, id, method, kv
+| extend kvdata = strcat('status=', status, ';req_duration_ms=', tostring(req_duration_ms))
+| parse-kv kvdata as (status, req_duration_ms) with (pair_delimiter=';', kv_delimiter='=')
+| project _time, status, req_duration_ms, method, uri
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | extend kv = parse-kv(uri, pair_delimiter='&', kv_delimiter='=') | project _time, id, method, kv%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5Bsample-http-logs%5D%20%7C%20extend%20kvdata%20%3D%20strcat%28status%3D%2C%20status%2C%20%3Breq_duration_ms%3D%2C%20tostring%28req_duration_ms%29%29%20%7C%20parse-kv%20kvdata%20as%20%28status%2C%20req_duration_ms%29%20with%20%28pair_delimiter%3D%27%3B%27%2C%20kv_delimiter%3D%27%3D%27%29%20%7C%20project%20_time%2C%20status%2C%20req_duration_ms%2C%20method%2C%20uri%22%7D)
 
 **Output**
 
-| _time               | id   | method | kv                                |
-| -------------------- | ---- | ------ | --------------------------------- |
-| 2025-09-01T10:01:00Z | u123 | GET    | {"q":"search","page":"1"}         |
-| 2025-09-01T10:02:00Z | u456 | POST   | {"action":"login","next":"/home"} |
+| _time               | status | req_duration_ms | method | uri      |
+| -------------------- | ------ | ----------------- | ------ | -------- |
+| 2024-05-01T10:00:00Z | 200    | 120               | GET    | /home    |
+| 2024-05-01T10:01:00Z | 404    | 35                | GET    | /missing |
 
-This query parses the query string parameters in the `uri` field and projects them into a structured dynamic object.
+This query extracts status and request duration from a concatenated field and projects them alongside other useful fields.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-You can extract attributes embedded in trace span IDs or metadata.
+OpenTelemetry traces often include attributes stored as key-value strings. You can use `parse-kv` to extract service name and status code for trace debugging.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| extend kv = parse-kv(span_id, pair_delimiter='-', kv_delimiter=':')
-| project _time, trace_id, ['service.name'], kv
+| extend kvdata = strcat('service.name=', ['service.name'], ';status_code=', status_code)
+| parse-kv kvdata as (['service.name'], status_code) with (pair_delimiter=';', kv_delimiter='=')
+| project _time, trace_id, span_id, ['service.name'], status_code, duration
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces)'] | extend kv = parse-kv(span_id, pair_delimiter='-', kv_delimiter=':') | project _time, trace_id, ['service.name'], kv%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5Botel-demo-traces%5D%20%7C%20extend%20kvdata%20%3D%20strcat%28service.name%3D%2C%20%5Bservice.name%5D%2C%20%3Bstatus_code%3D%2C%20status_code%29%20%7C%20parse-kv%20kvdata%20as%20%28%5Bservice.name%5D%2C%20status_code%29%20with%20%28pair_delimiter%3D%27%3B%27%2C%20kv_delimiter%3D%27%3D%27%29%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20%5Bservice.name%5D%2C%20status_code%2C%20duration%22%7D)
 
 **Output**
 
-| _time               | trace_id | service.name    | kv                            |
-| -------------------- | --------- | --------------- | ----------------------------- |
-| 2025-09-01T10:03:00Z | t789      | frontend        | {"part1":"abc","part2":"xyz"} |
-| 2025-09-01T10:04:00Z | t101      | checkoutservice | {"part1":"def","part2":"uvw"} |
+| _time               | trace_id | span_id | service.name | status_code | duration     |
+| -------------------- | --------- | -------- | ------------ | ------------ | ------------ |
+| 2024-05-01T11:00:00Z | abc123    | span01   | frontend     | 200          | 00:00:00.150 |
+| 2024-05-01T11:00:01Z | def456    | span02   | cartservice  | 500          | 00:00:00.320 |
 
-This query breaks down structured identifiers in `span_id` into key–value components for easier analysis.
+This query extracts the service name and status code from a synthetic key-value string for easier analysis of trace health.
 
 </Tab>
 <Tab title="Security logs">
 
-You can parse structured information inside log messages, such as extracting action and result fields.
+Security logs sometimes encode user and location information as key-value pairs. You can extract fields like user ID and city for investigation.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend kv = parse-kv(uri, pair_delimiter=';', kv_delimiter='=')
-| project _time, status, ['geo.country'], kv
+| extend kvdata = strcat('id=', id, ';city=', ['geo.city'])
+| parse-kv kvdata as (id, ['geo.city']) with (pair_delimiter=';', kv_delimiter='=')
+| project _time, id, ['geo.city'], status, uri
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | extend kv = parse-kv(uri, pair_delimiter=';', kv_delimiter='=') | project _time, status, ['geo.country'], kv%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5Bsample-http-logs%5D%20%7C%20extend%20kvdata%20%3D%20strcat%28id%3D%2C%20id%2C%20%3Bcity%3D%2C%20%5Bgeo.city%5D%29%20%7C%20parse-kv%20kvdata%20as%20%28id%2C%20%5Bgeo.city%5D%29%20with%20%28pair_delimiter%3D%27%3B%27%2C%20kv_delimiter%3D%27%3D%27%29%20%7C%20project%20_time%2C%20id%2C%20%5Bgeo.city%5D%2C%20status%2C%20uri%22%7D)
 
 **Output**
 
-| _time               | status | geo.country | kv                                    |
-| -------------------- | ------ | ----------- | ------------------------------------- |
-| 2025-09-01T10:05:00Z | 403    | US          | {"action":"access","result":"denied"} |
-| 2025-09-01T10:06:00Z | 200    | DE          | {"action":"login","result":"success"} |
+| _time               | id      | geo.city | status | uri    |
+| -------------------- | ------- | -------- | ------ | ------ |
+| 2024-05-01T12:00:00Z | user123 | Berlin   | 200    | /login |
+| 2024-05-01T12:01:00Z | user456 | Paris    | 403    | /admin |
 
-This query parses embedded key–value fields from the `uri` to identify blocked and successful login attempts by country.
+This query extracts user ID and city information from a synthetic key-value string to help detect suspicious activity by location.
 
 </Tab>
 </Tabs>
 
 ## List of related operators
 
-- [parse-json](/apl/scalar-functions/parse-json-function): Use when the string is already in JSON format. More efficient than `parse-kv` for JSON data.
-- [extract](/apl/scalar-functions/extract-function): Use for regular expression-based extraction when data is less structured.
-- [split](/apl/scalar-functions/split-function): Use when you need to split strings into arrays instead of key–value objects.
-- [mv-expand](/apl/tabular-operators/mv-expand-operator): Use to expand dynamic arrays or property bags into separate rows after parsing.
-- [project](/apl/tabular-operators/project-operator): Use to select and rename specific extracted keys for further analysis.
+- [extend](/apl/tabular-operators/extend-operator): Adds calculated columns. Use when parsing is not required but you want to create new derived columns.
+- [parse](/apl/tabular-operators/parse-operator): Extracts values from a string expression without filtering out non-matching rows. Use when you want to keep all rows, including those that fail to parse.
+- [project](/apl/tabular-operators/project-operator): Selects and computes columns without parsing. Use when you want to transform data rather than extract values.
+- [where](/apl/tabular-operators/where-operator): Filters rows based on conditions. Use alongside parsing functions if you want more control over filtering logic.
