@@ -80,10 +80,7 @@ parse-kv Expression as (KeysList) with (pair_delimiter = PairDelimiter, kv_delim
 
 A dataset where each specified key is extracted into its own column with the corresponding value. If a key is missing in the original string, the column is empty for that row.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 When analyzing HTTP logs, you might encounter a field where request metadata is encoded as key-value pairs. You can extract values like status and duration for easier analysis.
 
@@ -91,12 +88,9 @@ When analyzing HTTP logs, you might encounter a field where request metadata is 
 
 ```kusto
 ['sample-http-logs']
-| extend kvdata = strcat('status=', status, ';req_duration_ms=', tostring(req_duration_ms))
 | parse-kv kvdata as (status, req_duration_ms) with (pair_delimiter=';', kv_delimiter='=')
 | project _time, status, req_duration_ms, method, uri
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5Bsample-http-logs%5D%20%7C%20extend%20kvdata%20%3D%20strcat%28status%3D%2C%20status%2C%20%3Breq_duration_ms%3D%2C%20tostring%28req_duration_ms%29%29%20%7C%20parse-kv%20kvdata%20as%20%28status%2C%20req_duration_ms%29%20with%20%28pair_delimiter%3D%27%3B%27%2C%20kv_delimiter%3D%27%3D%27%29%20%7C%20project%20_time%2C%20status%2C%20req_duration_ms%2C%20method%2C%20uri%22%7D)
 
 **Output**
 
@@ -106,59 +100,6 @@ When analyzing HTTP logs, you might encounter a field where request metadata is 
 | 2024-05-01T10:01:00Z | 404    | 35                | GET    | /missing |
 
 This query extracts status and request duration from a concatenated field and projects them alongside other useful fields.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-OpenTelemetry traces often include attributes stored as key-value strings. You can use `parse-kv` to extract service name and status code for trace debugging.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend kvdata = strcat('service.name=', ['service.name'], ';status_code=', status_code)
-| parse-kv kvdata as (['service.name'], status_code) with (pair_delimiter=';', kv_delimiter='=')
-| project _time, trace_id, span_id, ['service.name'], status_code, duration
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5Botel-demo-traces%5D%20%7C%20extend%20kvdata%20%3D%20strcat%28service.name%3D%2C%20%5Bservice.name%5D%2C%20%3Bstatus_code%3D%2C%20status_code%29%20%7C%20parse-kv%20kvdata%20as%20%28%5Bservice.name%5D%2C%20status_code%29%20with%20%28pair_delimiter%3D%27%3B%27%2C%20kv_delimiter%3D%27%3D%27%29%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20%5Bservice.name%5D%2C%20status_code%2C%20duration%22%7D)
-
-**Output**
-
-| _time               | trace_id | span_id | service.name | status_code | duration     |
-| -------------------- | --------- | -------- | ------------ | ------------ | ------------ |
-| 2024-05-01T11:00:00Z | abc123    | span01   | frontend     | 200          | 00:00:00.150 |
-| 2024-05-01T11:00:01Z | def456    | span02   | cartservice  | 500          | 00:00:00.320 |
-
-This query extracts the service name and status code from a synthetic key-value string for easier analysis of trace health.
-
-</Tab>
-<Tab title="Security logs">
-
-Security logs sometimes encode user and location information as key-value pairs. You can extract fields like user ID and city for investigation.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend kvdata = strcat('id=', id, ';city=', ['geo.city'])
-| parse-kv kvdata as (id, ['geo.city']) with (pair_delimiter=';', kv_delimiter='=')
-| project _time, id, ['geo.city'], status, uri
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5Bsample-http-logs%5D%20%7C%20extend%20kvdata%20%3D%20strcat%28id%3D%2C%20id%2C%20%3Bcity%3D%2C%20%5Bgeo.city%5D%29%20%7C%20parse-kv%20kvdata%20as%20%28id%2C%20%5Bgeo.city%5D%29%20with%20%28pair_delimiter%3D%27%3B%27%2C%20kv_delimiter%3D%27%3D%27%29%20%7C%20project%20_time%2C%20id%2C%20%5Bgeo.city%5D%2C%20status%2C%20uri%22%7D)
-
-**Output**
-
-| _time               | id      | geo.city | status | uri    |
-| -------------------- | ------- | -------- | ------ | ------ |
-| 2024-05-01T12:00:00Z | user123 | Berlin   | 200    | /login |
-| 2024-05-01T12:01:00Z | user456 | Paris    | 403    | /admin |
-
-This query extracts user ID and city information from a synthetic key-value string to help detect suspicious activity by location.
-
-</Tab>
-</Tabs>
 
 ## List of related operators
 
