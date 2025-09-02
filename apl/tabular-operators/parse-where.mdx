@@ -1,0 +1,156 @@
+---
+title: parse-where
+description: 'This page explains how to use the parse-where operator in APL.'
+---
+
+The `parse-where` operator lets you extract structured values from a text expression and filter rows where the parsing succeeds. You use it when your data contains unstructured or semi-structured text, and you want to match and filter rows based on whether they fit a specific format. Unlike `parse`, which extracts fields into new columns, `parse-where` focuses on filtering rows without retaining the parsed values.
+
+This operator is useful when you work with logs, traces, or event data that contain patterns such as HTTP requests, error messages, or identifiers. By applying `parse-where`, you can reduce large datasets to only the rows that match your format of interest.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you use the `rex` command to extract fields from raw text and filter events. In APL, the `parse-where` operator serves a similar role, but instead of extracting values, it filters rows to those where parsing succeeds. You don’t need to keep the extracted fields if you only want to filter.
+
+<CodeGroup>
+```sql Splunk example
+... | rex field=_raw "uri=(?<endpoint>/api/[a-z]+)"
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| parse-where uri with '/api/' endpoint
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, you often combine string functions with a `WHERE` clause to test patterns, for example with `LIKE` or `REGEXP`. In APL, you can achieve similar filtering with `parse-where`, which only keeps rows where the pattern match succeeds. Unlike SQL, you don’t have to write separate conditions—the operator handles both parsing and filtering.
+
+<CodeGroup>
+```sql SQL example
+SELECT *
+FROM sample_http_logs
+WHERE uri LIKE '/api/%'
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| parse-where uri with '/api/' endpoint
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+T | parse-where Expression with * stringConstant columnName * [stringConstant columnName ...]
+```
+
+### Parameters
+
+| Parameter        | Type   | Description                                        |
+| ---------------- | ------ | -------------------------------------------------- |
+| `Expression`     | string | The text expression to parse.                      |
+| `stringConstant` | string | A fixed text value that defines the parse pattern. |
+| `columnName`     | string | A placeholder for the parsed value in the pattern. |
+
+### Returns
+
+The operator returns only those rows where the expression matches the specified parse pattern. It does not keep or project the parsed values.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+When you analyze HTTP logs, you can use `parse-where` to filter only the rows where a URL matches a specific pattern.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| parse-where uri with '/api/' endpoint
+| project _time, id, method, uri, status
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20parse-where%20uri%20with%20'/api/'%20endpoint%20%7C%20project%20_time%2C%20id%2C%20method%2C%20uri%2C%20status%22%7D)
+
+**Output**
+
+| _time               | id     | method | uri           | status |
+| -------------------- | ------ | ------ | ------------- | ------ |
+| 2025-01-01T12:00:00Z | user42 | GET    | /api/products | 200    |
+| 2025-01-01T12:01:00Z | user17 | POST   | /api/cart     | 201    |
+
+This query keeps only log entries where the `uri` field starts with `/api/`.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In traces, you can use `parse-where` to filter spans whose service name follows a particular prefix.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| parse-where ['service.name'] with 'frontend' suffix
+| project _time, trace_id, span_id, ['service.name'], duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20parse-where%20%5B'service.name'%5D%20with%20'frontend'%20suffix%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20%5B'service.name'%5D%2C%20duration%22%7D)
+
+**Output**
+
+| _time               | trace_id | span_id | service.name  | duration         |
+| -------------------- | --------- | -------- | ------------- | ---------------- |
+| 2025-01-01T12:00:00Z | abc123    | span01   | frontend      | 00:00:01.2000000 |
+| 2025-01-01T12:00:01Z | def456    | span02   | frontendproxy | 00:00:00.5000000 |
+
+This query filters spans where the `service.name` starts with `frontend`.
+
+</Tab>
+<Tab title="Security logs">
+
+In security analysis, you can filter logs to only those where the request URI matches a suspicious pattern.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| parse-where uri with '/admin/' path
+| project _time, id, method, uri, status, ['geo.country']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20parse-where%20uri%20with%20'/admin/'%20path%20%7C%20project%20_time%2C%20id%2C%20method%2C%20uri%2C%20status%2C%20%5B'geo.country'%5D%22%7D)
+
+**Output**
+
+| _time               | id     | method | uri           | status | geo.country |
+| -------------------- | ------ | ------ | ------------- | ------ | ----------- |
+| 2025-01-01T13:00:00Z | user99 | GET    | /admin/login  | 403    | US          |
+| 2025-01-01T13:05:00Z | user22 | POST   | /admin/config | 500    | DE          |
+
+This query keeps only suspicious requests that access admin endpoints.
+
+</Tab>
+</Tabs>
+
+## List of related operators
+
+- [parse](/apl/tabular-operators/parse-operator): Extracts structured data into columns instead of filtering rows. Use it when you want to keep the parsed values.
+- [extract](/apl/scalar-functions/extract-function): Extracts data from text using regular expressions. Use it when you need flexible pattern matching and want to capture values.
+- [where](/apl/tabular-operators/where-operator): Filters rows based on Boolean expressions. Use it for direct conditions instead of pattern parsing.
+- [search](/apl/tabular-operators/search-operator): Searches across multiple columns for specific text. Use it for broader keyword searches.
+- [project](/apl/tabular-operators/project-operator): Selects and computes specific columns. Use it after filtering to refine the result set.

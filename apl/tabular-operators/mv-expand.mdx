@@ -1,0 +1,167 @@
+---
+title: mv-expand
+description: 'This page explains how to use the mv-expand operator in APL.'
+---
+
+The `mv-expand` operator expands dynamic arrays and property bags into multiple rows. Each element of the array or each property of the bag becomes its own row, while other columns are duplicated.  
+
+You use `mv-expand` when you want to analyze or filter individual values inside arrays or objects. This is especially useful when working with logs that include lists of values, OpenTelemetry traces that contain arrays of spans, or security events that group multiple attributes into one field.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `mvexpand` command expands multi-value fields into separate events. The APL `mv-expand` operator works in a very similar way, splitting array values into individual rows. The main difference is that APL explicitly works with dynamic arrays or property bags, while Splunk handles multi-value fields implicitly.
+
+<CodeGroup>
+```sql Splunk example
+... | mvexpand request_uri
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| mv-expand uri
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you use `CROSS JOIN UNNEST` or `CROSS APPLY` to flatten arrays into rows. In APL, `mv-expand` provides a simpler and more direct way to achieve the same result.
+
+<CodeGroup>
+```sql SQL example
+SELECT id, value
+FROM logs
+CROSS JOIN UNNEST(request_uris) AS t(value)
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| mv-expand uri
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+T | mv-expand ColumnName [to typeof(DataType)] [limit=N]
+```
+
+### Parameters
+
+| Parameter             | Description                                                                     |
+| --------------------- | ------------------------------------------------------------------------------- |
+| `ColumnName`          | The name of the column that contains a dynamic array or property bag to expand. |
+| `to typeof(DataType)` | Optional. Converts each expanded element to the specified type.                 |
+| `limit=N`             | Optional. Limits the number of expanded rows per record.                        |
+
+### Returns
+
+The operator returns a table where each element of the expanded column is placed in its own row. Other columns are duplicated for each expanded row.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+When analyzing logs, request URIs can sometimes be stored as arrays. You can use `mv-expand` to expand them into individual rows for easier filtering.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| mv-expand uri
+| summarize count() by uri
+| top 5 by count_
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | mv-expand uri | summarize count() by uri | top 5 by count_%22%7D)
+
+**Output**
+
+| uri              | count_ |
+| ---------------- | ------- |
+| /api/v1/products | 1200    |
+| /api/v1/cart     | 950     |
+| /api/v1/checkout | 720     |
+| /api/v1/login    | 650     |
+| /api/v1/profile  | 500     |
+
+This query expands the `uri` array into rows and counts the most frequent request URIs.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Traces often include multiple span IDs grouped under a single trace. You can use `mv-expand` to expand span IDs for detailed analysis.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| mv-expand span_id
+| summarize count() by ['service.name']
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces)'] | mv-expand span_id | summarize count() by ['service.name']%22%7D)
+
+**Output**
+
+| service.name          | count_ |
+| --------------------- | ------- |
+| frontend              | 4100    |
+| cartservice           | 3800    |
+| checkoutservice       | 3600    |
+| productcatalogservice | 3400    |
+| loadgenerator         | 3000    |
+
+This query expands the `span_id` field to count how many spans each service generates.
+
+</Tab>
+<Tab title="Security logs">
+
+In security logs, user IDs can appear as arrays if multiple accounts are affected by a single event. `mv-expand` helps isolate them for per-user inspection.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| mv-expand id
+| summarize count() by id, status
+| top 5 by count_
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | mv-expand id | summarize count() by id, status | top 5 by count_%22%7D)
+
+**Output**
+
+| id      | status | count_ |
+| ------- | ------ | ------- |
+| user123 | 401    | 320     |
+| user456 | 403    | 250     |
+| user789 | 200    | 220     |
+| user111 | 500    | 180     |
+| user222 | 404    | 150     |
+
+This query expands the `id` array into rows and counts how often each user ID appears with a given status.
+
+</Tab>
+</Tabs>
+
+## List of related operators
+
+- [expand](/apl/tabular-operators/expand-operator): Expands JSON objects into rows. Use it when you want to expand structured data, not arrays.
+- [project](/apl/tabular-operators/project-operator): Selects or computes columns. Use it when you want to reshape data, not expand arrays.
+- [summarize](/apl/tabular-operators/summarize-operator): Aggregates data across rows. Use it after expanding arrays to compute statistics.
+- [top](/apl/tabular-operators/top-operator): Returns the top N rows by expression. Use it after expansion to find the most frequent values.
+- [parse_json](/apl/scalar-functions/parse-json-function): Converts JSON strings to dynamic objects. Use it before `mv-expand` when working with string-encoded arrays.
