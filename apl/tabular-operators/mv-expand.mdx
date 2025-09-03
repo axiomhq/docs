@@ -58,12 +58,6 @@ CROSS JOIN UNNEST(request_uris) AS t(value)
 mv-expand [kind=(bag|array)] [with_itemindex=IndexFieldName] FieldName [to typeof(Typename)] [limit Rowlimit]
 ```
 
-### Example
-
-```kusto
-mv-expand kind=array tags to typeof(string) limit 1000
-```
-
 ### Parameters
 
 | Parameter                        | Description                                                                            |
@@ -78,93 +72,30 @@ mv-expand kind=array tags to typeof(string) limit 1000
 
 The operator returns a table where each element of the expanded array or each property of the expanded object is placed in its own row. Other columns are duplicated for each expanded row.
 
-## Use case examples
+## Use case example
 
-<Tabs>
-<Tab title="Log analysis">
-
-When analyzing logs, request URIs can sometimes be stored as arrays. You can use `mv-expand` to expand them into individual rows for easier filtering.
+When analyzing logs, some values can be stored as arrays. You can use `mv-expand` to expand them into individual rows for easier filtering.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| mv-expand uri
-| summarize count() by uri
-| top 5 by count_
+| limit 100
+| mv-expand territories
+| summarize count = count() by territory_name = tostring(territories)
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | mv-expand uri | summarize count() by uri | top 5 by count_%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20limit%20100%20%7C%20mv-expand%20territories%20%7C%20summarize%20count%20%3D%20count()%20by%20territory_name%20%3D%20tostring(territories)%22%7D)
 
 **Output**
 
-| uri              | count_ |
+| territory_name      | count |
 | ---------------- | ------- |
-| /api/v1/products | 1200    |
-| /api/v1/cart     | 950     |
-| /api/v1/checkout | 720     |
-| /api/v1/login    | 650     |
-| /api/v1/profile  | 500     |
+| United States | 67     |
+| India         | 22     |
+| Japan         | 12     |
 
-This query expands the `uri` array into rows and counts the most frequent request URIs.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Traces often include multiple span IDs grouped under a single trace. You can use `mv-expand` to expand span IDs for detailed analysis.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| mv-expand span_id
-| summarize count() by ['service.name']
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces)'] | mv-expand span_id | summarize count() by ['service.name']%22%7D)
-
-**Output**
-
-| service.name          | count_ |
-| --------------------- | ------- |
-| frontend              | 4100    |
-| cartservice           | 3800    |
-| checkoutservice       | 3600    |
-| productcatalogservice | 3400    |
-| loadgenerator         | 3000    |
-
-This query expands the `span_id` field to count how many spans each service generates.
-
-</Tab>
-<Tab title="Security logs">
-
-In security logs, user IDs can appear as arrays if multiple accounts are affected by a single event. `mv-expand` helps isolate them for per-user inspection.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| mv-expand id
-| summarize count() by id, status
-| top 5 by count_
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | mv-expand id | summarize count() by id, status | top 5 by count_%22%7D)
-
-**Output**
-
-| id      | status | count_ |
-| ------- | ------ | ------- |
-| user123 | 401    | 320     |
-| user456 | 403    | 250     |
-| user789 | 200    | 220     |
-| user111 | 500    | 180     |
-| user222 | 404    | 150     |
-
-This query expands the `id` array into rows and counts how often each user ID appears with a given status.
-
-</Tab>
-</Tabs>
+This query expands the `territories` array into rows and counts the most frequent territories.
 
 ## List of related operators
 
