@@ -1,0 +1,138 @@
+---
+title: "Create"
+description: "Learn how to create and define AI capabilities using structured prompts and typed arguments with Axiom."
+keywords: ["ai engineering", "rudder", "create", "prompt", "template", "schema"]
+---
+
+import { Badge } from "/snippets/badge.jsx"
+import { definitions } from '/snippets/definitions.mdx'
+
+The **Create** stage is about defining a new AI <Tooltip tip={definitions.Capability}>capability</Tooltip> as a structured, version-able asset in your codebase. The goal is to move away from scattered, hard-coded string prompts and toward a more disciplined and organized approach to prompt engineering.
+
+### Defining a capability as a prompt object
+
+In Rudder, every capability is represented by a `Prompt` object. This object serves as the single source of truth for the capability’s logic, including its messages, metadata, and the schema for its arguments.
+
+For now, these `Prompt` objects can be defined and managed as TypeScript files within your own project repository.
+
+A typical `Prompt` object looks like this:
+
+```typescript
+// src/prompts/email-summarizer.prompt.ts
+
+import { 
+  experimental_Type,
+  type experimental_Prompt 
+} from 'axiom/ai';
+
+export const emailSummarizerPrompt = {
+  name: "Email Summarizer",
+  slug: "email-summarizer",
+  version: "1.0.0",
+  model: "gpt-4o",
+  messages: [
+    {
+      role: "system",
+      content:
+        `Summarize emails concisely, highlighting action items.
+        The user is named {{ username }}.`,
+    },
+    {
+      role: "user",
+      content: "Please summarize this email: {{ email_content }}",
+    },
+  ],
+  arguments: {
+    username: experimental_Type.String(),
+    email_content: experimental_Type.String(),
+  },
+} satisfies experimental_Prompt;
+
+```
+
+### Strongly-typed arguments with `Template`
+
+To ensure that prompts are used correctly, the Axiom’s AI SDK includes a `Template` type system (exported as `Type`) for defining the schema of a prompt’s `arguments`. This provides type safety, autocompletion, and a clear, self-documenting definition of what data the prompt expects.
+
+The `arguments` object uses `Template` helpers to define the shape of the context:
+
+```typescript
+// src/prompts/report-generator.prompt.ts
+
+import { 
+  experimental_Type,
+  type experimental_Prompt
+} from 'axiom/ai';
+
+export const reportGeneratorPrompt = {
+  // ... other properties
+  arguments: {
+    company: experimental_Type.Object({
+      name: experimental_Type.String(),
+      isActive: experimental_Type.Boolean(),
+      departments: experimental_Type.Array(
+        experimental_Type.Object({
+          name: experimental_Type.String(),
+          budget: experimental_Type.Number(),
+        })
+      ),
+    }),
+    priority: experimental_Type.Union([
+      experimental_Type.Literal("high"),
+      experimental_Type.Literal("medium"),
+      experimental_Type.Literal("low"),
+    ]),
+  },
+} satisfies experimental_Prompt;
+```
+
+You can even infer the exact TypeScript type for a prompt’s context using the `InferContext` utility.
+
+### Prototyping and local testing
+
+Before using a prompt in your application, you can test it locally using the `parse` function. This function takes a `Prompt` object and a `context` object, rendering the templated messages to verify the output. This is a quick way to ensure your templating logic is correct.
+
+```typescript
+import { experimental_parse } from 'axiom/ai';
+import { 
+  reportGeneratorPrompt
+} from './prompts/report-generator.prompt';
+
+const context = {
+  company: {
+    name: 'Axiom',
+    isActive: true,
+    departments: [
+      { name: 'Engineering', budget: 500000 },
+      { name: 'Marketing', budget: 150000 },
+    ],
+  },
+  priority: 'high' as const,
+};
+
+// Render the prompt with the given context
+const parsedPrompt = await experimental_parse(
+  reportGeneratorPrompt, { context }
+);
+
+console.log(parsedPrompt.messages);
+// [
+//   {
+//     role: 'system',
+//     content: 'Generate a report for Axiom.\nCompany Status: Active...'
+//   }
+// ]
+```
+
+### Managing prompts with Axiom
+
+To enable more advanced workflows and collaboration, Axiom is building tools to manage your prompt assets centrally.
+
+* <Badge>Coming soon</Badge> The `axiom` CLI will allow you to `push`, `pull`, and `list` prompt versions directly from your terminal, synchronizing your local files with the Axiom platform.
+* <Badge>Coming soon</Badge> The SDK will include methods like `axiom.prompts.create()` and `axiom.prompts.load()` for programmatic access to your managed prompts. This will be the foundation for A/B testing, version comparison, and deploying new prompts without changing your application code.
+
+### What’s next?
+
+Now that you’ve created and structured your capability, the next step is to measure its quality against a set of known good examples.
+
+Learn more about this step of the Rudder workflow in the [Measure](/ai-engineering/measure) docs.

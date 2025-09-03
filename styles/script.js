@@ -12,7 +12,7 @@ if (document.querySelectorAll("a")) {
     }
 }
 
-// Make top-left logo link to marketing site. The event listener is necessary to replace Mintlify's default event listener.
+// Make top-left logo link to marketing site. The event listener is necessary to replace Mintlify’s default event listener.
 if (document.querySelector("#sidebar a")) {
     const logoLink = document.querySelector("#sidebar a");
 
