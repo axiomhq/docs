@@ -5,8 +5,6 @@ sidebarTitle: Limits
 keywords: ['axiom documentation', 'documentation', 'axiom', 'reference', 'settings', 'field restrictions', 'time stamp', 'time stamp field', 'limits', 'requirements', 'pricing', 'usage']
 ---
 
-import IngestDataLimits from "/snippets/ingest-data-limits.mdx"
-
 Axiom applies certain limits and requirements to guarantee good service across the platform. Some of these limits depend on your pricing plan, and some of them are applied system-wide. This reference article explains all limits and requirements applied by Axiom.
 
 Limits are necessary to prevent potential issues that could arise from the ingestion of excessively large events or data structures that are too complex. Limits help maintain system performance, allow for effective data processing, and manage resources effectively.
@@ -45,7 +43,11 @@ For more information on how to save on data loading, data retention, and queryin
 
 Axiom restricts the number of datasets and the number of fields in your datasets. The number of datasets and fields you can use is based on your pricing plan and explained in the table above.
 
-If you ingest a new event that would exceed the allowed number of fields in a dataset, Axiom returns an error and rejects the event. To prevent this error, ensure that the number of fields in your events are within the allowed limits. To reduce the number of fields in a dataset, [trim the dataset](/reference/datasets#trim-dataset) and [vacuum its fields](/reference/datasets#vacuum-fields).
+If you ingest a new event that would exceed the allowed number of fields in a dataset, Axiom returns an error and rejects the event. To prevent this error, ensure that the number of fields in your events are within the allowed limits.
+
+To reduce the number of fields in a dataset, use one of the following approaches:
+- [Trim the dataset](/reference/datasets#trim-dataset) and [vacuum its fields](/reference/datasets#vacuum-fields).
+- Use [map fields](/apl/data-types/map-fields).
 
 ## System-wide limits
 
@@ -53,7 +55,45 @@ The following limits are applied to all accounts, irrespective of the pricing pl
 
 ### Limits on ingested data
 
-<IngestDataLimits />
+The table below summarizes the limits Axiom applies to each data ingest. These limits are independent of your pricing plan.
+
+|                              | Limit     |
+| ---------------------------- | --------- |
+| Maximum event size           | 1 MB      |
+| Maximum events in a batch    | 10,000    |
+| Maximum field name length    | 200 bytes |
+
+If you try to ingest data that exceeds these limits, Axiom does the following:
+- Replaces strings that are too long with <invalid string: too long>.
+- Replaces binary data that is too long with <invalid data>.
+- Truncates maps and slices that nest deeper than 100 levels and replaces them with `nil` at the cut-off level.
+- Converts the following float values to `nil`:
+    - NaN
+    - +Infty
+    - -Infty
+
+### Special fields
+
+Axiom creates the following two fields automatically for a new dataset:
+
+- `_time` is the timestamp of the event. If the data you ingest doesn’t have a `_time` field, Axiom assigns the time of the data ingest to the events.
+- `_sysTime` is the time when you ingested the data.
+
+In most cases, use `_time` to define the timestamp of events. In rare cases, if you experience clock skews on your event-producing systems, `_sysTime` can be useful.
+
+### Reserved field names
+
+Axiom reserves the following field names for internal use:
+
+- `_blockInfo`
+- `_cursor`
+- `_rowID`
+- `_source`
+- `_sysTime`
+
+Don’t ingest data that contains these fields names. If you try to ingest a field with a reserved name, Axiom renames the ingested field to `_user_FIELDNAME`. For example, if you try to ingest the field `_sysTime`, Axiom renames it to `_user_sysTime`.
+
+In general, avoid ingesting field names that start with `_`.
 
 ### Requirements for timestamp field
 
