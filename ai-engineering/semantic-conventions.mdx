@@ -1,0 +1,333 @@
+---
+title: "Semantic Conventions"
+keywords: ["ai engineering", "opentelemetry", "semantic conventions", "telemetry", "traces", "spans"]
+---
+
+import { Badge } from "/snippets/badge.jsx"
+
+Axiom supports two approaches for sending generative AI telemetry:
+
+<CardGroup cols={2}>
+  <Card title="Axiom AI SDK" icon="bolt" href="/ai-engineering/quickstart#installation">
+    **Fastest setup** - Use our wrapper around the Vercel AI SDK for automatic instrumentation with minimal code changes. See the [Quickstart](/ai-engineering/quickstart) guide.
+  </Card>
+  <Card title="Custom OpenTelemetry" icon="code" href="#required-attributes">
+    **Full control** - Send traces manually using any OpenTelemetry-compatible instrumentation that follows our semantic conventions (this page).
+  </Card>
+</CardGroup>
+
+If you use the Axiom AI SDK, it automatically captures and sends traces with the correct semantic conventions, so you can skip the rest of this page.
+
+If you prefer to use your own tooling instead of the Axiom AI SDK, you can send OpenTelemetry traces directly to Axiom following our semantic conventions. This approach gives you full control over your instrumentation while ensuring compatibility with Axiom's AI Engineering features.
+
+If you are setting up OpenTelemetry for the first time, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry#send-opentelemetry-data-to-axiom) for examples in multiple languages.
+
+<Note>
+Axiom's conventions for AI spans are based on version 1.37 of the [OpenTelemetry Semantic conventions for generative client AI spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/).
+
+Axiom requires two additional attributes: `gen_ai.capability.name` and `gen_ai.step.name`. More on these below.
+</Note>
+
+TODO: INCOREPORATE THIS
+
+```typescript
+const ATTR_AXIOM_GEN_AI_SCHEMA_URL = 'axiom.gen_ai.schema_url'; // => https://axiom.co/ai/schemas/0.0.2
+const ATTR_AXIOM_GEN_AI_SDK_NAME = 'axiom.gen_ai.sdk.name'; // => 'your_sdk_name'
+const ATTR_AXIOM_GEN_AI_SDK_VERSION = 'axiom.gen_ai.sdk.version'; // => '1.2.3'
+```
+
+## Required attributes
+
+To ensure your traces are properly recognized and processed by Axiom's AI Engineering features, the following attributes are required.
+
+### `gen_ai.operation.name`
+
+AI Spans are identified by the `gen_ai.operation.name` attribute. This is a required attribute in the [OpenTelemetry specification](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/).
+
+#### Supported operations
+
+Axiom currently provides custom UI for the following values:
+
+- `chat` - Chat completion
+- `execute_tool` - Tool execution
+
+#### Additional values
+
+- `text_completion` - Text completion (legacy, has been deprecated by OpenAI and many other providers)
+- `generate_content` - Multimodal content generation
+- `embeddings` - Vector embeddings
+- `create_agent` - Creating AI agents
+- `invoke_agent` - Invoking existing agents  
+
+It is also possible to provide custom, arbitrary values.
+
+### `gen_ai.capability.name` and `gen_ai.step.name`
+
+The purpose of these attributes is to provide context for AI operations and allow you to break your operations down by feature and step, especially when querying.
+
+`capability` can be thought of as a feature or function of the AI system, while `step` refers to a specific stage in the operation. In general, each LLM call will be one `step`. A `capability` may contain multiple `step`s.
+
+### Span naming and structure
+
+Following OpenTelemetry conventions:
+
+**Span name:** `{gen_ai.operation.name} {gen_ai.request.model}`
+- Examples: `chat gpt-4`, `embeddings text-embedding-ada-002`, `invoke_agent Math-Tutor`
+
+**Span kind:** 
+- `CLIENT` for calls to external AI services (recommended) 
+- `INTERNAL` for models running in the same process
+
+**Span status:** Follow OpenTelemetry error handling conventions
+
+### Core attributes
+
+Beyond `gen_ai.operation.name`, these attributes enable Axiom's AI features:
+
+| Attribute | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `gen_ai.provider.name` | string | Required | Provider (openai, anthropic, aws.bedrock, etc.) |
+| `gen_ai.request.model` | string | When available | Model requested (gpt-4, claude-3, etc.) |
+| `gen_ai.response.model` | string | When available | Model that fulfilled the request |
+| `gen_ai.input.messages` | Messages[] | Recommended | Input conversation history (see Messages below) |
+| `gen_ai.output.messages` | Messages[] | Recommended | Model response messages (see Messages below) |
+| `gen_ai.usage.input_tokens` | integer | Recommended | Input token count |
+| `gen_ai.usage.output_tokens` | integer | Recommended | Output token count |
+| `gen_ai.request.choice_count` | integer | When !=1 | Number of completion choices requested |
+| `gen_ai.response.id` | string | Recommended | Unique response identifier |
+| `gen_ai.response.finish_reasons` | string[] | Recommended | Why generation stopped |
+| `server.address` | string | Recommended | AI service hostname |
+| `server.port` | integer | When applicable | AI service port |
+
+### Agent-specific attributes
+
+For agent operations (`create_agent`, `invoke_agent`), include these additional attributes:
+
+| Attribute | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `gen_ai.agent.id` | string | When available | Unique agent identifier |
+| `gen_ai.agent.name` | string | When available | Human-readable agent name |
+| `gen_ai.agent.description` | string | When available | Agent description/purpose |
+| `gen_ai.conversation.id` | string | When available | Conversation/session identifier |
+| `gen_ai.system_instructions` | any | Optional | System prompt for the agent |
+
+### Tool execution attributes  
+
+For tool operations (`execute_tool`), include these additional attributes:
+
+| Attribute | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `gen_ai.tool.name` | string | Required | Name of the executed tool |
+| `gen_ai.tool.call.id` | string | When available | Tool call identifier |
+| `gen_ai.tool.type` | string | When available | Tool type (function, extension, datastore) |
+| `gen_ai.tool.description` | string | When available | Tool description |
+| `gen_ai.tool.arguments` | string | When available | Tool arguments |
+| `gen_ai.tool.message` | string | When available | Tool message |
+
+### Messages
+
+Messages support four different roles, each with specific content formats:
+
+Messages follow OpenTelemetry's structured format using a `parts` array:
+
+**System messages**
+```json
+{
+  "role": "system",
+  "parts": [
+    {"type": "text", "content": "You are a helpful assistant"}
+  ]
+}
+```
+
+**User messages**
+```json
+{
+  "role": "user",
+  "parts": [
+    {"type": "text", "content": "Weather in Paris?"}
+  ]
+}
+```
+
+**Assistant messages**
+```json
+{
+  "role": "assistant", 
+  "parts": [
+    {"type": "text", "content": "Hi there!"},
+    {"type": "tool_call", "id": "call_123", "name": "get_weather", "arguments": {"location": "Paris"}}
+  ],
+  "finish_reason": "stop"
+}
+```
+
+**Tool messages**
+```json
+{
+  "role": "tool",
+  "parts": [
+    {"type": "tool_call_response", "id": "call_123", "result": "rainy, 57°F"}
+  ]
+}
+```
+
+**Content part types:**
+- `text` - Text content with `content` field
+- `image_url` - Image with `image_url.url` field  
+- `reasoning` - Reasoning with `content` field
+- `tool_call` - Tool invocation with `id`, `name`, `arguments`
+- `tool_call_response` - Tool result with `id`, `result`
+
+## Example trace structure
+
+### Chat completion
+
+Here is an example of a properly structured chat completion trace:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { trace, SpanKind } from '@opentelemetry/api';
+
+const tracer = trace.getTracer('my-ai-app');
+
+// Create a span for the AI operation
+const span = tracer.startSpan('chat gpt-4', {
+  kind: SpanKind.CLIENT
+});
+
+// (Your AI operation logic here...)
+
+span.setAttributes({
+  // Set operation name
+  'gen_ai.operation.name': 'chat',
+  // set capability and step
+  'gen_ai.capability.name': 'customer_support',
+  'gen_ai.step.name': 'respond_to_greeting',
+  // set other attributes
+  'gen_ai.provider.name': 'openai',
+  'gen_ai.request.model': 'gpt-4',
+  'gen_ai.response.model': 'gpt-4',
+  'gen_ai.usage.input_tokens': 150,
+  'gen_ai.usage.output_tokens': 75,
+  'gen_ai.input.messages': JSON.stringify([
+    { role: 'user', parts: [{ type: 'text', content: 'Hello, how are you?' }] }
+  ]),
+  'gen_ai.output.messages': JSON.stringify([
+    { role: 'assistant', parts: [{ type: 'text', content: 'I\'m doing well, thank you!' }], finish_reason: 'stop' }
+  ])
+});
+
+span.end();
+```
+
+```python Python
+from opentelemetry import trace
+from opentelemetry.trace import SpanKind
+import json
+
+tracer = trace.get_tracer("my-ai-app")
+
+# Create a span for the AI operation
+with tracer.start_as_current_span("chat gpt-4", kind=SpanKind.CLIENT) as span:
+    # (Your AI operation logic here...)
+
+    span.set_attributes({
+        # Set operation name
+        "gen_ai.operation.name": "chat",
+        # Set capability and step
+        "gen_ai.capability.name": "customer_support",
+        "gen_ai.step.name": "respond_to_greeting",
+        # Set other attributes
+        "gen_ai.provider.name": "openai",
+        "gen_ai.request.model": "gpt-4",
+        "gen_ai.response.model": "gpt-4",
+        "gen_ai.usage.input_tokens": 150,
+        "gen_ai.usage.output_tokens": 75,
+        "gen_ai.input.messages": json.dumps([
+            {"role": "user", "parts": [{"type": "text", "content": "Hello, how are you?"}]}
+        ]),
+        "gen_ai.output.messages": json.dumps([
+            {"role": "assistant", "parts": [{"type": "text", "content": "I'm doing well, thank you!"}], "finish_reason": "stop"}
+        ])
+    })
+    
+```
+
+</CodeGroup>
+
+### Tool execution
+
+Here is an example of a tool execution within an agent:
+
+<CodeGroup>
+
+```typescript Node.js
+import { trace, SpanKind } from '@opentelemetry/api';
+
+const tracer = trace.getTracer('my-agent-app');
+
+// Create a span for tool execution
+const span = tracer.startSpan('execute_tool get_weather', {
+  kind: SpanKind.CLIENT
+});
+
+// (Your tool call logic here...)
+
+// Set tool-specific attributes
+span.setAttributes({
+  // Set operation name
+  'gen_ai.operation.name': 'execute_tool',
+  // Set capability and step
+  'gen_ai.capability.name': 'weather_assistance',
+  'gen_ai.step.name': 'fetch_current_weather',
+  // Set other attributes
+  'gen_ai.tool.name': 'get_weather',
+  'gen_ai.tool.type': 'function',
+  'gen_ai.tool.call.id': 'call_abc123',
+  'gen_ai.tool.arguments': JSON.stringify({ location: 'New York', units: 'celsius' }),
+  'gen_ai.tool.message': JSON.stringify({ temperature: 22, condition: 'sunny', humidity: 65 }),
+});
+
+span.end();
+```
+
+```python Python
+from opentelemetry import trace
+from opentelemetry.trace import SpanKind
+import json
+
+tracer = trace.get_tracer("my-agent-app")
+
+# Create a span for tool execution  
+with tracer.start_as_current_span("execute_tool get_weather", kind=SpanKind.CLIENT) as span:
+    span.set_attributes({
+        # Set operation name
+        "gen_ai.operation.name": "execute_tool",
+        # Set capability and step
+        "gen_ai.step.name": "fetch_current_weather",
+        "gen_ai.capability.name": "weather_assistance",
+        # Set other attributes
+        "gen_ai.tool.name": "get_weather",
+        "gen_ai.tool.type": "function",
+        "gen_ai.tool.call.id": "call_abc123",
+        "gen_ai.tool.arguments": json.dumps({"location": "New York", "units": "celsius"}),
+        "gen_ai.tool.message": json.dumps({"temperature": 22, "condition": "sunny", "humidity": 65}),
+    })
+```
+
+</CodeGroup>
+
+
+## What's next?
+
+Once you're sending traces with the proper semantic conventions:
+
+- Explore the [Rudder workflow](/ai-engineering/create) to learn about systematic AI development
+- View your traces in Axiom's Console using the AI Trace Waterfall visualization
+- Set up monitors and alerts based on your AI telemetry data
+
+<Info>
+Need help implementing these conventions? Check out the [Quickstart](/ai-engineering/quickstart) guide for a faster setup using Axiom's AI SDK, or reach out to [support](https://axiom.co/support) for assistance with custom implementations.
+</Info>
