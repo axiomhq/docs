@@ -191,33 +191,33 @@ import { trace, SpanKind } from '@opentelemetry/api';
 const tracer = trace.getTracer('my-ai-app');
 
 // Create a span for the AI operation
-const span = tracer.startSpan('chat gpt-4', {
+return tracer.startActiveSpan('chat gpt-4', {
   kind: SpanKind.CLIENT
+}, (span) => {
+  // (Your AI operation logic here...)
+
+  span.setAttributes({
+    // Set operation name
+    'gen_ai.operation.name': 'chat',
+    // set capability and step
+    'gen_ai.capability.name': 'customer_support',
+    'gen_ai.step.name': 'respond_to_greeting',
+    // set other attributes
+    'gen_ai.provider.name': 'openai',
+    'gen_ai.request.model': 'gpt-4',
+    'gen_ai.response.model': 'gpt-4',
+    'gen_ai.usage.input_tokens': 150,
+    'gen_ai.usage.output_tokens': 75,
+    'gen_ai.input.messages': JSON.stringify([
+      { role: 'user', parts: [{ type: 'text', content: 'Hello, how are you?' }] }
+    ]),
+    'gen_ai.output.messages': JSON.stringify([
+      { role: 'assistant', parts: [{ type: 'text', content: 'I\'m doing well, thank you!' }], finish_reason: 'stop' }
+    ])
+  });
+  
+  // Return your result here (span is automatically ended)
 });
-
-// (Your AI operation logic here...)
-
-span.setAttributes({
-  // Set operation name
-  'gen_ai.operation.name': 'chat',
-  // set capability and step
-  'gen_ai.capability.name': 'customer_support',
-  'gen_ai.step.name': 'respond_to_greeting',
-  // set other attributes
-  'gen_ai.provider.name': 'openai',
-  'gen_ai.request.model': 'gpt-4',
-  'gen_ai.response.model': 'gpt-4',
-  'gen_ai.usage.input_tokens': 150,
-  'gen_ai.usage.output_tokens': 75,
-  'gen_ai.input.messages': JSON.stringify([
-    { role: 'user', parts: [{ type: 'text', content: 'Hello, how are you?' }] }
-  ]),
-  'gen_ai.output.messages': JSON.stringify([
-    { role: 'assistant', parts: [{ type: 'text', content: 'I\'m doing well, thank you!' }], finish_reason: 'stop' }
-  ])
-});
-
-span.end();
 ```
 
 ```python Python
@@ -267,28 +267,28 @@ import { trace, SpanKind } from '@opentelemetry/api';
 const tracer = trace.getTracer('my-agent-app');
 
 // Create a span for tool execution
-const span = tracer.startSpan('execute_tool get_weather', {
+return tracer.startActiveSpan('execute_tool get_weather', {
   kind: SpanKind.CLIENT
+}, (span) => {
+  // (Your tool call logic here...)
+
+  // Set tool-specific attributes
+  span.setAttributes({
+    // Set operation name
+    'gen_ai.operation.name': 'execute_tool',
+    // Set capability and step
+    'gen_ai.capability.name': 'weather_assistance',
+    'gen_ai.step.name': 'fetch_current_weather',
+    // Set other attributes
+    'gen_ai.tool.name': 'get_weather',
+    'gen_ai.tool.type': 'function',
+    'gen_ai.tool.call.id': 'call_abc123',
+    'gen_ai.tool.arguments': JSON.stringify({ location: 'New York', units: 'celsius' }),
+    'gen_ai.tool.message': JSON.stringify({ temperature: 22, condition: 'sunny', humidity: 65 }),
+  });
+  
+  // Return your result here (span is automatically ended)
 });
-
-// (Your tool call logic here...)
-
-// Set tool-specific attributes
-span.setAttributes({
-  // Set operation name
-  'gen_ai.operation.name': 'execute_tool',
-  // Set capability and step
-  'gen_ai.capability.name': 'weather_assistance',
-  'gen_ai.step.name': 'fetch_current_weather',
-  // Set other attributes
-  'gen_ai.tool.name': 'get_weather',
-  'gen_ai.tool.type': 'function',
-  'gen_ai.tool.call.id': 'call_abc123',
-  'gen_ai.tool.arguments': JSON.stringify({ location: 'New York', units: 'celsius' }),
-  'gen_ai.tool.message': JSON.stringify({ temperature: 22, condition: 'sunny', humidity: 65 }),
-});
-
-span.end();
 ```
 
 ```python Python
