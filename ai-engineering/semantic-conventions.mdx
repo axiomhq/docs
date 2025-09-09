@@ -28,14 +28,6 @@ Axiom's conventions for AI spans are based on version 1.37 of the [OpenTelemetry
 Axiom requires two additional attributes: `gen_ai.capability.name` and `gen_ai.step.name`. More on these below.
 </Note>
 
-TODO: INCOREPORATE THIS
-
-```typescript
-const ATTR_AXIOM_GEN_AI_SCHEMA_URL = 'axiom.gen_ai.schema_url'; // => https://axiom.co/ai/schemas/0.0.2
-const ATTR_AXIOM_GEN_AI_SDK_NAME = 'axiom.gen_ai.sdk.name'; // => 'your_sdk_name'
-const ATTR_AXIOM_GEN_AI_SDK_VERSION = 'axiom.gen_ai.sdk.version'; // => '1.2.3'
-```
-
 ## Required attributes
 
 To ensure your traces are properly recognized and processed by Axiom's AI Engineering features, the following attributes are required.
@@ -44,14 +36,12 @@ To ensure your traces are properly recognized and processed by Axiom's AI Engine
 
 AI Spans are identified by the `gen_ai.operation.name` attribute. This is a required attribute in the [OpenTelemetry specification](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/).
 
-#### Supported operations
-
-Axiom currently provides custom UI for the following values:
+Axiom currently provides custom UI for the following operations:
 
 - `chat` - Chat completion
 - `execute_tool` - Tool execution
 
-#### Additional values
+Other possible values include:
 
 - `text_completion` - Text completion (legacy, has been deprecated by OpenAI and many other providers)
 - `generate_content` - Multimodal content generation
@@ -59,7 +49,9 @@ Axiom currently provides custom UI for the following values:
 - `create_agent` - Creating AI agents
 - `invoke_agent` - Invoking existing agents  
 
-It is also possible to provide custom, arbitrary values.
+For more information, see TODO:
+
+#### Additional values
 
 ### `gen_ai.capability.name` and `gen_ai.step.name`
 
@@ -67,18 +59,24 @@ The purpose of these attributes is to provide context for AI operations and allo
 
 `capability` can be thought of as a feature or function of the AI system, while `step` refers to a specific stage in the operation. In general, each LLM call will be one `step`. A `capability` may contain multiple `step`s.
 
-### Span naming and structure
+### `axiom.gen_ai` attributes
 
-Following OpenTelemetry conventions:
+These attributes currently have no TKTK
 
-**Span name:** `{gen_ai.operation.name} {gen_ai.request.model}`
-- Examples: `chat gpt-4`, `embeddings text-embedding-ada-002`, `invoke_agent Math-Tutor`
+- `axiom.gen_ai.schema_url` - The schema URL for the Axiom AI conventions. Currently: `https://axiom.co/ai/schemas/0.0.2`
+- `axiom.gen_ai.sdk.name` - The name of the SDK (e.g., `my-ai-instrumentation-sdk`)
+- `axiom.gen_ai.sdk.version` - The version of the SDK (e.g., `1.2.3`)
 
-**Span kind:** 
-- `CLIENT` for calls to external AI services (recommended) 
-- `INTERNAL` for models running in the same process
+### Span naming
 
-**Span status:** Follow OpenTelemetry error handling conventions
+Span names should follow the the OpenTelemetry conventions:
+
+- `generate_text {gen_ai.request.model}`
+- `execute_tool {gen_ai.tool.name}`
+- `embeddings {gen_ai.request.model}`
+- `generate_content {gen_ai.request.model}`
+- `create_agent {gen_ai.agent.name}`
+- `invoke_agent {gen_ai.agent.name}`
 
 ### Core attributes
 
@@ -124,11 +122,13 @@ For tool operations (`execute_tool`), include these additional attributes:
 | `gen_ai.tool.arguments` | string | When available | Tool arguments |
 | `gen_ai.tool.message` | string | When available | Tool message |
 
+https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#recording-content-on-attributes
+
 ### Messages
 
 Messages support four different roles, each with specific content formats:
 
-Messages follow OpenTelemetry's structured format using a `parts` array:
+Messages follow OpenTelemetry's structured format:
 
 **System messages**
 ```json
