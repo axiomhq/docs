@@ -1,0 +1,241 @@
+---
+title: "TypeScript SDK"
+description: "Learn how to instrument your TypeScript app with Axiom's AI SDK for automatic AI telemetry capture."
+keywords: ["ai engineering", "typescript", "axiom ai sdk", "telemetry", "withspan", "opentelemetry"]
+---
+
+import { Badge } from "/snippets/badge.jsx"
+import AIEngineeringInstrumentationSnippet from '/snippets/ai-engineering-instrumentation.mdx'
+
+This guide shows how to instrument your TypeScript app with Axiom's AI SDK for automatic AI telemetry capture.
+
+If you followed the [Quickstart](/ai-engineering/quickstart) guide, you should already have OpenTelemetry configured. If not, configure your tracer first:
+
+## Configuring the tracer
+
+You must configure an OTLP trace exporter pointing to your Axiom instance. This is typically done in a dedicated instrumentation file that's loaded before your app starts. Below is an example in TypeScript.
+
+<AIEngineeringInstrumentationSnippet />
+
+Be sure to define the `AXIOM_TOKEN` and `AXIOM_DATASET` environment variables in your `.env` file.
+
+## Capturing Gen AI telemetry with Axiom's AI SDK
+
+The foundation of the Observe stage is Axiom's SDK, which integrates with your app to capture detailed OpenTelemetry traces for every AI interaction.
+
+<Info>
+The initial release of Axiom's AI SDK is focused on providing deep integration with TypeScript applications, particularly those using Vercel's AI SDK to interact with frontier models.
+</Info>
+
+## Instrumenting AI SDK calls
+
+The easiest way to get started is by wrapping your existing AI model client. Axiom's AI SDK provides helper functions for popular libraries like Vercel's [AI SDK](https://ai-sdk.dev/docs).
+
+The `wrapAISDKModel` function takes an existing AI model object and returns an instrumented version that will automatically generate trace data for every call.
+
+<CodeGroup>
+
+```typescript OpenAI
+// src/shared/openai.ts
+
+import { createOpenAI } from '@ai-sdk/openai';
+import { wrapAISDKModel } from 'axiom/ai';
+
+const openaiProvider = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Wrap the model to enable automatic tracing
+export const gpt4o = wrapAISDKModel(openaiProvider('gpt-4o'));
+export const gpt4oMini = wrapAISDKModel(openaiProvider('gpt-4o-mini'));
+```
+
+```typescript Anthropic
+// src/shared/anthropic.ts
+
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { wrapAISDKModel } from 'axiom/ai';
+
+const anthropicProvider = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+// Wrap the model to enable automatic tracing
+export const claude35Sonnet = wrapAISDKModel(anthropicProvider('claude-3-5-sonnet-20241022'));
+export const claude35Haiku = wrapAISDKModel(anthropicProvider('claude-3-5-haiku-20241022'));
+```
+
+```typescript Google Gemini
+// src/shared/gemini.ts
+
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { wrapAISDKModel } from 'axiom/ai';
+
+const geminiProvider = createGoogleGenerativeAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
+// Wrap the model to enable automatic tracing
+export const gemini20Flash = wrapAISDKModel(geminiProvider('gemini-2.0-flash-exp'));
+export const gemini15Pro = wrapAISDKModel(geminiProvider('gemini-1.5-pro'));
+```
+
+```typescript Grok
+// src/shared/grok.ts
+
+import { createXai } from '@ai-sdk/xai';
+import { wrapAISDKModel } from 'axiom/ai';
+
+const grokProvider = createXai({
+  apiKey: process.env.XAI_API_KEY,
+});
+
+// Wrap the model to enable automatic tracing
+export const grokBeta = wrapAISDKModel(grokProvider('grok-beta'));
+export const grok2Mini = wrapAISDKModel(grokProvider('grok-2-mini'));
+```
+
+</CodeGroup>
+
+## Adding context with `withSpan`
+
+While `wrapAISDKModel` handles the automatic instrumentation, the `withSpan` function allows you to add crucial business context to your traces. It creates a parent span around your LLM call and attaches metadata about the `capability` and `step` being executed.
+
+```typescript
+// src/app/page.tsx
+
+import { withSpan } from 'axiom/ai';
+import { generateText } from 'ai';
+import { gpt4o } from '@/shared/openai';
+
+export default async function Page() {
+  const userId = 123;
+
+  // Use withSpan to define the capability and step
+  const res = await withSpan({ capability: 'get_capital', step: 'generate_answer' }, (span) => {
+    // You have access to the OTel span to add custom attributes
+    span.setAttribute('user_id', userId);
+
+    return generateText({
+      model: gpt4o, // Use the wrapped model
+      messages: [
+        {
+          role: 'user',
+          content: 'What is the capital of Spain?',
+        },
+      ],
+    });
+  });
+
+  return <p>{res.text}</p>;
+}
+```
+
+## Instrumenting tool calls with `wrapTool`
+
+For many AI capabilities, the LLM call is only part of the story. If your capability uses tools to interact with external data or services, observing the performance and outcome of those tools is critical. The Axiom AI SDK provides the `wrapTool` and `wrapTools` functions to automatically instrument your Vercel AI SDK tool definitions.
+
+The `wrapTool` helper takes your tool's name and its definition and returns an instrumented version. This wrapper creates a dedicated child span for every tool execution, capturing its arguments, output, and any errors.
+
+```typescript
+// src/app/generate-text/page.tsx
+import { tool } from 'ai';
+import { z } from 'zod';
+import { wrapTool } from 'axiom/ai';
+import { generateText } from 'ai';
+import { gpt4o } from '@/shared/openai';
+
+// In your generateText call, provide wrapped tools
+const { text, toolResults } = await generateText({
+  model: gpt4o,
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'How do I get from Paris to Berlin?' },
+  ],
+  tools: {
+    // Wrap each tool with its name
+    findDirections: wrapTool(
+      'findDirections', // The name of the tool
+      tool({
+        description: 'Find directions to a location',
+        inputSchema: z.object({
+          from: z.string(),
+          to: z.string(),
+        }),
+        execute: async (params) => {
+          // Your tool logic here...
+          return { directions: `To get from ${params.from} to ${params.to}, use a teleporter.` };
+        },
+      })
+    )
+  }
+});
+```
+
+## Complete instrumentation example
+
+<Accordion title="Full end-to-end code example">
+Here's how all three instrumentation functions work together in a single, real-world example:
+
+```typescript
+// src/app/page.tsx
+
+import { withSpan, wrapAISDKModel, wrapTool } from 'axiom/ai';
+import { generateText, tool } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
+
+// 1. Create and wrap the AI model client
+const openaiProvider = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+const gpt4o = wrapAISDKModel(openaiProvider('gpt-4o'));
+
+// 2. Define and wrap your tool(s)
+const findDirectionsTool = wrapTool(
+  'findDirections', // The tool name must be passed to the wrapper
+  tool({
+    description: 'Find directions to a location',
+    inputSchema: z.object({ from: z.string(), to: z.string() }),
+    execute: async ({ from, to }) => ({
+      directions: `To get from ${from} to ${to}, use a teleporter.`,
+    }),
+  })
+);
+
+// 3. In your application logic, use `withSpan` to add context
+//    and call the AI model with your wrapped tools.
+export default async function Page() {
+  const userId = 123;
+
+  const { text } = await withSpan({ capability: 'get_directions', step: 'generate_ai_response' }, async (span) => {
+    // You have access to the OTel span to add custom attributes
+    span.setAttribute('user_id', userId);
+
+    return generateText({
+      model: gpt4o, // Use the wrapped model
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: 'How do I get from Paris to Berlin?' },
+      ],
+      tools: {
+        findDirections: findDirectionsTool, // Use the wrapped tool
+      },
+    });
+  });
+
+  return <p>{text}</p>;
+}
+```
+
+This demonstrates the three key steps to rich observability:
+1. **`wrapAISDKModel`**: Automatically captures telemetry for the LLM provider call
+2. **`wrapTool`**: Instruments the tool execution with detailed spans
+3. **`withSpan`**: Creates a parent span that ties everything together under a business capability
+</Accordion>
+
+## What's next?
+
+Using your own OpenTelemetry instrumentation instead? See the [Manual Instrumentation](/ai-engineering/observe/manual-instrumentation) guide for custom OpenTelemetry setup.
+
+Once you're capturing telemetry, return to the [Introduction](/ai-engineering/observe/introduction) to understand how to analyze your AI telemetry data in Axiom's console.
