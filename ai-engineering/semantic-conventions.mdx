@@ -23,7 +23,7 @@ If you are setting up OpenTelemetry for the first time, see [Send OpenTelemetry 
 <Note>
 Axiom's conventions for AI spans are based on version 1.37 of the [OpenTelemetry Semantic conventions for generative client AI spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/).
 
-Axiom requires two additional attributes: `gen_ai.capability.name` and `gen_ai.step.name`. More on these below.
+Axiom requires two additional attributes: `gen_ai.capability.name` and `gen_ai.step.name`.
 </Note>
 
 ## Required attributes
@@ -53,11 +53,9 @@ For more information, see [Gen AI Attributes](https://opentelemetry.io/docs/spec
 
 The purpose of these attributes is to provide context for AI operations and allow you to break your operations down by feature and step, especially when querying.
 
-[Capability](/ai-engineering/concepts#capability) can be thought of as a feature or function of the AI system, while `step` refers to a specific stage in the operation. In general, each LLM call will be one step. A capability may contain multiple steps.
+A [capability](/ai-engineering/concepts#capability) can be thought of as a feature or function of the AI system, while a step refers to a specific stage in the operation. In general, each LLM call will be one step. A capability may contain multiple steps.
 
 ### `axiom.gen_ai` attributes
-
-These attributes currently have no TKTK
 
 - `axiom.gen_ai.schema_url` - The schema URL for the Axiom AI conventions. Currently: `https://axiom.co/ai/schemas/0.0.2`
 - `axiom.gen_ai.sdk.name` - The name of the SDK (e.g., `my-ai-instrumentation-sdk`)
@@ -83,13 +81,14 @@ Beyond `gen_ai.operation.name`, these attributes enable Axiom's AI features:
 | `gen_ai.provider.name` | string | Required | Provider (openai, anthropic, aws.bedrock, etc.) |
 | `gen_ai.request.model` | string | When available | Model requested (gpt-4, claude-3, etc.) |
 | `gen_ai.response.model` | string | When available | Model that fulfilled the request |
-| `gen_ai.input.messages` | Messages[] | Recommended | Input conversation history (see Messages below) |
-| `gen_ai.output.messages` | Messages[] | Recommended | Model response messages (see Messages below) |
+| `gen_ai.input.messages` | Messages[] (stringified) | Recommended | Input conversation history |
+| `gen_ai.output.messages` | Messages[] (stringified) | Recommended | Model response messages |
 | `gen_ai.usage.input_tokens` | integer | Recommended | Input token count |
 | `gen_ai.usage.output_tokens` | integer | Recommended | Output token count |
-| `gen_ai.request.choice_count` | integer | When !=1 | Number of completion choices requested |
+| `gen_ai.request.choice_count` | integer | When >1 | Number of completion choices requested |
 | `gen_ai.response.id` | string | Recommended | Unique response identifier |
 | `gen_ai.response.finish_reasons` | string[] | Recommended | Why generation stopped |
+| `gen_ai.conversation.id` | string | When available | Conversation/session identifier |
 | `server.address` | string | Recommended | AI service hostname |
 | `server.port` | integer | When applicable | AI service port |
 
@@ -103,7 +102,6 @@ For agent operations (`create_agent`, `invoke_agent`), include these additional 
 | `gen_ai.agent.name` | string | When available | Human-readable agent name |
 | `gen_ai.agent.description` | string | When available | Agent description/purpose |
 | `gen_ai.conversation.id` | string | When available | Conversation/session identifier |
-| `gen_ai.system_instructions` | any | Optional | System prompt for the agent |
 
 ### Tool execution attributes  
 
@@ -122,9 +120,7 @@ For more information, see [Gen AI Attributes](https://opentelemetry.io/docs/spec
 
 ### Messages
 
-Messages support four different roles, each with specific content formats:
-
-Messages follow OpenTelemetry's structured format:
+Messages support four different roles, each with specific content formats. They follow OpenTelemetry's structured format:
 
 **System messages**
 ```json
@@ -318,10 +314,6 @@ with tracer.start_as_current_span("execute_tool get_weather", kind=SpanKind.CLIE
 
 Once you're sending traces with the proper semantic conventions:
 
-- Explore the [Rudder workflow](/ai-engineering/create) to learn about systematic AI development
-- View your traces in Axiom's Console using the AI Trace Waterfall visualization
-- Set up monitors and alerts based on your AI telemetry data
-
-<Info>
-Need help implementing these conventions? Check out the [Quickstart](/ai-engineering/quickstart) guide for a faster setup using Axiom's AI SDK, or reach out to [support](https://axiom.co/support) for assistance with custom implementations.
-</Info>
+- View your [traces](/query-data/traces) in Axiom's Console
+- Set up [monitors and alerts](/monitor-data/monitors) based on your AI telemetry data
+- Learn about [developing AI features](/ai-engineering/create) with confidence using Axiom
