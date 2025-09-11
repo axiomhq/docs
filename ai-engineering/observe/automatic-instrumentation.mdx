@@ -1,37 +1,30 @@
 ---
-title: "TypeScript SDK"
-description: "Learn how to instrument your TypeScript app with Axiom's AI SDK for automatic AI telemetry capture."
+title: "Automatic instrumentation"
+description: "Learn how to instrument your TypeScript app with Axiom AI SDK for automatic AI telemetry capture."
 keywords: ["ai engineering", "typescript", "axiom ai sdk", "telemetry", "withspan", "opentelemetry"]
 ---
 
 import { Badge } from "/snippets/badge.jsx"
-import AIEngineeringInstrumentationSnippet from '/snippets/ai-engineering-instrumentation.mdx'
 
-This guide shows how to instrument your TypeScript app with Axiom's AI SDK for automatic AI telemetry capture.
+This page explains how to set up automatic instrumentation in your TypeScript generative AI app using Axiom AI SDK.
 
-If you followed the [Quickstart](/ai-engineering/quickstart) guide, you should already have OpenTelemetry configured. If not, configure your tracer first:
-
-## Configuring the tracer
-
-You must configure an OTLP trace exporter pointing to your Axiom instance. This is typically done in a dedicated instrumentation file that's loaded before your app starts. Below is an example in TypeScript.
-
-<AIEngineeringInstrumentationSnippet />
-
-Be sure to define the `AXIOM_TOKEN` and `AXIOM_DATASET` environment variables in your `.env` file.
-
-## Capturing Gen AI telemetry with Axiom's AI SDK
-
-The foundation of the Observe stage is Axiom's SDK, which integrates with your app to capture detailed OpenTelemetry traces for every AI interaction.
+Alternatively, instrument your app manually. For more information on instrumentation approaches, see [Introduction to Observe](/ai-engineering/observe/introduction).
 
 <Info>
-The initial release of Axiom's AI SDK is focused on providing deep integration with TypeScript applications, particularly those using Vercel's AI SDK to interact with frontier models.
+Axiom AI SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/ai).
+
+The initial release of Axiom AI SDK provides deep integration with TypeScript apps, particularly those using Vercel AI SDK to interact with frontier models.
 </Info>
 
-## Instrumenting AI SDK calls
+## Prerequisite
 
-The easiest way to get started is by wrapping your existing AI model client. Axiom's AI SDK provides helper functions for popular libraries like Vercel's [AI SDK](https://ai-sdk.dev/docs).
+Follow the procedure in [Quickstart](/ai-engineering/quickstart) to set up Axiom AI SDK in your TypeScript project.
 
-The `wrapAISDKModel` function takes an existing AI model object and returns an instrumented version that will automatically generate trace data for every call.
+## Instrument AI SDK calls
+
+Axiom AI SDK provides helper functions for popular libraries like Vercel’s [AI SDK](https://ai-sdk.dev/docs) to wrap your existing AI model client.
+
+The `wrapAISDKModel` function takes an existing AI model object and returns an instrumented version that automatically generates trace data for every call.
 
 <CodeGroup>
 
@@ -97,13 +90,11 @@ export const grok2Mini = wrapAISDKModel(grokProvider('grok-2-mini'));
 
 </CodeGroup>
 
-## Adding context with `withSpan`
+## Add context
 
-While `wrapAISDKModel` handles the automatic instrumentation, the `withSpan` function allows you to add crucial business context to your traces. It creates a parent span around your LLM call and attaches metadata about the `capability` and `step` being executed.
+The `withSpan` function allows you to add crucial business context to your traces. It creates a parent span around your LLM call and attaches metadata about the `capability` and `step` that you execute.
 
-```typescript
-// src/app/page.tsx
-
+```typescript /src/app/page.tsx
 import { withSpan } from 'axiom/ai';
 import { generateText } from 'ai';
 import { gpt4o } from '@/shared/openai';
@@ -131,14 +122,13 @@ export default async function Page() {
 }
 ```
 
-## Instrumenting tool calls with `wrapTool`
+## Instrument tool calls
 
 For many AI capabilities, the LLM call is only part of the story. If your capability uses tools to interact with external data or services, observing the performance and outcome of those tools is critical. The Axiom AI SDK provides the `wrapTool` and `wrapTools` functions to automatically instrument your Vercel AI SDK tool definitions.
 
-The `wrapTool` helper takes your tool's name and its definition and returns an instrumented version. This wrapper creates a dedicated child span for every tool execution, capturing its arguments, output, and any errors.
+The `wrapTool` helper takes your tool’s name and its definition and returns an instrumented version. This wrapper creates a dedicated child span for every tool execution, capturing its arguments, output, and any errors.
 
-```typescript
-// src/app/generate-text/page.tsx
+```typescript /src/app/generate-text/page.tsx
 import { tool } from 'ai';
 import { z } from 'zod';
 import { wrapTool } from 'axiom/ai';
@@ -174,12 +164,9 @@ const { text, toolResults } = await generateText({
 
 ## Complete instrumentation example
 
-<Accordion title="Full end-to-end code example">
-Here's how all three instrumentation functions work together in a single, real-world example:
+Example of how all three instrumentation functions work together in a single, real-world example:
 
-```typescript
-// src/app/page.tsx
-
+```typescript /src/app/page.tsx expandable
 import { withSpan, wrapAISDKModel, wrapTool } from 'axiom/ai';
 import { generateText, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -229,13 +216,15 @@ export default async function Page() {
 ```
 
 This demonstrates the three key steps to rich observability:
+
 1. **`wrapAISDKModel`**: Automatically captures telemetry for the LLM provider call
-2. **`wrapTool`**: Instruments the tool execution with detailed spans
-3. **`withSpan`**: Creates a parent span that ties everything together under a business capability
-</Accordion>
+1. **`wrapTool`**: Instruments the tool execution with detailed spans
+1. **`withSpan`**: Creates a parent span that ties everything together under a business capability
 
-## What's next?
+## What’s next?
 
-Using your own OpenTelemetry instrumentation instead? See the [Manual Instrumentation](/ai-engineering/observe/manual-instrumentation) guide for custom OpenTelemetry setup.
+After sending traces to Axiom:
 
-Once you're capturing telemetry, return to the [Introduction](/ai-engineering/observe/introduction) to understand how to analyze your AI telemetry data in Axiom's console.
+- View your [traces](/query-data/traces) in Console
+- Set up [monitors and alerts](/monitor-data/monitors) based on your AI telemetry data
+- Learn about [developing AI features](/ai-engineering/create) with confidence using Axiom

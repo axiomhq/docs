@@ -4,35 +4,24 @@ description: "Install and configure the Axiom AI SDK to begin capturing telemetr
 keywords: ["ai engineering", "getting started", "install", "setup", "configuration", "opentelemetry"]
 ---
 
-import AIEngineeringInstrumentationSnippet from '/snippets/ai-engineering-instrumentation.mdx'
 import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import AIInstrumentationApproaches from "/snippets/ai-instrumentation-approaches.mdx"
 
-This guide provides the steps to install and configure Axiom’s [AI SDK](https://github.com/axiomhq/ai). Once configured, you can follow the Rudder workflow to create, measure, observe, and iterate on your capabilities.
 
-## Integration approaches
+Quickly start capturing telemetry data from your generative AI apps. After installation and configuration, follow the Rudder workflow to create, measure, observe, and iterate on your capabilities.
 
-Axiom offers two ways to capture generative AI telemetry:
+This page explains how to set up automatic instrumentation with Axiom AI SDK. Expand the section below to chooose the right instrumentation approach for your needs.
 
-<CardGroup cols={2}>
-  <Card title="Axiom AI SDK" icon="bolt" href="#prerequisites">
-    **TypeScript** - Use with the Vercel AI SDK for automatic instrumentation with minimal code changes. Follow this guide to get started.
-  </Card>
-  <Card title="Custom OpenTelemetry" icon="code" href="/ai-engineering/observe/manual-instrumentation">
-    **Language-agnostic OpenTelemetry** - Send traces using your own tooling by following our semantic conventions. Works with any language or SDK.
-  </Card>
-</CardGroup>
+<Accordion title="Choose your instrumentation approach">
+<AIInstrumentationApproaches />
+</Accordion>
 
-## Prerequisites
+<Prerequisites />
 
-Before you begin, ensure you have the following:
+## Install
 
-* An Axiom **account**. Create one [here](https://www.axiom.co/register).
-* An Axiom **dataset**. Create one [here](https://app.axiom.co/datasets).
-* An Axiom **API token**. Create one [here](https://app.axiom.co/settings/api-tokens).
-
-## Installation
-
-Install the Axiom AI SDK into your TypeScript project using your preferred package manager.
+Install the Axiom AI SDK into your TypeScript project:
 
 <CodeGroup>
 
@@ -54,79 +43,110 @@ bun add axiom
 
 </CodeGroup>
 
-The SDK is open source. You can view the source code and examples in Axiom’s [AI SDK](https://github.com/axiomhq/ai) GitHub repository.
-
-<Tip>
+<Info>
 The `axiom` package includes the `axiom` command-line interface (CLI) for managing your AI assets, which will be used in later stages of the Rudder workflow.
-</Tip>
+</Info>
 
-## Configuration
+## Configure tracer
 
-Axiom’s AI SDK is built on the OpenTelemetry standard and requires a configured tracer to send data to Axiom. This is typically done in a dedicated instrumentation file that’s loaded before the rest of your application.
+To send data to Axiom, configure a tracer. For example, use a dedicated instrumentation file and load it before the rest of your app. An example configuration for a Node.js environment:
 
-Here is a standard configuration for a Node.js environment:
+1. Install dependencies:
 
-<CodeGroup>
+    <CodeGroup>
 
-```bash pnpm
-pnpm i \
-  dotenv \
-  @opentelemetry/exporter-trace-otlp-http \
-  @opentelemetry/resources \
-  @opentelemetry/sdk-node \
-  @opentelemetry/sdk-trace-node \
-  @opentelemetry/semantic-conventions \
-  @opentelemetry/api
-```
+    ```bash pnpm
+    pnpm i \
+      dotenv \
+      @opentelemetry/exporter-trace-otlp-http \
+      @opentelemetry/resources \
+      @opentelemetry/sdk-node \
+      @opentelemetry/sdk-trace-node \
+      @opentelemetry/semantic-conventions \
+      @opentelemetry/api
+    ```
 
-```bash npm
-npm i \
-  dotenv \
-  @opentelemetry/exporter-trace-otlp-http \
-  @opentelemetry/resources \
-  @opentelemetry/sdk-node \
-  @opentelemetry/sdk-trace-node \
-  @opentelemetry/semantic-conventions \
-  @opentelemetry/api
-```
+    ```bash npm
+    npm i \
+      dotenv \
+      @opentelemetry/exporter-trace-otlp-http \
+      @opentelemetry/resources \
+      @opentelemetry/sdk-node \
+      @opentelemetry/sdk-trace-node \
+      @opentelemetry/semantic-conventions \
+      @opentelemetry/api
+    ```
 
-```bash yarn
-yarn add \
-  dotenv \
-  @opentelemetry/exporter-trace-otlp-http \
-  @opentelemetry/resources \
-  @opentelemetry/sdk-node \
-  @opentelemetry/sdk-trace-node \
-  @opentelemetry/semantic-conventions \
-  @opentelemetry/api
-```
+    ```bash yarn
+    yarn add \
+      dotenv \
+      @opentelemetry/exporter-trace-otlp-http \
+      @opentelemetry/resources \
+      @opentelemetry/sdk-node \
+      @opentelemetry/sdk-trace-node \
+      @opentelemetry/semantic-conventions \
+      @opentelemetry/api
+    ```
 
-```bash bun
-bun add \
-  dotenv \
-  @opentelemetry/exporter-trace-otlp-http \
-  @opentelemetry/resources \
-  @opentelemetry/sdk-node \
-  @opentelemetry/sdk-trace-node \
-  @opentelemetry/semantic-conventions \
-  @opentelemetry/api
-```
+    ```bash bun
+    bun add \
+      dotenv \
+      @opentelemetry/exporter-trace-otlp-http \
+      @opentelemetry/resources \
+      @opentelemetry/sdk-node \
+      @opentelemetry/sdk-trace-node \
+      @opentelemetry/semantic-conventions \
+      @opentelemetry/api
+    ```
 
-</CodeGroup>
+    </CodeGroup>
 
-<AIEngineeringInstrumentationSnippet />
+1. Create instrumentation file:
 
-## Environment variables
+    ```typescript /src/instrumentation.ts
 
-Your Axiom credentials and any frontier model API keys should be stored as environment variables. Create a `.env` file in the root of your project:
+    import 'dotenv/config'; // Make sure to load environment variables
+    import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+    import { resourceFromAttributes } from '@opentelemetry/resources';
+    import { NodeSDK } from '@opentelemetry/sdk-node';
+    import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
+    import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+    import { trace } from "@opentelemetry/api";
+    import { initAxiomAI, RedactionPolicy } from 'axiom';
 
-```bash
-# Axiom Credentials
+    const tracer = trace.getTracer("my-tracer");
+
+    // Configure the NodeSDK to export traces to your Axiom dataset
+    const sdk = new NodeSDK({
+      resource: resourceFromAttributes({
+        [ATTR_SERVICE_NAME]: 'my-ai-app', // Replace with your service name
+      }),
+      spanProcessor: new SimpleSpanProcessor(
+        new OTLPTraceExporter({
+          url: `https://api.axiom.co/v1/traces`,
+          headers: {
+            Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+            'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
+          },
+        }),
+      ),
+    });
+
+    // Start the SDK
+    sdk.start();
+
+    // Initialize the Axiom AI SDK with the configured tracer
+    initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
+    ```
+
+## Store environment variables
+
+Store environment variables in an `.env` file in the root of your project:
+
+```bash .env
 AXIOM_TOKEN="API_TOKEN"
 AXIOM_DATASET="DATASET_NAME"
-
-# Frontier Model API Keys
-OPENAI_API_KEY="OPENAI_API_KEY"
+PENAI_API_KEY="OPENAI_API_KEY"
 GEMINI_API_KEY="GEMINI_API_KEY"
 ```
 
@@ -136,8 +156,5 @@ GEMINI_API_KEY="GEMINI_API_KEY"
 
 ## What’s next?
 
-Now that your application is configured to send telemetry to Axiom, you have several paths forward:
-
-* **Continue with Axiom AI SDK**: Learn about instrumenting your AI model and tool calls in the [Observe](/ai-engineering/observe/introduction) page.
-* **Switch to custom tooling**: If you prefer to use your own instrumentation, see the [Manual Instrumentation](/ai-engineering/observe/manual-instrumentation) page.
-* **Explore the Rudder workflow**: Start building systematic AI capabilities beginning with [Create](/ai-engineering/create).
+- **Explore the Rudder workflow**: Start building systematic AI capabilities beginning with [Create](/ai-engineering/create).
+- **Continue with Axiom AI SDK**: Learn about instrumenting your AI model and tool calls in [Observe](/ai-engineering/observe/introduction).
