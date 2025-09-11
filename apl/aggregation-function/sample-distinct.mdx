@@ -1,0 +1,159 @@
+---
+title: sample-distinct
+description: 'This page explains how to use the sample-distinct operator in APL.'
+---
+
+The `sample-distinct` operator returns a random sample of distinct values from a dataset. You can use it when you want to quickly explore representative subsets of unique values without scanning the full dataset. This is useful in scenarios such as exploratory data analysis, performance testing, or when you need a small but diverse set of unique values for validation.
+
+Unlike `sample`, which randomly selects rows, `sample-distinct` ensures that only distinct values for the chosen column are included in the output.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use the `sample` command to return a subset of events, but it does not guarantee uniqueness. To get distinct values, you combine commands like `dedup` and `sample`. In APL, `sample-distinct` combines both operations into one: it first deduplicates values and then samples from them.
+
+<CodeGroup>
+```sql Splunk example
+... | dedup uri | sample 5
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| sample-distinct 5 of uri
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, you use `SELECT DISTINCT` to get unique values and combine it with `TABLESAMPLE` or `ORDER BY RAND()` to get a random sample. In APL, `sample-distinct` does both in a single operator.
+
+<CodeGroup>
+```sql SQL example
+SELECT DISTINCT uri
+FROM sample_http_logs
+ORDER BY RAND()
+LIMIT 5;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| sample-distinct 5 of uri
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+T | sample-distinct NumberOfRows [of Column]
+```
+
+### Parameters
+
+| Parameter      | Type   | Description                                                                                                  |
+| -------------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| `NumberOfRows` | int    | The number of distinct values to return.                                                                     |
+| `Column`       | string | (Optional) The column from which to select distinct values. If omitted, all columns are considered together. |
+
+### Returns
+
+A table with up to the specified number of distinct values. The rows are chosen randomly.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+When you want to see a random subset of unique URLs that users accessed in your logs, you can use `sample-distinct`.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| sample-distinct 5 of uri
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22\['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | sample-distinct 5 of uri%22%7D)
+
+**Output**
+
+| uri            |
+| -------------- |
+| /products/view |
+| /cart/add      |
+| /checkout      |
+| /home          |
+| /login         |
+
+This query returns 5 random distinct URLs (`uri`) from the HTTP logs, which helps you explore a representative subset of endpoints.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You can use `sample-distinct` to explore unique services in your distributed traces.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| sample-distinct 3 of ['service.name']
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22\['otel-demo-traces](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces)'] | sample-distinct 3 of \['service.name']%22%7D)
+
+**Output**
+
+| service.name    |
+| --------------- |
+| frontend        |
+| cartservice     |
+| checkoutservice |
+
+This query returns 3 random distinct services from your traces, helping you quickly see which parts of your system are represented.
+
+</Tab>
+<Tab title="Security logs">
+
+You can use `sample-distinct` to view a random selection of unique status codes in security logs.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| sample-distinct 4 of status
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22\['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | sample-distinct 4 of status%22%7D)
+
+**Output**
+
+| status |
+| ------ |
+| 200    |
+| 401    |
+| 403    |
+| 500    |
+
+This query helps you quickly identify a variety of HTTP status codes that appear in your logs without scanning the entire dataset.
+
+</Tab>
+</Tabs>
+
+## List of related operators
+
+* [sample](/apl/tabular-operators/sample-operator): Returns a random sample of rows but does not ensure uniqueness.
+* [distinct](/apl/tabular-operators/distinct-operator): Returns all unique values without sampling.
+* [take](/apl/tabular-operators/take-operator): Returns the first *n* rows from a dataset without randomization or uniqueness.
+* [top](/apl/tabular-operators/top-operator): Returns the first *n* rows sorted by a specified expression.
+* [summarize](/apl/tabular-operators/summarize-operator): Groups rows and computes aggregates, often used with `distinct` for deduplication.

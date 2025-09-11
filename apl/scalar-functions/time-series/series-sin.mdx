@@ -1,0 +1,157 @@
+---
+title: series_sin
+description: 'This page explains how to use the series_sin function in APL.'
+---
+
+The `series_sin` function in APL returns the sine of each element in a numeric array. It applies the mathematical sine function element by element, producing a new array of the same length. 
+
+You use `series_sin` when you want to transform numeric sequences into their trigonometric equivalents. This is useful for signal processing, data transformations, or preparing time series data for statistical and mathematical analysis.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL does not provide a direct equivalent to `series_sin` for arrays. Instead, you typically use the `eval` command with the `sin()` function to compute the sine of a single numeric value. In APL, `series_sin` applies `sin()` across an array in one step.
+
+<CodeGroup>
+```sql Splunk example
+... | eval sin_val=sin(duration)
+````
+
+```kusto APL equivalent
+datatable(arr: dynamic)
+[
+    dynamic([0, 1.57, 3.14])
+]
+| extend sin_values = series_sin(arr)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL provides the `SIN()` function, but it operates on single values rather than arrays. In APL, `series_sin` is vectorized and works directly on arrays without requiring iteration.
+
+<CodeGroup>
+```sql SQL example
+SELECT SIN(duration) AS sin_val
+FROM traces;
+```
+
+```kusto APL equivalent
+datatable(arr: dynamic)
+[
+    dynamic([0, 1.57, 3.14])
+]
+| extend sin_values = series_sin(arr)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+series_sin(arr)
+```
+
+### Parameters
+
+| Parameter | Type    | Description                 |
+| --------- | ------- | --------------------------- |
+| `arr`     | dynamic | An array of numeric values. |
+
+### Returns
+
+A dynamic array where each element is the sine of the corresponding input element.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You can use `series_sin` to transform request durations into trigonometric values for advanced analysis, such as periodicity detection.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize arr = make_list(req_duration_ms, 10)
+| extend sin_arr = series_sin(arr)
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22\['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | summarize arr = make\_list(req\_duration\_ms, 10) | extend sin\_arr = series\_sin(arr)%22%7D)
+
+**Output**
+
+| arr                   | sin\_arr                     |
+| --------------------- | ---------------------------- |
+| \[120, 250, 500, 750] | \[−0.58, −0.97, −0.52, 0.94] |
+
+This query collects a sample of request durations and applies `series_sin` to generate a transformed series for analysis.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You can use `series_sin` to apply trigonometric transformation to span durations for modeling or feature extraction.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| summarize arr = make_list(toint(duration), 10) by ['service.name']
+| extend sin_arr = series_sin(arr)
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22\['otel-demo-traces](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces)'] | summarize arr = make\_list(toint(duration), 10) by \['service.name'] | extend sin\_arr = series\_sin(arr)%22%7D)
+
+**Output**
+
+| service.name | arr              | sin\_arr              |
+| ------------ | ---------------- | --------------------- |
+| frontend     | \[200, 400, 600] | \[0.91, −0.73, −0.28] |
+
+This query groups spans by service, aggregates durations into arrays, and transforms them using `series_sin`.
+
+</Tab>
+<Tab title="Security logs">
+
+You can use `series_sin` to apply mathematical transformations to response times in security-related traffic to detect unusual patterns.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '403'
+| summarize arr = make_list(req_duration_ms, 10) by geo.country
+| extend sin_arr = series_sin(arr)
+```
+
+\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22\['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | where status == '403' | summarize arr = make\_list(req\_duration\_ms, 10) by geo.country | extend sin\_arr = series\_sin(arr)%22%7D)
+
+**Output**
+
+| geo.country | arr              | sin\_arr               |
+| ----------- | ---------------- | ---------------------- |
+| US          | \[180, 360, 540] | \[−0.80, −0.99, −0.84] |
+
+This query filters failed requests (`403`) by country, aggregates durations, and applies `series_sin` to identify periodic anomalies.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [series\_cos](/apl/array-functions/series_cos): Returns the cosine of each array element. Use when you want the cosine instead of sine.
+* [series\_tan](/apl/array-functions/series_tan): Returns the tangent of each array element. Use when analyzing angular relationships.
+* [series\_exp](/apl/array-functions/series_exp): Returns the exponential of each array element. Useful for growth and scaling analysis.
+* [series\_log](/apl/array-functions/series_log): Returns the natural logarithm of each array element. Useful for reducing skew in data distributions.
+* [series\_abs](/apl/array-functions/series_abs): Returns the absolute value of each array element. Use when you want non-negative transformations.
