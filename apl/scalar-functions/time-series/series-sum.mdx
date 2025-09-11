@@ -1,0 +1,158 @@
+---
+title: series_sum
+description: 'This page explains how to use the series_sum function in APL.'
+---
+
+The `series_sum` function in APL calculates the total of all numeric elements in a dynamic array. You use it when you have a series of values and you want to condense them into a single aggregate number. For example, if you create arrays of request durations or span times, `series_sum` lets you quickly compute the total across each series.
+
+This function is useful in scenarios such as:
+
+- Aggregating request latencies across sessions or users.
+- Summing the duration of spans in distributed traces.
+- Calculating total counts or values across arrays in security log analysis.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use the `eval` command with `mvsum` to sum values in a multivalue field. In APL, you use `series_sum` for the same purpose. Both functions collapse an array into a single scalar value.
+
+<CodeGroup>
+```sql Splunk example
+... | eval total_duration = mvsum(req_duration_ms)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend total_duration = series_sum(pack_array(req_duration_ms))
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, you normally use `SUM()` as an aggregate over rows. If you want to sum elements inside an array, you must use functions such as `UNNEST` first. In APL, `series_sum` directly operates on dynamic arrays, so you don’t need to flatten them.
+
+<CodeGroup>
+```sql SQL example
+SELECT user_id, SUM(val) AS total
+FROM my_table, UNNEST(values) AS val
+GROUP BY user_id
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize total = series_sum(pack_array(req_duration_ms)) by id
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+series_sum(array)
+```
+
+### Parameters
+
+| Parameter | Type            | Description                         |
+| --------- | --------------- | ----------------------------------- |
+| `array`   | dynamic (array) | The array of numeric values to sum. |
+
+### Returns
+
+A `real` value representing the sum of all numeric elements in the array. If the array is empty, the function returns `0`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+When you want to calculate the total request duration per user across multiple requests.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize durations = make_list(req_duration_ms) by id
+| extend total_duration = series_sum(durations)
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | summarize durations = make_list(req_duration_ms) by id | extend total_duration = series_sum(durations)%22%7D)
+
+**Output**
+
+| id   | durations       | total_duration |
+| ---- | --------------- | --------------- |
+| u123 | [120, 300, 50] | 470             |
+| u456 | [200, 150]     | 350             |
+
+This query collects request durations for each user, creates an array, and then sums the array to compute the total request time per user.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+When you want to compute the total span duration per service within a trace.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| summarize durations = make_list(duration) by ['service.name'], trace_id
+| extend total_span_duration = series_sum(durations)
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces)'] | summarize durations = make_list(duration) by ['service.name'], trace_id | extend total_span_duration = series_sum(durations)%22%7D)
+
+**Output**
+
+| service.name    | trace_id | durations                     | total_span_duration |
+| --------------- | --------- | ----------------------------- | --------------------- |
+| frontend        | t123      | [00:00:01.2000000, 00:00:02] | 00:00:03.2000000      |
+| checkoutservice | t456      | [00:00:00.5000000]           | 00:00:00.5000000      |
+
+This query groups spans by service and trace, collects the span durations, and computes the total execution time of spans.
+
+</Tab>
+<Tab title="Security logs">
+
+When you want to evaluate the total request duration for each HTTP status code.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize durations = make_list(req_duration_ms) by status
+| extend total_duration = series_sum(durations)
+```
+
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | summarize durations = make_list(req_duration_ms) by status | extend total_duration = series_sum(durations)%22%7D)
+
+**Output**
+
+| status | durations       | total_duration |
+| ------ | --------------- | --------------- |
+| 200    | [100, 300, 50] | 450             |
+| 500    | [250, 400]     | 650             |
+
+This query aggregates request durations for each HTTP status code, then sums them to provide insight into the total duration of successful vs. failed requests.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [series_avg](/apl/series-functions/series_avg): Returns the average of numeric elements in an array. Use it when you want the mean instead of the sum.
+- [series_min](/apl/series-functions/series_min): Returns the smallest element in the array. Use it when you want to detect the minimum value in the series.
+- [series_max](/apl/series-functions/series_max): Returns the largest element in the array. Use it when you want the maximum value.
+- [series_count](/apl/series-functions/series_count): Returns the number of elements in the array. Use it to check the size of a series.
+- [series_stats](/apl/series-functions/series_stats): Returns multiple descriptive statistics (sum, min, max, avg, stdev) at once. Use it for comprehensive analysis instead of a single metric.
