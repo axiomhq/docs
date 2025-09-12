@@ -36,9 +36,77 @@ Axiom plans to support MCP [resources](https://modelcontextprotocol.io/docs/conc
 Axiom MCP Server works with all AI agents that support MCP.
 
 <Prerequisites />
-- Set up an AI agent that supports MCP. For example, install the [Claude desktop app](https://claude.ai/download).
 
 ## Setup
+
+<Tabs>
+<Tab title="Claude Desktop">
+
+
+Free
+no custom mcp, only mcp in anthropic's directory
+Paid
+Personal account (you pay) - you get to add your own connector
+Organization account (work pays) - the admins choose which mcp's are allowed. They can add custom mcps but they are added globally and then the user has to just auth them locally
+
+Claude.ai (Team, Enterprise)
+Navigate to Settings → Integrations → Add more
+Enter the following:
+Integration name: Axiom
+Integration URL: https://mcp.axiom.co/sse
+Enable the tools in any new chats
+
+Claude Desktop (Free, Pro)
+Claude Desktop requires the mcp-remote bridge. Add to ~/Library/Application Support/Claude/claude_desktop_config.json:
+
+{
+  "mcpServers": {
+    "axiom": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.axiom.co/sse"]
+    }
+  }
+}
+Restart Claude Desktop after making changes.
+
+Cursor
+Cursor supports remote servers natively. Install from the MCP tools directory or add manually in settings.
+
+1. Install the [Claude Desktop app](https://claude.ai/download) version 0.7.0 or later.
+1. In Claude Desktop, go to **Settings > Developer > MCP Servers**.
+1. Click **Add Server**, and then enter the following:
+    - **Name:** `Axiom`
+    - **URL:** `https://mcp.axiom.co/mcp`
+1. Click **Connect**.
+
+</Tab>
+<Tab title="Claude.ai">
+
+1. **Access Claude.ai**
+   Navigate to claude.ai and sign in to your account.
+
+2. **Enable MCP Features**
+   Ensure you have MCP features enabled in your Claude.ai account (available for Pro users).
+
+3. **Add MCP Server**
+   Click on your profile icon and navigate to:
+   **Settings → Connected Apps**
+   Click "Connect New App" and add the Axiom MCP server:
+
+   * **Server URL:** `https://mcp.axiom.co/mcp`
+
+4. **Authenticate**
+   Complete the OAuth flow to authenticate with Axiom. The server will then be available in your Claude conversations.
+
+</Tab>
+<Tab title="Cursor">
+
+1. Install [Cursor](https://cursor.com/home).
+1. Install from the MCP tools directory or add manually in the [Cursor settings](https://www.cursor.com/settings).
+1. Restart Cursor to load the Axiom MCP server.
+
+</Tab>
+<Tab title="Other clients">
 
 In your AI agent, add a remote MCP connection with the following details:
 
@@ -47,16 +115,16 @@ In your AI agent, add a remote MCP connection with the following details:
 
 For AI agents that require server-sent events (SSE), use the server URL `https://mcp.axiom.co/sse`.
 
-For more information, see the documentation of your AI agent. For example:
-
-- [Claude desktop app](https://modelcontextprotocol.io/docs/tutorials/use-remote-mcp-server)
-- [Cursor](https://docs.cursor.com/en/context/mcp)
+</Tab>
+</Tabs>
 
 When your AI agent first attempts to interact with Axiom MCP Server, authenticate the request in your browser. You can later revoke access on the Profile page of the Axiom web UI.
 
+The setup explained above uses a remote MCP connection and is the recommended approach for most use cases. Alternatively, deploy Axiom MCP Server locally on your machine for more control.
+
 <Accordion title="Local setup">
 
-The setup explained above uses a remote MCP connection and is the recommended approach for most use cases. Alternatively, deploy Axiom MCP Server locally on your machine for more control.
+## Local setup
 
 With the local setup:
 
@@ -112,7 +180,7 @@ Configure your AI agent to use the MCP server in one of the following ways:
 
 1. In the settings of your AI agent, reference the binary file of Axiom MCP Server and the config file you have previously created.
 
-    For example, if you use the Claude desktop app, add `axiom` to the `mcpServers` section of the Claude configuration file. If you use a Mac, the default path is `~/Library/Application Support/Claude/claude_desktop_config.json`.
+    For example, if you use the Claude desktop app, add `axiom` to the `mcpServers` section of the Claude configuration file. The default path is `~/Library/Application Support/Claude/claude_desktop_config.json` on MacOS and `%APPDATA%\Claude\claude_desktop_config.json` on Windows.
 
     ```json claude_desktop_config.json
     {
@@ -126,7 +194,7 @@ Configure your AI agent to use the MCP server in one of the following ways:
     ```
 
     <Info>
-    Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of Axiom MCP Server. By default, it’s `~/go/bin/axiom-mcp`.
+    Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of Axiom MCP Server.
 
     Replace `PATH_AXIOM_MCP_CONFIG` with the path the config file you have previously created.
     </Info>
@@ -135,7 +203,7 @@ Configure your AI agent to use the MCP server in one of the following ways:
 
 In the settings of your AI agent, use environment variables to specify the authentication details and the binary file of Axiom MCP Server.
 
-For example, if you use the Claude desktop app, add `axiom` to the `mcpServers` section of the Claude configuration file. If you use a Mac, the default path is `~/Library/Application Support/Claude/claude_desktop_config.json`. For example:
+For example, if you use the Claude desktop app, add `axiom` to the `mcpServers` section of the Claude configuration file. The default path is `~/Library/Application Support/Claude/claude_desktop_config.json` on MacOS and `%APPDATA%\Claude\claude_desktop_config.json` on Windows.
 
 ```json claude_desktop_config.json
 {
@@ -158,7 +226,7 @@ For example, if you use the Claude desktop app, add `axiom` to the `mcpServers` 
 ```
 
 <Info>
-Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of Axiom MCP Server. By default, it’s `~/go/bin/axiom-mcp`.
+Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of Axiom MCP Server.
 
 <ReplaceToken />
 
