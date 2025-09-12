@@ -1,95 +1,58 @@
 ---
-title: "Manual Instrumentation"
+title: "Manual instrumentation"
+description: "Learn how to manually instrument your generative AI apps using OpenTelemetry tooling."
 keywords: ["ai engineering", "opentelemetry", "semantic conventions", "telemetry", "traces", "spans"]
 ---
 
-Axiom supports two approaches for sending generative AI telemetry:
-
-<CardGroup cols={2}>
-  <Card title="Axiom AI SDK" icon="bolt" href="/ai-engineering/observe/typescript-sdk">
-    **TypeScript** - Use with the Vercel AI SDK for automatic instrumentation with minimal code changes.
-  </Card>
-  <Card title="Custom OpenTelemetry" icon="code" href="#required-attributes">
-    **Language-agnostic OpenTelemetry** - Send traces using your own tooling following our semantic conventions. Works with any language or SDK. (this page).
-  </Card>
-</CardGroup>
-
-If you use the Axiom AI SDK, it automatically captures and sends traces with the correct semantic conventions, so you can skip the rest of this page and use the [TypeScript SDK](/ai-engineering/observe/typescript-sdk) guide instead.
-
-If you prefer to use your own tooling instead of the Axiom AI SDK, you can send OpenTelemetry traces directly to Axiom following our semantic conventions. This approach gives you full control over your instrumentation while ensuring compatibility with Axiom's AI Engineering features.
+Manually instrumenting your generative AI apps using language-agnostic OpenTelemetry tooling gives you full control over your instrumentation while ensuring compatibility with Axiom’s AI engineering features.
 
 <Info>
-Both SDK and custom OpenTelemetry approaches emit identical `gen_ai.*` attributes, so all the telemetry analysis features work the same way.
+Alternatively, instrument your app with Axiom AI SDK. For more information on instrumentation approaches, see [Introduction to Observe](/ai-engineering/observe).
 </Info>
 
-If you are setting up OpenTelemetry for the first time, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry#send-opentelemetry-data-to-axiom) for examples in multiple languages.
-
-<Note>
-Axiom's conventions for AI spans are based on version 1.37 of the [OpenTelemetry Semantic conventions for generative client AI spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/).
-
-Axiom requires two additional attributes: `gen_ai.capability.name` and `gen_ai.step.name`.
-</Note>
+For more information on sending OpenTelemetry data to Axiom, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry#send-opentelemetry-data-to-axiom) for examples in multiple languages.
 
 ## Required attributes
 
-To ensure your spans are properly recognized by Axiom's AI Engineering features, the following attributes are required.
+Axiom’s conventions for AI spans are based on version 1.37 of the [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/) for generative client AI spans.
+
+Axiom requires the following attributes in your data to properly recognize your spans:
+
+- `gen_ai.operation.name` identifies AI spans. It’s also a required attribute in the OpenTelemetry specification.
+- `gen_ai.capability.name` provides context about the specific capability being used within the AI operation.
+- `gen_ai.step.name` allows you to break down the AI operation into individual steps for more granular tracking.
 
 ### `gen_ai.operation.name`
 
-AI Spans are identified by the `gen_ai.operation.name` attribute. This is a required attribute in the [OpenTelemetry specification](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/).
+Axiom currently provides custom UI for the following operations related to the `gen_ai.operation.name` attribute:
 
-Axiom currently provides custom UI for the following operations:
-
-- `chat` - Chat completion
-- `execute_tool` - Tool execution
+- `chat`: Chat completion
+- `execute_tool`: Tool execution
 
 Other possible values include:
 
-- `generate_content` - Multimodal content generation
-- `embeddings` - Vector embeddings
-- `create_agent` - Creating AI agents
-- `invoke_agent` - Invoking existing agents  
-- `text_completion` - Text completion (legacy, has been deprecated by OpenAI and many other providers)
+- `generate_content`: Multimodal content generation
+- `embeddings`: Vector embeddings
+- `create_agent`: Create AI agents
+- `invoke_agent`: Invoke existing agents
+- `text_completion`: Text completion. This is a legacy value and has been deprecated by OpenAI and many other providers.
 
-For more information, see [Gen AI Attributes](https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/#gen-ai-operation-name).
+For more information, see the OpenTelemetry documentation on [Gen AI Attributes](https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/#gen-ai-operation-name).
 
-### `gen_ai.capability.name` and `gen_ai.step.name`
+## Recommended attributes
 
-The purpose of these attributes is to provide context for AI operations and allow you to break your operations down by feature and step, especially when querying.
+Axiom recommends the following attributes to get the most out of Axiom’s AI telemetry features:
 
-A [capability](/ai-engineering/concepts#capability) can be thought of as a feature or function of the AI system, while a step refers to a specific stage in the operation. In general, each LLM call will be one step. A capability may contain multiple steps.
+### `axiom.gen_ai` attributes
 
-## `axiom.gen_ai` attributes
-
-- `axiom.gen_ai.schema_url` - The schema URL for the Axiom AI conventions. Currently: `https://axiom.co/ai/schemas/0.0.2`
-- `axiom.gen_ai.sdk.name` - The name of the SDK (e.g., `my-ai-instrumentation-sdk`)
-- `axiom.gen_ai.sdk.version` - The version of the SDK (e.g., `1.2.3`)
-
-## Span naming
-
-Span names should follow the OpenTelemetry conventions for generative AI spans. Below are the suggested span names for common values of [gen_ai.operation.name](#gen_ai.operation.name):
-
-- `chat {gen_ai.request.model}`
-- `execute_tool {gen_ai.tool.name}`
-- `embeddings {gen_ai.request.model}`
-- `generate_content {gen_ai.request.model}`
-- `text_completion {gen_ai.request.model}`
-- `create_agent {gen_ai.agent.name}`
-- `invoke_agent {gen_ai.agent.name}`
-
-More information:
-- [AI spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#spans)
-- [Agent spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/)
-- [Tool span](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#execute-tool-span)
-
-## Other attributes
-
-Beyond `gen_ai.operation.name`, `gen_ai.capability.name` and `gen_ai.step.name`, these attributes are recommended to get the most out of Axiom's AI telemetry features.
+- `axiom.gen_ai.schema_url`: Schema URL for the Axiom AI conventions. For example: `https://axiom.co/ai/schemas/0.0.2`
+- `axiom.gen_ai.sdk.name`: Name of the SDK. For example: `my-ai-instrumentation-sdk`
+- `axiom.gen_ai.sdk.version`: Version of the SDK. For example: `1.2.3`
 
 ### Chat spans
 
 | Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
+|:--------- |:---- |:-------- |:----------- |
 | `gen_ai.provider.name` | string | Required | Provider (openai, anthropic, aws.bedrock, etc.) |
 | `gen_ai.request.model` | string | When available | Model requested (gpt-4, claude-3, etc.) |
 | `gen_ai.response.model` | string | When available | Model that fulfilled the request |
@@ -107,7 +70,7 @@ Beyond `gen_ai.operation.name`, `gen_ai.capability.name` and `gen_ai.step.name`,
 For tool operations (`execute_tool`), include these additional attributes:
 
 | Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
+|:--------- |:---- |:-------- |:----------- |
 | `gen_ai.tool.name` | string | Required | Name of the executed tool |
 | `gen_ai.tool.call.id` | string | When available | Tool call identifier |
 | `gen_ai.tool.type` | string | When available | Tool type (function, extension, datastore) |
@@ -122,18 +85,37 @@ For more information, see [Gen AI Attributes](https://opentelemetry.io/docs/spec
 For agent operations (`create_agent`, `invoke_agent`), include these additional attributes:
 
 | Attribute | Type | Required | Description |
-| --------- | ---- | -------- | ----------- |
+|:--------- |:---- |:-------- |:----------- |
 | `gen_ai.agent.id` | string | When available | Unique agent identifier |
 | `gen_ai.agent.name` | string | When available | Human-readable agent name |
 | `gen_ai.agent.description` | string | When available | Agent description/purpose |
 | `gen_ai.conversation.id` | string | When available | Conversation/session identifier |
 
+## Span naming
+
+Ensure span names follow the OpenTelemetry conventions for generative AI spans. For example, the suggested span names for common values of `gen_ai.operation.name` are the following:
+
+- `chat {gen_ai.request.model}`
+- `execute_tool {gen_ai.tool.name}`
+- `embeddings {gen_ai.request.model}`
+- `generate_content {gen_ai.request.model}`
+- `text_completion {gen_ai.request.model}`
+- `create_agent {gen_ai.agent.name}`
+- `invoke_agent {gen_ai.agent.name}`
+
+For more information, see the OpenTelemetry documentation on span naming:
+- [AI spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#spans)
+- [Agent spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/)
+- [Tool span](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#execute-tool-span)
 
 ## Messages
 
-Messages support four different roles, each with specific content formats. They follow OpenTelemetry's structured format:
+Messages support four different roles, each with specific content formats. They follow OpenTelemetry’s structured format:
 
-**System messages**
+### System messages
+
+System messages are messages that the system adds to set the behavior of the assistant. They typically contain instructions or context for the AI model.
+
 ```json
 {
   "role": "system",
@@ -143,7 +125,10 @@ Messages support four different roles, each with specific content formats. They 
 }
 ```
 
-**User messages**
+### User messages
+
+User messages are messages that users send to the AI model. They typically contain questions, commands, or other input from the user.
+
 ```json
 {
   "role": "user",
@@ -153,7 +138,10 @@ Messages support four different roles, each with specific content formats. They 
 }
 ```
 
-**Assistant messages**
+### Assistant messages
+
+Assistant messages are messages that the AI model sends back to the user. They typically contain responses, answers, or other output from the model.
+
 ```json
 {
   "role": "assistant", 
@@ -165,7 +153,10 @@ Messages support four different roles, each with specific content formats. They 
 }
 ```
 
-**Tool messages**
+### Tool messages
+
+Tool messages are messages that contain the results of tool calls made by the AI model. They typically contain the output or response from the tool.
+
 ```json
 {
   "role": "tool",
@@ -175,22 +166,26 @@ Messages support four different roles, each with specific content formats. They 
 }
 ```
 
-**Content part types:**
-- `text` - Text content with `content` field
-- `tool_call` - Tool invocation with `id`, `name`, `arguments`
-- `tool_call_response` - Tool result with `id`, `response`
+### Content part types
 
-See more information in [Recording content on attributes](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#recording-content-on-attributes), as well as the JSON schema for [inputs](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-input-messages.json) and [outputs](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-output-messages.json).
+- `text`: Text content with `content` field
+- `tool_call`: Tool invocation with `id`, `name`, `arguments`
+- `tool_call_response`: Tool result with `id`, `response`
+
+For more information, see the OpenTelemetry documentation:
+
+- [Recording content on attributes](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#recording-content-on-attributes)
+- JSON schema for [inputs](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-input-messages.json) and [outputs](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-output-messages.json)
 
 ## Example trace structure
 
 ### Chat completion
 
-Here is an example of a properly structured chat completion trace:
+Example of a properly structured chat completion trace:
 
 <CodeGroup>
 
-```typescript TypeScript
+```typescript TypeScript expandable
 import { trace, SpanKind, SpanStatusCode } from '@opentelemetry/api';
 
 const tracer = trace.getTracer('my-ai-app');
@@ -233,7 +228,7 @@ return tracer.startActiveSpan('chat gpt-4', {
 });
 ```
 
-```python Python
+```python Python expandable
 from opentelemetry import trace
 from opentelemetry.trace import SpanKind
 import json
@@ -270,11 +265,11 @@ with tracer.start_as_current_span("chat gpt-4", kind=SpanKind.CLIENT) as span:
 
 ### Tool execution
 
-Here is an example of a tool execution within an agent:
+Example of a tool execution within an agent:
 
 <CodeGroup>
 
-```typescript Node.js
+```typescript TypeScript expandable
 import { trace, SpanKind, SpanStatusCode } from '@opentelemetry/api';
 
 const tracer = trace.getTracer('my-agent-app');
@@ -311,7 +306,7 @@ return tracer.startActiveSpan('execute_tool get_weather', {
 });
 ```
 
-```python Python
+```python Python expandable
 from opentelemetry import trace
 from opentelemetry.trace import SpanKind
 import json
@@ -337,12 +332,10 @@ with tracer.start_as_current_span("execute_tool get_weather", kind=SpanKind.CLIE
 
 </CodeGroup>
 
-## What's next?
+## What’s next?
 
-Once you're sending traces with the proper semantic conventions:
+After sending traces with the proper semantic conventions:
 
-- View your [traces](/query-data/traces) in Axiom's Console
+- View your [traces](/query-data/traces) in Console
 - Set up [monitors and alerts](/monitor-data/monitors) based on your AI telemetry data
 - Learn about [developing AI features](/ai-engineering/create) with confidence using Axiom
-
-Prefer the fastest route with zero configuration? See the [TypeScript SDK](/ai-engineering/observe/typescript-sdk) for a wrapper around the Vercel AI SDK.
