@@ -85,7 +85,7 @@ You can use `series_not_equals` to identify differences in request durations acr
 | extend diff_flags = series_not_equals(durations1, durations2)
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C summarize durations1%20%3D%20make_list(req_duration_ms)%20by%20method %7C join%20(%20%20%20%5B'sample-http-logs'%5D %20%20%20%7C%20summarize%20durations2%20%3D%20make_list(req_duration_ms)%20by%20method )%20on%20method %7C extend%20diff_flags%20%3D%20series_not_equals(durations1%2C%20durations2)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations1%20%3D%20make_list(req_duration_ms)%20by%20method%20%7C%20join%20(%20%5B'sample-http-logs'%5D%20%7C%20summarize%20durations2%20%3D%20make_list(req_duration_ms)%20by%20method%20)%20on%20method%20%7C%20extend%20diff_flags%20%3D%20series_not_equals(durations1%2C%20durations2)%22%7D)
 
 **Output**
 
@@ -105,17 +105,17 @@ You can use `series_not_equals` to compare the duration of spans between two ser
 
 ```kusto
 ['otel-demo-traces']
-| where service.name == 'frontend'
+| where ['service.name'] == 'frontend'
 | summarize frontend_durations = make_list(duration) by trace_id
 | join (
     ['otel-demo-traces']
-    | where service.name == 'checkoutservice'
+    | where ['service.name'] == 'checkout'
     | summarize checkout_durations = make_list(duration) by trace_id
 ) on trace_id
 | extend diff_flags = series_not_equals(frontend_durations, checkout_durations)
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D) %7C where%20service.name%20%3D%3D%20'frontend' %7C summarize%20frontend_durations%20%3D%20make_list(duration)%20by%20trace_id %7C join%20(%20%20%20%5B'otel-demo-traces'%5D %20%20%20%7C%20where%20service.name%20%3D%3D%20'checkoutservice' %20%20%20%7C%20summarize%20checkout_durations%20%3D%20make_list(duration)%20by%20trace_id )%20on%20trace_id %7C extend%20diff_flags%20%3D%20series_not_equals(frontend_durations%2C%20checkout_durations)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20%7C%20summarize%20frontend_durations%20%3D%20make_list(duration)%20by%20trace_id%20%7C%20join%20(%20%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'checkout'%20%7C%20summarize%20checkout_durations%20%3D%20make_list(duration)%20by%20trace_id%20)%20on%20trace_id%20%7C%20extend%20diff_flags%20%3D%20series_not_equals(frontend_durations%2C%20checkout_durations)%22%7D)
 
 **Output**
 
@@ -135,17 +135,17 @@ You can use `series_not_equals` to check if HTTP status codes differ between req
 
 ```kusto
 ['sample-http-logs']
-| where geo.country == 'US'
+| where ['geo.country'] == 'United States'
 | summarize us_statuses = make_list(status) by uri
 | join (
     ['sample-http-logs']
-    | where geo.country == 'DE'
+    | where ['geo.country'] == 'Germany'
     | summarize de_statuses = make_list(status) by uri
 ) on uri
 | extend diff_flags = series_not_equals(us_statuses, de_statuses)
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) %7C where%20geo.country%20%3D%3D%20'US' %7C summarize%20us_statuses%20%3D%20make_list(status)%20by%20uri %7C join%20(%20%20%20%5B'sample-http-logs'%5D %20%20%20%7C%20where%20geo.country%20%3D%3D%20'DE' %20%20%20%7C%20summarize%20de_statuses%20%3D%20make_list(status)%20by%20uri )%20on%20uri %7C extend%20diff_flags%20%3D%20series_not_equals(us_statuses%2C%20de_statuses)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20'United%20States'%20%7C%20summarize%20us_statuses%20%3D%20make_list(status)%20by%20uri%20%7C%20join%20(%20%5B'sample-http-logs'%5D%20%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20'Germany'%20%7C%20summarize%20de_statuses%20%3D%20make_list(status)%20by%20uri%20)%20on%20uri%20%7C%20extend%20diff_flags%20%3D%20series_not_equals(us_statuses%2C%20de_statuses)%22%7D)
 
 **Output**
 

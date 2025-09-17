@@ -81,11 +81,11 @@ You want to check whether request durations for a user stay within an acceptable
 ```kusto
 ['sample-http-logs']
 | summarize durations=make_list(req_duration_ms), times=make_list(_time) by id
-| extend threshold=repeat(200, array_length(durations))
+| extend threshold=dynamic([200, 200, 200])
 | extend below_or_equal=series_less_equals(durations, threshold)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%3Dmake_list%28req_duration_ms%29%2C%20times%3Dmake_list%28_time%29%20by%20id%20%7C%20extend%20threshold%3Drepeat%28200%2C%20array_length%28durations%29%29%20%7C%20extend%20below_or_equal%3Dseries_less_equals%28durations%2C%20threshold%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%3Dmake_list(req_duration_ms)%2C%20times%3Dmake_list(_time)%20by%20id%20%7C%20extend%20threshold%3Ddynamic(%5B200%2C%20200%2C%20200%5D)%20%7C%20extend%20below_or_equal%3Dseries_less_equals(durations%2C%20threshold)%22%7D)
 
 **Output**
 
@@ -106,11 +106,11 @@ You want to validate whether service durations stay within a performance baselin
 ['otel-demo-traces']
 | where ['service.name'] == 'frontend'
 | summarize durations=make_list(duration), times=make_list(_time) by trace_id
-| extend baseline=repeat(00:00:01, array_length(durations))
+| extend baseline=dynamic([1000000000, 1000000000, 1000000000])
 | extend below_or_equal=series_less_equals(durations, baseline)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20%7C%20summarize%20durations%3Dmake_list%28duration%29%2C%20times%3Dmake_list%28_time%29%20by%20trace_id%20%7C%20extend%20baseline%3Drepeat%2800%3A00%3A01%2C%20array_length%28durations%29%29%20%7C%20extend%20below_or_equal%3Dseries_less_equals%28durations%2C%20baseline%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20%7C%20summarize%20durations%3Dmake_list(duration)%2C%20times%3Dmake_list(_time)%20by%20trace_id%20%7C%20extend%20baseline%3Ddynamic(%5B1000000000%2C%201000000000%2C%201000000000%5D)%20%7C%20extend%20below_or_equal%3Dseries_less_equals(durations%2C%20baseline)%22%7D)
 
 **Output**
 
@@ -129,13 +129,13 @@ You want to check whether requests from a given country stay within acceptable r
 
 ```kusto
 ['sample-http-logs']
-| where ['geo.country'] == 'US'
+| where ['geo.country'] == 'United States'
 | summarize durations=make_list(req_duration_ms), times=make_list(_time) by id
-| extend limit=repeat(300, array_length(durations))
-| extend below_or_equal=series_less_equals(durations, limit)
+| extend limits=dynamic([300, 300, 300])
+| extend below_or_equal=series_less_equals(durations, limits)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20'US'%20%7C%20summarize%20durations%3Dmake_list%28req_duration_ms%29%2C%20times%3Dmake_list%28_time%29%20by%20id%20%7C%20extend%20limit%3Drepeat%28300%2C%20array_length%28durations%29%29%20%7C%20extend%20below_or_equal%3Dseries_less_equals%28durations%2C%20limit%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20'United%20States'%20%7C%20summarize%20durations%3Dmake_list(req_duration_ms)%2C%20times%3Dmake_list(_time)%20by%20id%20%7C%20extend%20limits%3Ddynamic(%5B300%2C%20300%2C%20300%5D)%20%7C%20extend%20below_or_equal%3Dseries_less_equals(durations%2C%20limits)%22%7D)
 
 **Output**
 

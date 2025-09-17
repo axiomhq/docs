@@ -78,11 +78,11 @@ When analyzing HTTP request durations, you can compare them against a fixed thre
 ```kusto
 ['sample-http-logs']
 | summarize durations = make_list(req_duration_ms) by id
-| extend threshold = repeat(200, array_length(durations))
+| extend threshold = dynamic([200,200,200,200])
 | extend above_threshold = series_greater(durations, threshold)
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | summarize durations = make_list(req_duration_ms) by id | extend threshold = repeat(200, array_length(durations)) | extend above_threshold = series_greater(durations, threshold)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20threshold%20%3D%20dynamic(%5B200%2C200%2C200%2C200%5D)%20%7C%20extend%20above_threshold%20%3D%20series_greater(durations%2C%20threshold)%22%7D)
 
 **Output**
 
@@ -105,13 +105,13 @@ You can compare span durations across services to see where certain spans take l
 | summarize frontend_spans = make_list(duration) by trace_id
 | join kind=inner (
     ['otel-demo-traces']
-    | where ['service.name'] == 'checkoutservice'
+    | where ['service.name'] == 'checkout'
     | summarize checkout_spans = make_list(duration) by trace_id
 ) on trace_id
 | extend longer_in_frontend = series_greater(frontend_spans, checkout_spans)
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces)'] | where ['service.name'] == 'frontend' | summarize frontend_spans = make_list(duration) by trace_id | join kind=inner ( ['otel-demo-traces'] | where ['service.name'] == 'checkoutservice' | summarize checkout_spans = make_list(duration) by trace_id ) on trace_id | extend longer_in_frontend = series_greater(frontend_spans, checkout_spans)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20%7C%20summarize%20frontend_spans%20%3D%20make_list(duration)%20by%20trace_id%20%7C%20join%20kind%3Dinner%20(%20%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'checkout'%20%7C%20summarize%20checkout_spans%20%3D%20make_list(duration)%20by%20trace_id%20)%20on%20trace_id%20%7C%20extend%20longer_in_frontend%20%3D%20series_greater(frontend_spans%2C%20checkout_spans)%22%7D)
 
 **Output**
 
@@ -120,31 +120,6 @@ You can compare span durations across services to see where certain spans take l
 | t1        | [30ms,50ms,10ms] | [20ms,40ms,15ms] | [true,true,false]   |
 
 This query compares span durations between `frontend` and `checkoutservice` services.
-
-</Tab>
-<Tab title="Security logs">
-
-When analyzing suspicious traffic, you can check if the number of failed requests is greater than successful requests.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize status_list = make_list(status) by id
-| extend fails = array_index_of(status_list, '500')
-| extend oks = array_index_of(status_list, '200')
-| extend comparison = series_greater(fails, oks)
-```
-
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | summarize status_list = make_list(status) by id | extend fails = array_index_of(status_list, '500') | extend oks = array_index_of(status_list, '200') | extend comparison = series_greater(fails, oks)%22%7D)
-
-**Output**
-
-| id   | fails    | oks      | comparison          |
-| ---- | -------- | -------- | ------------------- |
-| u456 | [0,1,0] | [1,0,1] | [false,true,false] |
-
-This query shows if failed requests outnumber successful requests for each user.
 
 </Tab>
 </Tabs>

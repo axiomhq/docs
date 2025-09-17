@@ -79,27 +79,24 @@ An array of Boolean values. Each element is `true` if the corresponding element 
 <Tabs>
 <Tab title="Log analysis">
 
-You want to check whether the average request duration in each city is less than the overall global average.
+You want to check whether the average request duration in each city is less than a fixed threshold of 150 milliseconds.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| make-series city_avg = avg(req_duration_ms) on _time step 1h by geo.city
-| extend global_avg = series_avg(city_avg)
-| extend is_less = series_less(city_avg, global_avg)
-```
+['sample-http-logs'] | take 50 | make-series city_avg = avg(req_duration_ms) on _time step 1h by ['geo.city'] | extend threshold = dynamic([150, 150, 150]) | extend is_less = series_less(city_avg, threshold)
+````
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | make-series city_avg = avg(req_duration_ms) on _time step 1h by geo.city | extend global_avg = series_avg(city_avg) | extend is_less = series_less(city_avg, global_avg)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20take%2050%20%7C%20make-series%20city_avg%20%3D%20avg(req_duration_ms)%20on%20_time%20step%201h%20by%20%5B'geo.city'%5D%20%7C%20extend%20threshold%20%3D%20dynamic(%5B150%2C%20150%2C%20150%5D)%20%7C%20extend%20is_less%20%3D%20series_less(city_avg%2C%20threshold)%22%7D)
 
 **Output**
 
-| geo.city | city_avg        | global_avg      | is_less               |
+| geo.city | city_avg        | threshold        | is_less               |
 | -------- | ---------------- | ---------------- | ---------------------- |
 | London   | [120, 90, 100]  | [150, 150, 150] | [true, true, true]    |
 | Paris    | [180, 200, 190] | [150, 150, 150] | [false, false, false] |
 
-This query shows whether each city’s request duration is below the global average at each time step.
+This query shows whether each city’s request duration stays below a 150 ms threshold at each time step.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
@@ -135,12 +132,13 @@ You want to detect if failed requests in each country are consistently less than
 
 ```kusto
 ['sample-http-logs']
-| summarize success = countif(status == '200'), failure = countif(status != '200') by geo.country, bin(_time, 1h)
-| make-series success_series = avg(success), failure_series = avg(failure) on _time step 1h by geo.country
+| take 50
+| summarize success = countif(status == '200'), failure = countif(status != '200') by ['geo.country'], bin(_time, 1h)
+| make-series success_series = avg(success), failure_series = avg(failure) on _time step 1h by ['geo.country']
 | extend failures_less = series_less(failure_series, success_series)
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | summarize success = countif(status == '200'), failure = countif(status != '200') by geo.country, bin(_time, 1h) | make-series success_series = avg(success), failure_series = avg(failure) on _time step 1h by geo.country | extend failures_less = series_less(failure_series, success_series)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20take%2050%20%7C%20summarize%20success%20%3D%20countif(status%20%3D%3D%20'200')%2C%20failure%20%3D%20countif(status%20!%3D%20'200')%20by%20%5B'geo.country'%5D%2C%20bin(_time%2C%201h)%20%7C%20make-series%20success_series%20%3D%20avg(success)%2C%20failure_series%20%3D%20avg(failure)%20on%20_time%20step%201h%20by%20%5B'geo.country'%5D%20%7C%20extend%20failures_less%20%3D%20series_less(failure_series%2C%20success_series)%22%7D)
 
 **Output**
 
