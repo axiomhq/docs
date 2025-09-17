@@ -85,7 +85,7 @@ In log analysis, you can compare observed request durations against a threshold 
 | extend exceeds = series_greater_equals(durations, threshold)
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) | summarize durations = make_list(req_duration_ms) by id | extend threshold = dynamic([100,100,100]) | extend exceeds = series_greater_equals(durations, threshold)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20threshold%20%3D%20dynamic(%5B100%2C100%2C100%5D)%20%7C%20extend%20exceeds%20%3D%20series_greater_equals(durations%2C%20threshold)%22%7D)
 
 **Output**
 
@@ -104,13 +104,13 @@ In OpenTelemetry traces, you can compare span durations from one service with ex
 
 ```kusto
 ['otel-demo-traces']
-| where ['service.name'] == 'checkoutservice'
+| where ['service.name'] == 'checkout'
 | summarize durations = make_list(duration) by trace_id
 | extend baseline = dynamic([100ms,200ms,300ms])
 | extend slower = series_greater_equals(durations, baseline)
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D) | where ['service.name'] == 'checkoutservice' | summarize durations = make_list(duration) by trace_id | extend baseline = dynamic([100ms,200ms,300ms]) | extend slower = series_greater_equals(durations, baseline)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'checkout'%20%7C%20summarize%20durations%20%3D%20make_list(duration)%20by%20trace_id%20%7C%20extend%20baseline%20%3D%20dynamic(%5B100ms%2C200ms%2C300ms%5D)%20%7C%20extend%20slower%20%3D%20series_greater_equals(durations%2C%20baseline)%22%7D)
 
 **Output**
 
@@ -130,12 +130,12 @@ In security logs, you can compare the frequency of failed status codes against a
 ```kusto
 ['sample-http-logs']
 | where status == '500'
-| summarize fails = make_list(req_duration_ms) by geo.country
+| summarize fails = make_list(req_duration_ms) by ['geo.country']
 | extend threshold = dynamic([200,200,200])
 | extend suspicious = series_greater_equals(fails, threshold)
 ```
 
-[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D) | where status == '500' | summarize fails = make_list(req_duration_ms) by geo.country | extend threshold = dynamic([200,200,200]) | extend suspicious = series_greater_equals(fails, threshold)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20%3D%3D%20'500'%20%7C%20summarize%20fails%20%3D%20make_list(req_duration_ms)%20by%20%5B'geo.country'%5D%20%7C%20extend%20threshold%20%3D%20dynamic(%5B200%2C200%2C200%5D)%20%7C%20extend%20suspicious%20%3D%20series_greater_equals(fails%2C%20threshold)%22%7D)
 
 **Output**
 
@@ -150,8 +150,7 @@ This query aggregates failed requests by country, builds a series of durations, 
 
 ## List of related functions
 
-- [series_equals](/apl/array-functions/series_equals): Compares two arrays element by element and returns `true` if elements are equal.
-- [series_less](/apl/array-functions/series_less): Compares two arrays and returns `true` where the first array element is less than the second.
-- [series_less_equals](/apl/array-functions/series_less_equals): Compares two arrays and returns `true` where the first array element is less than or equal to the second.
-- [series_greater](/apl/array-functions/series_greater): Compares two arrays and returns `true` where the first array element is greater than the second.
-- [series_not_equals](/apl/array-functions/series_not_equals): Compares two arrays and returns `true` where elements are not equal.
+- [series_greater](/apl/scalar-functions/time-series/series-greater): Compares two arrays and returns `true` where the first array element is greater than the second.
+- [series_less](/apl/scalar-functions/time-series/series-less): Compares two arrays and returns `true` where the first array element is less than the second.
+- [series_less_equals](/apl/scalar-functions/time-series/series-less-equals): Compares two arrays and returns `true` where the first array element is less than or equal to the second.
+- [series_not_equals](/apl/scalar-functions/time-series/series-not-equals): Compares two arrays and returns `true` where elements are not equal.
