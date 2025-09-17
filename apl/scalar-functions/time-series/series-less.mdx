@@ -90,14 +90,14 @@ You want to check whether the average request duration in each city is less than
 | extend is_less = series_less(city_avg, global_avg)
 ```
 
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22\['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | make-series city\_avg = avg(req\_duration\_ms) on \_time step 1h by geo.city | extend global\_avg = series\_avg(city\_avg) | extend is\_less = series\_less(city\_avg, global\_avg)%22%7D)
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | make-series city_avg = avg(req_duration_ms) on _time step 1h by geo.city | extend global_avg = series_avg(city_avg) | extend is_less = series_less(city_avg, global_avg)%22%7D)
 
 **Output**
 
-| geo.city | city\_avg        | global\_avg      | is\_less               |
+| geo.city | city_avg        | global_avg      | is_less               |
 | -------- | ---------------- | ---------------- | ---------------------- |
-| London   | \[120, 90, 100]  | \[150, 150, 150] | \[true, true, true]    |
-| Paris    | \[180, 200, 190] | \[150, 150, 150] | \[false, false, false] |
+| London   | [120, 90, 100]  | [150, 150, 150] | [true, true, true]    |
+| Paris    | [180, 200, 190] | [150, 150, 150] | [false, false, false] |
 
 This query shows whether each city’s request duration is below the global average at each time step.
 
@@ -115,14 +115,14 @@ You want to verify if the duration of each span is less than the corresponding d
 | extend decreasing = series_less(span_durations, shifted)
 ```
 
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22\['otel-demo-traces](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces)'] | make-series span\_durations = avg(duration) on \_time step 5m by \['service.name'] | extend shifted = series\_shift(span\_durations, 1) | extend decreasing = series\_less(span\_durations, shifted)%22%7D)
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['otel-demo-traces)'] | make-series span_durations = avg(duration) on _time step 5m by ['service.name'] | extend shifted = series_shift(span_durations, 1) | extend decreasing = series_less(span_durations, shifted)%22%7D)
 
 **Output**
 
-| service.name | span\_durations      | shifted              | decreasing           |
+| service.name | span_durations      | shifted              | decreasing           |
 | ------------ | -------------------- | -------------------- | -------------------- |
-| frontend     | \[50ms, 40ms, 45ms]  | \[null, 50ms, 40ms]  | \[null, true, false] |
-| cartservice  | \[100ms, 95ms, 90ms] | \[null, 100ms, 95ms] | \[null, true, true]  |
+| frontend     | [50ms, 40ms, 45ms]  | [null, 50ms, 40ms]  | [null, true, false] |
+| cartservice  | [100ms, 95ms, 90ms] | [null, 100ms, 95ms] | [null, true, true]  |
 
 This query identifies whether spans are becoming shorter compared to the previous time bucket.
 
@@ -140,14 +140,14 @@ You want to detect if failed requests in each country are consistently less than
 | extend failures_less = series_less(failure_series, success_series)
 ```
 
-\[Run in Playground]\([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22\['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | summarize success = countif(status == '200'), failure = countif(status != '200') by geo.country, bin(\_time, 1h) | make-series success\_series = avg(success), failure\_series = avg(failure) on \_time step 1h by geo.country | extend failures\_less = series\_less(failure\_series, success\_series)%22%7D)
+[Run in Playground]([https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22['sample-http-logs)'] | summarize success = countif(status == '200'), failure = countif(status != '200') by geo.country, bin(_time, 1h) | make-series success_series = avg(success), failure_series = avg(failure) on _time step 1h by geo.country | extend failures_less = series_less(failure_series, success_series)%22%7D)
 
 **Output**
 
-| geo.country | success\_series  | failure\_series | failures\_less      |
+| geo.country | success_series  | failure_series | failures_less      |
 | ----------- | ---------------- | --------------- | ------------------- |
-| US          | \[300, 280, 310] | \[10, 20, 15]   | \[true, true, true] |
-| UK          | \[150, 140, 160] | \[20, 25, 30]   | \[true, true, true] |
+| US          | [300, 280, 310] | [10, 20, 15]   | [true, true, true] |
+| UK          | [150, 140, 160] | [20, 25, 30]   | [true, true, true] |
 
 This query checks whether failures stay consistently lower than successful requests across time intervals.
 
@@ -156,8 +156,8 @@ This query checks whether failures stay consistently lower than successful reque
 
 ## List of related functions
 
-* [series\_greater](/apl/array-functions/series_greater): Returns `true` when elements in the first array are greater than in the second array.
-* [series\_equals](/apl/array-functions/series_equals): Returns `true` when elements in both arrays are equal.
-* [series\_not\_equals](/apl/array-functions/series_not_equals): Returns `true` when elements in both arrays are different.
-* [series\_less\_equals](/apl/array-functions/series_less_equals): Returns `true` when elements in the first array are less than or equal to the second array.
-* [series\_greater\_equals](/apl/array-functions/series_greater_equals): Returns `true` when elements in the first array are greater than or equal to the second array.
+* [series_greater](/apl/array-functions/series_greater): Returns `true` when elements in the first array are greater than in the second array.
+* [series_equals](/apl/array-functions/series_equals): Returns `true` when elements in both arrays are equal.
+* [series_not_equals](/apl/array-functions/series_not_equals): Returns `true` when elements in both arrays are different.
+* [series_less_equals](/apl/array-functions/series_less_equals): Returns `true` when elements in the first array are less than or equal to the second array.
+* [series_greater_equals](/apl/array-functions/series_greater_equals): Returns `true` when elements in the first array are greater than or equal to the second array.
