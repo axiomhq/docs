@@ -1,0 +1,157 @@
+---
+title: series_less_equals
+description: 'This page explains how to use the series_less_equals function in APL.'
+---
+
+The `series_less_equals` function compares two numeric arrays element by element and returns a new array of Boolean values. Each element in the result is `true` if the corresponding element in the first array is less than or equal to the corresponding element in the second array, and `false` otherwise.  
+
+You can use this function to analyze numeric sequences over time, such as detecting when one series of measurements stays below or matches another. This is useful in monitoring scenarios, anomaly detection, and when working with time-series data in logs, traces, or security events.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, comparisons across arrays are not directly supported in the same way. SPL typically works with single values or requires custom evaluation functions to iterate over arrays. In APL, `series_less_equals` provides a built-in way to compare arrays element by element.
+
+<CodeGroup>
+```sql Splunk example
+| eval result=if(value1 <= value2, true(), false())
+````
+
+```kusto APL equivalent
+print arr1=dynamic([1,2,3]), arr2=dynamic([2,2,2])
+| extend result=series_less_equals(arr1, arr2)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, comparisons are scalar by default. You cannot compare arrays directly without unnesting or joining them. In APL, `series_less_equals` lets you perform an element-wise comparison of two arrays with a single function call.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE WHEN a.value <= b.value THEN true ELSE false END
+FROM array_table_a a
+JOIN array_table_b b ON a.idx = b.idx;
+```
+
+```kusto APL equivalent
+print arr1=dynamic([1,2,3]), arr2=dynamic([2,2,2])
+| extend result=series_less_equals(arr1, arr2)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+series_less_equals(arr1, arr2)
+```
+
+### Parameters
+
+| Parameter | Type            | Description                                                    |
+| --------- | --------------- | -------------------------------------------------------------- |
+| `arr1`    | dynamic (array) | The first numeric array.                                       |
+| `arr2`    | dynamic (array) | The second numeric array. Must have the same length as `arr1`. |
+
+### Returns
+
+A dynamic array of Boolean values. Each element is `true` if the element of `arr1` is less than or equal to the corresponding element of `arr2`, otherwise `false`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You want to check whether request durations for a user stay within an acceptable threshold over time.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize durations=make_list(req_duration_ms), times=make_list(_time) by id
+| extend threshold=repeat(200, array_length(durations))
+| extend below_or_equal=series_less_equals(durations, threshold)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%3Dmake_list%28req_duration_ms%29%2C%20times%3Dmake_list%28_time%29%20by%20id%20%7C%20extend%20threshold%3Drepeat%28200%2C%20array_length%28durations%29%29%20%7C%20extend%20below_or_equal%3Dseries_less_equals%28durations%2C%20threshold%29%22%7D)
+
+**Output**
+
+| id | durations        | threshold        | below\_or\_equal     |
+| -- | ---------------- | ---------------- | -------------------- |
+| u1 | \[120, 180, 250] | \[200, 200, 200] | \[true, true, false] |
+
+This query checks for each user whether the request duration at each point is less than or equal to the threshold of 200 ms.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+You want to validate whether service durations stay within a performance baseline.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ['service.name'] == 'frontend'
+| summarize durations=make_list(duration), times=make_list(_time) by trace_id
+| extend baseline=repeat(00:00:01, array_length(durations))
+| extend below_or_equal=series_less_equals(durations, baseline)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20%7C%20summarize%20durations%3Dmake_list%28duration%29%2C%20times%3Dmake_list%28_time%29%20by%20trace_id%20%7C%20extend%20baseline%3Drepeat%2800%3A00%3A01%2C%20array_length%28durations%29%29%20%7C%20extend%20below_or_equal%3Dseries_less_equals%28durations%2C%20baseline%29%22%7D)
+
+**Output**
+
+| trace\_id | durations                 | baseline              | below\_or\_equal |
+| --------- | ------------------------- | --------------------- | ---------------- |
+| t1        | \[00:00:00.5, 00:00:01.2] | \[00:00:01, 00:00:01] | \[true, false]   |
+
+This query shows whether spans in the frontend service meet a performance baseline of 1 second.
+
+</Tab>
+<Tab title="Security logs">
+
+You want to check whether requests from a given country stay within acceptable request duration limits.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where ['geo.country'] == 'US'
+| summarize durations=make_list(req_duration_ms), times=make_list(_time) by id
+| extend limit=repeat(300, array_length(durations))
+| extend below_or_equal=series_less_equals(durations, limit)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20'US'%20%7C%20summarize%20durations%3Dmake_list%28req_duration_ms%29%2C%20times%3Dmake_list%28_time%29%20by%20id%20%7C%20extend%20limit%3Drepeat%28300%2C%20array_length%28durations%29%29%20%7C%20extend%20below_or_equal%3Dseries_less_equals%28durations%2C%20limit%29%22%7D)
+
+**Output**
+
+| id | durations        | limit            | below\_or\_equal     |
+| -- | ---------------- | ---------------- | -------------------- |
+| u2 | \[220, 280, 350] | \[300, 300, 300] | \[true, true, false] |
+
+This query checks whether requests originating in the United States remain within a 300 ms duration limit.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+* [series\_greater](/apl/series-functions/series_greater): Compares two arrays and returns `true` where the first array’s elements are greater than the second’s.
+* [series\_greater\_equals](/apl/series-functions/series_greater_equals): Compares two arrays and returns `true` where the first array’s elements are greater than or equal to the second’s.
+* [series\_less](/apl/series-functions/series_less): Compares two arrays and returns `true` where the first array’s elements are strictly less than the second’s.
+* [series\_equals](/apl/series-functions/series_equals): Compares two arrays and returns `true` where the elements are equal.
+* [series\_not\_equals](/apl/series-functions/series_not_equals): Compares two arrays and returns `true` where the elements are not equal.
