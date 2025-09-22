@@ -46,23 +46,57 @@ Axiom MCP Server works with all AI agents that support MCP.
 <Tabs>
 <Tab title="Claude">
 
-1. Ensure you’re on the Pro, Team, or Enterprise plan. Custom MCP Servers aren’t supported on the Free plan.
+### Claude
+
+If you’re on the Pro, Team, or Enterprise plan:
+
+1. Add Axiom to the list of remote MCP servers:
     - If you’re on the Pro plan, follow the [Claude documentation](https://support.anthropic.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp#h_3d1a65aded) to add Axiom to the list of remote MCP servers using the URL `https://mcp.axiom.co/mcp`.
     - If you’re on the Team or Enterprise plan, ask your organization admin to follow the [Claude documentation](https://support.anthropic.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp#h_3d1a65aded) to add Axiom to the list of remote MCP servers using the URL `https://mcp.axiom.co/mcp`.
-1. In [Claude.ai](https://claude.ai/settings/connectors) or the [Claude Desktop app](https://claude.ai/download), go to **Settings > Connectors**.
+1. In [Claude.ai](https://claude.ai/settings/connectors) or [Claude Desktop](https://claude.ai/download), go to **Settings > Connectors**.
 1. Find Axiom in the list.
 1. Click **Connect**.
-1. Authenticate the request in your browser. You can later revoke access on the Profile page of the Axiom Console.
+1. Authenticate the request in your browser.
+
+If you’re on the Free plan:
+
+1. Install [Claude Desktop](https://claude.ai/download).
+1. In Claude Desktop, go to **Settings > Developers**, and then click **Edit Config**.
+1. Add the following to `claude_desktop_config.json`:
+
+    ```json claude_desktop_config.json
+    {
+        "mcpServers": {
+            "axiom": {
+                "command": "npx",
+                "args": [
+                    "-y",
+                    "mcp-remote",
+                    "https://mcp.axiom.co/mcp"
+                ]
+            }
+        }
+    }
+    ```
+
+1. Restart Claude Desktop.
+1. Authenticate the request in your browser.
 
 </Tab>
 <Tab title="Cursor">
 
+### Cursor
+
 1. Install [Cursor](https://cursor.com/home).
 1. [Install Axiom MCP Server](https://cursor.com/en/install-mcp?name=axiom&config=eyJ1cmwiOiJodHRwczovL21jcC5heGlvbS5jby9tY3AifQ%3D%3D).
-1. Authenticate the request in your browser. You can later revoke access on the Profile page of the Axiom Console.
+1. Authenticate the request in your browser.
 
 </Tab>
 <Tab title="Other clients">
+
+### Other clients
+
+If your agent supports connecting to remote MCP servers directly:
 
 1. In your AI agent, add a remote MCP connection with the following details:
 
@@ -72,6 +106,28 @@ Axiom MCP Server works with all AI agents that support MCP.
     For AI agents that require server-sent events (SSE), use the server URL `https://mcp.axiom.co/sse`.
 
 1. Authenticate the request in your browser. You can later revoke access on the Profile page of the Axiom Console.
+
+If your agent doesn’t support connecting to remote MCP servers directly, use the [mcp-remote library](https://www.npmjs.com/package/mcp-remote):
+
+1. Add the `mcp-remote` library to the configuration file of your AI agent. For example:
+
+    ```json
+    {
+        "mcpServers": {
+            "axiom": {
+                "command": "npx",
+                "args": [
+                    "-y",
+                    "mcp-remote",
+                    "https://mcp.axiom.co/mcp"
+                ]
+            }
+        }
+    }
+    ```
+
+1. Restart your AI agent.
+1. Authenticate the request in your browser.
 
 </Tab>
 </Tabs>
@@ -143,7 +199,10 @@ Configure your AI agent to use the MCP Server in one of the following ways:
       "mcpServers": {
         "axiom": {
           "command": "PATH_AXIOM_MCP_BINARY",
-          "args" : ["--config", "PATH_AXIOM_MCP_CONFIG"]
+          "args": [
+            "--config",
+            "PATH_AXIOM_MCP_CONFIG"
+          ]
         }
       }
     }
@@ -206,3 +265,14 @@ After setting up the Axiom MCP Server, you can:
 - Use the [prebuilt prompts](#supported-mcp-prompts). For example, in Claude, click **+ > Add from Axiom** to access them.
 
 To answer your questions, your AI client can use the [supported MCP tools](#supported-mcp-tools).
+
+## Revoke access
+
+Using the procedure above, you authorized your AI client to access your event data in Axiom.
+
+To revoke access:
+
+1. In Axiom, go to <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Profile**.
+1. In the Sessions section, find the session where you authorized your AI client, and then click <img src="/doc-assets/icons/delete.svg" className="inline-icon" alt="Delete icon" /> **Delete** on the right.
+
+If you connected to Axiom MCP Server using the `mcp-remote` library, clear the `.mcp-auth` folder. This is where Axiom MCP Server stores credential information. On a Mac, the default path is `~/.mcp-auth`.
