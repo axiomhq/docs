@@ -1,0 +1,146 @@
+---
+title: trim
+description: 'This page explains how to use the trim function in APL.'
+---
+
+The `trim` function removes all leading and trailing matches of a specified regular expression from a string. You use it when you want to clean up input values by stripping unwanted characters, whitespace, or tokens at the start or end of strings. This is useful in log analysis, cleaning up OpenTelemetry trace attributes, or standardizing values in security logs where input formats vary.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use the `trim` function to remove characters from both ends of a string. In APL, the `trim` function is more flexible because it accepts a full regular expression, not just a list of characters.
+
+<CodeGroup>
+```sql Splunk example
+... | eval cleaned=trim(field, "-")
+````
+
+```kusto APL equivalent
+print s='--https://axiom.co--'
+| extend cleaned=trim("--", s)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, `TRIM` removes whitespace or specified characters from both ends of a string. APL’s `trim` works similarly but uses regular expressions, giving you greater control and pattern matching options.
+
+<CodeGroup>
+```sql SQL example
+SELECT TRIM(BOTH '-' FROM '--hello--');
+```
+
+```kusto APL equivalent
+print s='--hello--'
+| extend cleaned=trim("--", s)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+trim(regex, source)
+```
+
+### Parameters
+
+| Name   | Type   | Required | Description                                                                      |
+| ------ | ------ | -------- | -------------------------------------------------------------------------------- |
+| regex  | string | ✓       | The string or regular expression to trim from the beginning and end of `source`. |
+| source | string | ✓       | The source string to process.                                                    |
+
+### Returns
+
+A string with all leading and trailing matches of `regex` removed.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+You can use `trim` to normalize URLs in logs by removing leading and trailing special characters before further analysis.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend clean_uri = trim(@"[/]+", uri)
+| summarize count() by clean_uri
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20clean_uri%20%3D%20trim(%40'%5B%2F%5D%2B'%2C%20uri)%20%7C%20summarize%20count()%20by%20clean_uri%22%7D)
+
+**Output**
+
+| clean_uri      | count |
+| --------------- | ----- |
+| api/login       | 120   |
+| product/details | 85    |
+| cart/add        | 62    |
+
+This query removes leading and trailing slashes from the `uri` field to group identical paths consistently.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In traces, you can use `trim` to clean service names by removing underscores or dashes around them.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend clean_service = trim(@"[-_]+", ['service.name'])
+| summarize avg(duration) by clean_service
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20clean_service%20%3D%20trim(%40'%5B-_%5D%2B'%2C%20%5B'service.name'%5D)%20%7C%20summarize%20avg(duration)%20by%20clean_service%22%7D)
+
+**Output**
+
+| clean_service  | avg_duration |
+| --------------- | ------------- |
+| frontend        | 120ms         |
+| cartservice     | 210ms         |
+| checkoutservice | 310ms         |
+
+This query ensures service names are standardized before calculating averages.
+
+</Tab>
+<Tab title="Security logs">
+
+When analyzing user IDs, you can use `trim` to remove wrapping characters (such as quotes or hashes) from identifiers.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend clean_id = trim(@"#+", id)
+| summarize count() by clean_id
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20clean_id%20%3D%20trim(%40'%23%2B'%2C%20id)%20%7C%20summarize%20count()%20by%20clean_id%22%7D)
+
+**Output**
+
+| clean_id | count |
+| --------- | ----- |
+| user123   | 42    |
+| user456   | 38    |
+| user789   | 55    |
+
+This query strips unwanted characters around user IDs so they can be reliably counted.
+
+</Tab>
+</Tabs>
