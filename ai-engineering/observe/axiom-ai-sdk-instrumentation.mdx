@@ -11,6 +11,8 @@ This page explains how to set up instrumentation in your TypeScript generative A
 
 <Info>
 Axiom AI SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/ai).
+
+This page explains how to work with OpenAI. The process is similar for other LLMs.
 </Info>
 
 Alternatively, [instrument your app manually](/ai-engineering/observe/manual-instrumentation). For more information on instrumentation approaches, see [Introduction to Observe](/ai-engineering/observe).
@@ -21,17 +23,23 @@ Follow the procedure in [Quickstart](/ai-engineering/quickstart) to set up Axiom
 
 ## Instrument AI SDK calls
 
-Axiom AI SDK provides helper functions for Vercel’s [AI SDK](https://ai-sdk.dev/docs) to wrap your existing AI model client.
-
-The `wrapAISDKModel` function takes an existing AI model object and returns an instrumented version that automatically generates trace data for every call.
+Axiom AI SDK provides helper functions for Vercel’s [AI SDK](https://ai-sdk.dev/docs) to wrap your existing AI model client. The `wrapAISDKModel` function takes an existing AI model object and returns an instrumented version that automatically generates trace data for every call.
 
 <Tabs>
-<Tab title="OpenAI">
+<Tab title="SDK provider">
 
-1. Run the following in your terminal to install the Vercel AI SDK and the OpenAI provider.
+To instrument calls with a Vercel AI SDK provider:
+
+1. Run the following in your terminal to install the Vercel AI SDK:
 
     ```sh
-    npm i ai @ai-sdk/openai
+    npm i ai
+    ```
+
+1. Install the AI SDK provider for the LLM you want to use. For example, run the following in your terminal to install the OpenAI provider. For the full list of providers, see the [Vercel documentation](https://ai-sdk.dev/providers/ai-sdk-providers/ai-gateway).
+
+    ```sh
+    npm i @ai-sdk/openai
     ```
 
 1. Create the file `src/shared/openai.ts` with the following content:
@@ -46,85 +54,35 @@ The `wrapAISDKModel` function takes an existing AI model object and returns an i
 
     // Wrap the model to enable automatic tracing
     export const gpt4o = wrapAISDKModel(openaiProvider('gpt-4o'));
-    export const gpt4oMini = wrapAISDKModel(openaiProvider('gpt-4o-mini'));
     ```
 
 </Tab>
-<Tab title="Anthropic">
+<Tab title="Gateway provider">
 
-1. Run the following in your terminal to install the Vercel AI SDK and the Anthropic provider.
+To instrument calls without a Vercel AI SDK provider, use the generic Vercel AI Gateway provider. For more information, see the [Vercel documentation](https://ai-sdk.dev/providers/ai-sdk-providers/ai-gateway).
+
+1. Run the following in your terminal to install the Vercel AI SDK:
 
     ```sh
-    npm i ai @ai-sdk/anthropic
+    npm i ai
     ```
 
-1. Create the file `src/shared/anthropic.ts` with the following content:
+1. Create the file `src/shared/openai.ts` with the following content:
 
-    ```ts /src/shared/anthropic.ts
-    import { createAnthropic } from '@ai-sdk/anthropic';
-    import { wrapAISDKModel } from 'axiom/ai';
+    ```ts /src/shared/openai.ts
+    import { createGateway } from 'ai';
+    import { wrapAISDKModel } from 'axiom';
 
-    const anthropicProvider = createAnthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+    const gateway = createGateway({
+      apiKey: process.env.OPENAI_API_KEY,
     });
 
     // Wrap the model to enable automatic tracing
-    export const claude35Sonnet = wrapAISDKModel(anthropicProvider('claude-3-5-sonnet-20241022'));
-    export const claude35Haiku = wrapAISDKModel(anthropicProvider('claude-3-5-haiku-20241022'));
-    ```
-
-</Tab>
-<Tab title="Gemini">
-
-1. Run the following in your terminal to install the Vercel AI SDK and the Gemini provider.
-
-    ```sh
-    npm i ai @ai-sdk/google
-    ```
-
-1. Create the file `src/shared/gemini.ts` with the following content:
-
-    ```ts /src/shared/gemini.ts
-    import { createGoogleGenerativeAI } from '@ai-sdk/google';
-    import { wrapAISDKModel } from 'axiom/ai';
-
-    const geminiProvider = createGoogleGenerativeAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    });
-
-    // Wrap the model to enable automatic tracing
-    export const gemini20Flash = wrapAISDKModel(geminiProvider('gemini-2.0-flash-exp'));
-    export const gemini15Pro = wrapAISDKModel(geminiProvider('gemini-1.5-pro'));
-    ```
-
-</Tab>
-<Tab title="Grok">
-
-1. Run the following in your terminal to install the Vercel AI SDK and the Grok provider.
-
-    ```sh
-    npm i ai @ai-sdk/xai
-    ```
-
-1. Create the file `src/shared/grok.ts` with the following content:
-
-    ```ts /src/shared/grok.ts
-    import { createXai } from '@ai-sdk/xai';
-    import { wrapAISDKModel } from 'axiom/ai';
-
-    const grokProvider = createXai({
-      apiKey: process.env.XAI_API_KEY,
-    });
-
-    // Wrap the model to enable automatic tracing
-    export const grokBeta = wrapAISDKModel(grokProvider('grok-beta'));
-    export const grok2Mini = wrapAISDKModel(grokProvider('grok-2-mini'));
+    export const gpt4o = wrapAISDKModel(gateway('openai/gpt-4o'));
     ```
 
 </Tab>
 </Tabs>
-
-The rest of the page explains how to work with OpenAI. The process is similar for other LLMs.
 
 ## Add context
 
