@@ -5,6 +5,8 @@ description: 'This page explains how to use Spotlight to automatically identify 
 
 Spotlight allows you to highlight a region of event data and automatically identify how it deviates from baseline across different fields. Instead of manually crafting queries to investigate anomalies, Spotlight analyzes every field in your data and presents the most significant differences through intelligent visualizations.
 
+This page explains how Spotlight works in the Axiom Console. For more information about the `spotlight` APL function, see [spotlight](/apl/aggregation-function/spotlight).
+
 Spotlight is particularly useful for:
 
 - **Root cause analysis**: Quickly identify why certain traces are slower, errors are occurring, or performance is degraded.
@@ -78,25 +80,29 @@ To dig deeper, iteratively refine your Spotlight analysis or jump to a view of m
 
 ### Investigate slow traces
 
-1. Create a heatmap query:
+1. Create a heatmap of trace durations. For example, run the following query:
 
     ```kusto
-    ['traces']
+    ['otel-demo-traces']
     | summarize histogram(duration, 20) by bin_auto(_time)
     ```
+
+    [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20histogram(duration%2C%2020)%20by%20bin_auto(_time)%22%7D)
 
 1. Select the region showing the slowest traces.
 1. Run Spotlight to see if slow traces are associated with specific endpoints, regions, or user segments.
 
 ### Understand error spikes
 
-1. Create a line chart:
+1. Build a time series of error-level logs. For example, run the following query:
 
     ```kusto
-    ['logs']
-    | where level == "error"
+    ['sample-http-logs']
+    | where status startswith "5"
     | summarize count() by bin_auto(_time)
     ```
+
+    [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20startswith%20'5'%20%7C%20summarize%20count()%20by%20bin_auto(_time)%22%7D)
 
 1. Select the time period where errors spiked.
 1. Run Spotlight to identify if there’s anything different about the selected errors.
