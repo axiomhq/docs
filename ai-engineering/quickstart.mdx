@@ -61,7 +61,6 @@ To send data to Axiom, configure a tracer. For example, use a dedicated instrume
       dotenv \
       @opentelemetry/exporter-trace-otlp-http \
       @opentelemetry/resources \
-      @opentelemetry/sdk-node \
       @opentelemetry/sdk-trace-node \
       @opentelemetry/semantic-conventions \
       @opentelemetry/api
@@ -72,7 +71,6 @@ To send data to Axiom, configure a tracer. For example, use a dedicated instrume
       dotenv \
       @opentelemetry/exporter-trace-otlp-http \
       @opentelemetry/resources \
-      @opentelemetry/sdk-node \
       @opentelemetry/sdk-trace-node \
       @opentelemetry/semantic-conventions \
       @opentelemetry/api
@@ -83,7 +81,6 @@ To send data to Axiom, configure a tracer. For example, use a dedicated instrume
       dotenv \
       @opentelemetry/exporter-trace-otlp-http \
       @opentelemetry/resources \
-      @opentelemetry/sdk-node \
       @opentelemetry/sdk-trace-node \
       @opentelemetry/semantic-conventions \
       @opentelemetry/api
@@ -94,7 +91,6 @@ To send data to Axiom, configure a tracer. For example, use a dedicated instrume
       dotenv \
       @opentelemetry/exporter-trace-otlp-http \
       @opentelemetry/resources \
-      @opentelemetry/sdk-node \
       @opentelemetry/sdk-trace-node \
       @opentelemetry/semantic-conventions \
       @opentelemetry/api
@@ -109,7 +105,7 @@ To send data to Axiom, configure a tracer. For example, use a dedicated instrume
     import 'dotenv/config'; // Make sure to load environment variables
     import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
     import { resourceFromAttributes } from '@opentelemetry/resources';
-    import { NodeSDK } from '@opentelemetry/sdk-node';
+    import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
     import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
     import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
     import { trace } from "@opentelemetry/api";
@@ -117,8 +113,8 @@ To send data to Axiom, configure a tracer. For example, use a dedicated instrume
 
     const tracer = trace.getTracer("my-tracer");
 
-    // Configure the NodeSDK to export traces to your Axiom dataset
-    const sdk = new NodeSDK({
+    // Configure the provider to export traces to your Axiom dataset
+    const provider = new NodeTracerProvider({
       resource: resourceFromAttributes({
         [ATTR_SERVICE_NAME]: 'my-ai-app', // Replace with your service name
       },
@@ -134,12 +130,12 @@ To send data to Axiom, configure a tracer. For example, use a dedicated instrume
             Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
             'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
           },
-        }),
+        })
       ),
     });
 
-    // Start the SDK
-    sdk.start();
+    // Register the provider
+    provider.register();
 
     // Initialize Axiom AI SDK with the configured tracer
     initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
