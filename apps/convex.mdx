@@ -1,13 +1,9 @@
 ---
 title: 'Connect Axiom with Convex'
 description: 'Stream function executions and console logs from your Convex deployment to Axiom for powerful querying, visualization, and monitoring.'
-overview: 'Backend-as-a-service platform'
 sidebarTitle: Convex
-keywords: ['convex', 'log streams', 'function logs']
-logoId: 'convex'
+keywords: ['convex', 'real-time backend', 'reactive functions', 'database monitoring', 'subscription tracking']
 ---
-
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
 
 Connect Axiom with [Convex](https://convex.dev) to get comprehensive observability into your backend functions and app events. Stream function executions, console logs, and metadata from your Convex deployment to Axiom for powerful querying, data visualization, and monitoring.
 
@@ -15,13 +11,15 @@ Connect Axiom with [Convex](https://convex.dev) to get comprehensive observabili
   <img src="/doc-assets/shots/convex-axiom-dashboard.png" alt="Convex Axiom dashboard showing function execution data" />
 </Frame>
 
-## What’s Convex?
+<Info>
+This page explains how to connecting with Convex can enhance your Axiom experience. For instructions on streaming data from Convex to Axiom, see [Send data from Convex](/send-data/convex).
+</Info>
+
+## Convex and log streams
 
 [Convex](https://convex.dev) is the backend platform that keeps your app in sync. It’s the open source, reactive database where queries are TypeScript code running right in the database. Just like React components react to state changes, Convex queries react to database changes.
 
 Convex provides a database, a place to write your server functions, and client libraries. It makes it easy to build and scale dynamic live-updating apps.
-
-## What are Convex log streams?
 
 Log streams enable streaming of events such as function executions and `console.log`s from your Convex deployment to supported destinations like Axiom, Datadog, or custom webhooks.
 
@@ -29,199 +27,52 @@ Log streams enable streaming of events such as function executions and `console.
 Log streams require a Convex Professional plan. Learn more about [Convex pricing plans](https://www.convex.dev/pricing) or upgrade your account.
 </Info>
 
-The most recent logs produced by your Convex deployment can be viewed in the Dashboard Logs page, the Convex CLI, or in the browser console. However, log streaming to Axiom enables:
+## Benefits of connecting Axiom with Convex
 
-- **Historical log storage** beyond the recent logs view
-- **Powerful querying** with Axiom Processing Language (APL)
-- **Advanced data visualization** and custom dashboards
-- **Integration with monitoring tools** like PagerDuty, Slack, and more
-- **Real-time alerting** based on function performance and errors
+Convex’s built-in features allow you to see the most recent logs produced by your deployment. Additionally, log streaming to Axiom provides comprehensive observability for your backend operations.
 
-## Prerequisites
+- **Historical log storage** beyond the recent logs view.
+- **Powerful querying** with Axiom Processing Language (APL).
+- **Advanced data visualization** and custom dashboards.
+- **Integration with monitoring tools** like PagerDuty, Slack, and more.
+- **Real-time alerting** based on function performance and errors.
 
-<Prerequisites />
-- [Create a Convex account](https://www.convex.dev/login) with a Professional plan.
-- Set up your app with Convex following one of the [quickstart guides](https://docs.convex.dev/quickstarts).
+## Analyze function performance
 
-## Configure Convex log streams
+After sending Convex log streams to Axiom, explore your Convex data and analyze your function performance using Axiom’s powerful [query capabilities](/query-data/explore). For example, you can:
 
-To send data from Convex to Axiom, set up a Convex log stream using the [Convex documentation](https://docs.convex.dev/production/integrations/log-streams#axiom).
-
-<Steps>
-<Step title="Access log streams settings">
-  In your Convex dashboard, navigate to Settings and then the Log Streams tab.
-</Step>
-
-<Step title="Configure Axiom integration">
-  Click "Configure" next to Axiom and provide the following information:
-  
-  - **Dataset name**: The name of your Axiom dataset
-  - **API key**: Your Axiom API token
-  - **Attributes** (optional): Key-value pairs to include in all log events sent to Axiom
-  
-  <Tip>
-  Attributes are useful for adding context like project name, environment, or team information to all your logs.
-  </Tip>
-</Step>
-
-<Step title="Verify connection">
-  Once configured, Convex will verify the connection to Axiom. You’ll see a confirmation when the log stream is active.
-</Step>
-</Steps>
-
-## Automatic dashboard creation
-
-When you configure a Convex dataset in Axiom, a dashboard is automatically created in the Integrations section of the Dashboards tab. This pre-built dashboard provides immediate insights into your Convex function performance and errors.
-
-<Check>
-You can find the automatic dashboard in Axiom under Dashboards > Integrations. To customize the layout, you can fork the dashboard and modify it to your needs.
-</Check>
-
-## Monitor function performance
-
-With Convex log streams in Axiom, you can monitor and analyze your function performance in real-time. The automatic dashboard provides immediate insights, and you can create custom queries using the structured log data.
-
-### Track function execution times
-
-Identify slow-performing functions by analyzing execution times:
-
-```apl
-['convex']
-| where data.topic == "function_execution"
-| summarize 
-    avg(data.execution_time_ms) as avg_time_ms,
-    max(data.execution_time_ms) as max_time_ms,
-    count() as total_calls
-  by data.function.path
-| order by avg_time_ms desc
-```
-
-### Monitor function errors
-
-Track functions that are experiencing failures:
-
-```apl
-['convex']
-| where data.topic == "function_execution" and data.status == "failure"
-| summarize count() by data.function.path, data.function.type
-| order by count() desc
-```
-
-### Analyze function types
-
-Compare performance across different function types (queries, mutations, actions):
-
-```apl
-['convex']
-| where data.topic == "function_execution"
-| summarize 
-    count() as total_calls,
-    avg(data.execution_time_ms) as avg_duration_ms
-  by data.function.type
-```
-
-### Track database usage
-
-Monitor database read patterns and identify resource-intensive functions:
-
-```apl
-['convex']
-| where data.topic == "function_execution"
-| summarize 
-    avg(data.usage.database_read_documents) as avg_docs_read,
-    avg(data.usage.database_read_bytes) as avg_bytes_read
-  by data.function.path
-| order by avg_bytes_read desc
-```
-
-### Monitor cache performance
-
-Track query cache hit rates for optimization:
-
-```apl
-['convex']
-| where data.topic == "function_execution" 
-  and data.function.type == "query"
-  and isnotempty(data.function.cached)
-| summarize 
-    countif(data.function.cached == true) as cache_hits,
-    count() as total_queries
-| extend cache_hit_rate = (cache_hits * 100) / total_queries
-```
-
-### Track scheduled job performance
-
-Monitor scheduled job lag and performance:
-
-```apl
-['convex']
-| where data.topic == "scheduled_job_lag"
-| summarize 
-    max(data.lag_seconds) as max_lag_seconds,
-    avg(data.lag_seconds) as avg_lag_seconds
-  by convex.project_slug, convex.deployment_name
-```
+- **Track function execution times**: Identify slow-performing functions by analyzing execution times.
+- **Monitor function errors**: Track functions that are experiencing failures.
+- **Analyze function types**: Compare performance across different function types (queries, mutations, actions).
+- **Track database usage**: Monitor database read patterns and identify resource-intensive functions.
+- **Monitor cache performance**: Track query cache hit rates for optimization.
+- **Track scheduled job performance**: Monitor scheduled job lag and performance.
 
 ## Set up monitoring and alerting
 
-Create monitors to get notified about issues in your Convex deployment:
+[Create monitors](/monitor-data/monitors) to get notified about issues in your Convex deployment. For example, you can set up a monitor to alert youa about the following:
 
-### Function failure rate alerts
+- **Function failure rate alerts**: Monitor functions with high error rates.
+- **Slow function alerts**: Set up alerts for functions exceeding execution time thresholds.
+- **Database operation alerts**: Set up alerts for database operations exceeding thresholds.
+- **Cache performance alerts**: Set up alerts for cache performance exceeding thresholds.
+- **Scheduled job performance alerts**: Set up alerts for scheduled job performance exceeding thresholds.
 
-Monitor functions with high error rates:
+## Prebuilt dashboard
 
-```apl
-['convex']
-| where data.topic == "function_execution"
-| summarize 
-    count() as total_calls,
-    countif(data.status == "failure") as failures
-  by data.function.path
-| extend error_rate = (failures * 100) / total_calls
-| where error_rate > 5  // Alert if error rate exceeds 5%
-```
+When you configure a Convex dataset in Axiom, a dashboard is automatically created in the **Integrations** section of the Dashboards tab. This prebuilt dashboard provides immediate insights into your Convex function performance and errors.
 
-### Slow function alerts
+The dashboard includes:
 
-Set up alerts for functions exceeding execution time thresholds:
+- **Function execution metrics**: Success rates, error counts, and performance trends.
+- **Database operation insights**: Query patterns, mutation frequencies, and subscription activity.
+- **Error analysis**: Error types, frequency, and affected functions.
+- **Performance monitoring**: Response times, throughput, and resource utilization.
 
-```apl
-['convex']
-| where data.topic == "function_execution" and data.execution_time_ms > 5000
-| summarize count() by data.function.path
-```
-
-## Log data structure
-
-Convex log streams send structured data to Axiom with the following key fields:
-
-- **`data.topic`**: Event type ("function_execution", "scheduled_job_lag")
-- **`data.status`**: Execution status ("success", "failure")
-- **`data.function.path`**: Full function path
-- **`data.function.type`**: Function type ("query", "mutation", "action")
-- **`data.function.component_path`**: Component path
-- **`data.execution_time_ms`**: Function execution time in milliseconds
-- **`data.usage.database_read_documents`**: Number of documents read
-- **`data.usage.database_read_bytes`**: Bytes of data read
-- **`data.function.cached`**: Cache hit indicator for queries
-- **`convex.project_slug`**: Convex project identifier
-- **`convex.deployment_name`**: Deployment name
-- **`convex.deployment_type`**: Deployment type
-
-## Benefits of Convex log streaming
-
-The Convex log streaming integration with Axiom provides several key benefits:
-
-1. **Complete observability**: Monitor all function executions, errors, and performance metrics in one place
-2. **Historical analysis**: Store and analyze logs beyond Convex’s recent logs view
-3. **Advanced querying**: Use APL to create complex queries and aggregations
-4. **Real-time monitoring**: Set up alerts and monitors for proactive issue detection
-5. **Custom dashboards**: Build tailored visualizations for your specific use cases
-6. **Team collaboration**: Share insights and dashboards with your development team
+You can customize this dashboard or create additional dashboards tailored to your specific monitoring needs and business requirements. For more information, see [Create dashboards](/dashboards/create) and [Configure dashboards](/dashboards/configure).
 
 ## Next steps
 
-- [Explore your Convex data](/query-data/explore) in Axiom’s query interface
-- [Create custom dashboards](/dashboards/create) for your team
-- [Set up monitors](/monitor-data/monitors) to get alerted about issues
-- [Learn APL](/apl/introduction) to write powerful queries against your Convex logs
+- [Explore your Convex data](/query-data/explore) in Axiom and [learn APL](/apl/introduction) to query your Convex logs.
+- [Create custom dashboards](/dashboards/create) for your team.
+- [Set up monitors](/monitor-data/monitors) to get alerted about issues.
