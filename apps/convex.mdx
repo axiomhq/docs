@@ -39,21 +39,21 @@ Convex’s built-in features allow you to see the most recent logs produced by y
 
 ## Analyze function performance
 
-Convex log streams send structured data to Axiom with the following key fields:
+Convex log streams send structured data to Axiom that includes the following key fields:
 
 <Accordion title="Log data structure">
-- **`data.topic`**: Event type
-- **`data.status`**: Execution status
-- **`data.function.path`**: Full function path
-- **`data.function.type`**: Function type
-- **`data.function.component_path`**: Component path
-- **`data.execution_time_ms`**: Function execution time in milliseconds
-- **`data.usage.database_read_documents`**: Number of documents read
-- **`data.usage.database_read_bytes`**: Bytes of data read
-- **`data.function.cached`**: Cache hit indicator for queries
-- **`convex.project_slug`**: Convex project identifier
-- **`convex.deployment_name`**: Deployment name
-- **`convex.deployment_type`**: Deployment type
+- **`['data.topic']`**: Event type
+- **`['data.status']`**: Execution status
+- **`['data.function.path']`**: Full function path
+- **`['data.function.type']`**: Function type
+- **`['data.function.component_path']`**: Component path
+- **`['data.execution_time_ms']`**: Function execution time in milliseconds
+- **`['data.usage.database_read_documents']`**: Number of documents read
+- **`['data.usage.database_read_bytes']`**: Bytes of data read
+- **`['data.function.cached']`**: Cache hit indicator for queries
+- **`['convex.project_slug']`**: Convex project identifier
+- **`['convex.deployment_name']`**: Deployment name
+- **`['convex.deployment_type']`**: Deployment type
 </Accordion>
 
 After sending Convex log streams to Axiom, explore your Convex data and analyze your function performance using Axiom’s powerful [query capabilities](/query-data/explore).
@@ -64,12 +64,12 @@ Identify slow-performing functions by analyzing execution times:
 
 ```kusto
 ['convex']
-| where data.topic == "function_execution"
+| where ['data.topic'] == "function_execution"
 | summarize 
-    avg(data.execution_time_ms) as avg_time_ms,
-    max(data.execution_time_ms) as max_time_ms,
-    count() as total_calls
-  by data.function.path
+    avg_time_ms = avg(['data.execution_time_ms']),
+    max_time_ms = max(['data.execution_time_ms']),
+    total_calls = count()
+  by ['data.function.path']
 | order by avg_time_ms desc
 ```
 </Accordion>
@@ -78,9 +78,9 @@ Track functions that are experiencing failures:
 
 ```kusto
 ['convex']
-| where data.topic == "function_execution" and data.status == "failure"
-| summarize count() by data.function.path, data.function.type
-| order by count() desc
+| where ['data.topic'] == "function_execution" and ['data.status'] == "failure"
+| summarize count() by ['data.function.path'], ['data.function.type']
+| order by count_ desc
 ```
 </Accordion>
 <Accordion title="Analyze function types">
@@ -88,11 +88,11 @@ Compare performance across different function types (queries, mutations, actions
 
 ```kusto
 ['convex']
-| where data.topic == "function_execution"
+| where ['data.topic'] == "function_execution"
 | summarize 
-    count() as total_calls,
-    avg(data.execution_time_ms) as avg_duration_ms
-  by data.function.type
+    total_calls = count(),
+    avg_duration_ms = avg(['data.execution_time_ms'])
+  by ['data.function.type']
 ```
 </Accordion>
 <Accordion title="Track database usage">
@@ -100,11 +100,11 @@ Track database read patterns and identify resource-intensive functions:
 
 ```kusto
 ['convex']
-| where data.topic == "function_execution"
+| where ['data.topic'] == "function_execution"
 | summarize 
-    avg(data.usage.database_read_documents) as avg_docs_read,
-    avg(data.usage.database_read_bytes) as avg_bytes_read
-  by data.function.path
+    avg_docs_read = avg(['data.usage.database_read_documents']),
+    avg_bytes_read = avg(['data.usage.database_read_bytes'])
+  by ['data.function.path']
 | order by avg_bytes_read desc
 ```
 </Accordion>
@@ -113,12 +113,12 @@ Track query cache hit rates for optimization:
 
 ```kusto
 ['convex']
-| where data.topic == "function_execution" 
-  and data.function.type == "query"
-  and isnotempty(data.function.cached)
+| where ['data.topic'] == "function_execution" 
+  and ['data.function.type'] == "query"
+  and isnotempty(['data.function.cached'])
 | summarize 
-    countif(data.function.cached == true) as cache_hits,
-    count() as total_queries
+    cache_hits = countif(['data.function.cached'] == true),
+    total_queries = count()
 | extend cache_hit_rate = (cache_hits * 100) / total_queries
 ```
 </Accordion>
@@ -127,11 +127,11 @@ Track scheduled job lag and performance:
 
 ```kusto
 ['convex']
-| where data.topic == "scheduled_job_lag"
+| where ['data.topic'] == "scheduled_job_lag"
 | summarize 
-    max(data.lag_seconds) as max_lag_seconds,
-    avg(data.lag_seconds) as avg_lag_seconds
-  by convex.project_slug, convex.deployment_name
+    max_lag_seconds = max(['data.lag_seconds']),
+    avg_lag_seconds = avg(['data.lag_seconds'])
+  by ['convex.project_slug'], ['convex.deployment_name']
 ```
 </Accordion>
 </AccordionGroup>
@@ -146,11 +146,11 @@ Monitor functions with high error rates:
 
 ```kusto
 ['convex']
-| where data.topic == "function_execution"
+| where ['data.topic'] == "function_execution"
 | summarize 
-    count() as total_calls,
-    countif(data.status == "failure") as failures
-  by data.function.path
+    total_calls = count(),
+    failures = countif(['data.status'] == "failure")
+  by ['data.function.path']
 | extend error_rate = (failures * 100) / total_calls
 | where error_rate > 5  // Alert if error rate exceeds 5%
 ```
@@ -161,8 +161,8 @@ Set up alerts for functions exceeding execution time thresholds:
 
 ```kusto
 ['convex']
-| where data.topic == "function_execution" and data.execution_time_ms > 5000
-| summarize count() by data.function.path
+| where ['data.topic'] == "function_execution" and ['data.execution_time_ms'] > 5000
+| summarize count() by ['data.function.path']
 ```
 </Accordion>
 </AccordionGroup>
