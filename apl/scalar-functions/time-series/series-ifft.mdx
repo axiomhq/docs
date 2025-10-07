@@ -1,0 +1,156 @@
+---
+title: series_ifft
+description: 'This page explains how to use the series_ifft function in APL.'
+---
+
+The `series_ifft` function performs an Inverse Fast Fourier Transform (IFFT) on a numeric dynamic array (series), converting frequency-domain data back into time-domain representation. This function is the inverse operation of `series_fft` and is essential for reconstructing signals from their frequency components.
+
+You can use `series_ifft` when you want to reconstruct time-domain signals from frequency-domain data, implement frequency-domain filtering, or perform signal synthesis. This is particularly useful after applying frequency-domain operations like filtering or when you need to convert processed frequency data back to the original time domain. Typical applications include signal reconstruction, frequency-domain filtering, noise reduction, and advanced signal processing workflows.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, IFFT operations aren’t natively available and typically require external tools or complex workarounds. Most Splunk users rely on statistical functions and time-based aggregations for signal reconstruction. In APL, `series_ifft` provides direct access to inverse frequency domain analysis, enabling sophisticated signal reconstruction capabilities.
+
+<CodeGroup>
+```sql Splunk example
+... | timechart span=1m avg(duration) by service
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize fft_data = make_list(complex_value) by bin(_time, 1m)
+| extend reconstructed_signal = series_ifft(fft_data)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not provide IFFT functionality. Database systems typically require specialized extensions or external libraries for inverse frequency domain analysis. Most SQL users rely on window functions and statistical aggregations for signal reconstruction. In APL, `series_ifft` brings advanced inverse signal processing capabilities directly into the query language.
+
+<CodeGroup>
+```sql SQL example
+SELECT AVG(duration) as avg_duration
+FROM requests
+GROUP BY DATE_TRUNC('minute', timestamp);
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize fft_data = make_list(complex_value) by bin(_time, 1m)
+| extend reconstructed_signal = series_ifft(fft_data)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+series_ifft(array)
+```
+
+### Parameters
+
+| Parameter | Type    | Description                        |
+| --------- | ------- | ---------------------------------- |
+| `array`   | dynamic | A dynamic array of complex numbers representing frequency domain data. |
+
+### Returns
+
+A dynamic array of numeric values representing the reconstructed time-domain signal.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, you can use `series_ifft` to reconstruct time-domain request duration patterns from frequency-domain data after applying frequency filtering.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize fft_data = make_list(complex(req_duration_ms, 0)) by bin(_time, 1h)
+| extend reconstructed_durations = series_ifft(fft_data)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20fft_data%20%3D%20make_list(complex(req_duration_ms%2C%200))%20by%20bin(_time%2C%201h)%20%7C%20extend%20reconstructed_durations%20%3D%20series_ifft(fft_data)%22%7D)
+
+**Output**
+
+| _time                | fft_data                    | reconstructed_durations    |
+| -------------------- | --------------------------- | -------------------------- |
+| 2024-01-01T00:00:00Z | [complex(450, 0), complex(-30, -51.96)] | [120, 150, 180] |
+| 2024-01-01T01:00:00Z | [complex(480, 0), complex(-30, -51.96)] | [130, 160, 190] |
+
+This query reconstructs time-domain request duration patterns from frequency-domain data, useful for signal reconstruction after frequency filtering.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In OpenTelemetry traces, you can use `series_ifft` to reconstruct time-domain span duration patterns from frequency-domain data for advanced latency analysis.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| summarize fft_data = make_list(complex(duration, 0)) by bin(_time, 30m), ['service.name']
+| extend reconstructed_durations = series_ifft(fft_data)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20fft_data%20%3D%20make_list(complex(duration%2C%200))%20by%20bin(_time%2C%2030m)%2C%20%5B'service.name'%5D%20%7C%20extend%20reconstructed_durations%20%3D%20series_ifft(fft_data)%22%7D)
+
+**Output**
+
+| _time                | service.name    | fft_data                    | reconstructed_durations    |
+| -------------------- | --------------- | --------------------------- | -------------------------- |
+| 2024-01-01T00:00:00Z | frontend        | [complex(600ms, 0), complex(-100ms, -173.2ms)] | [100ms, 200ms, 300ms] |
+| 2024-01-01T00:00:00Z | cart            | [complex(750ms, 0), complex(-100ms, -173.2ms)] | [150ms, 250ms, 350ms] |
+
+This query reconstructs time-domain span duration patterns from frequency-domain data, useful for advanced signal reconstruction in service performance analysis.
+
+</Tab>
+<Tab title="Security logs">
+
+In security logs, you can use `series_ifft` to reconstruct time-domain request duration patterns from frequency-domain data for advanced attack pattern analysis.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize fft_data = make_list(complex(req_duration_ms, 0)) by bin(_time, 15m), ['geo.country']
+| extend reconstructed_durations = series_ifft(fft_data)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20fft_data%20%3D%20make_list(complex(req_duration_ms%2C%200))%20by%20bin(_time%2C%2015m)%2C%20%5B'geo.country'%5D%20%7C%20extend%20reconstructed_durations%20%3D%20series_ifft(fft_data)%22%7D)
+
+**Output**
+
+| _time                | geo.country | fft_data                    | reconstructed_durations    |
+| -------------------- | ----------- | --------------------------- | -------------------------- |
+| 2024-01-01T00:00:00Z | US          | [complex(1200, 0), complex(-200, -346.4)] | [200, 400, 600] |
+| 2024-01-01T00:00:00Z | DE          | [complex(900, 0), complex(-200, -346.4)] | [100, 300, 500] |
+
+This query reconstructs time-domain request duration patterns from frequency-domain data by country, useful for advanced signal reconstruction in security analysis.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [series_fft](/apl/scalar-functions/time-series/series-fft): Performs Fast Fourier Transform to convert time domain to frequency domain. Use before applying frequency-domain operations.
+- [series_fir](/apl/scalar-functions/time-series/series-fir): Applies a finite impulse response filter to a series. Use for time-domain filtering instead of frequency-domain processing.
+- [series_cos](/apl/scalar-functions/time-series/series-cos): Returns the cosine of each element in an array. Use for generating periodic components in signal synthesis.
+- [series_sin](/apl/scalar-functions/time-series/series-sin): Returns the sine of each element in an array. Use for generating periodic components with phase shifts.
+- [series_exp](/apl/scalar-functions/time-series/series-exp): Calculates the exponential of each element in an array. Use for exponential signal components instead of frequency reconstruction.
