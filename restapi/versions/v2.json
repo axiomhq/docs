@@ -1797,7 +1797,7 @@
             }
           },
           {
-            "description": "'all', 'team', or userID",
+            "description": "- If the value of `who` is undefined, the request returns queries starred by the authenticated user.\n- If the value of `who` is a user ID, the request returns queries starred by the user with this ID (this request requires elevated privileges). For example, `&who='abc123'`.\n- If the value of `who` is `team`, the request returns queries starred by the team apart from the authenticated user.For example, `&who=team`.\n- If the value of `who` is `all`, the request returns queries starred by all users in the team, including the authenticated user. For example, `&who=all`.",
             "name": "who",
             "in": "query",
             "schema": {
@@ -2810,6 +2810,16 @@
       }
     },
     "requestBodies": {
+      "FlowDestination": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/FlowDestination"
+            }
+          }
+        },
+        "required": true
+      },
       "Repo": {
         "content": {
           "application/json": {
@@ -3320,6 +3330,99 @@
           }
         }
       },
+      "Block": {
+        "type": "object",
+        "properties": {
+          "locatorURL": {
+            "description": "URL to locate the block in storage",
+            "type": "string",
+            "example": "block://unstable_v0/zgAQynPEQLEMsQwAAwAACAwYqTcAFGcAAAAAAAAACjgVchcAG7bpGFuQrFTOk54YW5Fr9V76LmidjehN6GOLBD7YhQAAAACS2SJheGlvbWVyc2Z0ODNheGlvbXRyYWNlc2RldnlreDdjeXJ12SxzMzovL2F4aW9tLWNsb3VkLWRldmVsb3BtZW50LWRhdGFiYXNlLTY1amJtLw=="
+          },
+          "memoryEstimate": {
+            "description": "Estimated memory usage in bytes",
+            "type": "integer",
+            "format": "int64",
+            "example": 1048576
+          },
+          "recordCount": {
+            "description": "Number of records in the block",
+            "type": "integer",
+            "format": "int32",
+            "example": 10000
+          }
+        }
+      },
+      "BlockFailure": {
+        "type": "object",
+        "properties": {
+          "block": {
+            "$ref": "#/components/schemas/Block"
+          },
+          "error": {
+            "description": "Error message describing the failure",
+            "type": "string",
+            "example": "Failed to parse block data"
+          },
+          "errorCode": {
+            "description": "Error code for categorizing the failure",
+            "type": "string",
+            "example": "PARSE_ERROR"
+          }
+        }
+      },
+      "BlockSuccess": {
+        "type": "object",
+        "properties": {
+          "block": {
+            "$ref": "#/components/schemas/Block"
+          },
+          "events": {
+            "description": "Number of events processed",
+            "type": "integer",
+            "format": "int64",
+            "example": 5000
+          }
+        }
+      },
+      "BlocksRequest": {
+        "type": "object",
+        "required": [
+          "apl",
+          "startTime",
+          "endTime"
+        ],
+        "properties": {
+          "apl": {
+            "description": "The APL query to execute for finding matching blocks",
+            "type": "string",
+            "example": "['my-dataset'] | where status_code >= 400"
+          },
+          "endTime": {
+            "description": "The end time for the query time range",
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-02T00:00:00Z"
+          },
+          "startTime": {
+            "description": "The start time for the query time range",
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-01T00:00:00Z"
+          }
+        }
+      },
+      "BlocksResponse": {
+        "type": "object",
+        "properties": {
+          "blocks": {
+            "description": "List of blocks matching the query",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            }
+          }
+        }
+      },
       "BucketInfo": {
         "description": "The standard mode of operation for Kirby is to create buckets on the _time column,",
         "type": "object",
@@ -3401,9 +3504,26 @@
             "type": "string",
             "default": ""
           },
+          "kind": {
+            "description": "The kind of the dataset",
+            "type": "string",
+            "default": "axiom:events:v1",
+            "enum": [
+              "otel:metrics:v1",
+              "otel:traces:v1",
+              "otel:logs:v1",
+              "axiom:events:v1"
+            ],
+            "example": "axiom:events:v1"
+          },
           "name": {
             "description": "Dataset unique name",
             "type": "string"
+          },
+          "region": {
+            "description": "Region of the dataset",
+            "type": "string",
+            "x-omitempty": true
           },
           "retentionDays": {
             "description": "Number of days to retain data in the dataset",
@@ -3418,8 +3538,43 @@
         },
         "example": {
           "description": "string",
+          "kind": "axiom:events:v1",
           "name": "string",
           "retentionDays": 30
+        }
+      },
+      "CreateFlowExport": {
+        "type": "object",
+        "required": [
+          "destinationId",
+          "name",
+          "apl",
+          "start",
+          "end"
+        ],
+        "properties": {
+          "apl": {
+            "description": "The APL query to execute for the export",
+            "type": "string"
+          },
+          "destinationId": {
+            "description": "The destination to export to",
+            "type": "string"
+          },
+          "end": {
+            "description": "The RFC3339-formatted time of the end of the export range",
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "description": "The name of the export",
+            "type": "string"
+          },
+          "start": {
+            "description": "The RFC3339-formatted time of the start of the export range",
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "CreateUserRequest": {
@@ -3505,7 +3660,8 @@
           "name",
           "description",
           "created",
-          "who"
+          "who",
+          "kind"
         ],
         "properties": {
           "canWrite": {
@@ -3524,6 +3680,18 @@
           "id": {
             "description": "Dataset ID",
             "type": "string"
+          },
+          "kind": {
+            "description": "The kind of the dataset",
+            "type": "string",
+            "default": "axiom:events:v1",
+            "enum": [
+              "otel:metrics:v1",
+              "otel:traces:v1",
+              "otel:logs:v1",
+              "axiom:events:v1"
+            ],
+            "example": "axiom:events:v1"
           },
           "mapFields": {
             "type": "array",
@@ -3558,6 +3726,7 @@
           "created": "2022-07-20T02:35:14.137Z",
           "description": "string",
           "id": "string",
+          "kind": "axiom:events:v1",
           "name": "string",
           "who": "string"
         }
@@ -3644,6 +3813,178 @@
           },
           "type": {
             "type": "string"
+          }
+        }
+      },
+      "FlowDestination": {
+        "description": "Flow destination configuration schema.",
+        "type": "object",
+        "required": [
+          "kind",
+          "name",
+          "failureMode",
+          "properties"
+        ],
+        "properties": {
+          "failureMode": {
+            "type": "string",
+            "enum": [
+              "waitAndRetry",
+              "abort",
+              "continue"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "readOnly": true
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "axiom",
+              "azureBlobStorageClientSecret",
+              "gcs",
+              "http",
+              "httpAuthorization",
+              "httpBasic",
+              "s3Compat"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "properties": {
+            "description": "Flow properties for the specific flow type.",
+            "type": "object",
+            "properties": {
+              "axiom": {
+                "$ref": "#/components/schemas/axiomProperties"
+              },
+              "azureBlobStorageClientSecret": {
+                "$ref": "#/components/schemas/azureBlobStorageClientSecretProperties"
+              },
+              "gcs": {
+                "$ref": "#/components/schemas/gcsProperties"
+              },
+              "http": {
+                "$ref": "#/components/schemas/httpProperties"
+              },
+              "httpAuthorization": {
+                "$ref": "#/components/schemas/httpAuthorizationProperties"
+              },
+              "httpBasic": {
+                "$ref": "#/components/schemas/httpBasicProperties"
+              },
+              "s3Compat": {
+                "$ref": "#/components/schemas/s3CompatProperties"
+              }
+            }
+          }
+        }
+      },
+      "FlowExport": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "description": "The APL of the export",
+            "type": "string",
+            "readOnly": true
+          },
+          "createdAt": {
+            "description": "The RFC3339-formatted time the export was created at",
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "createdBy": {
+            "type": "string",
+            "readOnly": true
+          },
+          "destinationId": {
+            "description": "The destination ID",
+            "type": "string",
+            "readOnly": true
+          },
+          "end": {
+            "description": "The RFC3339-formatted time of the end of the export range",
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "errorMessages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true
+          },
+          "errorRate": {
+            "description": "Error Rate",
+            "type": "number",
+            "format": "double",
+            "readOnly": true
+          },
+          "eventsIn": {
+            "description": "Number of events received",
+            "type": "integer",
+            "readOnly": true
+          },
+          "eventsOut": {
+            "description": "Number of events delivered",
+            "type": "integer",
+            "readOnly": true
+          },
+          "id": {
+            "type": "string",
+            "readOnly": true
+          },
+          "lastActivity": {
+            "description": "The RFC3339-formatted time of the last activity",
+            "type": "string",
+            "format": "date-time",
+            "x-isnullable": true,
+            "readOnly": true
+          },
+          "name": {
+            "description": "The name of the export",
+            "type": "string",
+            "readOnly": true
+          },
+          "progress": {
+            "description": "Progress",
+            "type": "number",
+            "format": "double",
+            "readOnly": true
+          },
+          "start": {
+            "description": "The RFC3339-formatted time of the start of the export range",
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "state": {
+            "description": "State",
+            "type": "string",
+            "enum": [
+              "requested",
+              "running",
+              "stopped",
+              "aborted",
+              "finished",
+              "expired"
+            ],
+            "readOnly": true
+          },
+          "stoppedAt": {
+            "description": "The RFC3339-formatted time the export was stopped at",
+            "type": "string",
+            "format": "date-time",
+            "x-isnullable": true,
+            "readOnly": true
+          },
+          "stoppedBy": {
+            "type": "string",
+            "readOnly": true
           }
         }
       },
@@ -3734,7 +4075,9 @@
           "withAuths",
           "features",
           "billingPeriodStart",
-          "billingPeriodEnd"
+          "billingPeriodEnd",
+          "defaultRegion",
+          "regions"
         ],
         "properties": {
           "apiRateLimitPerSecond": {
@@ -3748,6 +4091,10 @@
           "billingPeriodStart": {
             "type": "string",
             "format": "date-time"
+          },
+          "defaultRegion": {
+            "type": "string",
+            "x-omitempty": true
           },
           "expiresAt": {
             "type": "string",
@@ -3808,6 +4155,13 @@
           "monthlyQueryGbHours": {
             "type": "integer",
             "format": "uint64"
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-omitempty": true
           },
           "storageAllowanceGB": {
             "type": "integer",
@@ -4292,6 +4646,9 @@
           "primaryEmail"
         ],
         "properties": {
+          "defaultRegion": {
+            "type": "string"
+          },
           "firstFailedPayment": {
             "type": "string"
           },
@@ -4371,6 +4728,9 @@
         ],
         "properties": {
           "name": {
+            "type": "string"
+          },
+          "region": {
             "type": "string"
           }
         }
@@ -4899,6 +5259,56 @@
           }
         }
       },
+      "TransformRequest": {
+        "type": "object",
+        "required": [
+          "blocks",
+          "apl",
+          "startTime",
+          "endTime",
+          "resultURLs"
+        ],
+        "properties": {
+          "apl": {
+            "description": "The APL query to apply for transformation",
+            "type": "string",
+            "example": "['my-dataset'] | where status_code >= 400 | project timestamp, service, error_message"
+          },
+          "blocks": {
+            "description": "List of block locator URLs to transform",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "block://unstable_v0/zgAQynPEQLEMsQwAAwAACAwYqTcAFGcAAAAAAAAACjgVchcAG7bpGFuQrFTOk54YW5Fr9V76LmidjehN6GOLBD7YhQAAAACS2SJheGlvbWVyc2Z0ODNheGlvbXRyYWNlc2RldnlreDdjeXJ12SxzMzovL2F4aW9tLWNsb3VkLWRldmVsb3BtZW50LWRhdGFiYXNlLTY1amJtLw=="
+            ]
+          },
+          "endTime": {
+            "description": "The end time for the transformation",
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-02T00:00:00Z"
+          },
+          "resultURLs": {
+            "description": "List of URLs where transformation results should be uploaded",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "https://output-bucket.s3.amazonaws.com/transformed/result1.jsonl?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...",
+              "https://output-bucket.s3.amazonaws.com/transformed/result2.jsonl?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=..."
+            ]
+          },
+          "startTime": {
+            "description": "The start time for the transformation",
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-01T00:00:00Z"
+          }
+        }
+      },
       "TrimOptions": {
         "type": "object",
         "required": [
@@ -5146,6 +5556,68 @@
           }
         }
       },
+      "axiomProperties": {
+        "type": "object",
+        "required": [
+          "dataset",
+          "token"
+        ],
+        "properties": {
+          "dataset": {
+            "description": "Name of the destination dataset",
+            "type": "string"
+          },
+          "token": {
+            "description": "Axiom ingest API token",
+            "type": "string"
+          },
+          "url": {
+            "description": "Axiom ingest API endpoint",
+            "type": "string"
+          }
+        }
+      },
+      "azureBlobStorageClientSecretProperties": {
+        "type": "object",
+        "required": [
+          "clientId",
+          "clientSecret",
+          "tenantID",
+          "url"
+        ],
+        "properties": {
+          "clientId": {
+            "description": "Client ID of the service principal",
+            "type": "string"
+          },
+          "clientSecret": {
+            "description": "Client secret of the service principal",
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "ndjson",
+              "headerlessCsv",
+              "csv",
+              "parquetFlat",
+              "sparseNdjson"
+            ]
+          },
+          "maximumEvents": {
+            "description": "Maximum number of events to send in a single file",
+            "type": "integer"
+          },
+          "tenantID": {
+            "description": "AD Tenant ID",
+            "type": "string"
+          },
+          "url": {
+            "description": "URL of the container",
+            "type": "string"
+          }
+        }
+      },
       "datasetCapabilities": {
         "type": "object",
         "additionalProperties": {
@@ -5246,6 +5718,173 @@
               },
               "x-omitempty": true
             }
+          }
+        }
+      },
+      "gcsProperties": {
+        "type": "object",
+        "required": [
+          "credentialsJson",
+          "bucket"
+        ],
+        "properties": {
+          "bucket": {
+            "description": "Name of the destination bucket",
+            "type": "string"
+          },
+          "credentialsJson": {
+            "description": "Service account or refresh token JSON credentials",
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "ndjson",
+              "headerlessCsv",
+              "csv",
+              "parquetFlat",
+              "sparseNdjson"
+            ]
+          }
+        }
+      },
+      "httpAuthorizationProperties": {
+        "type": "object",
+        "required": [
+          "authorization",
+          "url"
+        ],
+        "properties": {
+          "authorization": {
+            "description": "Authorization header value",
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "ndjson",
+              "headerlessCsv",
+              "csv",
+              "parquetFlat",
+              "sparseNdjson",
+              "textTemplate"
+            ]
+          },
+          "headers": {
+            "description": "HTTP headers to send with each request",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "maximumConnections": {
+            "description": "Maximum number of connections to the target server",
+            "type": "integer"
+          },
+          "maximumEvents": {
+            "description": "Maximum number of events to send in a single request",
+            "type": "integer"
+          },
+          "textTemplateEncoderBody": {
+            "description": "Text Encoder Template, only available if format is textTemplate",
+            "type": "string"
+          },
+          "url": {
+            "description": "URL of the destination endpoint",
+            "type": "string"
+          }
+        }
+      },
+      "httpBasicProperties": {
+        "type": "object",
+        "required": [
+          "username",
+          "url"
+        ],
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "ndjson",
+              "headerlessCsv",
+              "csv",
+              "parquetFlat",
+              "sparseNdjson",
+              "textTemplate"
+            ]
+          },
+          "headers": {
+            "description": "HTTP headers to send with each request",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "maximumConnections": {
+            "description": "Maximum number of connections to the target server",
+            "type": "integer"
+          },
+          "maximumEvents": {
+            "description": "Maximum number of events to send in a single request",
+            "type": "integer"
+          },
+          "password": {
+            "description": "Password of the destination endpoint",
+            "type": "string"
+          },
+          "textTemplateEncoderBody": {
+            "description": "Text Encoder Template, only available if format is textTemplate",
+            "type": "string"
+          },
+          "url": {
+            "description": "URL of the destination endpoint",
+            "type": "string"
+          },
+          "username": {
+            "description": "Username of the destination endpoint",
+            "type": "string"
+          }
+        }
+      },
+      "httpProperties": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "ndjson",
+              "headerlessCsv",
+              "csv",
+              "parquetFlat",
+              "sparseNdjson",
+              "textTemplate"
+            ]
+          },
+          "headers": {
+            "description": "HTTP headers to send with each request",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "maximumConnections": {
+            "description": "Maximum number of connections to the target server",
+            "type": "integer"
+          },
+          "maximumEvents": {
+            "description": "Maximum number of events to send in a single request",
+            "type": "integer"
+          },
+          "textTemplateEncoderBody": {
+            "description": "Text Encoder Template, only available if format is textTemplate",
+            "type": "string"
+          },
+          "url": {
+            "description": "URL of the destination endpoint",
+            "type": "string"
           }
         }
       },
@@ -5799,6 +6438,51 @@
               },
               "x-omitempty": true
             }
+          }
+        }
+      },
+      "s3CompatProperties": {
+        "type": "object",
+        "required": [
+          "accessKeyId",
+          "secretAccessKey",
+          "hostname",
+          "bucket"
+        ],
+        "properties": {
+          "accessKeyId": {
+            "description": "AWS access key identifier",
+            "type": "string"
+          },
+          "bucket": {
+            "description": "Name of the destination bucket",
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "ndjson",
+              "headerlessCsv",
+              "csv",
+              "parquetFlat",
+              "sparseNdjson"
+            ]
+          },
+          "hostname": {
+            "description": "Hostname of the S3 compatible storage",
+            "type": "string"
+          },
+          "maximumEvents": {
+            "description": "Maximum number of events to send in a single file",
+            "type": "integer"
+          },
+          "region": {
+            "description": "Region of the destination bucket",
+            "type": "string"
+          },
+          "secretAccessKey": {
+            "description": "AWS secret access key",
+            "type": "string"
           }
         }
       },
