@@ -45,7 +45,7 @@ A typical AxQL query contains the following:
 ```kusto
 k8s:cpu_usage[1h..]
 | where namespace == "prod"
-| align avg(5m)
+| align to 5m using avg
 ```
 
 This example queries the `k8s` dataset’s `cpu_usage` metric one hour before the current time. It filters results to events where `namespace` is `prod` and aggregates events over 5-minute time windows into their average value.
@@ -116,8 +116,8 @@ Available functions:
 | `min(arg)`            | Returns the minimum between the argument and the value.               |
 | `max(arg)`            | Returns the maximum between the argument and the value.               |
 | `abs`                 | Returns the absolute value of each data point.                   |
-| `fill_prev`           | Fills missing values using the previous non-null value.          |
-| `fill_const(arg)`     | Fills missing values with a constant.                            |
+| `fill::prev`           | Fills missing values using the previous non-null value.          |
+| `fill::const(arg)`     | Fills missing values with a constant.                            |
 | `+`, `-`, `*`, `/`    | Performs the respective mathematical calculation on each value.  |
 |  `>`, `<`, `>=`, `<=` | Sets the value to `1.0` if the condition is true, `0` otherwise. |
 
@@ -131,10 +131,10 @@ Available functions:
 | map  + 5
 
 // Fill empty values with the latest value
-| map fill_last
+| map fill::prev
 
 // Fill empty values with zeros
-| map fill_const(0)
+| map fill::const(0)
 
 // Set existing values to 0 if the value is < 0.4. Else set to 1.
 | map < 0.4
@@ -173,12 +173,12 @@ Use `align` to aggregate over time windows.
 **Syntax:**
 
 ```kusto
-| align <aggregation_function>(<time_window>)
+| align to <time_window> using <aggregation_function>
 ```
 
 {/*
 ```kusto
-| align <aggregation_function>(<time_window>[, <step>])
+| align to <emit window> [over <sliding window>] <aggregation_function>
 ```
 */}
 
@@ -191,24 +191,25 @@ Available aggregation functions:
 | `min`    | Takes the minimum value per interval. |
 | `max`    | Takes the maximum value per interval. |
 | `count`  | Counts non-null values per interval.  |
+| `prom::rate` | Prometheus style rate |
 
 **Examples:**
 
 ```kusto
 // Calculate the average over 5-minute time windows
-| align avg(5m)
+| align to 5m using avg
 
 // Count the data points in the last hour
-| align count(1h)
+| align to 1h using count
 ```
 
 {/*
 ```kusto
 // Calculate the running average every minute with a lookback window of 5 minutes
-| align avg(5m, 1m)
+| align to 1m over 5m using avg
 
 // Aggregate data using a custom function from WASM
-| align wasm::my_module::my_function(30s)
+| align to 30s using wasm::my_module::my_function
 ```
 */}
 
@@ -260,7 +261,7 @@ Bucketing is a special case of grouping that combines the time and tag dimension
 **Syntax:**
 
 ```kusto
-| bucket by <tags> using <function>(<window>)
+| bucket [by <tags>] to <window> using <function>
 ```
 
 Available functions:
@@ -274,13 +275,13 @@ Available functions:
 
 ```kusto
 // Bucket over the `project` and `namespace` tags using the histogram aggregation
-| bucket by project, namespace using histogram(5m)
+| bucket by project, namespace to 5m using histogram
 ```
 
 {/*
 ```kusto
 // Bucket over the `project` and `namespace` tags using a custom aggregation function from WASM
-| bucket by project, namespace using wasm::my_module::my_function(5m)
+| bucket by project, namespace to 5m using wasm::my_module::my_function
 ```
 */}
 
@@ -427,7 +428,7 @@ To reference the query parameters in your query, use the dollar sign (`$`).
 
 ```kusto
 // Calculate the running average over a one-hour window, emitting every `step`
-| align avg($step, 1h)
+| align to  $step over 1h using avg
 ```
 
 ### Custom functions
@@ -459,7 +460,7 @@ wasm::<module_name>::<function_name>
 
 ```kusto
 // Bucket over the `project` and `namespace` tags using a custom aggregation function from WASM
-| bucket by project, namespace using wasm::my_module::my_function(5m)
+| bucket by project, namespace to 5m using wasm::my_module::my_function
 ```
 */}
 

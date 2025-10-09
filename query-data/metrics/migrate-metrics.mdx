@@ -65,7 +65,7 @@ test-with-minus.com:axiomdb_transport_ingest_pressure as snot
 | group using max
 | as cookie
 | map < 0.4
-| align avg(7d)
+| align to 7d using avg
 | as cake
 ```
 </CodeGroup>
@@ -157,15 +157,15 @@ sum(rate(http_request_duration_count{container=~"ingest|api|login", path=~".*(in
   | filter path =~ /.*(ingest|(?:v1\/(traces|logs))).*/
   | filter code >= 500 
   | map rate
-  | align avg(5m)
+  | align to 5m using avg
   | group using sum;
   test:http_request_duration_count
   | filter container =~ /ingest|api|login/
   | filter path =~ /.*(ingest|(?:v1\/(traces|logs))).*/
   | map rate
-  | align avg(5m)
+  | align to 5m using avg
   | group using sum
-} join using / as error_rate
+} compute using / as error_rate
 ```
 </CodeGroup>
 
@@ -195,7 +195,7 @@ max(
     | filter pod =~ /ingest-.*/
     | filter resource == "cpu"
     | group by pod using sum;
-} join by pod using / as cpu_usage
+} compute by pod using / as cpu_usage
 | replace service = pod ~ s/(.+)-.+-.+/$1/
 | group by service using max
 ```
@@ -241,7 +241,7 @@ test:http_requests_total
 | filter path =~ /.*(ingest|(?:v1\/(traces|logs))).*/
 | filter code =~ /[123]../
 | map rate
-| align avg(5m)
+| align to 5m using avg
 | group by method, path, code using sum
 ```
 </CodeGroup>

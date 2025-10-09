@@ -9,7 +9,7 @@ description: This page gives examples about how to query OTel metrics.
 test:axiom_http_requests_total
 | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
 | where code < 400
-| align rate(5m)
+| align to 5m using rate
 | group by method, path, code using sum
 ```
 
@@ -22,7 +22,7 @@ test-with-minus.com:axiomdb_transport_ingest_pressure as snot
 | group using max
 | as cookie
 | map < 0.4
-| align avg(7d)
+| align to 7d using avg
 | as cake
 ```
 
@@ -31,7 +31,7 @@ test-with-minus.com:axiomdb_transport_ingest_pressure as snot
 ```kusto
 test:axiom_http_request_duration_seconds_bucket
 | where code == /[123]../
-| bucket by method, path using interpolate_histogram(5m, 0.90, max, 0.99)
+| bucket by method, path to 5m using interpolate_histogram(0.90, max, 0.99)
 ```
 
 ### Filtered histogram
@@ -44,7 +44,7 @@ axiom-dev.metrics:axiomdb_transport_request_duration_seconds_bucket
 | map rate
 | align avg(30s)
 | group by handler, le using sum
-| bucket by handler using interpolate_histogram(30s, min, 0.5, max)
+| bucket by handler to 30s using interpolate_histogram(min, 0.5, max)
 ```
 
 ## Compute
@@ -57,12 +57,16 @@ axiom-dev.metrics:axiomdb_transport_request_duration_seconds_bucket
     | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
     | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
     | where code >= 500 // note since things go through prom we currently store it as string but this is how we'd want this query to IO_WORKER
-    | align rate(5m)
+    | map interpolate::linear
+    | map rate
+    | align to 5m using avg
     | group using sum;
     test:axiom_http_request_duration_seconds_count
     | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
     | where path == ".*(elastic/_bulk|ingest|(?:v1/(traces|logs|metrics))).*"
-    | align rate(5m)
+    | map interpolate::linear
+    | map rate
+    | align to 5m using avg
     | group using sum
 }
 | compute error_rate using /
@@ -73,9 +77,9 @@ axiom-dev.metrics:axiomdb_transport_request_duration_seconds_bucket
 ```kusto
 {
     test:metric_a
-    | align avg(1m, 5m); // emit every 1m running values over 5m
+    | align to 1m over 5m using avg; // emit every 1m running values over 5m
     test:metric_a
-    | align avg(1m, 1h) // emit every 1m running values over 5m
+    | align to 1m over 1h using avg // emit every 1m running values over 5m
 }
 | compute avg_over_time using /
 ```
@@ -124,16 +128,16 @@ test-with-minus.com:axiomdb_transport_ingest_pressure
 | where service == /axiomdb-[a-f]/
 | group using max
 | map < 0.4
-| align avg(7d)
+| align to 7d using avg
 ```
 
 ### SLO histogram
 
 ```
 test:http_server_request_duration_seconds_bucket
-| bucket using interpolate_histogram(1m ,0.99)
+| bucket to 1m using interpolate_histogram(0.99)
 | map < 0.4
-| align avg(7d)
+| align to 7d using avg
 ```
 
 ### SLO ingest rate
