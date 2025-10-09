@@ -93,8 +93,6 @@ Available operators:
 
 - Equality: `==`, `!=`
 - Comparisons: `<`, `<=`, `>`, `>=`
-{/* - Logical: `and`, `or`, `not` */}
-{/* - Set: `in` */}
 
 The value must be one of the [supported data types](#data-types).
 
@@ -140,32 +138,6 @@ Available functions:
 | map < 0.4
 ```
 
-{/*
-```kusto
-// Transform data using a custom function from WASM
-| map wasm::my_module::my_function(1, 2, 3)
-```
-
-**Examples for series mappings:**
-
-```kusto
-// Rename the metric to `cpu_usage_rate`
-| as cpu_usage_rate
-
-// Rename the tag `load` to `cpu_load`
-| replace load=cpu_load
-
-// Replace the value of `hostname` using a regular expression
-TODO
-
-// Create the new tag `core` by adding 1 to `gpu_core`
-| replace core = gpu_core + 1
-
-// Remove the tag `gpu_core`
-| remove gpu_core
-```
-*/}
-
 ### Aggregation
 
 Use `align` to aggregate over time windows.
@@ -175,12 +147,6 @@ Use `align` to aggregate over time windows.
 ```kusto
 | align to <time_window> using <aggregation_function>
 ```
-
-{/*
-```kusto
-| align to <emit window> [over <sliding window>] <aggregation_function>
-```
-*/}
 
 Available aggregation functions:
 
@@ -202,16 +168,6 @@ Available aggregation functions:
 // Count the data points in the last hour
 | align to 1h using count
 ```
-
-{/*
-```kusto
-// Calculate the running average every minute with a lookback window of 5 minutes
-| align to 1m over 5m using avg
-
-// Aggregate data using a custom function from WASM
-| align to 30s using wasm::my_module::my_function
-```
-*/}
 
 ### Grouping
 
@@ -248,12 +204,6 @@ Available aggregation functions:
 | group by project, namespace using sum
 ```
 
-{/*
-// Group data by the `project` and `namespace` tags using a custom aggregation function from WASM
-| group by project, namespace using wasm::my_module::my_function(1, 2, 3)
-```
-*/}
-
 ### Bucketing
 
 Bucketing is a special case of grouping that combines the time and tag dimensions.
@@ -277,13 +227,6 @@ Available functions:
 // Bucket over the `project` and `namespace` tags using the histogram aggregation
 | bucket by project, namespace to 5m using histogram
 ```
-
-{/*
-```kusto
-// Bucket over the `project` and `namespace` tags using a custom aggregation function from WASM
-| bucket by project, namespace to 5m using wasm::my_module::my_function
-```
-*/}
 
 ## Other operations
 
@@ -328,142 +271,6 @@ Available operators:
 | align avg(5m)
 ```
 
-{/*
-### Join
-
-Pull tags from another series.
-
-**Syntax:**
-
-```kusto
-| join <tag(s)> from <source> by <key>
-```
-
-**Example:**
-
-```kusto
-// Pull the `created_by_kind` tag from the `test` dataset’s `kube_pod_info` metric and join it with the `kube_pod_status_ready` metric using the `pod` field as the key
-test:kube_pod_status_ready
-| group by pod using sum;
-| join created_by_kind from test:kube_pod_info by pod
-```
-
-### Format
-
-Use `format` as the last operator in your query to format the results.
-
-**Example:**
-
-```kusto
-// Format HTTP requests into strings like `"GET[200]: /api/v1/metrics"`
-| format "{{.method}}{{.code}}: {{.path}}"
-```
-
-## Modifiers
-
-Modifiers are declarations at the beginning of a query that can:
-- Configure query settings
-- Define query parameters
-- Import custom functions
-
-### Query settings
-
-Use the `set` command to configure settings at the beginning of a query.
-
-**Syntax:**
-
-```kusto
-set <query_settings>[=<value>];
-```
-
-Available query settings:
-
-- `strict`: Use strict mode for production queries where it is crucial to get the correct information.
-- `warn`: Define whether you want to see warning to improve your query.
-- `behavior`: Allow conversion of non-string data to string data. This is useful for cross-compiling Prometheus queries that treat everything as a string.
-- `edition`: Define the edition of AxQL your query uses.
-
-**Examples:**
-
-```kusto
-// Use strict mode
-set strict;
-
-// Warn for possible type conflicts
-set warn=types;
-
-// Warn for possible performance issues
-set warn=performance;
-
-// Warn for idiomatic issues
-set warn=ideomatic;
-
-// Allow conversion of non-string data to string data
-set behaviour=regexp-string-conversion;
-
-// Define the edition of AxQL your query uses
-set edition=2025;
-```
-
-### Query parameters
-
-Define query parameters at the beginning of a query.
-
-**Syntax:**
-
-```kusto
-set query=<query_parameter>:<type>
-```
-
-**Example:**
-
-```kusto
-// Import the `step` query parameter with the type `relative_time`
-set query=step:relative_time
-```
-
-To reference the query parameters in your query, use the dollar sign (`$`).
-
-**Example:**
-
-```kusto
-// Calculate the running average over a one-hour window, emitting every `step`
-| align to  $step over 1h using avg
-```
-
-### Custom functions
-
-To import custom functions to your query, use the `wasm` command. You can import modules from WASM files you have previously uploaded to Axiom.
-
-**Syntax:**
-
-```kusto
-set wasm=<module_name>:<file_name>
-```
-
-**Example:**
-
-```kusto
-// Import the module named `my_module` from the `ai_functions.wasm` file
-set wasm=my_module:ai_functions.wasm 
-```
-
-To reference custom functions in your query, use the following syntax:
-
-**Syntax:**
-
-```kusto
-wasm::<module_name>::<function_name>
-```
-
-**Example:**
-
-```kusto
-// Bucket over the `project` and `namespace` tags using a custom aggregation function from WASM
-| bucket by project, namespace to 5m using wasm::my_module::my_function
-```
-*/}
-
 ## Language features
 
 ### Data types
@@ -473,7 +280,6 @@ wasm::<module_name>::<function_name>
 - Floats: `3.14`
 - Booleans: `true`, `false`
 - Regex: `/.*metrics.*/`
-{/* - Sets: `[value1, value2]` */}
 
 ### Identifier naming rules
 
