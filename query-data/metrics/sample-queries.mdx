@@ -42,7 +42,7 @@ axiom-dev.metrics:axiomdb_transport_request_duration_seconds_bucket
 | filter handler == /^ingest$/
 | filter le == /^0\.5/
 | map rate
-| align avg(30s)
+| align to 30s using avg
 | group by handler, le using sum
 | bucket by handler to 30s using interpolate_histogram(min, 0.5, max)
 ```
@@ -102,26 +102,4 @@ test:http_server_request_duration_seconds_bucket
 | bucket to 1m using interpolate_histogram(0.99)
 | map < 0.4
 | align to 7d using avg
-```
-
-### SLO ingest rate
-
-```kusto
-{
-  `test`:axiom_http_requests_total
-  | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
-  | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/ 
-  | where code >= 500
-  | align rate(1h)
-  | group using sum;
-  
-  test:axiom_http_requests_total
-  | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
-  | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/ 
-  | align rate(1h)
-  | group using sum;
-}
-| compute error_rate using /
-| map < 0.2
-| align avg(7d, 1h)
 ```
