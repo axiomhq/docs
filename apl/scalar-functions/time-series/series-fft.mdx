@@ -16,38 +16,10 @@ If you come from other query languages, this section explains how to adjust your
 
 In Splunk SPL, FFT operations aren’t natively available and typically require external tools or complex workarounds. Most Splunk users rely on statistical functions and time-based aggregations for pattern analysis. In APL, `series_fft` provides direct access to frequency domain analysis, enabling sophisticated signal processing capabilities.
 
-<CodeGroup>
-```sql Splunk example
-... | timechart span=1m avg(duration) by service
-````
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize durations = make_list(req_duration_ms) by bin(_time, 1m)
-| extend fft_result = series_fft(durations)
-```
-
-</CodeGroup>
-
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-ANSI SQL does not provide FFT functionality. Database systems typically require specialized extensions or external libraries for frequency domain analysis. Most SQL users rely on window functions and statistical aggregations for time series analysis. In APL, `series_fft` brings advanced signal processing capabilities directly into the query language.
-
-<CodeGroup>
-```sql SQL example
-SELECT AVG(duration) as avg_duration
-FROM requests
-GROUP BY DATE_TRUNC('minute', timestamp);
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize durations = make_list(req_duration_ms) by bin(_time, 1m)
-| extend fft_result = series_fft(durations)
-```
-
-</CodeGroup>
+ANSI SQL doesn’t provide FFT functionality. Database systems typically require specialized extensions or external libraries for frequency domain analysis. Most SQL users rely on window functions and statistical aggregations for time series analysis. In APL, `series_fft` brings advanced signal processing capabilities directly into the query language.
 
 </Accordion>
 </AccordionGroup>
@@ -64,18 +36,15 @@ series_fft(array)
 
 | Parameter | Type    | Description                        |
 | --------- | ------- | ---------------------------------- |
-| `array`   | dynamic | A dynamic array of numeric values representing time series data. |
+| `array`   | dynamic | A dynamic array of real numeric values representing time series data. |
 
 ### Returns
 
 A dynamic array of complex numbers representing the frequency domain representation of the input time series.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-In log analysis, you can use `series_fft` to identify periodic patterns in request durations, such as daily or hourly cycles in application performance.
+Use `series_fft` to identify periodic patterns in request durations, such as daily or hourly cycles in application performance.
 
 **Query**
 
@@ -86,66 +55,6 @@ In log analysis, you can use `series_fft` to identify periodic patterns in reque
 ```
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20bin(_time%2C%201h)%20%7C%20extend%20fft_analysis%20%3D%20series_fft(durations)%22%7D)
-
-**Output**
-
-| _time                | durations           | fft_analysis                    |
-| -------------------- | ------------------- | ------------------------------- |
-| 2024-01-01T00:00:00Z | [120, 150, 180]    | [complex(450, 0), complex(-30, -51.96), complex(-30, 51.96)] |
-| 2024-01-01T01:00:00Z | [130, 160, 190]    | [complex(480, 0), complex(-30, -51.96), complex(-30, 51.96)] |
-
-This query performs FFT analysis on hourly request duration patterns to identify frequency components and periodic behavior.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-In OpenTelemetry traces, you can use `series_fft` to analyze frequency patterns in span durations across different services to identify performance cycles.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| summarize durations = make_list(duration) by bin(_time, 30m), ['service.name']
-| extend fft_analysis = series_fft(durations)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20durations%20%3D%20make_list(duration)%20by%20bin(_time%2C%2030m)%2C%20%5B'service.name'%5D%20%7C%20extend%20fft_analysis%20%3D%20series_fft(durations)%22%7D)
-
-**Output**
-
-| _time                | service.name    | durations           | fft_analysis                    |
-| -------------------- | --------------- | ------------------- | ------------------------------- |
-| 2024-01-01T00:00:00Z | frontend        | [100ms, 200ms, 300ms] | [complex(600ms, 0), complex(-100ms, -173.2ms), complex(-100ms, 173.2ms)] |
-| 2024-01-01T00:00:00Z | cart            | [150ms, 250ms, 350ms] | [complex(750ms, 0), complex(-100ms, -173.2ms), complex(-100ms, 173.2ms)] |
-
-This query performs FFT analysis on span durations to identify frequency patterns and periodic behavior in service performance.
-
-</Tab>
-<Tab title="Security logs">
-
-In security logs, you can use `series_fft` to detect periodic attack patterns or identify frequency components in request volumes that might indicate coordinated attacks.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize durations = make_list(req_duration_ms) by bin(_time, 15m), ['geo.country']
-| extend fft_analysis = series_fft(durations)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20bin(_time%2C%2015m)%2C%20%5B'geo.country'%5D%20%7C%20extend%20fft_analysis%20%3D%20series_fft(durations)%22%7D)
-
-**Output**
-
-| _time                | geo.country | durations           | fft_analysis                    |
-| -------------------- | ----------- | ------------------- | ------------------------------- |
-| 2024-01-01T00:00:00Z | US          | [200, 400, 600]     | [complex(1200, 0), complex(-200, -346.4), complex(-200, 346.4)] |
-| 2024-01-01T00:00:00Z | DE          | [100, 300, 500]     | [complex(900, 0), complex(-200, -346.4), complex(-200, 346.4)] |
-
-This query performs FFT analysis on request durations by country to identify frequency patterns that might indicate coordinated attacks or geographic-based performance variations.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 
