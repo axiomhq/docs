@@ -3,7 +3,7 @@ title: series_ifft
 description: 'This page explains how to use the series_ifft function in APL.'
 ---
 
-The `series_ifft` function performs an Inverse Fast Fourier Transform (IFFT) on a numeric dynamic array (series), converting frequency-domain data back into time-domain representation. This function is the inverse operation of `series_fft` and is essential for reconstructing signals from their frequency components.
+The `series_ifft` function applies the Inverse Fast Fourier Transform (IFFT) on a series, taking a series of complex numbers in the frequency domain and transforming it back to the time/spatial domain using the Fast Fourier Transform. This function is the complementary function of `series_fft`. Commonly the original series is transformed to the frequency domain for spectral processing and then back to the time/spatial domain.
 
 You can use `series_ifft` when you want to reconstruct time-domain signals from frequency-domain data, implement frequency-domain filtering, or perform signal synthesis. This is particularly useful after applying frequency-domain operations like filtering or when you need to convert processed frequency data back to the original time domain. Typical applications include signal reconstruction, frequency-domain filtering, noise reduction, and advanced signal processing workflows.
 
@@ -29,18 +29,19 @@ ANSI SQL doesn’t provide IFFT functionality. Database systems typically requir
 ### Syntax
 
 ```kusto
-series_ifft(array)
+series_ifft(fft_real [, fft_imaginary])
 ```
 
 ### Parameters
 
 | Parameter | Type    | Description                        |
 | --------- | ------- | ---------------------------------- |
-| `array`   | dynamic | A dynamic array of complex numbers representing frequency domain data. |
+| `fft_real`   | dynamic | A dynamic array of real numeric values representing the real component of the series to transform. |
+| `fft_imaginary`   | dynamic | Optional: A dynamic array of real numeric values representing the imaginary component of the series. Only specify this if the input series contains complex numbers. |
 
 ### Returns
 
-A dynamic array of numeric values representing the reconstructed time-domain signal.
+The function returns the complex inverse FFT in two series. The first series for the real component and the second one for the imaginary component.
 
 ## Example
 
@@ -51,17 +52,17 @@ The example below shows how `series_ifft` reverses the effect of `series_fft` by
 ```kusto
 ['sample-http-logs']
 | summarize durations = make_list(req_duration_ms) by bin(_time, 1h)
-| extend reconstructed_durations = series_ifft(series_fft(durations)[0], series_fft(durations)[1])
+| extend reconstructed_durations = series_ifft(series_fft(durations)[0])
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20bin(_time%2C%201h)%20%7C%20extend%20reconstructed_durations%20%3D%20series_ifft(series_fft(durations)%5B0%5D%2C%20series_fft(durations)%5B1%5D)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20bin(_time%2C%201h)%20%7C%20extend%20reconstructed_durations%20%3D%20series_ifft(series_fft(durations)%5B0%5D)%22%7D)
 
 **Output**
 
-| _time                | durations | reconstructed_durations    |
-| -------------------- | --------------------------- | -------------------------- |
-| 2024-01-01T00:00:00Z | 0.5848084109504474 | 0.5848084110671455 |
-| 2024-01-01T01:00:00Z | 0.5506109370041884 | 0.5506109371007348 |
+| durations | reconstructed_durations    |
+| --------------------------- | -------------------------- |
+| 0.5848084109504474 | 0.5848084110671455 |
+| 0.5506109370041884 | 0.5506109371007348 |
 
 ## List of related functions
 
