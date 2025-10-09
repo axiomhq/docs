@@ -15,112 +15,70 @@ OpenTelemetry provides a standardized way to collect and export telemetry data f
 - [Create a dataset in Axiom](/reference/datasets) where you send your data.
 - [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete datasets.
 - [Install Node.js version 14](https://nodejs.org/en/download/package-manager) or newer.
-- An existing Next.js app. Alternatively, use the provided example project.
+- An existing Next.js app. Alternatively, create a new app with the default settings using the [Next.js documentation](https://nextjs.org/learn/pages-router/create-nextjs-app-setup).
 
-## Initial setup
+## Send data from new project
 
-For initial setup, choose one of the following options:
+### Initial setup
 
-- Use the `@vercel/otel` package for easier setup.
-- Set up your app without the `@vercel/otel` package.
+1. Create a new app with the default settings using the [Next.js documentation](https://nextjs.org/learn/pages-router/create-nextjs-app-setup).
+1. Run the following command to install the dependencies:
 
-### Initial setup with @vercel/otel
+    ```bash
+    npm install @opentelemetry/exporter-trace-otlp-http @opentelemetry/sdk-trace-node @opentelemetry/resources
+    ```
 
-To use the `@vercel/otel` package for easier setup, run the following command to install the dependencies:
+1. Create an `instrumentation.ts` file in the `src` folder of your project with the following content:
 
-```bash
-npm install @vercel/otel @opentelemetry/exporter-trace-otlp-http @opentelemetry/sdk-trace-node
-```
+    ```ts /src/instrumentation.ts
+    import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+    import { resourceFromAttributes } from "@opentelemetry/resources";
+    import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+    import { SimpleSpanProcessor } from "@opentelemetry/sdk-trace-node";
+    import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 
-Create an `instrumentation.ts` file in the root of your project with the following content:
+    export function register() {
+      const provider = new NodeTracerProvider({
+        resource: resourceFromAttributes({
+          [ATTR_SERVICE_NAME]: "nextjs-otel-example",
+        }, {
+          // Use the latest schema version
+          // Info: https://opentelemetry.io/docs/specs/semconv/
+          schemaUrl: 'https://opentelemetry.io/schemas/1.37.0',
+        }),
+        spanProcessor: new SimpleSpanProcessor(
+          new OTLPTraceExporter({
+            url: `https://${process.env.AXIOM_DOMAIN}/v1/traces`,
+            headers: {
+              Authorization: `Bearer ${process.env.API_TOKEN}`,
+              "X-Axiom-Dataset": `${process.env.DATASET_NAME}`,
+            },
+          })
+        ),
+      });
 
-```js
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
-import { registerOTel } from '@vercel/otel';
+      provider.register();
+    }
+    ```
 
-export function register() {
-  registerOTel({
-    serviceName: 'nextjs-app',
-    spanProcessors: [
-      new SimpleSpanProcessor(
-        new OTLPTraceExporter({
-          url: `https://${process.env.AXIOM_DOMAIN}/v1/traces`,
-          headers: {
-            Authorization: `Bearer ${process.env.API_TOKEN}`,
-            'X-Axiom-Dataset': `${process.env.DATASET_NAME}`,
-          },
-        })
-      ),
-    ],
-  });
-}
-```
+1. Add the `AXIOM_DOMAIN`, `API_TOKEN`, and `DATASET_NAME` environment variables to your `.env` file. For example:
 
-Add the `API_TOKEN`, `DATASET_NAME`, and `AXIOM_DOMAIN` environment variables to your `.env` file. For example:
+    ```bash
+    AXIOM_DOMAIN=api.axiom.co
+    API_TOKEN=xaat-123
+    DATASET_NAME=my-dataset
+    ```
 
-```bash
-API_TOKEN=xaat-123
-DATASET_NAME=my-dataset
-AXIOM_DOMAIN=api.axiom.co
-```
+### Update root layout
 
-### Initial setup without @vercel/otel
+In the `/src/app/layout.tsx` file, import and call the `register` function from the `instrumentation` module:
 
-To set up your app without the `@vercel/otel` package, run the following command to install the dependencies:
-
-```bash
-npm install @opentelemetry/sdk-node @opentelemetry/exporter-trace-otlp-http @opentelemetry/resources @opentelemetry/semantic-conventions @opentelemetry/sdk-trace-node
-```
-
-Create an `instrumentation.ts` file in the root of your project with the following content:
-
-```js
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
-import { SEMRESATTRS_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-node';
-
-export function register() {
-  const sdk = new NodeSDK({
-    resource: new Resource({
-      [SEMRESATTRS_SERVICE_NAME]: 'nextjs-app',
-    }),
-    spanProcessor: new SimpleSpanProcessor(
-      new OTLPTraceExporter({
-        url: `https://${process.env.AXIOM_DOMAIN}/v1/traces`,
-        headers: {
-          Authorization: `Bearer ${process.env.API_TOKEN}`,
-          'X-Axiom-Dataset': process.env.DATASET_NAME,
-        },
-      })
-    ),
-  });
-
-  sdk.start();
-}
-```
-
-Add the `API_TOKEN` and `DATASET_NAME` environment variables to your `.env` file. For example:
-
-```bash
-API_TOKEN=xaat-123
-DATASET_NAME=my-dataset
-```
-
-## Set up the Next.js environment
-
-### layout.tsx
-
-In the `src/app/layout.tsx` file, import and call the `register` function from the `instrumentation` module:
-
-```js
-import { register } from '../../instrumentation';
+```tsx /src/app/layout.tsx
+import { register } from '../instrumentation';
 
 register();
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>{children}</body>
@@ -131,58 +89,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
 This file sets up the root layout for your Next.js app and initializes the OpenTelemetry instrumentation by calling the `register` function.
 
-### route.ts
-
-Create a `route.ts` file in `src/app/api/rolldice/` to handle HTTP GET requests to the `/rolldice` API endpoint:
-
-```js
-// src/app/api/rolldice/route.ts
-
-import { NextResponse } from 'next/server';
-
-function getRandomNumber(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min) + min);
-}
-
-export async function GET() {
-  const diceRoll = getRandomNumber(1, 6);
-  return NextResponse.json(diceRoll.toString());
-}
-```
-
-This file defines a route handler for the `/rolldice` endpoint, which returns a random number between 1 and 6.
-
-### next.config.js
-
-Configure the `next.config.js` file to enable instrumentation and resolve the `tls` module:
-
-```js
-module.exports = {
-  experimental: {
-    // Enable the instrumentation hook for collecting telemetry data
-    instrumentationHook: true,
-  },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        // Disable the 'tls' module on the client side
-        tls: false,
-      };
-    }
-    return config;
-  },
-};
-```
-
-This configuration enables the instrumentation hook and resolves the `tls` module for the client-side build.
-
-### tsconfig.json
+### Update compiler options
 
 Add the following options to your `tsconfig.json` file to ensure compatibility with OpenTelemetry and Next.js:
 
-```json
+```json /tsconfig.json
 {
   "compilerOptions": {
+    "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -211,27 +125,7 @@ Add the following options to your `tsconfig.json` file to ensure compatibility w
 
 This file configures the TypeScript compiler options for your Next.js app.
 
-## Project structure
-
-After completing the steps above, the project structure of your Next.js app is the following:
-
-```bash
-my-nextjs-app/
-  ├── src/
-  │   ├── app/
-  │   │   ├── api/
-  │   │   │   └── rolldice/
-  │   │   │       └── route.ts
-  │   │   ├── page.tsx
-  │   │   └── layout.tsx
-  │   └── ...
-  ├── instrumentation.ts
-  ├── next.config.js
-  ├── tsconfig.json
-  └── ...
-```
-
-## Run the app and observe traces in Axiom
+### Observe traces in Axiom
 
 Use the following command to run your Next.js app with OpenTelemetry instrumentation in development mode:
 
@@ -245,7 +139,7 @@ In Axiom, go to the **Stream** tab and click your dataset. This page displays th
 
 Go to the **Dashboards** tab and click **OpenTelemetry Traces**. This pre-built traces dashboard provides further insights into the performance and behavior of your app.
 
-## Send data from an existing Next.js project
+## Send data from existing project
 
 ### Manual instrumentation
 
@@ -282,7 +176,7 @@ Automatic instrumentation uses the capabilities of OpenTelemetry to automaticall
 
 1. Use the OpenTelemetry Node SDK to configure your app to automatically instrument supported libraries and frameworks. Set up `NodeSDK` in an `instrumentation.ts` file in your project.
 
-```js
+```ts /src/instrumentation.ts
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 
@@ -360,8 +254,6 @@ register();
 |                             | telemetry.sdk.name                   | Name of the telemetry SDK. For example, opentelemetry.             |
 |                             | telemetry.sdk.version                | Version of the telemetry SDK. For example, 1.23.0.                 |
 
-s
-
 ### List of imported libraries
 
 `@opentelemetry/api`
@@ -377,8 +269,8 @@ This defines the Resource which represents the entity producing telemetry. In Ne
 
 The OpenTelemetry SDK for Node.js which provides a comprehensive set of tools for instrumenting Node.js apps. It includes automatic instrumentation for popular libraries and frameworks, as well as APIs for manual instrumentation. In the Next.js setup, it’s used to configure and initialize the OpenTelemetry SDK.
 
+`@opentelemetry/sdk-trace-node`
+This package provides the Node.js-specific implementation of the OpenTelemetry Tracing SDK. It includes the core components needed to create and manage spans, as well as utilities for automatic and manual instrumentation in Node.js environments. In a Next.js app, it works alongside `@opentelemetry/sdk-node` to give finer control over the tracing pipeline. For example, configuring span processors, sampling strategies, or custom span exporters directly for trace data. It’s useful when you need more granular control over tracing behavior beyond the default SDK configuration.
+
 `@opentelemetry/semantic-conventions`
 A set of standard attributes and conventions for describing resources, spans, and metrics in OpenTelemetry. By adhering to these conventions, your Next.js app’s telemetry data becomes more consistent and interoperable with other OpenTelemetry-compatible tools and systems.
-
-`@vercel/otel`
-A package provided by Vercel that simplifies the setup and configuration of OpenTelemetry for Next.js apps deployed on the Vercel platform. It abstracts away some of the boilerplate code and provides a more streamlined integration experience.

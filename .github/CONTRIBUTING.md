@@ -4,7 +4,7 @@ Axiom encourages you to participate in this documentation project. The community
 
 To contribute, fork this repo, and then clone it. For more information, see the [GitHub documentation](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project).
 
-Before contributing, please read the following guidelines and the [Code of conduct](/.github/CODE_OF_CONDUCT.md).
+Before contributing, please read the following guidelines and the [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct.html).
 
 ## Submit an issue
 
