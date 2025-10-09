@@ -145,25 +145,6 @@ max(
 ```
 </CodeGroup>
 
-### Calculate running average
-
-Calculate the running average relation between two metrics.
-
-<CodeGroup>
-```kusto Prometheus example
-avg_over_time(metric_a[5m]) / avg_over_time(metric_b[1h])
-````
-
-```kusto AxQL equivalent
-{
-    test:metric_a
-    | align avg(5m, 1m);
-    test:metric_a
-    | align avg(1h, 1m)
-} join using / as avg_over_time
-```
-</CodeGroup>
-
 ### Calculate rate
 
 Calculate rate of HTTP requests by method, path and http response code.
@@ -187,67 +168,5 @@ test:http_requests_total
 | map rate
 | align to 5m using avg
 | group by method, path, code using sum
-```
-</CodeGroup>
-
-### Calculate Service Level Objectives (SLO)
-
-Calculate SLO with the goal of max 40% ingest pressure over the running average of 1 hour over the past 7 days.
-
-<CodeGroup>
-```kusto Prometheus example
-avg_over_time(
-  (max(
-    transport_ingest_pressure{
-      time_window = "1m",
-      service =~ "db-[a-f]"
-    }
-  ) <bool 0.4)[7d:]
-)
-````
-
-```kusto AxQL equivalent
-test:transport_ingest_pressure
-| filter time_window == "1m"
-| filter service =~ /db-[a-f]/
-| group using max
-| map < 0.4
-| align avg(7d, 1h)
-```
-</CodeGroup>
-
-### Calculate error rate SLO
-
-Calculate the error rate SLO as a running average over the past seven days, with a goal of 80% success rate.
-
-<CodeGroup>
-```kusto Prometheus example
-avg_over_time(
-    ((
-        sum(rate(http_requests_total{container=~"ingest|api|login", path=~".*(ingest|(?:v1/(traces|logs))).*", code!~"[1234].."}[1h]))
-        /
-        sum(rate(http_requests_total{container=~"ingest|api|login", path=~".*(ingest|(?:v1/(traces|logs))).*"}[1h]))
-    ) <bool 0.2)[7d:]
-)
-````
-
-```kusto AxQL equivalent
-{
-  test:http_requests_total
-  | filter container =~ /ingest|api|login/
-  | filter path =~ /.*(ingest|(?:v1\/(traces|logs))).*/ 
-  | filter code < 500
-  | map rate
-  | align avg(1h)
-  | group using sum;
-  test:http_requests_total
-  | filter container =~ /ingest|api|login/
-  | filter path =~ /.*(ingest|(?:v1\/(traces|logs))).*/ 
-  | map rate
-  | align avg(1h)
-  | group using sum
-} join using / as error_rate
-| map < 0.2
-| align avg(7d, 1h)
 ```
 </CodeGroup>
