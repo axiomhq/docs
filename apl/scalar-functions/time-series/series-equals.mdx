@@ -67,7 +67,7 @@ series_equals(array, value)
 
 | Parameter | Type    | Description                        |
 | --------- | ------- | ---------------------------------- |
-| `array`   | dynamic | A dynamic array of numeric values. |
+| `array`   | dynamic | A dynamic array of real numeric values. |
 | `value`   | numeric | The value to compare against each array element. |
 
 ### Returns
@@ -109,18 +109,18 @@ In OpenTelemetry traces, you can use `series_equals` to identify spans with spec
 
 ```kusto
 ['otel-demo-traces']
-| summarize durations = make_list(duration) by ['service.name']
-| extend is_1s = series_equals(durations, 1000)
+| summarize durations = make_list(toreal(duration)) by ['service.name']
+| extend is_1s = series_equals(durations, toreal(1s))
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20durations%20%3D%20make_list(duration)%20by%20%5B'service.name'%5D%20%7C%20extend%20is_1s%20%3D%20series_equals(durations%2C%201000)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20durations%20%3D%20make_list(toreal(duration))%20by%20%5B'service.name'%5D%20%7C%20extend%20is_1s%20%3D%20series_equals(durations%2C%20toreal(1s))%22%7D)
 
 **Output**
 
 | service.name          | durations                | is_1s              |
 | --------------------- | ------------------------ | ------------------ |
-| frontend              | [800ms, 1000ms, 1200ms] | [false, true, false] |
-| productcatalogservice | [1000ms, 1000ms, 900ms] | [true, true, false] |
+| frontend              | [800, 1000, 1200] | [false, true, false] |
+| productcatalogservice | [1000, 1000, 900] | [true, true, false] |
 
 This query identifies spans with exactly 1-second durations per service, useful for finding spans that hit specific latency targets.
 
