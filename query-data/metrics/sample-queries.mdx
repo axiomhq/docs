@@ -84,25 +84,6 @@ axiom-dev.metrics:axiomdb_transport_request_duration_seconds_bucket
 | compute avg_over_time using /
 ```
 
-## Replace labels
-
-```kusto
-{
-    test:container_cpu_usage_seconds_total
-    | where namespace == /(axiom|cloud).*/
-    | where pod == /axiom-ingest-.*/
-    | group by pod using sum;
-    test:kube_pod_container_resource_requests
-    | where namespace == /(axiom|cloud).*/
-    | where pod == /axiom-ingest-.*/
-    | where resource == "cpu"
-    | group by pod using sum;
-}
-| compute cpu_usage using /
-| replace service = pod ~ s/(.+)-.+-.+/$1/
-| group by service using max
-```
-
 ## Service Level Objectives (SLO)
 
 ```kusto
