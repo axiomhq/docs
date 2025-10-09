@@ -16,38 +16,10 @@ If you come from other query languages, this section explains how to adjust your
 
 In Splunk SPL, IFFT operations aren’t natively available and typically require external tools or complex workarounds. Most Splunk users rely on statistical functions and time-based aggregations for signal reconstruction. In APL, `series_ifft` provides direct access to inverse frequency domain analysis, enabling sophisticated signal reconstruction capabilities.
 
-<CodeGroup>
-```sql Splunk example
-... | timechart span=1m avg(duration) by service
-````
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize fft_data = make_list(complex_value) by bin(_time, 1m)
-| extend reconstructed_signal = series_ifft(fft_data)
-```
-
-</CodeGroup>
-
 </Accordion>
 <Accordion title="ANSI SQL users">
 
 ANSI SQL does not provide IFFT functionality. Database systems typically require specialized extensions or external libraries for inverse frequency domain analysis. Most SQL users rely on window functions and statistical aggregations for signal reconstruction. In APL, `series_ifft` brings advanced inverse signal processing capabilities directly into the query language.
-
-<CodeGroup>
-```sql SQL example
-SELECT AVG(duration) as avg_duration
-FROM requests
-GROUP BY DATE_TRUNC('minute', timestamp);
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize fft_data = make_list(complex_value) by bin(_time, 1m)
-| extend reconstructed_signal = series_ifft(fft_data)
-```
-
-</CodeGroup>
 
 </Accordion>
 </AccordionGroup>
@@ -70,82 +42,26 @@ series_ifft(array)
 
 A dynamic array of numeric values representing the reconstructed time-domain signal.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-In log analysis, you can use `series_ifft` to reconstruct time-domain request duration patterns from frequency-domain data after applying frequency filtering.
+The example below shows how `series_ifft` reverses the effect of `series_fft` by reconstructing the original time-domain signal from frequency-domain data.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize fft_data = make_list(complex(req_duration_ms, 0)) by bin(_time, 1h)
-| extend reconstructed_durations = series_ifft(fft_data)
+| summarize durations = make_list(req_duration_ms) by bin(_time, 1h)
+| extend reconstructed_durations = series_ifft(series_fft(durations)[0], series_fft(durations)[1])
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20fft_data%20%3D%20make_list(complex(req_duration_ms%2C%200))%20by%20bin(_time%2C%201h)%20%7C%20extend%20reconstructed_durations%20%3D%20series_ifft(fft_data)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20bin(_time%2C%201h)%20%7C%20extend%20reconstructed_durations%20%3D%20series_ifft(series_fft(durations)%5B0%5D%2C%20series_fft(durations)%5B1%5D)%22%7D)
 
 **Output**
 
-| _time                | fft_data                    | reconstructed_durations    |
+| _time                | durations | reconstructed_durations    |
 | -------------------- | --------------------------- | -------------------------- |
-| 2024-01-01T00:00:00Z | [complex(450, 0), complex(-30, -51.96)] | [120, 150, 180] |
-| 2024-01-01T01:00:00Z | [complex(480, 0), complex(-30, -51.96)] | [130, 160, 190] |
-
-This query reconstructs time-domain request duration patterns from frequency-domain data, useful for signal reconstruction after frequency filtering.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-In OpenTelemetry traces, you can use `series_ifft` to reconstruct time-domain span duration patterns from frequency-domain data for advanced latency analysis.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| summarize fft_data = make_list(complex(duration, 0)) by bin(_time, 30m), ['service.name']
-| extend reconstructed_durations = series_ifft(fft_data)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20fft_data%20%3D%20make_list(complex(duration%2C%200))%20by%20bin(_time%2C%2030m)%2C%20%5B'service.name'%5D%20%7C%20extend%20reconstructed_durations%20%3D%20series_ifft(fft_data)%22%7D)
-
-**Output**
-
-| _time                | service.name    | fft_data                    | reconstructed_durations    |
-| -------------------- | --------------- | --------------------------- | -------------------------- |
-| 2024-01-01T00:00:00Z | frontend        | [complex(600ms, 0), complex(-100ms, -173.2ms)] | [100ms, 200ms, 300ms] |
-| 2024-01-01T00:00:00Z | cart            | [complex(750ms, 0), complex(-100ms, -173.2ms)] | [150ms, 250ms, 350ms] |
-
-This query reconstructs time-domain span duration patterns from frequency-domain data, useful for advanced signal reconstruction in service performance analysis.
-
-</Tab>
-<Tab title="Security logs">
-
-In security logs, you can use `series_ifft` to reconstruct time-domain request duration patterns from frequency-domain data for advanced attack pattern analysis.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize fft_data = make_list(complex(req_duration_ms, 0)) by bin(_time, 15m), ['geo.country']
-| extend reconstructed_durations = series_ifft(fft_data)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20fft_data%20%3D%20make_list(complex(req_duration_ms%2C%200))%20by%20bin(_time%2C%2015m)%2C%20%5B'geo.country'%5D%20%7C%20extend%20reconstructed_durations%20%3D%20series_ifft(fft_data)%22%7D)
-
-**Output**
-
-| _time                | geo.country | fft_data                    | reconstructed_durations    |
-| -------------------- | ----------- | --------------------------- | -------------------------- |
-| 2024-01-01T00:00:00Z | US          | [complex(1200, 0), complex(-200, -346.4)] | [200, 400, 600] |
-| 2024-01-01T00:00:00Z | DE          | [complex(900, 0), complex(-200, -346.4)] | [100, 300, 500] |
-
-This query reconstructs time-domain request duration patterns from frequency-domain data by country, useful for advanced signal reconstruction in security analysis.
-
-</Tab>
-</Tabs>
+| 2024-01-01T00:00:00Z | 0.5848084109504474 | 0.5848084110671455 |
+| 2024-01-01T01:00:00Z | 0.5506109370041884 | 0.5506109371007348 |
 
 ## List of related functions
 
