@@ -70,29 +70,6 @@ test-with-minus.com:axiomdb_transport_ingest_pressure as snot
 ```
 </CodeGroup>
 
-### Add label from another metric
-
-Add the label `created_by_kind` from `kube_pod_info`.
-
-<CodeGroup>
-```kusto Prometheus example
-sum(kube_pod_status_ready) by (pod)
-*
-on(pod)
-group_left(created_by_kind)
-kube_pod_info{}
-````
-
-```kusto AxQL equivalent
-{
-    test:kube_pod_status_ready
-    | group by pod using sum;
-    test:kube_pod_info
-    | group by pod, created_by_kind using max;
-} join by pod using enrich as ready_status
-```
-</CodeGroup>
-
 ### Multiply each value by 100
 
 <CodeGroup>
@@ -103,39 +80,6 @@ http_request_duration_seconds_count{} * 100
 ```kusto AxQL equivalent
 test:axiom_http_request_duration_seconds_count
 | map * 100
-```
-</CodeGroup>
-
-### Create tag enrichment over two series
-
-Add `internal_ip` from `kube_node_info` to `kube_pod_info` based on the node, then join them to `kube_pod_status_ready` based on the pod.
-
-<CodeGroup>
-```kusto Prometheus example
-sum(kube_pod_status_ready) by (pod)
-*
-on(pod)
-group_left(node)
-kube_pod_info
-*
-on(node)
-group_left(internal_ip)
-kube_node_info
-````
-
-```kusto AxQL equivalent
-{
-    test:kube_pod_status_ready
-    | group by pod using sum;
-    {
-        test:kube_pod_info
-        | group by pod, internal_ip using max;
-        test:kube_node_info
-        | group by internal_ip using max;
-    } join by internal_ip using enrich as node_info
-    | group by pod using max;
-} join by pod using enrich as ready_status
-
 ```
 </CodeGroup>
 
