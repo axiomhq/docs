@@ -57,9 +57,9 @@ Try out this filter in the [HTTP logs dashboard of the Axiom Playground](https:/
     - Choose **List** to manually define a static list of options. Enter the options as a list of key-value pairs.
     - Choose **Query** to define a dynamic list of options. In this case, Axiom determines the list of options displayed in the filter dynamically based on an APL query. The results of the APL query must contain two fields which Axiom interprets as key-value pairs. Use the `project` command to create key-value fields from any output.
 
-<Warning>
+<Note>
 The value in the key-value pairs must be a string. To use number or Boolean fields, convert their values to strings using [`tostring()`](/apl/scalar-functions/conversion-functions#tostring()).
-</Warning>
+</Note>
 
 The example APL query below uses the distinct values in the `geo.country` field to populate the list of options. It projects these values as both the key and the value and sorts them in alphabetical order.
 
@@ -77,6 +77,7 @@ See this filter in action in the [HTTP logs dashboard of the Axiom Playground](h
 Sometimes it makes sense that filters depend on each other. For example, in one filter you select the country, and in the other filter the city. In this case, the list of options in the city filter depends on your choice in the country filter.
 
 To create a filter that depends on another filter, follow these steps:
+
 1. Create a filter. In this example, the ID of the independent filter is `country_filter`.
 1. Create a dependent select filter. In this example, the ID of the dependent select filter is `city_filter`. The dependent filter must be a select filter.
 1. In the dependent filter, use `declare query_parameters` at the beginning of your query to reference the independent filter’s ID. For example, `declare query_parameters (country_filter:string = "")`. This lets you use `country_filter` as a parameter in your query even though it doesn’t exist in your data. For more information, see [Declare query parameters](#declare-query-parameters).
@@ -95,6 +96,23 @@ declare query_parameters (country_filter:string = "");
 ```
 
 Check out this filter in the [HTTP logs dashboard of the Axiom Playground](https://play.axiom.co/axiom-play-qf1k/dashboards/gZXp8KNJy68q7yGsuA).
+
+### Filter for datasets
+
+Use a select filter to choose the dataset whose values you want to display in the dashboard:
+
+1. Create a select filter where you specify the dataset names as the keys and the values. In this example, the ID of the independent filter is `dataset_filter`.
+1. Create a dashboard element based on an APL query:
+    - Use `declare query_parameters` at the beginning of your query to reference the filter’s ID. For example, `declare query_parameters (dataset_filter:string = "")`.
+    - Use the `dataset_filter` parameter as the value of the `table` operator to filter for dataset names in the query.
+
+The APL query below defines a chart where the data displayed depends on your choice in the filter with the ID `dataset_filter`. For example, if you choose **otel-demo-traces** in the filter, the chart only displays data from this dataset.
+
+```kusto
+declare query_parameters (dataset_filter:string = "");
+table(dataset_filter)
+| summarize count() by bin_auto(_time), ['service.name']
+```
 
 ## Reference filters in chart queries
 
