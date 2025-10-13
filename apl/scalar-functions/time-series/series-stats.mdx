@@ -97,16 +97,16 @@ In log analysis, you can use `series_stats` to get a comprehensive statistical s
 ```kusto
 ['sample-http-logs']
 | summarize durations = make_list(req_duration_ms) by id
-| extend statistics = series_stats(durations)
+| extend stats_array = series_stats(durations)
 | project id, 
-    min_duration = statistics[0],
-    max_duration = statistics[2],
-    avg_duration = statistics[4],
-    stdev_duration = statistics[6]
+    min_duration = stats_array[0],
+    max_duration = stats_array[2],
+    avg_duration = stats_array[4],
+    stdev_duration = stats_array[6]
 | take 5
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20statistics%20%3D%20series_stats(durations)%20%7C%20project%20id%2C%20min_duration%20%3D%20statistics%5B0%5D%2C%20max_duration%20%3D%20statistics%5B2%5D%2C%20avg_duration%20%3D%20statistics%5B4%5D%2C%20stdev_duration%20%3D%20statistics%5B6%5D%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20stats_array%20%3D%20series_stats(durations)%20%7C%20project%20id%2C%20min_duration%20%3D%20stats_array%5B0%5D%2C%20max_duration%20%3D%20stats_array%5B2%5D%2C%20avg_duration%20%3D%20stats_array%5B4%5D%2C%20stdev_duration%20%3D%20stats_array%5B6%5D%20%7C%20take%205%22%7D)
 
 **Output**
 
@@ -115,7 +115,7 @@ In log analysis, you can use `series_stats` to get a comprehensive statistical s
 | u123 | 15           | 245          | 95           | 45.2           |
 | u456 | 8            | 189          | 78           | 38.7           |
 
-This query calculates comprehensive statistics for each user's request durations by extracting specific elements from the 7-element statistics array.
+This query calculates comprehensive statistics for each user's request durations by extracting specific elements from the 7-element stats array.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
@@ -128,17 +128,17 @@ In OpenTelemetry traces, you can use `series_stats` to analyze HTTP status code 
 ['otel-demo-traces']
 | where isnotnull(['attributes.http.status_code'])
 | summarize status_codes = make_list(tolong(['attributes.http.status_code'])) by ['service.name']
-| extend statistics = series_stats(status_codes)
+| extend stats_array = series_stats(status_codes)
 | project ['service.name'],
-    min_status = statistics[0],
-    min_position = statistics[1],
-    max_status = statistics[2],
-    max_position = statistics[3],
-    avg_status = statistics[4]
+    min_status = stats_array[0],
+    min_position = stats_array[1],
+    max_status = stats_array[2],
+    max_position = stats_array[3],
+    avg_status = stats_array[4]
 | take 5
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20isnotnull(%5B'attributes.http.status_code'%5D)%20%7C%20summarize%20status_codes%20%3D%20make_list(tolong(%5B'attributes.http.status_code'%5D))%20by%20%5B'service.name'%5D%20%7C%20extend%20statistics%20%3D%20series_stats(status_codes)%20%7C%20project%20%5B'service.name'%5D%2C%20min_status%20%3D%20statistics%5B0%5D%2C%20min_position%20%3D%20statistics%5B1%5D%2C%20max_status%20%3D%20statistics%5B2%5D%2C%20max_position%20%3D%20statistics%5B3%5D%2C%20avg_status%20%3D%20statistics%5B4%5D%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20isnotnull(%5B'attributes.http.status_code'%5D)%20%7C%20summarize%20status_codes%20%3D%20make_list(tolong(%5B'attributes.http.status_code'%5D))%20by%20%5B'service.name'%5D%20%7C%20extend%20stats_array%20%3D%20series_stats(status_codes)%20%7C%20project%20%5B'service.name'%5D%2C%20min_status%20%3D%20stats_array%5B0%5D%2C%20min_position%20%3D%20stats_array%5B1%5D%2C%20max_status%20%3D%20stats_array%5B2%5D%2C%20max_position%20%3D%20stats_array%5B3%5D%2C%20avg_status%20%3D%20stats_array%5B4%5D%20%7C%20take%205%22%7D)
 
 **Output**
 
@@ -159,16 +159,16 @@ In security logs, you can use `series_stats` to establish behavioral baselines a
 ```kusto
 ['sample-http-logs']
 | summarize durations = make_list(req_duration_ms) by status
-| extend statistics = series_stats(durations)
+| extend stats_array = series_stats(durations)
 | project status,
-    typical_duration = statistics[4],
-    variance = statistics[5],
-    stdev = statistics[6],
-    max_observed = statistics[2]
+    typical_duration = stats_array[4],
+    variance = stats_array[5],
+    stdev = stats_array[6],
+    max_observed = stats_array[2]
 | extend anomaly_threshold = typical_duration + (3 * stdev)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20status%20%7C%20extend%20statistics%20%3D%20series_stats(durations)%20%7C%20project%20status%2C%20typical_duration%20%3D%20statistics%5B4%5D%2C%20variance%20%3D%20statistics%5B5%5D%2C%20stdev%20%3D%20statistics%5B6%5D%2C%20max_observed%20%3D%20statistics%5B2%5D%20%7C%20extend%20anomaly_threshold%20%3D%20typical_duration%20%2B%20(3%20*%20stdev)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20status%20%7C%20extend%20stats_array%20%3D%20series_stats(durations)%20%7C%20project%20status%2C%20typical_duration%20%3D%20stats_array%5B4%5D%2C%20variance%20%3D%20stats_array%5B5%5D%2C%20stdev%20%3D%20stats_array%5B6%5D%2C%20max_observed%20%3D%20stats_array%5B2%5D%20%7C%20extend%20anomaly_threshold%20%3D%20typical_duration%20%2B%20(3%20*%20stdev)%22%7D)
 
 **Output**
 
