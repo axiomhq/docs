@@ -140,13 +140,12 @@ In security logs, you can use `series_pearson_correlation` to identify relations
 ```kusto
 ['sample-http-logs']
 | extend success_count = iff(status == '200', 1, 0)
-| extend failure_count = iff(status == '401', 1, 0)
+| extend failure_count = iff(status == '500', 1, 0)
 | summarize successes = make_list(success_count), failures = make_list(failure_count) by bin(_time, 1h)
-| summarize all_successes = make_list(successes), all_failures = make_list(failures)
-| extend correlation = series_pearson_correlation(all_successes, all_failures)
+| extend correlation = series_pearson_correlation(successes, failures)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20success_count%20%3D%20iff(status%20%3D%3D%20'200'%2C%201%2C%200)%20%7C%20extend%20failure_count%20%3D%20iff(status%20%3D%3D%20'401'%2C%201%2C%200)%20%7C%20summarize%20successes%20%3D%20make_list(success_count)%2C%20failures%20%3D%20make_list(failure_count)%20by%20bin(_time%2C%201h)%20%7C%20summarize%20all_successes%20%3D%20make_list(successes)%2C%20all_failures%20%3D%20make_list(failures)%20%7C%20extend%20correlation%20%3D%20series_pearson_correlation(all_successes%2C%20all_failures)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20success_count%20%3D%20iff(status%20%3D%3D%20'200'%2C%201%2C%200)%20%7C%20extend%20failure_count%20%3D%20iff(status%20%3D%3D%20'500'%2C%201%2C%200)%20%7C%20summarize%20successes%20%3D%20make_list(success_count)%2C%20failures%20%3D%20make_list(failure_count)%20by%20bin(_time%2C%201h)%20%7C%20extend%20correlation%20%3D%20series_pearson_correlation(successes%2C%20failures)%22%7D)
 
 **Output**
 
