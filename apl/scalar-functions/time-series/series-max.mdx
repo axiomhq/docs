@@ -3,9 +3,9 @@ title: series_max
 description: 'This page explains how to use the series_max function in APL.'
 ---
 
-The `series_max` function returns the maximum value from each numeric dynamic array (series). This function scans through all elements in the series and identifies the highest value present.
+The `series_max` function compares two numeric arrays element by element and returns a new array. Each position in the result contains the maximum value between the corresponding elements from the two input arrays.
 
-You can use `series_max` when you need to find peak values in time-series data. This is particularly useful for identifying maximum resource utilization, peak response times, highest transaction volumes, or other scenarios where you need to determine the upper bound of measurements across a series.
+You use `series_max` when you want to create an envelope or upper bound from multiple series, combine baseline metrics with actual values, or merge data from different sources by keeping the higher value at each point. For example, you can compare response times across different servers and keep the higher value at each time point, or combine SLA thresholds with actual measurements.
 
 ## For users of other query languages
 
@@ -14,37 +14,42 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, you typically use the `max()` function to find maximum values across multiple fields or events. In APL, `series_max` operates on dynamic arrays, returning the maximum value from each array in a single operation.
+In Splunk SPL, element-wise maximum comparisons typically require custom logic with `eval` or `foreach`. In contrast, APL provides the specialized `series_max` function to directly compare arrays element by element and return the maximum values.
 
 <CodeGroup>
 ```sql Splunk example
-... | stats max(response_time) as peak_time by user
+... | timechart avg(cpu_usage) as cpu1, avg(cpu_usage_backup) as cpu2
+| eval max_cpu = if(cpu1 > cpu2, cpu1, cpu2)
 ```
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| summarize times = make_list(req_duration_ms) by id
-| extend peak_time = series_max(times)
+| make-series primary = avg(req_duration_ms), backup = avg(req_duration_ms) on _time step 1m
+| extend max_values = series_max(primary, backup)
 ```
+
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In SQL, you use the `MAX()` aggregate function to find the maximum value across rows. In APL, `series_max` operates on individual arrays, extracting the maximum value from each array element-wise.
+In ANSI SQL, you use the `GREATEST()` function to compare scalar values. To compare sequences element-wise, you need window functions or complex joins. In APL, `series_max` simplifies this by applying the maximum operation across arrays in a single step.
 
 <CodeGroup>
 ```sql SQL example
-SELECT user_id, MAX(response_time) AS peak_time
-FROM requests
-GROUP BY user_id;
+SELECT _time,
+       GREATEST(t1.req_duration_ms, t2.req_duration_ms) AS max_duration
+FROM logs t1
+JOIN logs t2
+  ON t1._time = t2._time
 ```
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| summarize times = make_list(req_duration_ms) by id
-| extend peak_time = series_max(times)
+| make-series series1 = avg(req_duration_ms), series2 = avg(req_duration_ms) on _time step 1m
+| extend max_series = series_max(series1, series2)
 ```
+
 </CodeGroup>
 
 </Accordion>
@@ -55,106 +60,106 @@ GROUP BY user_id;
 ### Syntax
 
 ```kusto
-series_max(array)
+series_max(array1, array2)
 ```
 
 ### Parameters
 
-| Parameter | Type    | Description                        |
-| --------- | ------- | ---------------------------------- |
-| `array`   | dynamic | A dynamic array of numeric values. |
+| Parameter | Type  | Description                                                                |
+| --------- | ----- | -------------------------------------------------------------------------- |
+| `array1`  | array | The first array of numeric values.                                         |
+| `array2`  | array | The second array of numeric values. Must have the same length as `array1`. |
 
 ### Returns
 
-A numeric scalar representing the maximum value in the input array.
+An array of numeric values. Each element is the maximum of the corresponding elements from `array1` and `array2`.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-In log analysis, you can use `series_max` to identify the peak request duration for each user, helping you understand maximum response times experienced.
+You want to create an upper bound by comparing request durations across two different cities and keeping the higher value at each time point.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize durations = make_list(req_duration_ms) by id
-| extend peak_duration = series_max(durations)
-| project id, peak_duration
+| take 50
+| make-series london_avg = avgif(req_duration_ms, ['geo.city'] == 'London'),
+             paris_avg = avgif(req_duration_ms, ['geo.city'] == 'Paris')
+             on _time step 1h
+| extend max_duration = series_max(london_avg, paris_avg)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20peak_duration%20%3D%20series_max(durations)%20%7C%20project%20id%2C%20peak_duration%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20take%2050%20%7C%20make-series%20london_avg%20%3D%20avgif(req_duration_ms%2C%20%5B'geo.city'%5D%20%3D%3D%20'London')%2C%20paris_avg%20%3D%20avgif(req_duration_ms%2C%20%5B'geo.city'%5D%20%3D%3D%20'Paris')%20on%20_time%20step%201h%20%7C%20extend%20max_duration%20%3D%20series_max(london_avg%2C%20paris_avg)%22%7D)
 
 **Output**
 
-| id   | peak_duration |
-| ---- | ------------- |
-| u123 | 245           |
-| u456 | 189           |
+| london_avg      | paris_avg       | max_duration    |
+| --------------- | --------------- | --------------- |
+| [120, 150, 100] | [180, 130, 190] | [180, 150, 190] |
 
-This query collects all request durations for each user and identifies the longest request duration, helping you spot potential performance issues.
+This query compares response times between two cities and creates a series containing the higher value at each time point.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-In OpenTelemetry traces, you can use `series_max` to find the maximum span duration for each service, identifying potential bottlenecks.
+You want to compare HTTP status codes between two services and keep the higher status code at each time point.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| summarize durations = make_list(duration_ms) by ['service.name']
-| extend max_duration = series_max(durations)
-| project ['service.name'], max_duration
+| where isnotnull(['attributes.http.status_code'])
+| make-series frontend_status = avgif(tolong(['attributes.http.status_code']), ['service.name'] == 'frontend'),
+             backend_status = avgif(tolong(['attributes.http.status_code']), ['service.name'] == 'checkoutservice')
+             on _time step 5m
+| extend max_status = series_max(frontend_status, backend_status)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20summarize%20durations%20%3D%20make_list(duration_ms)%20by%20%5B'service.name'%5D%20%7C%20extend%20max_duration%20%3D%20series_max(durations)%20%7C%20project%20%5B'service.name'%5D%2C%20max_duration%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20isnotnull(%5B'attributes.http.status_code'%5D)%20%7C%20make-series%20frontend_status%20%3D%20avgif(tolong(%5B'attributes.http.status_code'%5D)%2C%20%5B'service.name'%5D%20%3D%3D%20'frontend')%2C%20backend_status%20%3D%20avgif(tolong(%5B'attributes.http.status_code'%5D)%2C%20%5B'service.name'%5D%20%3D%3D%20'checkoutservice')%20on%20_time%20step%205m%20%7C%20extend%20max_status%20%3D%20series_max(frontend_status%2C%20backend_status)%22%7D)
 
 **Output**
 
-| service.name | max_duration |
-| ------------ | ------------ |
-| frontend     | 850          |
-| checkout     | 1200         |
+| frontend_status     | backend_status      | max_status          |
+| ------------------- | ------------------- | ------------------- |
+| [200.0, 204.5, 200.0] | [201.0, 200.0, 205.0] | [201.0, 204.5, 205.0] |
 
-This query aggregates span durations per service and identifies the slowest span for each service, useful for performance optimization.
+This query compares status codes across services and creates a series with the maximum status code at each time interval.
 
 </Tab>
 <Tab title="Security logs">
 
-In security logs, you can use `series_max` to identify the longest request duration for each HTTP status code, helping detect potential security issues like slow authentication attempts.
+You want to track the maximum count between successful and failed requests at each time point to identify the dominant request type.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize durations = make_list(req_duration_ms) by status
-| extend max_duration = series_max(durations)
-| project status, max_duration
+| take 50
+| make-series success_count = countif(status == '200'),
+             failure_count = countif(status != '200')
+             on _time step 1h
+| extend max_count = series_max(success_count, failure_count)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20status%20%7C%20extend%20max_duration%20%3D%20series_max(durations)%20%7C%20project%20status%2C%20max_duration%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20take%2050%20%7C%20make-series%20success_count%20%3D%20countif(status%20%3D%3D%20'200')%2C%20failure_count%20%3D%20countif(status%20!%3D%20'200')%20on%20_time%20step%201h%20%7C%20extend%20max_count%20%3D%20series_max(success_count%2C%20failure_count)%22%7D)
 
 **Output**
 
-| status | max_duration |
-| ------ | ------------ |
-| 200    | 340          |
-| 401    | 8900         |
-| 500    | 550          |
+| success_count  | failure_count | max_count      |
+| -------------- | ------------- | -------------- |
+| [300, 280, 310] | [10, 290, 15] | [300, 290, 310] |
 
-This query groups request durations by status code and finds the longest request for each, helping you identify suspicious patterns like unusually long authentication attempts.
+This query compares success and failure counts and returns the higher value at each time point, helping you understand the dominant traffic pattern.
 
 </Tab>
 </Tabs>
 
 ## List of related functions
 
-- [series_min](/apl/scalar-functions/time-series/series-min): Returns the minimum value from a series. Use when you need the lowest value instead of the highest.
-- [series_stats](/apl/scalar-functions/time-series/series-stats): Returns comprehensive statistics including min, max, average, and standard deviation. Use when you need multiple statistical measures.
-- [series_stats_dynamic](/apl/scalar-functions/time-series/series-stats-dynamic): Returns statistics in a dynamic object format. Use when you need flexible statistical output.
-- [series_sum](/apl/scalar-functions/time-series/series-sum): Returns the sum of all values in a series. Use when you need totals rather than maximum values.
-- [max](/apl/aggregation-function/max): Aggregation function that returns the maximum value across grouped records. Use with `summarize` for aggregating, not for array operations.
-
+- [series_min](/apl/scalar-functions/time-series/series-min): Compares two arrays and returns the minimum value at each position.
+- [series_less](/apl/scalar-functions/time-series/series-less): Compares two arrays and returns `true` where elements in the first array are less than the second.
+- [series_greater](/apl/scalar-functions/time-series/series-greater): Compares two arrays and returns `true` where the first array element is greater than the second.
+- [max](/apl/aggregation-function/max): Aggregation function that returns the maximum value across grouped records.

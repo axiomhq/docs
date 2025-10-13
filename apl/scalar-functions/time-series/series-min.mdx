@@ -3,9 +3,9 @@ title: series_min
 description: 'This page explains how to use the series_min function in APL.'
 ---
 
-The `series_min` function returns the minimum value from each numeric dynamic array (series). This function scans through all elements in the series and identifies the lowest value present.
+The `series_min` function compares two numeric arrays element by element and returns a new array. Each position in the result contains the minimum value between the corresponding elements from the two input arrays.
 
-You can use `series_min` when you need to find the smallest values in time-series data. This is particularly useful for identifying minimum resource utilization, fastest response times, lowest transaction volumes, or other scenarios where you need to determine the lower bound of measurements across a series.
+You use `series_min` when you want to create a lower bound from multiple series, combine baseline metrics with actual values while keeping the smaller value, or merge data from different sources by selecting the lower value at each point. For example, you can compare response times across different servers and keep the lower value at each time point, or create minimum thresholds from multiple sources.
 
 ## For users of other query languages
 
@@ -14,37 +14,42 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, you typically use the `min()` function to find minimum values across multiple fields or events. In APL, `series_min` operates on dynamic arrays, returning the minimum value from each array in a single operation.
+In Splunk SPL, element-wise minimum comparisons typically require custom logic with `eval` or `foreach`. In contrast, APL provides the specialized `series_min` function to directly compare arrays element by element and return the minimum values.
 
 <CodeGroup>
 ```sql Splunk example
-... | stats min(response_time) as fastest_time by user
+... | timechart avg(latency) as latency1, avg(latency_backup) as latency2
+| eval min_latency = if(latency1 < latency2, latency1, latency2)
 ```
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| summarize times = make_list(req_duration_ms) by id
-| extend fastest_time = series_min(times)
+| make-series primary = avg(req_duration_ms), backup = avg(req_duration_ms) on _time step 1m
+| extend min_values = series_min(primary, backup)
 ```
+
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In SQL, you use the `MIN()` aggregate function to find the minimum value across rows. In APL, `series_min` operates on individual arrays, extracting the minimum value from each array element-wise.
+In ANSI SQL, you use the `LEAST()` function to compare scalar values. To compare sequences element-wise, you need window functions or complex joins. In APL, `series_min` simplifies this by applying the minimum operation across arrays in a single step.
 
 <CodeGroup>
 ```sql SQL example
-SELECT user_id, MIN(response_time) AS fastest_time
-FROM requests
-GROUP BY user_id;
+SELECT _time,
+       LEAST(t1.req_duration_ms, t2.req_duration_ms) AS min_duration
+FROM logs t1
+JOIN logs t2
+  ON t1._time = t2._time
 ```
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| summarize times = make_list(req_duration_ms) by id
-| extend fastest_time = series_min(times)
+| make-series series1 = avg(req_duration_ms), series2 = avg(req_duration_ms) on _time step 1m
+| extend min_series = series_min(series1, series2)
 ```
+
 </CodeGroup>
 
 </Accordion>
@@ -55,106 +60,106 @@ GROUP BY user_id;
 ### Syntax
 
 ```kusto
-series_min(array)
+series_min(array1, array2)
 ```
 
 ### Parameters
 
-| Parameter | Type    | Description                        |
-| --------- | ------- | ---------------------------------- |
-| `array`   | dynamic | A dynamic array of numeric values. |
+| Parameter | Type  | Description                                                                |
+| --------- | ----- | -------------------------------------------------------------------------- |
+| `array1`  | array | The first array of numeric values.                                         |
+| `array2`  | array | The second array of numeric values. Must have the same length as `array1`. |
 
 ### Returns
 
-A numeric scalar representing the minimum value in the input array.
+An array of numeric values. Each element is the minimum of the corresponding elements from `array1` and `array2`.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-In log analysis, you can use `series_min` to identify the fastest request duration for each user, helping you understand the best-case performance.
+You want to create a lower bound by comparing request durations across two different cities and keeping the lower value at each time point.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize durations = make_list(req_duration_ms) by id
-| extend min_duration = series_min(durations)
-| project id, min_duration
+| take 50
+| make-series london_avg = avgif(req_duration_ms, ['geo.city'] == 'London'),
+             paris_avg = avgif(req_duration_ms, ['geo.city'] == 'Paris')
+             on _time step 1h
+| extend min_duration = series_min(london_avg, paris_avg)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20min_duration%20%3D%20series_min(durations)%20%7C%20project%20id%2C%20min_duration%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20take%2050%20%7C%20make-series%20london_avg%20%3D%20avgif(req_duration_ms%2C%20%5B'geo.city'%5D%20%3D%3D%20'London')%2C%20paris_avg%20%3D%20avgif(req_duration_ms%2C%20%5B'geo.city'%5D%20%3D%3D%20'Paris')%20on%20_time%20step%201h%20%7C%20extend%20min_duration%20%3D%20series_min(london_avg%2C%20paris_avg)%22%7D)
 
 **Output**
 
-| id   | min_duration |
-| ---- | ------------ |
-| u123 | 12           |
-| u456 | 8            |
+| london_avg      | paris_avg       | min_duration    |
+| --------------- | --------------- | --------------- |
+| [120, 150, 100] | [180, 130, 190] | [120, 130, 100] |
 
-This query collects all request durations for each user and identifies the shortest request duration, helping you establish performance baselines.
+This query compares response times between two cities and creates a series containing the lower value at each time point.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-In OpenTelemetry traces, you can use `series_min` to find the minimum span duration for each service, establishing performance benchmarks.
+You want to compare HTTP status codes between two services and keep the lower status code at each time point.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| summarize durations = make_list(duration_ms) by ['service.name']
-| extend min_duration = series_min(durations)
-| project ['service.name'], min_duration
+| where isnotnull(['attributes.http.status_code'])
+| make-series frontend_status = avgif(tolong(['attributes.http.status_code']), ['service.name'] == 'frontend'),
+             backend_status = avgif(tolong(['attributes.http.status_code']), ['service.name'] == 'checkoutservice')
+             on _time step 5m
+| extend min_status = series_min(frontend_status, backend_status)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20summarize%20durations%20%3D%20make_list(duration_ms)%20by%20%5B'service.name'%5D%20%7C%20extend%20min_duration%20%3D%20series_min(durations)%20%7C%20project%20%5B'service.name'%5D%2C%20min_duration%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20isnotnull(%5B'attributes.http.status_code'%5D)%20%7C%20make-series%20frontend_status%20%3D%20avgif(tolong(%5B'attributes.http.status_code'%5D)%2C%20%5B'service.name'%5D%20%3D%3D%20'frontend')%2C%20backend_status%20%3D%20avgif(tolong(%5B'attributes.http.status_code'%5D)%2C%20%5B'service.name'%5D%20%3D%3D%20'checkoutservice')%20on%20_time%20step%205m%20%7C%20extend%20min_status%20%3D%20series_min(frontend_status%2C%20backend_status)%22%7D)
 
 **Output**
 
-| service.name | min_duration |
-| ------------ | ------------ |
-| frontend     | 15           |
-| checkout     | 22           |
+| frontend_status     | backend_status      | min_status          |
+| ------------------- | ------------------- | ------------------- |
+| [200.0, 204.5, 200.0] | [201.0, 200.0, 205.0] | [200.0, 200.0, 200.0] |
 
-This query aggregates span durations per service and identifies the fastest span for each service, useful for setting performance targets.
+This query compares status codes across services and creates a series with the minimum status code at each time interval.
 
 </Tab>
 <Tab title="Security logs">
 
-In security logs, you can use `series_min` to identify the shortest request duration for each HTTP status code, helping establish normal behavior patterns.
+You want to track the minimum count between successful and failed requests at each time point to identify which type has less traffic.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize durations = make_list(req_duration_ms) by status
-| extend min_duration = series_min(durations)
-| project status, min_duration
+| take 50
+| make-series success_count = countif(status == '200'),
+             failure_count = countif(status != '200')
+             on _time step 1h
+| extend min_count = series_min(success_count, failure_count)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20status%20%7C%20extend%20min_duration%20%3D%20series_min(durations)%20%7C%20project%20status%2C%20min_duration%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20take%2050%20%7C%20make-series%20success_count%20%3D%20countif(status%20%3D%3D%20'200')%2C%20failure_count%20%3D%20countif(status%20!%3D%20'200')%20on%20_time%20step%201h%20%7C%20extend%20min_count%20%3D%20series_min(success_count%2C%20failure_count)%22%7D)
 
 **Output**
 
-| status | min_duration |
-| ------ | ------------ |
-| 200    | 5            |
-| 401    | 45           |
-| 500    | 10           |
+| success_count  | failure_count | min_count    |
+| -------------- | ------------- | ------------ |
+| [300, 280, 310] | [10, 290, 15] | [10, 280, 15] |
 
-This query groups request durations by status code and finds the shortest request for each, helping you understand typical response patterns.
+This query compares success and failure counts and returns the lower value at each time point, helping you identify the minority traffic pattern.
 
 </Tab>
 </Tabs>
 
 ## List of related functions
 
-- [series_max](/apl/scalar-functions/time-series/series-max): Returns the maximum value from a series. Use when you need the highest value instead of the lowest.
-- [series_stats](/apl/scalar-functions/time-series/series-stats): Returns comprehensive statistics including min, max, average, and standard deviation. Use when you need multiple statistical measures.
-- [series_stats_dynamic](/apl/scalar-functions/time-series/series-stats-dynamic): Returns statistics in a dynamic object format. Use when you need flexible statistical output.
-- [series_sum](/apl/scalar-functions/time-series/series-sum): Returns the sum of all values in a series. Use when you need totals rather than minimum values.
-- [min](/apl/aggregation-function/min): Aggregation function that returns the minimum value across grouped records. Use with `summarize` for aggregating, not for array operations.
-
+- [series_max](/apl/scalar-functions/time-series/series-max): Compares two arrays and returns the maximum value at each position.
+- [series_less](/apl/scalar-functions/time-series/series-less): Compares two arrays and returns `true` where elements in the first array are less than the second.
+- [series_greater](/apl/scalar-functions/time-series/series-greater): Compares two arrays and returns `true` where the first array element is greater than the second.
+- [min](/apl/aggregation-function/min): Aggregation function that returns the minimum value across grouped records.
