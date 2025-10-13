@@ -118,38 +118,6 @@ In log analysis, you can use `series_stats` to get a comprehensive statistical s
 This query calculates comprehensive statistics for each user's request durations by extracting specific elements from the 7-element stats array.
 
 </Tab>
-<Tab title="OpenTelemetry traces">
-
-In OpenTelemetry traces, you can use `series_stats` to analyze HTTP status code distribution, including where the minimum and maximum values occur in the series.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where isnotnull(['attributes.http.status_code'])
-| summarize status_codes = make_list(tolong(['attributes.http.status_code'])) by ['service.name']
-| extend stats_array = series_stats(status_codes)
-| project ['service.name'],
-    min_status = stats_array[0],
-    min_position = stats_array[1],
-    max_status = stats_array[2],
-    max_position = stats_array[3],
-    avg_status = stats_array[4]
-| take 5
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20isnotnull(%5B'attributes.http.status_code'%5D)%20%7C%20summarize%20status_codes%20%3D%20make_list(tolong(%5B'attributes.http.status_code'%5D))%20by%20%5B'service.name'%5D%20%7C%20extend%20stats_array%20%3D%20series_stats(status_codes)%20%7C%20project%20%5B'service.name'%5D%2C%20min_status%20%3D%20stats_array%5B0%5D%2C%20min_position%20%3D%20stats_array%5B1%5D%2C%20max_status%20%3D%20stats_array%5B2%5D%2C%20max_position%20%3D%20stats_array%5B3%5D%2C%20avg_status%20%3D%20stats_array%5B4%5D%20%7C%20take%205%22%7D)
-
-**Output**
-
-| service.name | min_status | min_position | max_status | max_position | avg_status |
-| ------------ | ---------- | ------------ | ---------- | ------------ | ---------- |
-| frontend     | 200        | 0            | 500        | 42           | 215.3      |
-| checkout     | 200        | 0            | 404        | 18           | 202.1      |
-
-This query provides statistical analysis of HTTP status codes per service, including the positions where min and max values occur.
-
-</Tab>
 <Tab title="Security logs">
 
 In security logs, you can use `series_stats` to establish behavioral baselines and calculate anomaly detection thresholds based on variance.

@@ -120,38 +120,6 @@ In log analysis, you can use `series_stats_dynamic` to generate comprehensive st
 This query uses property names to access statistics and calculate a custom performance score based on the coefficient of variation.
 
 </Tab>
-<Tab title="OpenTelemetry traces">
-
-In OpenTelemetry traces, you can use `series_stats_dynamic` to create flexible performance reports that identify where extreme values occur in the trace timeline.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where isnotnull(['attributes.http.status_code'])
-| summarize status_codes = make_list(tolong(['attributes.http.status_code'])) by ['service.name']
-| extend stats = series_stats_dynamic(status_codes)
-| where stats.max > 400
-| project ['service.name'],
-    min_status = stats.min,
-    max_status = stats.max,
-    max_at_position = stats.max_idx,
-    avg_status = stats.avg
-| take 5
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20isnotnull(%5B'attributes.http.status_code'%5D)%20%7C%20summarize%20status_codes%20%3D%20make_list(tolong(%5B'attributes.http.status_code'%5D))%20by%20%5B'service.name'%5D%20%7C%20extend%20stats%20%3D%20series_stats_dynamic(status_codes)%20%7C%20where%20stats.max%20%3E%20400%20%7C%20project%20%5B'service.name'%5D%2C%20min_status%20%3D%20stats.min%2C%20max_status%20%3D%20stats.max%2C%20max_at_position%20%3D%20stats.max_idx%2C%20avg_status%20%3D%20stats.avg%20%7C%20take%205%22%7D)
-
-**Output**
-
-| service.name | min_status | max_status | max_at_position | avg_status |
-| ------------ | ---------- | ---------- | --------------- | ---------- |
-| frontend     | 200        | 500        | 42              | 215.3      |
-| checkout     | 200        | 404        | 18              | 202.1      |
-
-This query filters services with error status codes and shows where in the series the maximum status code occurs.
-
-</Tab>
 <Tab title="Security logs">
 
 In security logs, you can use `series_stats_dynamic` to build adaptive anomaly detection thresholds with clear, self-documenting property access.
