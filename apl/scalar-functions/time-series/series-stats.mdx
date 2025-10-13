@@ -3,7 +3,7 @@ title: series_stats
 description: 'This page explains how to use the series_stats function in APL.'
 ---
 
-The `series_stats` function computes comprehensive statistical measures for a numeric dynamic array (series), returning multiple values including minimum, maximum, average, variance, and standard deviation.
+The `series_stats` function computes comprehensive statistical measures for a numeric dynamic array (series), returning an array with seven elements containing minimum, maximum, average, variance, standard deviation, and the positions of minimum and maximum values.
 
 You can use `series_stats` when you need a complete statistical summary of time-series data in a single operation. This is particularly useful for understanding data distribution, identifying outliers, calculating confidence intervals, or performing comprehensive data quality assessments without running multiple separate aggregations.
 
@@ -14,7 +14,7 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, you typically use multiple `stats` functions to calculate different statistics. In APL, `series_stats` provides all common statistics in a single operation on array data.
+In Splunk SPL, you typically use multiple `stats` functions to calculate different statistics. In APL, `series_stats` provides all common statistics in a single operation on array data, returning them as a 7-element array.
 
 <CodeGroup>
 ```sql Splunk example
@@ -26,13 +26,14 @@ In Splunk SPL, you typically use multiple `stats` functions to calculate differe
 ['sample-http-logs']
 | summarize values = make_list(req_duration_ms) by id
 | extend stats = series_stats(values)
+| extend min_val = stats[0], max_val = stats[2], avg_val = stats[4]
 ```
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In SQL, you calculate multiple aggregate functions separately. In APL, `series_stats` provides all these statistics in a single function call on array data.
+In SQL, you calculate multiple aggregate functions separately. In APL, `series_stats` provides all these statistics in a single function call on array data, returned as a 7-element array.
 
 <CodeGroup>
 ```sql SQL example
@@ -49,6 +50,7 @@ GROUP BY user_id;
 ['sample-http-logs']
 | summarize values = make_list(req_duration_ms) by id
 | extend stats = series_stats(values)
+| extend min_val = stats[0], max_val = stats[2], avg_val = stats[4]
 ```
 </CodeGroup>
 
@@ -71,12 +73,17 @@ series_stats(array)
 
 ### Returns
 
-A dynamic object containing the following statistical measures:
-- `min`: Minimum value in the series
-- `max`: Maximum value in the series
-- `avg`: Average (mean) value
-- `variance`: Variance of the values
-- `stdev`: Standard deviation of the values
+An array with seven numeric elements in the following order:
+
+| Index | Statistic  | Description                                               |
+| ----- | ---------- | --------------------------------------------------------- |
+| 0     | min        | The minimum value in the input array.                     |
+| 1     | min_idx    | The first position of the minimum value in the array.     |
+| 2     | max        | The maximum value in the input array.                     |
+| 3     | max_idx    | The first position of the maximum value in the array.     |
+| 4     | avg        | The average value of the input array.                     |
+| 5     | variance   | The sample variance of the input array.                   |
+| 6     | stdev      | The sample standard deviation of the input array.         |
 
 ## Use case examples
 
@@ -92,13 +99,14 @@ In log analysis, you can use `series_stats` to get a comprehensive statistical s
 | summarize durations = make_list(req_duration_ms) by id
 | extend statistics = series_stats(durations)
 | project id, 
-    min_duration = statistics.min,
-    max_duration = statistics.max,
-    avg_duration = statistics.avg,
-    stdev_duration = statistics.stdev
+    min_duration = statistics[0],
+    max_duration = statistics[2],
+    avg_duration = statistics[4],
+    stdev_duration = statistics[6]
+| take 5
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20statistics%20%3D%20series_stats(durations)%20%7C%20project%20id%2C%20min_duration%20%3D%20statistics.min%2C%20max_duration%20%3D%20statistics.max%2C%20avg_duration%20%3D%20statistics.avg%2C%20stdev_duration%20%3D%20statistics.stdev%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20statistics%20%3D%20series_stats(durations)%20%7C%20project%20id%2C%20min_duration%20%3D%20statistics%5B0%5D%2C%20max_duration%20%3D%20statistics%5B2%5D%2C%20avg_duration%20%3D%20statistics%5B4%5D%2C%20stdev_duration%20%3D%20statistics%5B6%5D%20%7C%20take%205%22%7D)
 
 **Output**
 
@@ -107,42 +115,44 @@ In log analysis, you can use `series_stats` to get a comprehensive statistical s
 | u123 | 15           | 245          | 95           | 45.2           |
 | u456 | 8            | 189          | 78           | 38.7           |
 
-This query calculates comprehensive statistics for each user's request durations, providing a complete performance profile in a single operation.
+This query calculates comprehensive statistics for each user's request durations by extracting specific elements from the 7-element statistics array.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-In OpenTelemetry traces, you can use `series_stats` to analyze span duration distribution for each service, identifying both typical performance and variability.
+In OpenTelemetry traces, you can use `series_stats` to analyze HTTP status code distribution, including where the minimum and maximum values occur in the series.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| summarize durations = make_list(duration_ms) by ['service.name']
-| extend statistics = series_stats(durations)
+| where isnotnull(['attributes.http.status_code'])
+| summarize status_codes = make_list(tolong(['attributes.http.status_code'])) by ['service.name']
+| extend statistics = series_stats(status_codes)
 | project ['service.name'],
-    min_span = statistics.min,
-    max_span = statistics.max,
-    avg_span = statistics.avg,
-    variability = statistics.stdev
+    min_status = statistics[0],
+    min_position = statistics[1],
+    max_status = statistics[2],
+    max_position = statistics[3],
+    avg_status = statistics[4]
+| take 5
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20summarize%20durations%20%3D%20make_list(duration_ms)%20by%20%5B'service.name'%5D%20%7C%20extend%20statistics%20%3D%20series_stats(durations)%20%7C%20project%20%5B'service.name'%5D%2C%20min_span%20%3D%20statistics.min%2C%20max_span%20%3D%20statistics.max%2C%20avg_span%20%3D%20statistics.avg%2C%20variability%20%3D%20statistics.stdev%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20isnotnull(%5B'attributes.http.status_code'%5D)%20%7C%20summarize%20status_codes%20%3D%20make_list(tolong(%5B'attributes.http.status_code'%5D))%20by%20%5B'service.name'%5D%20%7C%20extend%20statistics%20%3D%20series_stats(status_codes)%20%7C%20project%20%5B'service.name'%5D%2C%20min_status%20%3D%20statistics%5B0%5D%2C%20min_position%20%3D%20statistics%5B1%5D%2C%20max_status%20%3D%20statistics%5B2%5D%2C%20max_position%20%3D%20statistics%5B3%5D%2C%20avg_status%20%3D%20statistics%5B4%5D%20%7C%20take%205%22%7D)
 
 **Output**
 
-| service.name | min_span | max_span | avg_span | variability |
-| ------------ | -------- | -------- | -------- | ----------- |
-| frontend     | 15       | 850      | 185      | 125.3       |
-| checkout     | 22       | 1200     | 320      | 245.8       |
+| service.name | min_status | min_position | max_status | max_position | avg_status |
+| ------------ | ---------- | ------------ | ---------- | ------------ | ---------- |
+| frontend     | 200        | 0            | 500        | 42           | 215.3      |
+| checkout     | 200        | 0            | 404        | 18           | 202.1      |
 
-This query provides statistical analysis of span durations per service, helping identify both performance baselines and consistency.
+This query provides statistical analysis of HTTP status codes per service, including the positions where min and max values occur.
 
 </Tab>
 <Tab title="Security logs">
 
-In security logs, you can use `series_stats` to establish behavioral baselines and identify statistical anomalies in request patterns.
+In security logs, you can use `series_stats` to establish behavioral baselines and calculate anomaly detection thresholds based on variance.
 
 **Query**
 
@@ -151,21 +161,22 @@ In security logs, you can use `series_stats` to establish behavioral baselines a
 | summarize durations = make_list(req_duration_ms) by status
 | extend statistics = series_stats(durations)
 | project status,
-    typical_duration = statistics.avg,
-    max_observed = statistics.max,
-    consistency = statistics.stdev
-| extend anomaly_threshold = typical_duration + (3 * consistency)
+    typical_duration = statistics[4],
+    variance = statistics[5],
+    stdev = statistics[6],
+    max_observed = statistics[2]
+| extend anomaly_threshold = typical_duration + (3 * stdev)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20status%20%7C%20extend%20statistics%20%3D%20series_stats(durations)%20%7C%20project%20status%2C%20typical_duration%20%3D%20statistics.avg%2C%20max_observed%20%3D%20statistics.max%2C%20consistency%20%3D%20statistics.stdev%20%7C%20extend%20anomaly_threshold%20%3D%20typical_duration%20%2B%20(3%20*%20consistency)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20status%20%7C%20extend%20statistics%20%3D%20series_stats(durations)%20%7C%20project%20status%2C%20typical_duration%20%3D%20statistics%5B4%5D%2C%20variance%20%3D%20statistics%5B5%5D%2C%20stdev%20%3D%20statistics%5B6%5D%2C%20max_observed%20%3D%20statistics%5B2%5D%20%7C%20extend%20anomaly_threshold%20%3D%20typical_duration%20%2B%20(3%20*%20stdev)%22%7D)
 
 **Output**
 
-| status | typical_duration | max_observed | consistency | anomaly_threshold |
-| ------ | ---------------- | ------------ | ----------- | ----------------- |
-| 200    | 52               | 340          | 12.5        | 89.5              |
-| 401    | 450              | 8900         | 850.2       | 3000.6            |
-| 500    | 125              | 550          | 95.3        | 410.9             |
+| status | typical_duration | variance | stdev | max_observed | anomaly_threshold |
+| ------ | ---------------- | -------- | ----- | ------------ | ----------------- |
+| 200    | 52               | 156.25   | 12.5  | 340          | 89.5              |
+| 401    | 450              | 722840   | 850.2 | 8900         | 3000.6            |
+| 500    | 125              | 9082     | 95.3  | 550          | 410.9             |
 
 This query uses statistical analysis to establish normal behavior patterns and calculate anomaly detection thresholds based on standard deviations.
 
@@ -174,9 +185,8 @@ This query uses statistical analysis to establish normal behavior patterns and c
 
 ## List of related functions
 
-- [series_stats_dynamic](/apl/scalar-functions/time-series/series-stats-dynamic): Returns statistics in a more flexible dynamic format. Use when you need additional statistics or custom output structure.
-- [series_max](/apl/scalar-functions/time-series/series-max): Returns only the maximum value. Use when you need just the maximum instead of full statistics.
-- [series_min](/apl/scalar-functions/time-series/series-min): Returns only the minimum value. Use when you need just the minimum instead of full statistics.
-- [avg](/apl/aggregation-function/avg): Aggregation function for calculating averages. Use with `summarize` for aggregating across rows instead of array elements.
-- [stdev](/apl/aggregation-function/stdev): Aggregation function for standard deviation. Use with `summarize` for aggregating across rows instead of array elements.
-
+- [series_stats_dynamic](/apl/scalar-functions/time-series/series-stats-dynamic): Returns the same statistics as a dynamic object with named properties instead of an array.
+- [series_max](/apl/scalar-functions/time-series/series-max): Compares two arrays element-wise and returns the maximum values.
+- [series_min](/apl/scalar-functions/time-series/series-min): Compares two arrays element-wise and returns the minimum values.
+- [avg](/apl/aggregation-function/avg): Aggregation function for calculating averages across rows.
+- [stdev](/apl/aggregation-function/stdev): Aggregation function for standard deviation across rows.
