@@ -103,32 +103,6 @@ You want to create a lower bound by comparing request durations across two diffe
 This query compares response times between two cities and creates a series containing the lower value at each time point.
 
 </Tab>
-<Tab title="OpenTelemetry traces">
-
-You want to compare HTTP status codes between two services and keep the lower status code at each time point.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where isnotnull(['attributes.http.status_code'])
-| make-series frontend_status = avgif(tolong(['attributes.http.status_code']), ['service.name'] == 'frontend'),
-             backend_status = avgif(tolong(['attributes.http.status_code']), ['service.name'] == 'checkoutservice')
-             on _time step 5m
-| extend min_status = series_min(frontend_status, backend_status)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20isnotnull(%5B'attributes.http.status_code'%5D)%20%7C%20make-series%20frontend_status%20%3D%20avgif(tolong(%5B'attributes.http.status_code'%5D)%2C%20%5B'service.name'%5D%20%3D%3D%20'frontend')%2C%20backend_status%20%3D%20avgif(tolong(%5B'attributes.http.status_code'%5D)%2C%20%5B'service.name'%5D%20%3D%3D%20'checkoutservice')%20on%20_time%20step%205m%20%7C%20extend%20min_status%20%3D%20series_min(frontend_status%2C%20backend_status)%22%7D)
-
-**Output**
-
-| frontend_status     | backend_status      | min_status          |
-| ------------------- | ------------------- | ------------------- |
-| [200.0, 204.5, 200.0] | [201.0, 200.0, 205.0] | [200.0, 200.0, 200.0] |
-
-This query compares status codes across services and creates a series with the minimum status code at each time interval.
-
-</Tab>
 <Tab title="Security logs">
 
 You want to track the minimum count between successful and failed requests at each time point to identify which type has less traffic.
