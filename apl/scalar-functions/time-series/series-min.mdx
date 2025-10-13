@@ -1,0 +1,160 @@
+---
+title: series_min
+description: 'This page explains how to use the series_min function in APL.'
+---
+
+The `series_min` function returns the minimum value from each numeric dynamic array (series). This function scans through all elements in the series and identifies the lowest value present.
+
+You can use `series_min` when you need to find the smallest values in time-series data. This is particularly useful for identifying minimum resource utilization, fastest response times, lowest transaction volumes, or other scenarios where you need to determine the lower bound of measurements across a series.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use the `min()` function to find minimum values across multiple fields or events. In APL, `series_min` operates on dynamic arrays, returning the minimum value from each array in a single operation.
+
+<CodeGroup>
+```sql Splunk example
+... | stats min(response_time) as fastest_time by user
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize times = make_list(req_duration_ms) by id
+| extend fastest_time = series_min(times)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, you use the `MIN()` aggregate function to find the minimum value across rows. In APL, `series_min` operates on individual arrays, extracting the minimum value from each array element-wise.
+
+<CodeGroup>
+```sql SQL example
+SELECT user_id, MIN(response_time) AS fastest_time
+FROM requests
+GROUP BY user_id;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize times = make_list(req_duration_ms) by id
+| extend fastest_time = series_min(times)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+series_min(array)
+```
+
+### Parameters
+
+| Parameter | Type    | Description                        |
+| --------- | ------- | ---------------------------------- |
+| `array`   | dynamic | A dynamic array of numeric values. |
+
+### Returns
+
+A numeric scalar representing the minimum value in the input array.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+In log analysis, you can use `series_min` to identify the fastest request duration for each user, helping you understand the best-case performance.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize durations = make_list(req_duration_ms) by id
+| extend min_duration = series_min(durations)
+| project id, min_duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20min_duration%20%3D%20series_min(durations)%20%7C%20project%20id%2C%20min_duration%22%7D)
+
+**Output**
+
+| id   | min_duration |
+| ---- | ------------ |
+| u123 | 12           |
+| u456 | 8            |
+
+This query collects all request durations for each user and identifies the shortest request duration, helping you establish performance baselines.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+In OpenTelemetry traces, you can use `series_min` to find the minimum span duration for each service, establishing performance benchmarks.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend duration_ms = duration / 1ms
+| summarize durations = make_list(duration_ms) by ['service.name']
+| extend min_duration = series_min(durations)
+| project ['service.name'], min_duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20summarize%20durations%20%3D%20make_list(duration_ms)%20by%20%5B'service.name'%5D%20%7C%20extend%20min_duration%20%3D%20series_min(durations)%20%7C%20project%20%5B'service.name'%5D%2C%20min_duration%22%7D)
+
+**Output**
+
+| service.name | min_duration |
+| ------------ | ------------ |
+| frontend     | 15           |
+| checkout     | 22           |
+
+This query aggregates span durations per service and identifies the fastest span for each service, useful for setting performance targets.
+
+</Tab>
+<Tab title="Security logs">
+
+In security logs, you can use `series_min` to identify the shortest request duration for each HTTP status code, helping establish normal behavior patterns.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize durations = make_list(req_duration_ms) by status
+| extend min_duration = series_min(durations)
+| project status, min_duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20status%20%7C%20extend%20min_duration%20%3D%20series_min(durations)%20%7C%20project%20status%2C%20min_duration%22%7D)
+
+**Output**
+
+| status | min_duration |
+| ------ | ------------ |
+| 200    | 5            |
+| 401    | 45           |
+| 500    | 10           |
+
+This query groups request durations by status code and finds the shortest request for each, helping you understand typical response patterns.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [series_max](/apl/scalar-functions/time-series/series-max): Returns the maximum value from a series. Use when you need the highest value instead of the lowest.
+- [series_stats](/apl/scalar-functions/time-series/series-stats): Returns comprehensive statistics including min, max, average, and standard deviation. Use when you need multiple statistical measures.
+- [series_stats_dynamic](/apl/scalar-functions/time-series/series-stats-dynamic): Returns statistics in a dynamic object format. Use when you need flexible statistical output.
+- [series_sum](/apl/scalar-functions/time-series/series-sum): Returns the sum of all values in a series. Use when you need totals rather than minimum values.
+- [min](/apl/aggregation-function/min): Aggregation function that returns the minimum value across grouped records. Use with `summarize` for aggregating, not for array operations.
+
