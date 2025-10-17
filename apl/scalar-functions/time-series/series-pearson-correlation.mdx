@@ -88,13 +88,14 @@ In log analysis, you can use `series_pearson_correlation` to identify relationsh
 
 ```kusto
 ['sample-http-logs']
-| extend city1 = iff(['geo.city'] == 'Seattle', req_duration_ms, 0)
-| extend city2 = iff(['geo.city'] == 'Portland', req_duration_ms, 0)
-| summarize seattle_times = make_list(city1), portland_times = make_list(city2)
-| extend correlation = series_pearson_correlation(seattle_times, portland_times)
+| extend city1 = iff(['geo.city'] == 'Tokyo', req_duration_ms, 0)
+| extend city2 = iff(['geo.city'] == 'Nagasaki', req_duration_ms, 0)
+| summarize tokyo_times = make_list(city1), nagasaki_times = make_list(city2)
+| extend correlation = series_pearson_correlation(tokyo_times, nagasaki_times)
+| project correlation
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20city1%20%3D%20iff(%5B'geo.city'%5D%20%3D%3D%20'Seattle'%2C%20req_duration_ms%2C%200)%20%7C%20extend%20city2%20%3D%20iff(%5B'geo.city'%5D%20%3D%3D%20'Portland'%2C%20req_duration_ms%2C%200)%20%7C%20summarize%20seattle_times%20%3D%20make_list(city1)%2C%20portland_times%20%3D%20make_list(city2)%20%7C%20extend%20correlation%20%3D%20series_pearson_correlation(seattle_times%2C%20portland_times)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20city1%20%3D%20iff(%5B'geo.city'%5D%20%3D%3D%20'Tokyo'%2C%20req_duration_ms%2C%200)%20%7C%20extend%20city2%20%3D%20iff(%5B'geo.city'%5D%20%3D%3D%20'Nagasaki'%2C%20req_duration_ms%2C%200)%20%7C%20summarize%20tokyo_times%20%3D%20make_list(city1)%2C%20nagasaki_times%20%3D%20make_list(city2)%20%7C%20extend%20correlation%20%3D%20series_pearson_correlation(tokyo_times%2C%20nagasaki_times)%20%7C%20project%20correlation%22%7D)
 
 **Output**
 
@@ -102,7 +103,7 @@ In log analysis, you can use `series_pearson_correlation` to identify relationsh
 | ----------- |
 | 0.87        |
 
-This query calculates the correlation between request durations in Seattle and Portland, revealing if performance issues in one region tend to coincide with issues in another.
+This query calculates the correlation between request durations in Tokyo and Nagasaki, revealing if performance issues in one region tend to coincide with issues in another.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
@@ -118,9 +119,10 @@ In OpenTelemetry traces, you can use `series_pearson_correlation` to analyze rel
 | extend checkout_dur = iff(['service.name'] == 'checkout', duration_ms, 0)
 | summarize frontend = make_list(frontend_dur), checkout = make_list(checkout_dur)
 | extend correlation = series_pearson_correlation(frontend, checkout)
+| project correlation
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20frontend_dur%20%3D%20iff(%5B'service.name'%5D%20%3D%3D%20'frontend'%2C%20duration_ms%2C%200)%20%7C%20extend%20checkout_dur%20%3D%20iff(%5B'service.name'%5D%20%3D%3D%20'checkout'%2C%20duration_ms%2C%200)%20%7C%20summarize%20frontend%20%3D%20make_list(frontend_dur)%2C%20checkout%20%3D%20make_list(checkout_dur)%20%7C%20extend%20correlation%20%3D%20series_pearson_correlation(frontend%2C%20checkout)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20frontend_dur%20%3D%20iff(%5B'service.name'%5D%20%3D%3D%20'frontend'%2C%20duration_ms%2C%200)%20%7C%20extend%20checkout_dur%20%3D%20iff(%5B'service.name'%5D%20%3D%3D%20'checkout'%2C%20duration_ms%2C%200)%20%7C%20summarize%20frontend%20%3D%20make_list(frontend_dur)%2C%20checkout%20%3D%20make_list(checkout_dur)%20%7C%20extend%20correlation%20%3D%20series_pearson_correlation(frontend%2C%20checkout)%20%7C%20project%20correlation%22%7D)
 
 **Output**
 
@@ -143,9 +145,10 @@ In security logs, you can use `series_pearson_correlation` to identify relations
 | extend failure_count = iff(status == '500', 1, 0)
 | summarize successes = make_list(success_count), failures = make_list(failure_count) by bin(_time, 1h)
 | extend correlation = series_pearson_correlation(successes, failures)
+| project correlation
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20success_count%20%3D%20iff(status%20%3D%3D%20'200'%2C%201%2C%200)%20%7C%20extend%20failure_count%20%3D%20iff(status%20%3D%3D%20'500'%2C%201%2C%200)%20%7C%20summarize%20successes%20%3D%20make_list(success_count)%2C%20failures%20%3D%20make_list(failure_count)%20by%20bin(_time%2C%201h)%20%7C%20extend%20correlation%20%3D%20series_pearson_correlation(successes%2C%20failures)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20success_count%20%3D%20iff(status%20%3D%3D%20'200'%2C%201%2C%200)%20%7C%20extend%20failure_count%20%3D%20iff(status%20%3D%3D%20'500'%2C%201%2C%200)%20%7C%20summarize%20successes%20%3D%20make_list(success_count)%2C%20failures%20%3D%20make_list(failure_count)%20by%20bin(_time%2C%201h)%20%7C%20extend%20correlation%20%3D%20series_pearson_correlation(successes%2C%20failures)%20%7C%20project%20correlation%22%7D)
 
 **Output**
 
