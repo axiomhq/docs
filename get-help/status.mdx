@@ -1,0 +1,158 @@
+---
+title: 'Axiom system status'
+description: 'This page explains how to monitor Axiom system status and get notified about service incidents.'
+sidebarTitle: System status
+---
+
+Monitor the operational status of Axiom services and subscribe to updates about incidents and maintenance windows.
+
+## Access the status page
+
+Axiom provides a public status page that shows the current operational status of all Axiom services:
+
+**Status page**: [https://status.axiom.co](https://status.axiom.co)
+
+The status page displays:
+
+- **Overall system status**: Indicates whether all systems are operational
+- **Component status**: Shows the status of individual Axiom components including:
+  - Axiom API (US and EU regions)
+  - Axiom app (US and EU regions)
+  - Data ingestion services
+  - Query services
+  - Authentication services
+- **Incident history**: Past incidents and their resolutions
+- **Scheduled maintenance**: Upcoming planned maintenance windows
+
+## Component-level subscriptions
+
+Subscribe to updates for specific Axiom components to receive notifications about incidents affecting those components:
+
+<Steps>
+<Step title="Visit the status page">
+Go to [https://status.axiom.co](https://status.axiom.co).
+</Step>
+
+<Step title="Click Subscribe to Updates">
+In the top right corner, click **Subscribe to Updates**.
+</Step>
+
+<Step title="Choose your notification method">
+Select how you want to receive updates:
+- **Email**: Receive incident notifications via email
+- **SMS**: Get text message alerts (requires phone number)
+- **Slack**: Connect your Slack workspace
+- **Webhook**: Configure a webhook URL for programmatic notifications
+- **RSS/Atom**: Subscribe to the feed in your RSS reader
+</Step>
+
+<Step title="Select components">
+Choose which components you want to monitor. For example:
+- Select **Axiom API - US** if your organization is in the US region
+- Select **Axiom API - EU** if your organization is in the EU region
+- Select **Data Ingestion** if you want to be notified about ingestion issues
+
+<Tip>
+Subscribe only to components relevant to your organization's region and usage to avoid unnecessary notifications.
+</Tip>
+</Step>
+
+<Step title="Confirm subscription">
+Complete the subscription process. You'll receive a confirmation message.
+
+<Check>
+You'll now receive notifications when the status of your selected components changes.
+</Check>
+</Step>
+</Steps>
+
+## Monitor dataset availability with alerts
+
+To monitor whether your datasets are receiving data as expected, create a monitor in Axiom:
+
+<Steps>
+<Step title="Navigate to Monitors">
+In the Axiom app, click the Monitors tab.
+</Step>
+
+<Step title="Create a threshold monitor">
+Click **New monitor**, and then select **Threshold monitor**.
+</Step>
+
+<Step title="Write a query">
+Create a query that counts events in your dataset. For example:
+
+```kusto
+['your-dataset']
+| summarize count() by bin(_time, 5m)
+```
+
+This query counts events in 5-minute intervals.
+</Step>
+
+<Step title="Set threshold">
+Configure the threshold to alert when the count falls below your expected rate. For example:
+- **Threshold**: 1
+- **Comparison**: below
+- **Frequency**: Check every 5 minutes
+- **Range**: Look at the last 5 minutes
+
+This configuration alerts you if no events arrive in a 5-minute window.
+</Step>
+
+<Step title="Add notifier">
+Select how you want to be notified (email, Slack, PagerDuty, etc.).
+
+For more information, see [Notifiers](/monitor-data/notifiers-overview).
+</Step>
+
+<Step title="Save and enable">
+Give your monitor a descriptive name like "Dataset ingestion check" and save it.
+
+<Check>
+You'll now receive alerts if your dataset stops receiving data.
+</Check>
+</Step>
+</Steps>
+
+<Tip>
+Adjust the time intervals and thresholds based on your expected ingestion rate. For datasets with lower event rates, use longer time windows.
+</Tip>
+
+## Troubleshoot connectivity issues
+
+If you're experiencing issues connecting to Axiom:
+
+<AccordionGroup>
+<Accordion title="Verify Axiom service status">
+First, check the [status page](https://status.axiom.co) to confirm that Axiom services are operational. If there's an active incident, monitor the status page for updates.
+</Accordion>
+
+<Accordion title="Check your network connectivity">
+Ensure your network allows outbound HTTPS connections to Axiom:
+- Verify that your firewall allows connections to `*.axiom.co` on port `443`
+- Test DNS resolution: `nslookup api.axiom.co` (or `api.eu.axiom.co` for EU)
+- Test connectivity: `curl https://api.axiom.co/v1/datasets` with your API token
+</Accordion>
+
+<Accordion title="Verify your region">
+Ensure you're using the correct domain for your organization's region:
+- US region: `https://api.axiom.co`
+- EU region: `https://api.eu.axiom.co`
+
+For more information, see [Regions](/reference/regions).
+</Accordion>
+
+<Accordion title="Check your API tokens">
+Verify that your API tokens are valid and have the necessary permissions. For more information, see [API tokens](/reference/tokens).
+</Accordion>
+</AccordionGroup>
+
+## Get support
+
+If you continue to experience issues after checking the status page and troubleshooting:
+
+- [Contact Axiom support](/get-help/contact-support)
+- Join the [Axiom community Discord](https://axiom.co/discord) for real-time help
+- Check the [FAQ](/get-help/faq) for answers to common questions
+
