@@ -1,0 +1,192 @@
+---
+title: Query metrics
+description: This page explains how to query OpenTelemetry metrics.
+---
+
+Query and analyze your OpenTelemetry metrics data using the Axiom Console. This page shows you how to extract insights from your metrics through filtering, aggregation, and transformation operations.
+
+For more information on working with metrics at Axiom, see [Metrics overview](/query-data/metrics/overview).
+
+<Info>
+Support for OTel metrics is currently in private preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
+</Info>
+
+## Concepts
+
+- **Dataset:** A group of related metrics.
+- **Metric:** A measurement that tracks a specific aspect of your system over time.
+- **Tag:** A key-value pair identifying a series.
+- **Series:** A unique combination of a metric and tag set.
+
+## Query structure
+
+A typical metrics query contains the following:
+
+1. **Source**: Defines dataset and the metric to query.
+1. **Filter**: Applies conditions to a series by its tags.
+1. **Transformation** can be the following:
+    - **Mapping:** Maps the data to a new value.
+    - **Aggregation:** Aggregates the data over a given time.
+    - **Grouping:** Groups the data by a set of tags, combining values over different series that are measured at the same timestamp.
+
+## Build metrics query
+
+1. Click the Query tab.
+1. Click **Builder** in the top left.
+1. In **Dataset**, select a OTel metrics dataset, and then select the metric you want to query.
+1. To filter data:
+    1. Click **+** in the **Where** section.
+    1. Select the tag where you want to filter for values.
+    1. Select the logical operator of the filter.
+    1. Specify the value for which you want to filter.
+1. In **Transformations**, select the transformations you want to apply to the data.
+1. Click **Run**.
+
+## Example query
+
+<Frame>
+<img src="/doc-assets/shots/example-metrics-query.png" alt="Example metrics query" />
+</Frame>
+
+This example queries the `axiom-dev.metrics` dataset’s `alertmanager_alerts` metric one hour before the current time. It filters results to events where `k8s.namespace.name` is `monitoring` and aggregates events over 30- second time windows into their average value.
+
+## Elements of queries
+
+The following explains each element of an AxQL query.
+
+### Source
+
+Specify the dataset and the metric.
+
+**Syntax:**
+
+```kusto
+<dataset>:<metric>
+```
+
+- **dataset**: Name of the dataset.
+- **metric**: Name of the metric.
+
+### Filter
+
+Use `where` to filter series based on tag values.
+
+**Syntax:**
+
+```kusto
+| where <tag> <operator> <value>
+```
+
+Available operators:
+
+- Equality: `==`, `!=`
+- Comparisons: `<`, `<=`, `>`, `>=`
+
+**Example:**
+
+```kusto
+| where project == /.*metrics.*/ and code >= 200 and code < 300
+```
+
+### Mapping
+
+Transform individual values or series.
+
+Available functions:
+
+| Function              | Description                                                      |
+|-----------------------|------------------------------------------------------------------|
+| `rate`                | Computes the per-second rate of change for a metric.             |
+| `min(arg)`            | Returns the minimum between the argument and the value.               |
+| `max(arg)`            | Returns the maximum between the argument and the value.               |
+| `abs`                 | Returns the absolute value of each data point.                   |
+| `fill::prev`           | Fills missing values using the previous non-null value.          |
+| `fill::const(arg)`     | Fills missing values with a constant.                            |
+| `interpolate::linear` |  Linear interpolation of missing values. |
+| `+`, `-`, `*`, `/`    | Performs the respective mathematical calculation on each value.  |
+|  `>`, `<`, `>=`, `<=` | Sets the value to `1.0` if the condition is true, `0` otherwise. |
+
+**Examples for data mappings:**
+
+```kusto
+// Calculate rate per second for the metric
+| map rate
+
+// Add 5 to each value
+| map  + 5
+
+// Fill empty values with the latest value
+| map fill::prev
+
+// Fill empty values with zeros
+| map fill::const(0)
+
+// Set existing values to 0 if the value is < 0.4. Else set to 1.
+| map < 0.4
+```
+
+### Aggregation
+
+Use `align` to aggregate over time windows.
+
+**Syntax:**
+
+```kusto
+| align to <time_window> using <aggregation_function>
+```
+
+Available aggregation functions:
+
+| Function | Description                           |
+|----------|---------------------------------------|
+| `avg`    | Averages values in each interval.     |
+| `sum`    | Sums values in each interval.         |
+| `min`    | Takes the minimum value per interval. |
+| `max`    | Takes the maximum value per interval. |
+| `count`  | Counts non-null values per interval.  |
+| `prom::rate` | Prometheus style rate |
+
+**Examples:**
+
+```kusto
+// Calculate the average over 5-minute time windows
+| align to 5m using avg
+
+// Count the data points in the last hour
+| align to 1h using count
+```
+
+### Grouping
+
+Use `group by` to combine series by tags.
+
+**Syntax:**
+
+```kusto
+| group [by <tag1>, <tag2>] using <aggregation_function>
+```
+
+If you don’t specify tags, Axiom aggregates all series into one group.
+
+Available aggregation functions:
+
+| Function | Description                           |
+|----------|---------------------------------------|
+| `avg`    | Averages values in each interval.     |
+| `sum`    | Sums values in each interval.         |
+| `min`    | Takes the minimum value per interval. |
+| `max`    | Takes the maximum value per interval. |
+| `count`  | Counts non-null values per interval.  |
+
+**Examples:**
+
+```kusto
+// Calculate the number of series
+| group using count
+
+// Calculate the total number of nodes
+| group using sum
+
+// Group data by the `project` and `namespace` tags using the `sum` aggregation
+| group by project, namespace using sum
+```
