@@ -33,3 +33,37 @@ To create a PagerDuty notifier, follow these steps:
 1. Click **Create**.
 
 You can now add your PagerDuty notifier to a specific monitor in Axiom. If any incident happens on your monitor, Axiom notifies you on the PagerDuty Service Activity dashboard.
+
+## How automatic incident resolution works
+
+Axiom automatically opens and closes PagerDuty incidents based on your monitor state. This ensures that incidents in PagerDuty accurately reflect the current state of your system without manual intervention.
+
+### Incident lifecycle
+
+When you configure a threshold monitor with a PagerDuty notifier in Axiom, the following happens:
+
+<Steps>
+<Step title="Incident creation">
+When your monitor enters the **Alarm** state (the threshold condition is met), Axiom sends a `trigger` event to PagerDuty. This creates a new incident in PagerDuty with a unique deduplication key that links the incident to your specific monitor.
+</Step>
+
+<Step title="Automatic resolution">
+When your monitor returns to the **OK** state (the threshold condition is no longer met), Axiom automatically sends a `resolve` event to PagerDuty using the same deduplication key. This automatically resolves the open incident in PagerDuty.
+
+<Note>
+For automatic resolution to work, your monitor must return to the OK state. The monitor continues to run on its configured schedule, and when the query results no longer meet the threshold condition, Axiom automatically resolves the PagerDuty incident.
+</Note>
+</Step>
+
+<Step title="Duplicate prevention">
+The deduplication key ensures that if the same monitor triggers multiple times while already in an alarm state, PagerDuty doesn't create duplicate incidents. All notifications for the same alarm are linked to the original incident.
+</Step>
+</Steps>
+
+### Troubleshooting auto-resolution
+
+If incidents in PagerDuty aren't automatically resolving when your monitor clears:
+
+- **Verify the monitor returns to OK**: Check your monitor's status in Axiom. The monitor must evaluate to OK for the resolution event to be sent.
+- **Check monitor configuration**: Ensure your monitor is configured correctly and runs on a regular schedule. If the monitor is disabled or deleted, resolution events aren't sent.
+- **Review PagerDuty service settings**: Confirm that the PagerDuty service accepts `resolve` events. Some PagerDuty services have settings that prevent automatic resolution.
