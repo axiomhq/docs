@@ -1,0 +1,182 @@
+---
+title: 'Share dashboards securely with restricted access'
+description: 'Learn how to use Role-Based Access Control (RBAC) to share dashboards with external users or vendors while restricting their access to specific datasets.'
+sidebarTitle: 'Secure dashboard sharing'
+keywords: ['rbac', 'dashboard', 'sharing', 'vendor access', 'restricted access', 'role-based access control', 'security']
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+This guide explains how to securely share dashboards with external users, vendors, or contractors while restricting their access to only the data they need to see. This is useful when you want to provide visibility into specific metrics without granting broad access to your Axiom organization.
+
+## Use case
+
+You want to create a dashboard that shows metrics for an external vendor or partner. The vendor should be able to:
+
+- View the dashboard and its visualizations
+- See data only from a specific dataset
+- Not access other dashboards, datasets, or organization settings
+- Not be able to modify any data or configurations
+
+## Prerequisites
+
+<Prerequisites />
+- Role-Based Access Control (RBAC) add-on enabled on your Axiom Cloud plan. For more information, see [Manage add-ons](/reference/usage-billing#manage-add-ons).
+- Owner or Admin role in your Axiom organization to create custom roles and groups.
+
+## Create a restricted viewer role
+
+<Steps>
+<Step title="Create a custom role">
+Create a custom role with minimal permissions:
+
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Roles**.
+1. Click **New role**.
+1. Name the role descriptively. For example, `Vendor Dashboard Viewer` or `External Analytics Access`.
+1. Add a description explaining the role's purpose.
+</Step>
+
+<Step title="Configure organization-level permissions">
+Set the following organization-level permissions:
+
+- **Dashboards**: **Read** only
+- **All other capabilities**: **No permissions** (leave unchecked)
+
+<Tip>
+By granting only Read access to dashboards, users with this role can view dashboards shared with them but can't create, modify, or delete any dashboards.
+</Tip>
+</Step>
+
+<Step title="Configure dataset-level permissions">
+Grant access only to the specific dataset that contains the data for this dashboard:
+
+1. In the **Individual datasets** section, click **Add dataset**.
+1. Search for and select the dataset you want to share. For example, `vendor-metrics` or `public-analytics`.
+1. For this dataset, set the following permissions:
+    - **Query**: **Read** (allows running queries to view data)
+    - **All other permissions**: **No permissions**
+
+<Warning>
+Don't grant organization-level dataset permissions. Only grant access to individual datasets that the vendor needs to see. This ensures they can't access other datasets in your organization.
+</Warning>
+</Step>
+
+<Step title="Save the role">
+Click **Save** to create the custom role.
+</Step>
+</Steps>
+
+## Create a group for external users
+
+Groups make it easier to manage access for multiple external users:
+
+<Steps>
+<Step title="Create a new group">
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Groups**.
+1. Click **New group**.
+1. Name the group descriptively. For example, `Vendor Partners` or `External Analytics Users`.
+</Step>
+
+<Step title="Assign the custom role">
+1. Click **Add roles**.
+1. Select the custom role you created (for example, `Vendor Dashboard Viewer`).
+1. Click **Save**.
+</Step>
+</Steps>
+
+## Invite users and share the dashboard
+
+<Steps>
+<Step title="Invite external users">
+1. Click <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Users**.
+1. Click **Invite user**.
+1. Enter the email address of the external user.
+1. For the **Role**, select **None** (this ensures they only get permissions from the group).
+1. Click **Invite**.
+</Step>
+
+<Step title="Add users to the group">
+1. Go to <img src="/doc-assets/icons/settings.svg" className="inline-icon" alt="Settings icon" /> **Settings > Groups**.
+1. Click the group you created (for example, `Vendor Partners`).
+1. Click **Add users**.
+1. Select the users you invited.
+1. Click **Save**.
+</Step>
+
+<Step title="Share the dashboard with the group">
+1. Go to the **Dashboards** tab.
+1. Open the dashboard you want to share.
+1. In the top right, click <img src="/doc-assets/icons/share.svg" className="inline-icon" alt="Share" /> **Share**.
+1. Select the group you created (for example, `Vendor Partners`).
+1. Click **Save**.
+
+<Note>
+Users only see data from datasets they have access to. If your dashboard queries multiple datasets but the user only has access to one, they only see data from that dataset.
+</Note>
+</Step>
+</Steps>
+
+## Verify the configuration
+
+To verify that the restricted access works as expected:
+
+1. Log in as a test user who is part of the external group (or ask an external user to test).
+1. Confirm they can:
+    - See only the shared dashboard (not other dashboards)
+    - View the data in the dashboard
+1. Confirm they can't:
+    - Access the Query tab to run arbitrary queries
+    - Access other datasets or dashboards
+    - Access Settings or any configuration pages
+    - See the full list of datasets in the organization
+
+## Best practices
+
+<AccordionGroup>
+<Accordion title="Use dedicated datasets for external access">
+Create separate datasets specifically for data you want to share externally. This makes it easier to control access and ensures you don't accidentally expose sensitive data. Use [views](/query-data/views) to create filtered, aggregated versions of your data that are safe to share.
+</Accordion>
+
+<Accordion title="Regularly review external access">
+Periodically review the users in your external access groups. Remove users who no longer need access. You can see all users in a group by going to **Settings > Groups** and clicking the group name.
+</Accordion>
+
+<Accordion title="Create separate groups for different vendors">
+If you work with multiple vendors or partners, create a separate group for each one. This makes it easier to manage permissions and quickly revoke access when needed.
+</Accordion>
+
+<Accordion title="Use descriptive naming">
+Use clear, descriptive names for roles, groups, and datasets that indicate their purpose and the level of access they provide. For example, `Vendor-ReadOnly-PublicMetrics` is clearer than `Role-1`.
+</Accordion>
+
+<Accordion title="Document your access structure">
+Keep internal documentation about who has access to what and why. This helps with auditing and makes it easier for other team members to understand your access control setup.
+</Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+### User can't see the dashboard
+
+- Verify the user is a member of the group that has access to the dashboard.
+- Confirm the dashboard is shared with the group. Go to the dashboard, click **Share**, and check the selected group.
+- Ensure the user has accepted their invitation and logged in to Axiom.
+
+### User sees "No data" in the dashboard
+
+- Verify the user's role has **Query (Read)** permission for the dataset used in the dashboard.
+- Check that the dataset actually contains data for the time range selected in the dashboard.
+- Confirm the dashboard queries the correct dataset that the user has access to.
+
+### User can access more than expected
+
+- Review the user's assigned role and group memberships. They might be a member of multiple groups or have a base role that grants additional permissions.
+- Remember that user permissions are the additive union of their base role plus all group memberships. To restrict access, set the base role to **None** and only grant permissions through group membership.
+
+## Related resources
+
+- [Role-Based Access Control](/reference/settings)
+- [Configure dashboards](/dashboards/configure)
+- [Views](/query-data/views)
+- [Dataset management](/reference/datasets)
+
