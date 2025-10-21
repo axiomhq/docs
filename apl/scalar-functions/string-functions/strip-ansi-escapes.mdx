@@ -1,0 +1,157 @@
+---
+title: strip_ansi_escapes
+description: 'This page explains how to use the strip_ansi_escapes function in APL.'
+---
+
+Use the `strip_ansi_escapes` function in APL to remove ANSI escape sequences from strings. ANSI escape codes are special character sequences used in terminal output to control text formatting, colors, and cursor positioning. When analyzing logs or terminal output, these codes can interfere with text processing, search operations, and data analysis.
+
+You use `strip_ansi_escapes` when you need to clean up terminal output, colorized logs, or any text that contains ANSI formatting codes. This is particularly useful when ingesting logs from command-line tools, CI/CD pipelines, container logs, or any system that outputs colored or formatted terminal text.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use regex-based replacements to remove ANSI escape sequences. APL's `strip_ansi_escapes` provides a dedicated function that handles all standard ANSI escape sequence patterns automatically.
+
+<CodeGroup>
+```sql Splunk example
+| rex mode=sed field=message 's/\x1b\[[0-9;]*m//g'
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend clean_message = strip_ansi_escapes(uri)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn't have a built-in function for removing ANSI escape sequences. You need to use regex replacement functions specific to your SQL dialect. APL's `strip_ansi_escapes` provides a cross-platform solution that handles various ANSI escape patterns.
+
+<CodeGroup>
+```sql SQL example
+SELECT REGEXP_REPLACE(message, '\x1b\[[0-9;]*m', '', 'g')
+FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend clean_message = strip_ansi_escapes(message)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+strip_ansi_escapes(text)
+```
+
+### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `text` | `string` | The string containing ANSI escape sequences that you want to remove. |
+
+### Returns
+
+A string with all ANSI escape sequences removed, leaving only the plain text content.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `strip_ansi_escapes` to clean terminal output from application logs that include color codes for better readability in terminals.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend raw_log = strcat('\u001b[32m', uri, '\u001b[0m')
+| extend clean_log = strip_ansi_escapes(raw_log)
+| project _time, raw_log, clean_log
+| take 5
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20raw_log%20%3D%20strcat('%5Cu001b%5B32m'%2C%20uri%2C%20'%5Cu001b%5B0m')%20%7C%20extend%20clean_log%20%3D%20strip_ansi_escapes(raw_log)%20%7C%20project%20_time%2C%20raw_log%2C%20clean_log%20%7C%20take%205%22%7D)
+
+**Output**
+
+| _time              | raw_log                | clean_log   |
+| ------------------ | ---------------------- | ----------- |
+| 2025-05-26 09:30:15 | \u001b[32m/api/users\u001b[0m | /api/users  |
+| 2025-05-26 09:31:20 | \u001b[32m/api/data\u001b[0m  | /api/data   |
+
+This query demonstrates cleaning ANSI color codes from log messages, making the text suitable for analysis and searching.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `strip_ansi_escapes` to clean up service names or span attributes that might contain terminal formatting codes from containerized applications.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend formatted_service = strcat('\u001b[1;34m', ['service.name'], '\u001b[0m')
+| extend clean_service = strip_ansi_escapes(formatted_service)
+| project _time, formatted_service, clean_service, span_id
+| take 5
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20formatted_service%20%3D%20strcat('%5Cu001b%5B1%3B34m'%2C%20%5B'service.name'%5D%2C%20'%5Cu001b%5B0m')%20%7C%20extend%20clean_service%20%3D%20strip_ansi_escapes(formatted_service)%20%7C%20project%20_time%2C%20formatted_service%2C%20clean_service%2C%20span_id%20%7C%20take%205%22%7D)
+
+**Output**
+
+| _time              | formatted_service             | clean_service | span_id          |
+| ------------------ | ----------------------------- | ------------- | ---------------- |
+| 2025-05-26 10:45:00 | \u001b[1;34mfrontend\u001b[0m     | frontend      | abc123def456     |
+| 2025-05-26 10:46:15 | \u001b[1;34mcart\u001b[0m          | cart          | xyz789ghi012     |
+
+This query strips formatting codes from service names, ensuring consistent field values for grouping and filtering operations.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `strip_ansi_escapes` to clean security tool output that includes colored severity indicators or formatted messages.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend security_msg = iff(status == '200', strcat('\u001b[32mOK: ', uri, '\u001b[0m'), strcat('\u001b[31mERROR: ', uri, '\u001b[0m'))
+| extend clean_msg = strip_ansi_escapes(security_msg)
+| project _time, status, security_msg, clean_msg
+| take 5
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20security_msg%20%3D%20iff(status%20%3D%3D%20'200'%2C%20strcat('%5Cu001b%5B32mOK%3A%20'%2C%20uri%2C%20'%5Cu001b%5B0m')%2C%20strcat('%5Cu001b%5B31mERROR%3A%20'%2C%20uri%2C%20'%5Cu001b%5B0m'))%20%7C%20extend%20clean_msg%20%3D%20strip_ansi_escapes(security_msg)%20%7C%20project%20_time%2C%20status%2C%20security_msg%2C%20clean_msg%20%7C%20take%205%22%7D)
+
+**Output**
+
+| _time              | status | security_msg                        | clean_msg       |
+| ------------------ | ------ | ----------------------------------- | --------------- |
+| 2025-05-26 11:15:30 | 200    | \u001b[32mOK: /api/users\u001b[0m       | OK: /api/users  |
+| 2025-05-26 11:16:45 | 404    | \u001b[31mERROR: /api/admin\u001b[0m    | ERROR: /api/admin |
+
+This query removes color codes from security messages, making them easier to parse, search, and export for compliance reporting.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [trim](/apl/scalar-functions/string-functions/trim): Use `trim` to remove leading and trailing characters. Use `strip_ansi_escapes` specifically for removing ANSI escape sequences anywhere in the string.
+- [replace_regex](/apl/scalar-functions/string-functions#replace-regex): Use `replace_regex` for custom pattern-based replacements. Use `strip_ansi_escapes` as a specialized, optimized solution for ANSI codes.
+- [trim_space](/apl/scalar-functions/string-functions/trim-space): Use `trim_space` to remove whitespace. Use `strip_ansi_escapes` to clean formatting codes.
+- [extract](/apl/scalar-functions/string-functions#extract): Use `extract` to pull specific patterns from text. Use `strip_ansi_escapes` to clean the text before extraction for better pattern matching.
+

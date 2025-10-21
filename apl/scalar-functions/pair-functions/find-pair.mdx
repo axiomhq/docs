@@ -1,0 +1,164 @@
+---
+title: find_pair
+description: 'This page explains how to use the find_pair function in APL.'
+---
+
+Use the `find_pair` function in APL to search an array of key-value pairs and find the first pair that matches specified key and value patterns. This function combines pattern matching with pair extraction, making it easy to locate specific pairs in collections of metadata or tags.
+
+You use `find_pair` when working with arrays of pairs (such as tags, labels, or metadata) where you need to find a specific pair based on pattern matching. This is particularly useful in log analysis, OpenTelemetry traces with custom attributes, and any scenario where data is stored as key-value pair arrays.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically iterate through multi-value fields using `mvfind` or use `spath` for JSON data. APL's `find_pair` provides a specialized function for finding key-value pairs with pattern matching.
+
+<CodeGroup>
+```sql Splunk example
+| eval found_tag=mvfind(tags, 'host=server.*')
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend tags = dynamic(['host:server1', 'env:prod', 'region:us-west'])
+| extend found = find_pair(tags, 'host', 'server*')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you typically use `JSON_EXTRACT` or array functions with `LIKE` patterns to search arrays. APL's `find_pair` provides a more direct approach for pair-based searches.
+
+<CodeGroup>
+```sql SQL example
+SELECT *
+FROM logs
+WHERE JSON_EXTRACT(tags, '$[*].key') LIKE 'host%'
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend tags = dynamic(['host:server1', 'env:prod'])
+| extend found = find_pair(tags, 'host*', '*')
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+find_pair(array, key_pattern, value_pattern)
+find_pair(array, key_pattern, value_pattern, separator)
+```
+
+### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `array` | `dynamic` | An array of strings representing key-value pairs to search. |
+| `key_pattern` | `string` | A wildcard pattern to match against pair keys. Use `*` for wildcard matching. |
+| `value_pattern` | `string` | A wildcard pattern to match against pair values. Use `*` for wildcard matching. |
+| `separator` | `string` | (Optional) The separator between keys and values in the pairs. Defaults to `:`. |
+
+### Returns
+
+A `dynamic` object representing the first matched pair, with `key` and `value` properties. Returns `null` if no matching pair is found.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `find_pair` to extract specific metadata from HTTP logs stored as tag arrays.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend tags = dynamic(['server:web01', 'env:production', 'region:us-west'])
+| extend server_tag = find_pair(tags, 'server', '*')
+| project _time, uri, tags, server_tag
+| take 5
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20tags%20%3D%20dynamic(%5B'server%3Aweb01'%2C%20'env%3Aproduction'%2C%20'region%3Aus-west'%5D)%20%7C%20extend%20server_tag%20%3D%20find_pair(tags%2C%20'server'%2C%20'*')%20%7C%20project%20_time%2C%20uri%2C%20tags%2C%20server_tag%20%7C%20take%205%22%7D)
+
+**Output**
+
+| _time              | uri      | tags                                                | server_tag                   |
+| ------------------ | -------- | --------------------------------------------------- | ---------------------------- |
+| 2025-05-26 08:15:30 | /api/user | ['server:web01', 'env:production', 'region:us-west'] | \{key: server, value: web01\} |
+| 2025-05-26 08:16:45 | /api/data | ['server:web01', 'env:production', 'region:us-west'] | \{key: server, value: web01\} |
+
+This query searches tag arrays for server information and extracts the matching pair, making it easy to filter or group by server tags.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `find_pair` to locate specific resource attributes or tags in OpenTelemetry spans.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend resource_attrs = dynamic(['host:frontend-1', 'version:v1.2.3', 'zone:us-east-1a'])
+| extend host_attr = find_pair(resource_attrs, 'host', 'frontend*')
+| project _time, span_id, ['service.name'], host_attr
+| take 5
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20resource_attrs%20%3D%20dynamic(%5B'host%3Afrontend-1'%2C%20'version%3Av1.2.3'%2C%20'zone%3Aus-east-1a'%5D)%20%7C%20extend%20host_attr%20%3D%20find_pair(resource_attrs%2C%20'host'%2C%20'frontend*')%20%7C%20project%20_time%2C%20span_id%2C%20%5B'service.name'%5D%2C%20host_attr%20%7C%20take%205%22%7D)
+
+**Output**
+
+| _time              | span_id      | ['service.name'] | host_attr                        |
+| ------------------ | ------------ | ----------------- | -------------------------------- |
+| 2025-05-26 10:20:15 | abc123def456 | frontend          | \{key: host, value: frontend-1\}  |
+| 2025-05-26 10:21:30 | xyz789ghi012 | frontend          | \{key: host, value: frontend-1\}  |
+
+This query extracts host information from resource attributes, useful for correlating spans with infrastructure.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `find_pair` to search security-related tags for specific attributes like user roles or access levels.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend security_tags = dynamic(['role:admin', 'clearance:high', 'department:security'])
+| extend role_tag = find_pair(security_tags, 'role', '*')
+| where status == '403'
+| project _time, uri, id, security_tags, role_tag
+| take 5
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20security_tags%20%3D%20dynamic(%5B'role%3Aadmin'%2C%20'clearance%3Ahigh'%2C%20'department%3Asecurity'%5D)%20%7C%20extend%20role_tag%20%3D%20find_pair(security_tags%2C%20'role'%2C%20'*')%20%7C%20where%20status%20%3D%3D%20'403'%20%7C%20project%20_time%2C%20uri%2C%20id%2C%20security_tags%2C%20role_tag%20%7C%20take%205%22%7D)
+
+**Output**
+
+| _time              | uri          | id      | security_tags                                        | role_tag                    |
+| ------------------ | ------------ | ------- | ---------------------------------------------------- | --------------------------- |
+| 2025-05-26 11:30:00 | /admin/panel | user123 | ['role:admin', 'clearance:high', 'department:security'] | \{key: role, value: admin\}  |
+
+This query identifies security-related access attempts by searching for role tags in failed access logs, helping detect unauthorized access attempts.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [parse_pair](/apl/scalar-functions/pair-functions#parse-pair): Use `parse_pair` to parse a single pair string into key and value. Use `find_pair` to search an array of pairs.
+- [pair](/apl/scalar-functions/pair-functions#pair): Use `pair` to create a pair string from a key and value. Use `find_pair` to locate existing pairs in arrays.
+- [array_index_of](/apl/scalar-functions/array-functions/array-index-of): Use `array_index_of` for exact match searches in arrays. Use `find_pair` for pattern-based pair matching.
+- [extract](/apl/scalar-functions/string-functions#extract): Use `extract` for regex-based extraction from single strings. Use `find_pair` for structured pair searching in arrays.
+
