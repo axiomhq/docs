@@ -28,7 +28,7 @@ In Splunk SPL, you typically combine filtering with histogram operations using s
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| summarize histogramif(req_duration_ms, status == '200', 10)
+| summarize histogramif(req_duration_ms, 10, status == '200')
 ```
 </CodeGroup>
 
@@ -47,7 +47,7 @@ GROUP BY duration_bin
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| summarize histogramif(req_duration_ms, status == '200', 10)
+| summarize histogramif(req_duration_ms, 10, status == '200')
 ```
 </CodeGroup>
 
@@ -59,7 +59,7 @@ GROUP BY duration_bin
 ### Syntax
 
 ```kusto
-histogramif(numeric_field, condition, number_of_bins)
+histogramif(numeric_field, number_of_bins, condition)
 ```
 
 ### Parameters
@@ -67,8 +67,8 @@ histogramif(numeric_field, condition, number_of_bins)
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | `numeric_field` | `real` | The numeric field to create a histogram for, such as request duration or response size. |
-| `condition` | `bool` | A boolean expression that determines which rows to include in the histogram. |
 | `number_of_bins` | `long` | The number of intervals (bins) to use for grouping the numeric values. |
+| `condition` | `bool` | A boolean expression that determines which rows to include in the histogram. |
 
 ### Returns
 
@@ -85,18 +85,10 @@ Use `histogramif` to analyze the distribution of request durations only for succ
 
 ```kusto
 ['sample-http-logs']
-| summarize histogramif(req_duration_ms, status == '200', 100) by bin_auto(_time)
+| summarize histogramif(req_duration_ms, 100, status == '200') by bin_auto(_time)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20histogramif(req_duration_ms%2C%20status%20%3D%3D%20'200'%2C%20100)%20by%20bin_auto(_time)%22%7D)
-
-**Output**
-
-| req_duration_ms_bin | count |
-|---------------------|-------|
-| 0                   | 45    |
-| 100                 | 180   |
-| 200                 | 95    |
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20histogramif(req_duration_ms%2C%20100%2C%20status%20%3D%3D%20'200')%20by%20bin_auto(_time)%22%7D)
 
 This query creates a histogram of request durations grouped into 100ms bins, but only includes requests with a `200` HTTP status code. This helps you understand the performance characteristics of successful requests.
 
@@ -109,18 +101,10 @@ Use `histogramif` to analyze span duration distributions for specific services i
 
 ```kusto
 ['otel-demo-traces']
-| summarize histogramif(duration, ['service.name'] == 'frontend', 50) by bin_auto(_time)
+| summarize histogramif(duration, 50, ['service.name'] == 'frontend') by bin_auto(_time)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20histogramif(duration%2C%20%5B'service.name'%5D%20%3D%3D%20'frontend'%2C%2050)%20by%20bin_auto(_time)%22%7D)
-
-**Output**
-
-| duration_bin | count |
-|--------------|-------|
-| 0.05s        | 25    |
-| 0.10s        | 95    |
-| 0.15s        | 40    |
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20histogramif(duration%2C%2050%2C%20%5B'service.name'%5D%20%3D%3D%20'frontend')%20by%20bin_auto(_time)%22%7D)
 
 This query groups span durations into 50ms intervals, focusing only on the frontend service. This helps you identify performance patterns specific to that service.
 
@@ -133,18 +117,10 @@ Use `histogramif` to examine the distribution of request durations for specific 
 
 ```kusto
 ['sample-http-logs']
-| summarize histogramif(req_duration_ms, ['geo.country'] == 'US', 50) by bin_auto(_time)
+| summarize histogramif(req_duration_ms, 50, ['geo.country'] == 'United States') by bin_auto(_time)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20histogramif(req_duration_ms%2C%20%5B'geo.country'%5D%20%3D%3D%20'US'%2C%2050)%20by%20bin_auto(_time)%22%7D)
-
-**Output**
-
-| req_duration_ms_bin | count |
-|---------------------|-------|
-| 0                   | 120   |
-| 50                  | 350   |
-| 100                 | 80    |
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20histogramif(req_duration_ms%2C%2050%2C%20%5B'geo.country'%5D%20%3D%3D%20'United%20States')%20by%20bin_auto(_time)%22%7D)
 
 This query analyzes request duration patterns for traffic originating from the US, helping you identify geographic performance variations or security patterns.
 
