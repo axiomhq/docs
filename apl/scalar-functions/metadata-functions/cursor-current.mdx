@@ -24,7 +24,7 @@ In Splunk SPL, you typically use time-based bookmarks or the `_indextime` field 
 ```kusto APL equivalent
 ['sample-http-logs']
 | extend cursor = cursor_current()
-| summarize max(_time), last_cursor = any(cursor)
+| summarize max(_time), last_cursor = make_list(cursor)[0]
 ```
 </CodeGroup>
 
@@ -42,7 +42,7 @@ FROM logs
 ```kusto APL equivalent
 ['sample-http-logs']
 | extend cursor = cursor_current()
-| summarize max(_time), processing_cursor = any(cursor)
+| summarize max(_time), processing_cursor = make_list(cursor)[0]
 ```
 </CodeGroup>
 
@@ -78,18 +78,17 @@ Use `cursor_current` to track the last processed position when implementing incr
 ['sample-http-logs']
 | extend processing_cursor = cursor_current()
 | where status != '200'
-| summarize error_count = count(), last_cursor = any(processing_cursor) by bin(_time, 1h)
+| summarize error_count = count(), last_cursor = make_list(processing_cursor)[0] by bin(_time, 5m)
 | take 5
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20processing_cursor%20%3D%20cursor_current()%20%7C%20where%20status%20!%3D%20'200'%20%7C%20summarize%20error_count%20%3D%20count()%2C%20last_cursor%20%3D%20any(processing_cursor)%20by%20bin(_time%2C%201h)%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20processing_cursor%20%3D%20cursor_current()%20%7C%20where%20status%20!%3D%20'200'%20%7C%20summarize%20error_count%20%3D%20count()%2C%20last_cursor%20%3D%20make_list(processing_cursor)[0]%20by%20bin(_time%2C%205m)%20%7C%20take%205%22%7D)
 
 **Output**
 
-| _time              | error_count | last_cursor      |
-| ------------------ | ----------- | ---------------- |
-| 2025-05-26 08:00:00 | 45          | cur_abc123def456 |
-| 2025-05-26 09:00:00 | 38          | cur_def789ghi012 |
+| error_count | last_cursor      |
+| ----------- | ---------------- |
+| 343,769     | 0ddnv2035n4lc-082f23975a003f6b-00006d10 |
 
 This query captures cursor positions alongside error counts, allowing you to resume processing from the last successful position in case of failures or for incremental updates.
 
@@ -104,47 +103,20 @@ Use `cursor_current` to implement incremental trace processing for building deri
 ['otel-demo-traces']
 | extend trace_cursor = cursor_current()
 | where kind == 'server'
-| summarize span_count = count(), latest_cursor = any(trace_cursor) by ['service.name'], bin(_time, 5m)
+| summarize span_count = count(), latest_cursor = make_list(trace_cursor)[0] by ['service.name'], bin(_time, 5m)
 | take 5
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20trace_cursor%20%3D%20cursor_current()%20%7C%20where%20kind%20%3D%3D%20'server'%20%7C%20summarize%20span_count%20%3D%20count()%2C%20latest_cursor%20%3D%20any(trace_cursor)%20by%20%5B'service.name'%5D%2C%20bin(_time%2C%205m)%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20trace_cursor%20%3D%20cursor_current()%20%7C%20where%20kind%20%3D%3D%20'server'%20%7C%20summarize%20span_count%20%3D%20count()%2C%20latest_cursor%20%3D%20make_list(trace_cursor)[0]%20by%20%5B'service.name'%5D%2C%20bin(_time%2C%205m)%20%7C%20take%205%22%7D)
 
 **Output**
 
-| _time              | ['service.name'] | span_count | latest_cursor    |
-| ------------------ | ----------------- | ---------- | ---------------- |
-| 2025-05-26 10:00:00 | frontend          | 234        | cur_xyz456abc789 |
-| 2025-05-26 10:05:00 | cart              | 187        | cur_mno123pqr456 |
+| ['service.name'] | span_count | latest_cursor    |
+| ----------------- | ---------- | ---------------- |
+| frontend          | 234        | cur_xyz456abc789 |
+| cart              | 187        | cur_mno123pqr456 |
 
 This query tracks the processing position for each service, enabling resumable trace analysis and incremental metric computation.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `cursor_current` to implement continuous security monitoring with checkpointing for failed login attempts or suspicious activities.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend security_cursor = cursor_current()
-| where status == '401' or status == '403'
-| summarize failed_attempts = count(), checkpoint = any(security_cursor) by id, ['geo.country'], bin(_time, 10m)
-| where failed_attempts > 3
-| take 5
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20security_cursor%20%3D%20cursor_current()%20%7C%20where%20status%20%3D%3D%20'401'%20or%20status%20%3D%3D%20'403'%20%7C%20summarize%20failed_attempts%20%3D%20count()%2C%20checkpoint%20%3D%20any(security_cursor)%20by%20id%2C%20%5B'geo.country'%5D%2C%20bin(_time%2C%2010m)%20%7C%20where%20failed_attempts%20%3E%203%20%7C%20take%205%22%7D)
-
-**Output**
-
-| _time              | id       | ['geo.country'] | failed_attempts | checkpoint       |
-| ------------------ | -------- | ---------------- | --------------- | ---------------- |
-| 2025-05-26 11:30:00 | user123  | CN               | 5               | cur_sec789xyz012 |
-| 2025-05-26 11:40:00 | user456  | RU               | 4               | cur_sec012abc345 |
-
-This query identifies security threats while maintaining cursor checkpoints, enabling resumable security monitoring even if the monitoring system restarts.
 
 </Tab>
 </Tabs>
