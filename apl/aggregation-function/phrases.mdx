@@ -1,0 +1,157 @@
+---
+title: 'phrases'
+description: 'This page explains how to use the phrases aggregation function in APL.'
+---
+
+The `phrases` aggregation extracts and counts common phrases or word sequences from text fields across a dataset. It analyzes text content to identify frequently occurring phrases, helping you discover patterns, trends, and common topics in your data.
+
+You can use this aggregation to identify common user queries, discover trending topics, extract key phrases from logs, or analyze conversation patterns in AI applications.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, there’s no built-in phrases function, but you might use the `rare` or `top` commands on tokenized text.
+
+<CodeGroup>
+```sql Splunk example
+| rex field=message "(?<words>\w+)"
+| top words
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize phrases(uri, 10)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would need complex string manipulation and grouping to extract common phrases.
+
+<CodeGroup>
+```sql SQL example
+SELECT 
+  phrase,
+  COUNT(*) as frequency
+FROM (
+  SELECT UNNEST(SPLIT(message, ' ')) as phrase
+  FROM logs
+)
+GROUP BY phrase
+ORDER BY frequency DESC
+LIMIT 10
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize phrases(uri, 10)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize phrases(column, max_phrases)
+```
+
+### Parameters
+
+- **column** (string, required): The column containing text data from which to extract phrases.
+- **max_phrases** (long, optional): The maximum number of top phrases to return. Default is 10.
+
+### Returns
+
+Returns a dynamic array containing the most common phrases found in the specified column, ordered by frequency.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Extract common URL patterns to understand which endpoints are most frequently accessed.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '404'
+| summarize common_404_paths = phrases(uri, 20)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20%3D%3D%20'404'%20%7C%20summarize%20common_404_paths%20%3D%20phrases(uri%2C%2020)%22%7D)
+
+**Output**
+
+| common_404_paths |
+|------------------|
+| ["/api/v1/users/profile", "/assets/old-logo.png", "/docs/deprecated", ...] |
+
+This query identifies the most common 404 error paths, helping you fix broken links or redirect old URLs.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Analyze common operation names across traces to understand service usage patterns.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ['service.name'] == 'frontend'
+| summarize common_operations = phrases(name, 15) by ['service.name']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20%7C%20summarize%20common_operations%20%3D%20phrases(name%2C%2015)%20by%20%5B'service.name'%5D%22%7D)
+
+**Output**
+
+| service.name | common_operations |
+|--------------|-------------------|
+| frontend | ["HTTP GET", "cart.checkout", "product.view", "user.login", ...] |
+
+This query reveals the most common operations in your frontend service, helping you understand usage patterns.
+
+</Tab>
+<Tab title="Security logs">
+
+Identify common patterns in potentially malicious requests by analyzing suspicious URIs.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status in ('403', '401') or uri contains '..'
+| summarize suspicious_patterns = phrases(uri, 25)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20in%20('403'%2C%20'401')%20or%20uri%20contains%20'..'%20%7C%20summarize%20suspicious_patterns%20%3D%20phrases(uri%2C%2025)%22%7D)
+
+**Output**
+
+| suspicious_patterns |
+|---------------------|
+| ["../../../etc/passwd", "/admin/login", "/.env", "/wp-admin", ...] |
+
+This query identifies common attack patterns in your logs, helping you understand security threats and improve defenses.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [make_list](/apl/aggregation-function/make-list): Creates an array of all values. Use this when you need all occurrences rather than common phrases.
+- [make_set](/apl/aggregation-function/make-set): Creates an array of unique values. Use this for distinct values without frequency analysis.
+- [topk](/apl/aggregation-function/topk): Returns top K values by a specific aggregation. Use this for numerical top values rather than phrase extraction.
+- [count](/apl/aggregation-function/count): Counts occurrences. Combine with group by for manual phrase counting if you need more control.
+- [dcount](/apl/aggregation-function/dcount): Counts distinct values. Use this to understand the variety of phrases before extracting top ones.
+

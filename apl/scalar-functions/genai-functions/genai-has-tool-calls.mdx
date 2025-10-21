@@ -1,0 +1,164 @@
+---
+title: 'genai_has_tool_calls'
+description: 'This page explains how to use the genai_has_tool_calls function in APL.'
+---
+
+The `genai_has_tool_calls` function checks whether a GenAI messages array contains any tool calls or function calls. It returns a boolean value indicating if the AI model requested to use external tools or functions during the conversation.
+
+You can use this function to filter conversations that use function calling, monitor tool usage patterns, identify integration opportunities, or track feature adoption of function calling capabilities.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would check if tool-related fields exist in the messages.
+
+<CodeGroup>
+```sql Splunk example
+| eval has_tools=if(isnotnull(tool_calls), "true", "false")
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend has_tools = genai_has_tool_calls(messages)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would check for existence of tool calls in the messages array.
+
+<CodeGroup>
+```sql SQL example
+SELECT 
+  conversation_id,
+  EXISTS(
+    SELECT 1 FROM UNNEST(messages) 
+    WHERE JSON_EXTRACT(content, '$.tool_calls') IS NOT NULL
+  ) as has_tools
+FROM conversations
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend has_tools = genai_has_tool_calls(messages)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+genai_has_tool_calls(messages)
+```
+
+### Parameters
+
+- **messages** (dynamic, required): An array of message objects from a GenAI conversation. Each message typically contains `role` and `content` fields.
+
+### Returns
+
+Returns a boolean value: `true` if the messages contain tool calls, `false` otherwise.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Analyze the adoption rate of function calling features in your AI application.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/chat'
+| extend uses_tools = genai_has_tool_calls(todynamic(response_body)['messages'])
+| summarize 
+    conversations_with_tools = countif(uses_tools),
+    total_conversations = count(),
+    adoption_rate = round(100.0 * countif(uses_tools) / count(), 2)
+by bin(_time, 1d)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fchat'%20%7C%20extend%20uses_tools%20%3D%20genai_has_tool_calls(todynamic(response_body)%5B'messages'%5D)%20%7C%20summarize%20conversations_with_tools%20%3D%20countif(uses_tools)%2C%20total_conversations%20%3D%20count()%2C%20adoption_rate%20%3D%20round(100.0%20*%20countif(uses_tools)%20%2F%20count()%2C%202)%20by%20bin(_time%2C%201d)%22%7D)
+
+**Output**
+
+| _time | conversations_with_tools | total_conversations | adoption_rate |
+|-------|--------------------------|---------------------|---------------|
+| 2024-01-15 | 345 | 1450 | 23.79 |
+| 2024-01-16 | 389 | 1523 | 25.54 |
+
+This query tracks function calling adoption over time, helping you understand feature usage trends.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Filter and analyze only those AI interactions that utilize external tools to understand integration patterns.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ['service.name'] == 'frontend' and kind == 'server'
+| extend has_tool_usage = genai_has_tool_calls(todynamic(attributes['ai.messages']))
+| where has_tool_usage == true
+| summarize avg_duration = avg(duration), call_count = count() by ['service.name']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20has_tool_usage%20%3D%20genai_has_tool_calls(todynamic(attributes%5B'ai.messages'%5D))%20%7C%20where%20has_tool_usage%20%3D%3D%20true%20%7C%20summarize%20avg_duration%20%3D%20avg(duration)%2C%20call_count%20%3D%20count()%20by%20%5B'service.name'%5D%22%7D)
+
+**Output**
+
+| service.name | avg_duration | call_count |
+|--------------|--------------|------------|
+| frontend | 2.3s | 245 |
+
+This query shows the performance impact of function calling by analyzing durations for conversations that use tools.
+
+</Tab>
+<Tab title="Security logs">
+
+Monitor for unauthorized or suspicious use of tool calling functionality.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/ai'
+| extend uses_tools = genai_has_tool_calls(todynamic(response_body)['messages'])
+| where uses_tools == true
+| summarize tool_usage_count = count() by id, ['geo.country']
+| where tool_usage_count > 50
+| order by tool_usage_count desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20uses_tools%20%3D%20genai_has_tool_calls(todynamic(response_body)%5B'messages'%5D)%20%7C%20where%20uses_tools%20%3D%3D%20true%20%7C%20summarize%20tool_usage_count%20%3D%20count()%20by%20id%2C%20%5B'geo.country'%5D%20%7C%20where%20tool_usage_count%20%3E%2050%20%7C%20order%20by%20tool_usage_count%20desc%22%7D)
+
+**Output**
+
+| id | geo.country | tool_usage_count |
+|----|--------------|------------------|
+| user_789 | US | 145 |
+| user_234 | CN | 98 |
+
+This query identifies users with unusually high tool calling usage, which could indicate automated behavior or abuse.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [genai_extract_tool_calls](/apl/scalar-functions/genai-functions/genai-extract-tool-calls): Extracts the actual tool calls. Use this after confirming tool calls exist to analyze what tools are being called.
+- [genai_extract_function_results](/apl/scalar-functions/genai-functions/genai-extract-function-results): Extracts function results. Use this to analyze the outcomes of tool calls.
+- [genai_message_roles](/apl/scalar-functions/genai-functions/genai-message-roles): Lists all message roles. Use this to understand conversation structure when tool calls are present.
+- [genai_conversation_turns](/apl/scalar-functions/genai-functions/genai-conversation-turns): Counts conversation turns. Analyze this alongside tool usage to understand complexity.
+
