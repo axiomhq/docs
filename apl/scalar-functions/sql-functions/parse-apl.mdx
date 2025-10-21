@@ -7,48 +7,6 @@ Use the `parse_apl` function in APL to parse an APL query string and convert it 
 
 You use `parse_apl` when you need to validate APL queries, extract query components for analysis, build query transformation tools, or implement query generation systems. This is particularly valuable for building APL-based automation, query validation pipelines, and programmatic query manipulation workflows.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, there isn’t a built-in function to parse queries into structured objects. You typically work with queries as strings. APL's `parse_apl` provides a way to understand query structure programmatically.
-
-<CodeGroup>
-```sql Splunk example
-| eval query_string = "search index=main | stats count"
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend query_string = '["sample-http-logs"] | summarize count()'
-| extend parsed_structure = parse_apl(query_string)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, there isn't a standard function for parsing queries into structured representations. SQL parsers are typically external tools. APL's `parse_apl` brings query parsing directly into your data pipeline.
-
-<CodeGroup>
-```sql SQL example
--- External SQL parser typically required
-SELECT query_text FROM query_log
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend query = '["sample-http-logs"] | where status == "200"'
-| extend parsed = parse_apl(query)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -65,7 +23,7 @@ parse_apl(apl_query)
 
 ### Returns
 
-A `dynamic` object representing the parsed structure of the APL query. This object contains the query's abstract syntax tree (AST), which you can inspect or manipulate programmatically.
+A dynamic object representing the parsed structure of the APL query. This object contains the query’s abstract syntax tree (AST), which you can inspect or manipulate programmatically.
 
 ## Use case examples
 
@@ -81,17 +39,59 @@ Use `parse_apl` to validate and analyze stored APL queries in query management s
 | extend sample_query = '["sample-http-logs"] | summarize count() by status'
 | extend parsed_query = parse_apl(sample_query)
 | extend query_valid = isnotnull(parsed_query)
-| project sample_query, query_valid, parsed_query
+| project parsed_query
 | take 1
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20sample_query%20%3D%20'%5B%22sample-http-logs%22%5D%20%7C%20summarize%20count()%20by%20status'%20%7C%20extend%20parsed_query%20%3D%20parse_apl(sample_query)%20%7C%20extend%20query_valid%20%3D%20isnotnull(parsed_query)%20%7C%20project%20sample_query%2C%20query_valid%2C%20parsed_query%20%7C%20take%201%22%7D)
-
 **Output**
 
-| sample_query                                               | query_valid | parsed_query         |
-| ---------------------------------------------------------- | ----------- | -------------------- |
-| ['sample-http-logs'] \| summarize count() by status        | true        | \{...AST structure...\} |
+```json
+{
+  "body": {
+    "source": {
+      "kind": "Dataset",
+      "name": {
+        "kind": "Entity",
+        "name": "sample-http-logs"
+      },
+      "wildcard": false
+    },
+    "kind": "TabularExpression",
+    "operations": [
+      {
+        "groups": [
+          {
+            "kind": "NamedExpression",
+            "expr": {
+              "kind": "Entity",
+              "name": "status"
+            },
+            "aliases": []
+          }
+        ],
+        "aggs": [
+          {
+            "kind": "NamedExpression",
+            "expr": {
+              "kind": "CallExpr",
+              "func": {
+                "name": "count",
+                "kind": "Entity"
+              },
+              "params": []
+            },
+            "aliases": []
+          }
+        ],
+        "kind": "Summarize",
+        "hints": []
+      }
+    ]
+  },
+  "kind": "Doc",
+  "statements": []
+}
+```
 
 This query demonstrates parsing and validating APL queries, useful for query management and validation systems.
 
@@ -107,17 +107,68 @@ Use `parse_apl` to extract query structure for building query analytics dashboar
 | extend trace_query = '["otel-demo-traces"] | where kind == "server" | summarize count()'
 | extend parsed_trace_query = parse_apl(trace_query)
 | extend has_where_clause = isnotnull(parsed_trace_query)
-| project trace_query, has_where_clause
+| project parsed_trace_query
 | take 1
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20trace_query%20%3D%20'%5B%22otel-demo-traces%22%5D%20%7C%20where%20kind%20%3D%3D%20%22server%22%20%7C%20summarize%20count()'%20%7C%20extend%20parsed_trace_query%20%3D%20parse_apl(trace_query)%20%7C%20extend%20has_where_clause%20%3D%20isnotnull(parsed_trace_query)%20%7C%20project%20trace_query%2C%20has_where_clause%20%7C%20take%201%22%7D)
-
 **Output**
 
-| trace_query                                                                     | has_where_clause |
-| ------------------------------------------------------------------------------- | ---------------- |
-| ['otel-demo-traces'] \| where kind == 'server' \| summarize count()             | true             |
+```json
+{
+  "kind": "Doc",
+  "statements": [],
+  "body": {
+    "kind": "TabularExpression",
+    "operations": [
+      {
+        "predicate": {
+          "left": {
+            "name": "kind",
+            "kind": "Entity"
+          },
+          "kind": "BinaryExpr",
+          "right": {
+            "value": "server",
+            "raw": false,
+            "quote": "\"",
+            "kind": "String",
+            "hidden": false
+          },
+          "op": "=="
+        },
+        "kind": "Where"
+      },
+      {
+        "kind": "Summarize",
+        "hints": [],
+        "groups": [],
+        "aggs": [
+          {
+            "kind": "NamedExpression",
+            "expr": {
+              "params": [],
+              "kind": "CallExpr",
+              "func": {
+                "kind": "Entity",
+                "name": "count"
+              }
+            },
+            "aliases": []
+          }
+        ]
+      }
+    ],
+    "source": {
+      "wildcard": false,
+      "kind": "Dataset",
+      "name": {
+        "kind": "Entity",
+        "name": "otel-demo-traces"
+      }
+    }
+  }
+}
+```
 
 This query parses trace analysis queries to understand query patterns and complexity.
 
@@ -133,17 +184,82 @@ Use `parse_apl` to analyze security query patterns and validate query structures
 | extend security_query = '["sample-http-logs"] | where status == "401" | summarize attempts = count() by id'
 | extend parsed_security = parse_apl(security_query)
 | extend is_valid_query = isnotnull(parsed_security)
-| project security_query, is_valid_query
+| project parsed_security
 | take 1
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20security_query%20%3D%20'%5B%22sample-http-logs%22%5D%20%7C%20where%20status%20%3D%3D%20%22401%22%20%7C%20summarize%20attempts%20%3D%20count()%20by%20id'%20%7C%20extend%20parsed_security%20%3D%20parse_apl(security_query)%20%7C%20extend%20is_valid_query%20%3D%20isnotnull(parsed_security)%20%7C%20project%20security_query%2C%20is_valid_query%20%7C%20take%201%22%7D)
-
 **Output**
 
-| security_query                                                                                  | is_valid_query |
-| ----------------------------------------------------------------------------------------------- | -------------- |
-| ['sample-http-logs'] \| where status == '401' \| summarize attempts = count() by id             | true           |
+```json
+{
+  "body": {
+    "kind": "TabularExpression",
+    "operations": [
+      {
+        "predicate": {
+          "right": {
+            "quote": "\"",
+            "kind": "String",
+            "hidden": false,
+            "value": "401",
+            "raw": false
+          },
+          "op": "==",
+          "left": {
+            "kind": "Entity",
+            "name": "status"
+          },
+          "kind": "BinaryExpr"
+        },
+        "kind": "Where"
+      },
+      {
+        "hints": [],
+        "groups": [
+          {
+            "expr": {
+              "name": "id",
+              "kind": "Entity"
+            },
+            "aliases": [],
+            "kind": "NamedExpression"
+          }
+        ],
+        "aggs": [
+          {
+            "aliases": [
+              {
+                "name": "attempts",
+                "kind": "Entity"
+              }
+            ],
+            "kind": "NamedExpression",
+            "expr": {
+              "params": [],
+              "kind": "CallExpr",
+              "func": {
+                "name": "count",
+                "kind": "Entity"
+              }
+            }
+          }
+        ],
+        "kind": "Summarize"
+      }
+    ],
+    "source": {
+      "kind": "Dataset",
+      "name": {
+        "kind": "Entity",
+        "name": "sample-http-logs"
+      },
+      "wildcard": false
+    }
+  },
+  "kind": "Doc",
+  "statements": []
+}
+```
 
 This query validates security monitoring queries programmatically, ensuring query reliability in automated security systems.
 

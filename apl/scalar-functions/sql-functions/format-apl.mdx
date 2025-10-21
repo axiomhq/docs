@@ -7,48 +7,6 @@ Use the `format_apl` function in APL to convert a parsed APL query structure (st
 
 You use `format_apl` when you need to programmatically build or modify APL queries, inspect query structure, or transform parsed query representations back into executable query strings. This is particularly useful for query generation, query templating systems, and programmatic query manipulation in automation workflows.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, there isn’t a built-in function to format queries from parsed structures. You typically work with string concatenation or templating. APL's `format_apl` provides a structured way to generate query strings from parsed query objects.
-
-<CodeGroup>
-```sql Splunk example
-| eval query_string = "search index=main | stats count"
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend parsed_query = parse_apl('["sample-http-logs"] | summarize count()')
-| extend formatted_query = format_apl(parsed_query)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, there isn't a standard function for formatting queries from parsed structures. You typically build queries using string concatenation or prepared statements. APL's `format_apl` provides a type-safe way to generate queries from structured representations.
-
-<CodeGroup>
-```sql SQL example
-SELECT CONCAT('SELECT * FROM ', table_name, ' WHERE id = ', id_value)
-FROM query_templates
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend query_structure = parse_apl('["sample-http-logs"] | where status == "200"')
-| extend query_string = format_apl(query_structure)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -65,7 +23,7 @@ format_apl(apl_dict)
 
 ### Returns
 
-A `string` containing the APL query reconstructed from the parsed structure. The returned query string is syntactically valid and can be executed.
+A string containing the APL query reconstructed from the parsed structure. The returned query string is syntactically valid and can be executed.
 
 ## Use case examples
 
@@ -83,8 +41,6 @@ Use `format_apl` to generate dynamic queries based on stored query templates for
 | project query_text
 | take 1
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20base_query%20%3D%20parse_apl('%5B%22sample-http-logs%22%5D%20%7C%20summarize%20count()%20by%20status')%20%7C%20extend%20query_text%20%3D%20format_apl(base_query)%20%7C%20project%20query_text%20%7C%20take%201%22%7D)
 
 **Output**
 
@@ -109,8 +65,6 @@ Use `format_apl` to build trace analysis queries programmatically from stored qu
 | take 1
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20trace_query_parsed%20%3D%20parse_apl('%5B%22otel-demo-traces%22%5D%20%7C%20where%20kind%20%3D%3D%20%22server%22')%20%7C%20extend%20trace_query_string%20%3D%20format_apl(trace_query_parsed)%20%7C%20project%20trace_query_string%20%7C%20take%201%22%7D)
-
 **Output**
 
 | trace_query_string                                      |
@@ -133,8 +87,6 @@ Use `format_apl` to generate security queries from templates for automated threa
 | project formatted_security_query
 | take 1
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20security_query%20%3D%20parse_apl('%5B%22sample-http-logs%22%5D%20%7C%20where%20status%20%3D%3D%20%22401%22%20or%20status%20%3D%3D%20%22403%22')%20%7C%20extend%20formatted_security_query%20%3D%20format_apl(security_query)%20%7C%20project%20formatted_security_query%20%7C%20take%201%22%7D)
 
 **Output**
 
