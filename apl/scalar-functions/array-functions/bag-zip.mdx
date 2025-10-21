@@ -82,13 +82,13 @@ Use `bag_zip` to combine metadata keys and values extracted from HTTP logs into 
 ```kusto
 ['sample-http-logs']
 | extend metadata_keys = dynamic(['status_code', 'request_method', 'city'])
-| extend metadata_values = dynamic([status, method, ['geo.city']])
+| extend metadata_values = pack_array(status, method, ['geo.city'])
 | extend request_metadata = bag_zip(metadata_keys, metadata_values)
 | project _time, uri, request_metadata
 | take 5
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20metadata_keys%20%3D%20dynamic(%5B'status_code'%2C%20'request_method'%2C%20'city'%5D)%20%7C%20extend%20metadata_values%20%3D%20dynamic(%5Bstatus%2C%20method%2C%20%5B'geo.city'%5D%5D)%20%7C%20extend%20request_metadata%20%3D%20bag_zip(metadata_keys%2C%20metadata_values)%20%7C%20project%20_time%2C%20uri%2C%20request_metadata%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20metadata_keys%20%3D%20dynamic(%5B'status_code'%2C%20'request_method'%2C%20'city'%5D)%20%7C%20extend%20metadata_values%20%3D%20pack_array(status%2C%20method%2C%20%5B'geo.city'%5D)%20%7C%20extend%20request_metadata%20%3D%20bag_zip(metadata_keys%2C%20metadata_values)%20%7C%20project%20_time%2C%20uri%2C%20request_metadata%20%7C%20take%205%22%7D)
 
 **Output**
 
@@ -109,13 +109,13 @@ Use `bag_zip` to construct custom span attributes from separate attribute name a
 ```kusto
 ['otel-demo-traces']
 | extend attr_keys = dynamic(['service', 'span_kind', 'status'])
-| extend attr_values = dynamic([['service.name'], kind, status_code])
+| extend attr_values = pack_array(['service.name'], kind, status_code)
 | extend span_attributes = bag_zip(attr_keys, attr_values)
 | project _time, span_id, trace_id, span_attributes
 | take 5
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20attr_keys%20%3D%20dynamic(%5B'service'%2C%20'span_kind'%2C%20'status'%5D)%20%7C%20extend%20attr_values%20%3D%20dynamic(%5B%5B'service.name'%5D%2C%20kind%2C%20status_code%5D)%20%7C%20extend%20span_attributes%20%3D%20bag_zip(attr_keys%2C%20attr_values)%20%7C%20project%20_time%2C%20span_id%2C%20trace_id%2C%20span_attributes%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20attr_keys%20%3D%20dynamic(%5B'service'%2C%20'span_kind'%2C%20'status'%5D)%20%7C%20extend%20attr_values%20%3D%20pack_array(%5B'service.name'%5D%2C%20kind%2C%20status_code)%20%7C%20extend%20span_attributes%20%3D%20bag_zip(attr_keys%2C%20attr_values)%20%7C%20project%20_time%2C%20span_id%2C%20trace_id%2C%20span_attributes%20%7C%20take%205%22%7D)
 
 **Output**
 
@@ -136,14 +136,14 @@ Use `bag_zip` to create structured security context objects from arrays of secur
 ```kusto
 ['sample-http-logs']
 | extend security_keys = dynamic(['client_ip', 'country', 'http_status'])
-| extend security_values = dynamic([id, ['geo.country'], status])
+| extend security_values = pack_array(id, ['geo.country'], status)
 | extend security_context = bag_zip(security_keys, security_values)
 | where status != '200'
 | project _time, uri, method, security_context
 | take 5
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20security_keys%20%3D%20dynamic(%5B'client_ip'%2C%20'country'%2C%20'http_status'%5D)%20%7C%20extend%20security_values%20%3D%20dynamic(%5Bid%2C%20%5B'geo.country'%5D%2C%20status%5D)%20%7C%20extend%20security_context%20%3D%20bag_zip(security_keys%2C%20security_values)%20%7C%20where%20status%20!%3D%20'200'%20%7C%20project%20_time%2C%20uri%2C%20method%2C%20security_context%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20security_keys%20%3D%20dynamic(%5B'client_ip'%2C%20'country'%2C%20'http_status'%5D)%20%7C%20extend%20security_values%20%3D%20pack_array(id%2C%20%5B'geo.country'%5D%2C%20status)%20%7C%20extend%20security_context%20%3D%20bag_zip(security_keys%2C%20security_values)%20%7C%20where%20status%20!%3D%20'200'%20%7C%20project%20_time%2C%20uri%2C%20method%2C%20security_context%20%7C%20take%205%22%7D)
 
 **Output**
 
