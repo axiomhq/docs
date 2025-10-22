@@ -35,8 +35,32 @@ You must use a different, dedicated dataset for each OTel component. When you cr
 
 ## OpenTelemetry Collector
 
-Configuring the OpenTelemetry collector is as simple as creating an HTTP exporter that sends data to the Axiom API together with headers to set the dataset and API token:
+Configuring the OpenTelemetry collector is as simple as creating an HTTP exporter that sends data to the Axiom API together with headers to set the dataset and API token.
 
+<Tabs>
+<Tab title="Logs">
+```yaml
+exporters:
+  otlphttp:
+    compression: gzip
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-dataset: DATASET_NAME
+
+service:
+  pipelines:
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlphttp
+```
+</Tab>
+<Tab title="Traces">
 ```yaml
 exporters:
   otlphttp:
@@ -57,16 +81,42 @@ service:
       exporters:
         - otlphttp
 ```
+</Tab>
+<Tab title="Metrics">
+```yaml
+exporters:
+  otlphttp:
+    compression: gzip
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-metrics-dataset: DATASET_NAME
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlphttp
+```
+</Tab>
+</Tabs>
 
 <Info>
 <ReplaceDomain />
 <ReplaceDatasetToken />
+When configuring metrics, use the `x-axiom-metrics-dataset` header instead of `x-axiom-dataset`.
 </Info>
 
-When using the OTLP/HTTP endpoint for traces and logs, the following endpoint URLs should be used in your SDK exporter OTel configuration.
+When using the OTLP/HTTP endpoint, the following endpoint URLs should be used in your SDK exporter OTel configuration.
 
 - Traces: `https://AXIOM_DOMAIN/v1/traces`
 - Logs: `https://AXIOM_DOMAIN/v1/logs`
+- Metrics: `https://AXIOM_DOMAIN/v1/metrics`
 
 ## OpenTelemetry for Go
 
