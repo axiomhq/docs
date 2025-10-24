@@ -1,0 +1,156 @@
+---
+title: 'genai_conversation_turns'
+description: 'This page explains how to use the genai_conversation_turns function in APL.'
+---
+
+The `genai_conversation_turns` function counts the number of conversation turns in a GenAI messages array. A turn typically represents a user message followed by an assistant response. This metric helps you understand conversation length and engagement patterns in AI applications.
+
+You can use this function to analyze conversation complexity, monitor user engagement, identify outlier conversations, or track conversation metrics for billing and usage analysis.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would typically use `eval` with `mvcount` to count array elements, but there’s no built-in function specifically for counting conversation turns.
+
+<CodeGroup>
+```sql Splunk example
+| eval turn_count=mvcount(messages)/2
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend turn_count = genai_conversation_turns(messages)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would need to unnest the array and count rows, then divide by the number of roles, which is more complex.
+
+<CodeGroup>
+```sql SQL example
+SELECT 
+  conversation_id,
+  COUNT(*) / 2 as turn_count
+FROM conversations
+CROSS JOIN UNNEST(messages)
+GROUP BY conversation_id
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend turn_count = genai_conversation_turns(messages)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+genai_conversation_turns(messages)
+```
+
+### Parameters
+
+- **messages** (dynamic, required): An array of message objects from a GenAI conversation. Each message typically contains a `role` and `content` field.
+
+### Returns
+
+Returns a long integer representing the number of conversation turns. A turn is typically counted as a user-assistant exchange pair.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Track conversation length across different API endpoints to understand user engagement and conversation complexity.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/chat'
+| extend turns = genai_conversation_turns(todynamic(response_body)['messages'])
+| summarize avg_turns = avg(turns), max_turns = max(turns) by uri
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fchat'%20%7C%20extend%20turns%20%3D%20genai_conversation_turns(todynamic(response_body)%5B'messages'%5D)%20%7C%20summarize%20avg_turns%20%3D%20avg(turns)%2C%20max_turns%20%3D%20max(turns)%20by%20uri%22%7D)
+
+**Output**
+
+| uri | avg_turns | max_turns |
+|-----|-----------|-----------|
+| /api/chat/support | 3.5 | 12 |
+| /api/chat/sales | 2.1 | 8 |
+
+This query calculates the average and maximum number of conversation turns for different chat endpoints, helping you understand which services have longer conversations.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Monitor conversation complexity across different AI services in your distributed system.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ['service.name'] == 'frontend'
+| extend conversation_turns = genai_conversation_turns(todynamic(attributes['ai.messages']))
+| summarize avg(conversation_turns), percentile(conversation_turns, 95) by ['service.name']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20%7C%20extend%20conversation_turns%20%3D%20genai_conversation_turns(todynamic(attributes%5B'ai.messages'%5D))%20%7C%20summarize%20avg(conversation_turns)%2C%20percentile(conversation_turns%2C%2095)%20by%20%5B'service.name'%5D%22%7D)
+
+**Output**
+
+| service.name | avg_conversation_turns | percentile_conversation_turns_95 |
+|--------------|------------------------|----------------------------------|
+| frontend | 4.2 | 9 |
+
+This query helps you understand typical conversation patterns in your AI services and identify outliers.
+
+</Tab>
+<Tab title="Security logs">
+
+Detect unusually long conversations that might indicate automated attacks or abuse of AI services.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/ai'
+| extend turns = genai_conversation_turns(todynamic(request_body)['messages'])
+| where turns > 15
+| project _time, id, ['geo.country'], uri, turns
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20turns%20%3D%20genai_conversation_turns(todynamic(request_body)%5B'messages'%5D)%20%7C%20where%20turns%20%3E%2015%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20uri%2C%20turns%22%7D)
+
+**Output**
+
+| _time | id | geo.country | uri | turns |
+|-------|----|--------------|----|-------|
+| 2024-01-15T10:30:00Z | user_789 | US | /api/ai/chat | 18 |
+| 2024-01-15T10:35:00Z | user_234 | CN | /api/ai/assistant | 22 |
+
+This query identifies conversations with an unusually high number of turns, which could indicate abuse, testing, or automated behavior.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [genai_message_roles](/apl/scalar-functions/genai-functions/genai-message-roles): Extracts all message roles to understand conversation structure. Use this when you need to analyze the role distribution in conversations.
+- [array_length](/apl/scalar-functions/array-functions/array-length): Returns the total number of messages (not turns). Use this when you need the raw message count instead of turn count.
+- [genai_cost](/apl/scalar-functions/genai-functions/genai-cost): Calculates the cost of a conversation. Use this in combination with turn count to understand cost per turn.
+- [genai_estimate_tokens](/apl/scalar-functions/genai-functions/genai-estimate-tokens): Estimates token usage. Use this with turn count to analyze tokens per turn.
+

@@ -1,0 +1,175 @@
+---
+title: 'genai_get_pricing'
+description: 'This page explains how to use the genai_get_pricing function in APL.'
+---
+
+The `genai_get_pricing` function retrieves the pricing information for a specific AI model. It returns a dynamic object containing the input token price and output token price per million tokens, which you can use for cost calculations and budgeting.
+
+You can use this function to display pricing information, create cost calculators, audit pricing data, or understand the cost structure of different AI models.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would typically use a lookup table to retrieve pricing information by model name.
+
+<CodeGroup>
+```sql Splunk example
+| lookup model_pricing model OUTPUT input_price output_price
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend pricing = genai_get_pricing(model)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would join with a pricing table to get model costs.
+
+<CodeGroup>
+```sql SQL example
+SELECT 
+  l.*,
+  p.input_price,
+  p.output_price
+FROM ai_logs l
+JOIN model_pricing p ON l.model = p.model_name
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend pricing = genai_get_pricing(model)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+genai_get_pricing(model)
+```
+
+### Parameters
+
+- **model** (string, required): The name of the AI model (for example, 'gpt-4', 'claude-3-opus-20240229', 'gpt-3.5-turbo').
+
+### Returns
+
+Returns a dynamic object containing pricing information with the following structure:
+```json
+{
+  "input_price_per_million": <number>,
+  "output_price_per_million": <number>
+}
+```
+
+Returns null if the model is not recognized.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Display pricing information for models being used to help teams understand cost implications.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/openai'
+| extend model_name = tostring(todynamic(response_body)['model'])
+| extend pricing = genai_get_pricing(model_name)
+| where isnotnull(pricing)
+| summarize request_count = count() by model_name, pricing = tostring(pricing)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fopenai'%20%7C%20extend%20model_name%20%3D%20tostring(todynamic(response_body)%5B'model'%5D)%20%7C%20extend%20pricing%20%3D%20genai_get_pricing(model_name)%20%7C%20where%20isnotnull(pricing)%20%7C%20summarize%20request_count%20%3D%20count()%20by%20model_name%2C%20pricing%20%3D%20tostring(pricing)%22%7D)
+
+**Output**
+
+| model_name | pricing | request_count |
+|------------|---------|---------------|
+| gpt-4 | `{"input_price_per_million": 30.0, "output_price_per_million": 60.0}` | 450 |
+| gpt-3.5-turbo | `{"input_price_per_million": 0.5, "output_price_per_million": 1.5}` | 1250 |
+
+This query shows which models are being used and their associated pricing, helping teams make informed decisions.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Compare pricing across different AI models used in your services to optimize costs.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ['service.name'] == 'frontend' and kind == 'server'
+| extend model = tostring(attributes['ai.model'])
+| extend pricing_info = genai_get_pricing(model)
+| where isnotnull(pricing_info)
+| extend input_price = todouble(todynamic(pricing_info)['input_price_per_million'])
+| summarize model_usage = count() by model, input_price
+| order by input_price desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20model%20%3D%20tostring(attributes%5B'ai.model'%5D)%20%7C%20extend%20pricing_info%20%3D%20genai_get_pricing(model)%20%7C%20where%20isnotnull(pricing_info)%20%7C%20extend%20input_price%20%3D%20todouble(todynamic(pricing_info)%5B'input_price_per_million'%5D)%20%7C%20summarize%20model_usage%20%3D%20count()%20by%20model%2C%20input_price%20%7C%20order%20by%20input_price%20desc%22%7D)
+
+**Output**
+
+| model | input_price | model_usage |
+|-------|-------------|-------------|
+| gpt-4 | 30.0 | 125 |
+| claude-3-opus | 15.0 | 89 |
+| gpt-3.5-turbo | 0.5 | 456 |
+
+This query helps you identify which models are most expensive and how frequently they're used.
+
+</Tab>
+<Tab title="Security logs">
+
+Monitor for attempts to use expensive models that might indicate resource abuse or unauthorized usage.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/ai'
+| extend model = tostring(todynamic(request_body)['model'])
+| extend pricing = genai_get_pricing(model)
+| where isnotnull(pricing)
+| extend input_cost = todouble(todynamic(pricing)['input_price_per_million'])
+| where input_cost > 10.0
+| project _time, id, ['geo.country'], model, input_cost
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20model%20%3D%20tostring(todynamic(request_body)%5B'model'%5D)%20%7C%20extend%20pricing%20%3D%20genai_get_pricing(model)%20%7C%20where%20isnotnull(pricing)%20%7C%20extend%20input_cost%20%3D%20todouble(todynamic(pricing)%5B'input_price_per_million'%5D)%20%7C%20where%20input_cost%20%3E%2010.0%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20model%2C%20input_cost%22%7D)
+
+**Output**
+
+| _time | id | geo.country | model | input_cost |
+|-------|----|--------------|---------| ----------|
+| 2024-01-15T10:30:00Z | user_789 | US | gpt-4 | 30.0 |
+| 2024-01-15T10:35:00Z | user_234 | UK | claude-3-opus | 15.0 |
+
+This query identifies usage of expensive models, which could indicate cost optimization opportunities or unauthorized access.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [genai_cost](/apl/scalar-functions/genai-functions/genai-cost): Calculates total cost for a conversation. Use this for actual cost calculation after retrieving pricing information.
+- [genai_input_cost](/apl/scalar-functions/genai-functions/genai-input-cost): Calculates input token cost. This function uses genai_get_pricing internally to determine input costs.
+- [genai_output_cost](/apl/scalar-functions/genai-functions/genai-output-cost): Calculates output token cost. This function uses genai_get_pricing internally to determine output costs.
+- [genai_estimate_tokens](/apl/scalar-functions/genai-functions/genai-estimate-tokens): Estimates token count. Combine with pricing information to predict costs before making API calls.
+

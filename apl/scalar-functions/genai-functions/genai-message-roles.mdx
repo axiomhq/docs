@@ -1,0 +1,165 @@
+---
+title: 'genai_message_roles'
+description: 'This page explains how to use the genai_message_roles function in APL.'
+---
+
+The `genai_message_roles` function extracts an array of all message roles from a GenAI conversation. This provides a sequence view of conversation participants, showing the order and types of messages (user, assistant, system, tool, etc.).
+
+You can use this function to analyze conversation patterns, validate conversation structure, detect role sequences, or understand conversation flow and complexity.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would extract the role field from all messages in an array.
+
+<CodeGroup>
+```sql Splunk example
+| eval roles=mvindex(role, 0, mvcount(role))
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend roles = genai_message_roles(messages)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would unnest the array and collect roles into an array.
+
+<CodeGroup>
+```sql SQL example
+SELECT 
+  conversation_id,
+  ARRAY_AGG(role ORDER BY msg_index) as roles
+FROM conversations
+CROSS JOIN UNNEST(messages) WITH OFFSET AS msg_index
+GROUP BY conversation_id
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend roles = genai_message_roles(messages)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+genai_message_roles(messages)
+```
+
+### Parameters
+
+- **messages** (dynamic, required): An array of message objects from a GenAI conversation. Each message typically contains `role` and `content` fields.
+
+### Returns
+
+Returns a dynamic array containing all the roles in the conversation in their original order (for example, `['system', 'user', 'assistant', 'user', 'assistant']`).
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Analyze common conversation patterns by examining role sequences across your application.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/chat'
+| extend role_sequence = tostring(genai_message_roles(todynamic(response_body)['messages']))
+| summarize conversation_count = count() by role_sequence
+| top 10 by conversation_count
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fchat'%20%7C%20extend%20role_sequence%20%3D%20tostring(genai_message_roles(todynamic(response_body)%5B'messages'%5D))%20%7C%20summarize%20conversation_count%20%3D%20count()%20by%20role_sequence%20%7C%20top%2010%20by%20conversation_count%22%7D)
+
+**Output**
+
+| role_sequence | conversation_count |
+|---------------|--------------------|
+| ["system","user","assistant"] | 850 |
+| ["system","user","assistant","user","assistant"] | 345 |
+| ["user","assistant"] | 189 |
+
+This query identifies the most common conversation patterns, helping you understand typical user interaction flows.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Validate that conversations follow expected patterns across different services.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ['service.name'] == 'frontend' and kind == 'server'
+| extend roles = genai_message_roles(todynamic(attributes['ai.messages']))
+| extend has_system = array_index_of(roles, 'system') >= 0
+| summarize 
+    with_system = countif(has_system),
+    without_system = countif(not(has_system))
+by ['service.name']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20roles%20%3D%20genai_message_roles(todynamic(attributes%5B'ai.messages'%5D))%20%7C%20extend%20has_system%20%3D%20array_index_of(roles%2C%20'system')%20%3E%3D%200%20%7C%20summarize%20with_system%20%3D%20countif(has_system)%2C%20without_system%20%3D%20countif(not(has_system))%20by%20%5B'service.name'%5D%22%7D)
+
+**Output**
+
+| service.name | with_system | without_system |
+|--------------|-------------|----------------|
+| frontend | 1234 | 189 |
+
+This query validates that most conversations include system prompts, helping ensure proper configuration.
+
+</Tab>
+<Tab title="Security logs">
+
+Detect unusual conversation patterns that might indicate prompt injection or manipulation attempts.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/ai'
+| extend roles = genai_message_roles(todynamic(request_body)['messages'])
+| extend role_count = array_length(roles)
+| extend system_count = array_length(array_select_dict(roles, '', 'system'))
+| where system_count > 1 or role_count > 20
+| project _time, id, ['geo.country'], roles, system_count, role_count
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20roles%20%3D%20genai_message_roles(todynamic(request_body)%5B'messages'%5D)%20%7C%20extend%20role_count%20%3D%20array_length(roles)%20%7C%20extend%20system_count%20%3D%20array_length(array_select_dict(roles%2C%20''%2C%20'system'))%20%7C%20where%20system_count%20%3E%201%20or%20role_count%20%3E%2020%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20roles%2C%20system_count%2C%20role_count%22%7D)
+
+**Output**
+
+| _time | id | geo.country | roles | system_count | role_count |
+|-------|----|--------------|---------| ------------|-----------|
+| 2024-01-15T10:30:00Z | user_789 | US | ["system","user","system","assistant"] | 2 | 4 |
+| 2024-01-15T10:35:00Z | user_234 | RU | ["system","user","assistant",...] | 1 | 24 |
+
+This query detects anomalous conversation structures such as multiple system prompts or unusually long conversations, which could indicate attacks or abuse.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [genai_get_role](/apl/scalar-functions/genai-functions/genai-get-role): Gets the role at a specific index. Use this when you need a specific role rather than the full sequence.
+- [genai_conversation_turns](/apl/scalar-functions/genai-functions/genai-conversation-turns): Counts conversation turns. Use this for a numerical metric of conversation length.
+- [genai_get_content_by_role](/apl/scalar-functions/genai-functions/genai-get-content-by-role): Gets content for a specific role. Use this after identifying roles of interest.
+- [array_length](/apl/scalar-functions/array-functions/array-length): Returns the number of messages. Apply this to the roles array to count messages.
+- [array_index_of](/apl/scalar-functions/array-functions/array-index-of): Finds the position of a role. Use this to detect if specific roles exist in the conversation.
+
