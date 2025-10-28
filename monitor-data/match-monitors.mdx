@@ -41,6 +41,54 @@ If you define your query using APL, you can use the following limited set of tab
 This restriction only applies to tabular operators.
 </Info>
 
+## Handle ingestion delays
+
+If your data experiences ingestion delays (the time between when an event occurs and when Axiom receives it), you may need to configure your match monitor to account for this delay. Without accounting for delays, your monitor may miss events that arrive late.
+
+<Steps>
+<Step title="Identify your ingestion delay">
+Use the `ingestion_time()` function to measure the delay between event time (`_time`) and ingestion time:
+
+```kusto
+['your-dataset']
+| extend ingest_time = ingestion_time()
+| extend delay_seconds = datetime_diff('second', ingest_time, _time)
+| summarize avg(delay_seconds), max(delay_seconds)
+```
+
+This query shows you the average and maximum ingestion delay for your dataset.
+</Step>
+
+<Step title="Configure the secondDelay parameter">
+When creating or updating your monitor through the API, add the `secondDelay` parameter to account for ingestion delays. This parameter tells the monitor to wait before evaluating events, ensuring late-arriving data is included.
+
+For example, if your ingestion delay is 45 minutes (2,700 seconds), set `secondDelay` to 2700 or higher:
+
+```json
+{
+  "name": "My Match Monitor",
+  "type": "MatchEvent",
+  "aplQuery": "['your-dataset'] | where severity == 'error'",
+  "intervalMinutes": 1,
+  "secondDelay": 2700,
+  "notifierIds": ["notifier_id"]
+}
+```
+
+<Note>
+The `secondDelay` parameter is currently only available through the API and not in the UI. For more information, see the [Monitors API documentation](/restapi/endpoints/createMonitor).
+</Note>
+</Step>
+
+<Step title="Verify the configuration">
+After configuring `secondDelay`, monitor the alerts to ensure events are being captured correctly. You may need to adjust the value based on your actual ingestion patterns.
+</Step>
+</Steps>
+
+<Tip>
+Match monitors evaluate events based on their `_time` field (when the event occurred), not when Axiom received them. If you have a 45-minute ingestion delay and your monitor runs every minute, it checks for events that occurred roughly one minute ago according to `_time`. Without `secondDelay`, these events may not have arrived yet.
+</Tip>
+
 ## Examples
 
 For real-world use cases, see [Monitor examples](/monitor-data/monitor-examples).
