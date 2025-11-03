@@ -18,27 +18,14 @@ Support for OTel metrics is currently in private preview. For more information, 
 - **Tag:** A key-value pair identifying a series.
 - **Series:** A unique combination of a metric and tag set.
 
-## Query structure
-
-A typical metrics query contains the following:
-
-1. **Source**: Define the dataset and the metric to query.
-1. **Filter**: Restrict the query to a set of series whose tag values match the conditions you specify.
-1. **Transformation:** Apply one or more transformations to the raw data. Available transformations are:
-    - **Mapping:** Map the data to a new value using the expression you specify.
-    - **Align:** Aggregate data using the function and the time window you specify.
-    - **Grouping:** Group the data by a set of tags using the aggregation function you specify.
-
 ## Build metrics query
+
+To build a typical metrics query:
 
 1. Click the Query tab.
 1. Click **Builder** in the top left.
-1. In **Dataset**, select an OTel metrics dataset, and then select the metric you want to query.
-1. To filter data:
-    1. Click **+** in the **Where** section.
-    1. Select the tag where you want to filter for values.
-    1. Select the logical operator of the filter.
-    1. Specify the value for which you want to filter.
+1. In **Dataset**, define the source of your query. Select an OTel metrics dataset, and then select the metric you want to query.
+1. In **Where**, filter the results. Restrict the query to a set of series whose tag values match the conditions you specify.
 1. In **Transformations**, select the transformations you want to apply to the data.
 1. Click **Run**.
 
@@ -56,43 +43,38 @@ The following explains each element of a metrics query.
 
 ### Source
 
-Specify the dataset and the metric.
+Specify the dataset and the metric in the **Dataset** field. The dataset and metric names are separated by a colon in the Builder interface.
 
-**Syntax:**
-
-```kusto
-<dataset>:<metric>
-```
-
-- **dataset**: Name of the dataset.
-- **metric**: Name of the metric.
+For example, `axiom-dev.metrics:alertmanager_alerts`.
 
 ### Filter
 
-Use `where` to filter series based on tag values.
+Use the **Where** section to filter series based on tag values.
+1. Click **+** in the **Where** section.
+1. Select the tag where you want to filter for values.
+1. Select the logical operator of the filter. Available operators are:
+    - Equality: `==`, `!=`
+    - Comparisons: `<`, `<=`, `>`, `>=`
+1. Specify the value for which you want to filter.
+1. Click **+** to add another filter and join them with the logical and operator.
 
-**Syntax:**
+For example, the following joins three filters: `project == /.*metrics.*/ and code >= 200 and code < 300`.
 
-```kusto
-| where <tag> <operator> <value>
-```
+### Transformations
 
-Available operators:
+Use the **Transformations** section to transform individual values or series.
 
-- Equality: `==`, `!=`
-- Comparisons: `<`, `<=`, `>`, `>=`
+1. Click **+** in the **Transformations** section.
+1. Select the transformation you want to apply to the data. Available transformations are:
+    - **map:** Map the data to a new value using the expression you specify.
+    - **align:** Aggregate data using the function and the time window you specify.
+    - **group:** Group the data by a set of tags using the aggregation function you specify.
 
-**Example:**
+#### Map
 
-```kusto
-| where project == /.*metrics.*/ and code >= 200 and code < 300
-```
+Use `map` to transform individual values.
 
-### Mapping
-
-Transform individual values or series.
-
-Available functions:
+Available mapping functions:
 
 | Function              | Description                                                      |
 |-----------------------|------------------------------------------------------------------|
@@ -102,25 +84,11 @@ Available functions:
 | `fill::prev`          | Fills missing values using the previous non-null value.          |
 | `!`                   | Negates the value. |
 
-**Examples for data mappings:**
+For example, to calculate rate per second for the metric, use `map rate`. To fill empty values with the latest value, use `map fill::prev`.
 
-```kusto
-// Calculate rate per second for the metric
-| map rate
+#### Align
 
-// Fill empty values with the latest value
-| map fill::prev
-```
-
-### Aggregation
-
-Use `align` to aggregate over time windows.
-
-**Syntax:**
-
-```kusto
-| align to <time_window> using <aggregation_function>
-```
+Use `align` to aggregate over time windows. You can specify the time window and the aggregation function to apply.
 
 Available aggregation functions:
 
@@ -133,27 +101,11 @@ Available aggregation functions:
 | `prom::rate` | Prometheus style rate |
 | `sum`    | Sums values in each interval.         |
 
-**Examples:**
+For example, to calculate the average over 5-minute time windows, use `align to 5m using avg`. To count the data points in the last hour, use `align to 1h using count`.
 
-```kusto
-// Calculate the average over 5-minute time windows
-| align to 5m using avg
+#### Group
 
-// Count the data points in the last hour
-| align to 1h using count
-```
-
-### Grouping
-
-Use `group by` to combine series by tags.
-
-**Syntax:**
-
-```kusto
-| group [by <tag1>, <tag2>] using <aggregation_function>
-```
-
-If you don’t specify tags, Axiom aggregates all series into one group.
+Use `group` to combine series by tags. You can specify the tags to group by and the aggregation function to apply. If you don’t specify tags, Axiom aggregates all series into one group.
 
 Available aggregation functions:
 
@@ -165,15 +117,7 @@ Available aggregation functions:
 | `min`    | Takes the minimum value per group. |
 | `sum`    | Sums values in each group.         |
 
-**Examples:**
-
-```kusto
-// Calculate the number of series
-| group using count
-
-// Calculate the total number of nodes
-| group using sum
-
-// Group data by the `project` and `namespace` tags using the `sum` aggregation
-| group by project, namespace using sum
-```
+For example:
+- To calculate the number of series, use `group using count`.
+- To calculate the total number of nodes, use `group using sum`.
+- To group data by the `project` and `namespace` tags using the `sum` aggregation, use `group by project, namespace using sum`.
