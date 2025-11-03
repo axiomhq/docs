@@ -51,8 +51,8 @@ public static class AxiomLogger
 
         // Specify the Axiom dataset name and construct the API endpoint URL
         var datasetName = "DATASET_NAME";
-        var axiomDomain = "AXIOM_DOMAIN";
-        var axiomUri = $"https://{axiomDomain}/v1/datasets/{datasetName}/ingest";
+        var region = "us-east-1.aws"; // Replace with "eu-central-1.aws" for EU region
+        var axiomUri = $"https://{region}.edge.axiom.co/v1/ingest/{datasetName}";
 
         // Replace with your Axiom API token
         var apiToken = "API_TOKEN"; // Ensure your API token is correct
@@ -244,7 +244,7 @@ public class AxiomConfig
 {
     public const string DatasetName = "DATASET_NAME";
     public const string ApiToken = "API_TOKEN";
-    public const string ApiUrl = "https://AXIOM_DOMAIN/v1/datasets";
+    public const string ApiUrl = "https://{REGION}.edge.axiom.co/v1";
 }
 
 public class AxiomHttpClient : IHttpClient
@@ -283,7 +283,7 @@ public class Program
             .MinimumLevel.Debug()
             .WriteTo.Console()
             .WriteTo.Http(
-                requestUri: $"{AxiomConfig.ApiUrl}/{AxiomConfig.DatasetName}/ingest",
+                requestUri: $"{AxiomConfig.ApiUrl}/ingest/{AxiomConfig.DatasetName}",
                 queueLimitBytes: null,
                 textFormatter: new ElasticsearchJsonFormatter(renderMessageTemplate: false, inlineFields: true),
                 httpClient: new AxiomHttpClient()
@@ -415,7 +415,7 @@ Set up NLog by creating an `NLog.config` file or configuring it programmatically
                 flushTimeout="5000">
             <target xsi:type="HTTP" 
                     name="axiom"
-                    url="https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest"
+                    url="https://{REGION}.edge.axiom.co/v1/ingest/{AXIOM_DATASET}"
                     HttpHeaders="Authorization: Bearer API_TOKEN"
                     contentType="application/json">
                 <layout xsi:type="JsonLayout" includeAllProperties="true">

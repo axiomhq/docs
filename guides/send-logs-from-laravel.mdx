@@ -74,6 +74,7 @@ return [
             'with' => [
                 'apiToken' => env('AXIOM_API_TOKEN'),
                 'dataset' => env('AXIOM_DATASET'),
+                'region' => env('AXIOM_REGION', 'us-east-1.aws'), // Default to US region
             ],
         ],
 
@@ -132,7 +133,7 @@ The `default` configuration specifies the primary channel Laravel uses for loggi
 LOG_CHANNEL=axiom
 AXIOM_API_TOKEN=API_TOKEN
 AXIOM_DATASET=DATASET_NAME
-AXIOM_URL=AXIOM_DOMAIN
+AXIOM_REGION=us-east-1.aws
 LOG_LEVEL=debug
 LOG_DEPRECATIONS_CHANNEL=null
 ```
@@ -172,7 +173,7 @@ The heart of the `logging.php` file lies within the **`channels`** array where y
             'with' => [
                 'apiToken' => env('AXIOM_API_TOKEN'),
                 'dataset' => env('AXIOM_DATASET'),
-                'axiomUrl' => env('AXIOM_URL'),
+                'region' => env('AXIOM_REGION', 'us-east-1.aws'),
             ],
         ],
 ```
@@ -248,18 +249,19 @@ class AxiomHandler extends AbstractProcessingHandler
 {
     private $apiToken;
     private $dataset;
+    private $region;
 
-    public function __construct($level = Logger::DEBUG, bool $bubble = true, $apiToken = null, $dataset = null)
+    public function __construct($level = Logger::DEBUG, bool $bubble = true, $apiToken = null, $dataset = null, $region = null)
     {
         parent::__construct($level, $bubble);
         $this->apiToken = $apiToken;
         $this->dataset = $dataset;
-        $this->axiomUrl = $axiomUrl;
+        $this->region = $region ?? 'us-east-1.aws'; // Default to US region
     }
 
     private function initializeCurl(): \CurlHandle
     {
-        $endpoint = "https://{$this->axiomUrl}/v1/datasets/{$this->dataset}/ingest";
+        $endpoint = "https://{$this->region}.edge.axiom.co/v1/ingest/{$this->dataset}";
         $ch = curl_init($endpoint);
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
