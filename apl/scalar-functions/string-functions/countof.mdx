@@ -1,0 +1,157 @@
+---
+title: 'countof'
+description: 'This page explains how to use the countof function in APL.'
+---
+
+The `countof` function counts the occurrences of a plain substring within a string. Use this function when you need to find how many times a specific text pattern appears in log messages, user input, or any string field without using regular expressions.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you might use a combination of `rex` and counting operations. APL's `countof` provides a simpler approach for counting plain string occurrences.
+
+<CodeGroup>
+```sql Splunk example
+| rex field=message max_match=0 "error"
+| eval error_count=mvcount(error)
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend error_count = countof(method, 'GET')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you typically calculate string occurrences using length differences. APL's `countof` provides a more direct approach.
+
+<CodeGroup>
+```sql SQL example
+SELECT (LENGTH(field) - LENGTH(REPLACE(field, 'search', ''))) / LENGTH('search') AS count FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend count = countof(field, 'search')
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+countof(text, search)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| text | string | Yes | The source string where occurrences are counted. |
+| search | string | Yes | The plain substring to search for within the text. |
+
+### Returns
+
+Returns the number of times the search string appears in the text.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Count how many times specific HTTP methods appear in URIs to identify API usage patterns.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend api_segments = countof(uri, '/')
+| summarize avg_depth = avg(api_segments), request_count = count() by method
+| sort by request_count desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20api_segments%20%3D%20countof(uri%2C%20%27%2F%27)%20%7C%20summarize%20avg_depth%20%3D%20avg(api_segments)%2C%20request_count%20%3D%20count()%20by%20method%20%7C%20sort%20by%20request_count%20desc%22%7D)
+
+**Output**
+
+| method | avg_depth | request_count |
+|--------|-----------|---------------|
+| GET | 3.2 | 5432 |
+| POST | 2.8 | 2341 |
+| PUT | 2.5 | 876 |
+| DELETE | 2.1 | 234 |
+
+This query counts the number of forward slashes in URIs to determine the average API endpoint depth by HTTP method, helping identify API structure complexity.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Count occurrences of specific terms in span names to analyze service operation patterns.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend has_http = countof(['service.name'], 'frontend')
+| summarize services_with_frontend = sum(has_http), total_spans = count()
+| extend percentage = round(100.0 * services_with_frontend / total_spans, 2)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20has_http%20%3D%20countof(%5B%27service.name%27%5D%2C%20%27frontend%27)%20%7C%20summarize%20services_with_frontend%20%3D%20sum(has_http)%2C%20total_spans%20%3D%20count()%20%7C%20extend%20percentage%20%3D%20round(100.0%20*%20services_with_frontend%20%2F%20total_spans%2C%202)%22%7D)
+
+**Output**
+
+| services_with_frontend | total_spans | percentage |
+|----------------------|-------------|------------|
+| 1234 | 8765 | 14.08 |
+
+This query counts how many spans contain 'frontend' in their service name to understand the proportion of frontend-related operations in your traces.
+
+</Tab>
+<Tab title="Security logs">
+
+Count suspicious patterns in URIs to detect potential security threats like path traversal attempts.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend dot_dot_count = countof(uri, '..')
+| where dot_dot_count > 0
+| project _time, uri, dot_dot_count, id, status, ['geo.country']
+| sort by dot_dot_count desc
+| limit 10
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20dot_dot_count%20%3D%20countof(uri%2C%20%27..%27)%20%7C%20where%20dot_dot_count%20%3E%200%20%7C%20project%20_time%2C%20uri%2C%20dot_dot_count%2C%20id%2C%20status%2C%20%5B%27geo.country%27%5D%20%7C%20sort%20by%20dot_dot_count%20desc%20%7C%20limit%2010%22%7D)
+
+**Output**
+
+| _time | uri | dot_dot_count | id | status | geo.country |
+|-------|-----|---------------|-------|--------|-------------|
+| 2024-11-06T10:00:00Z | /../../etc/passwd | 2 | user123 | 403 | Unknown |
+| 2024-11-06T10:01:00Z | /../config.php | 1 | user456 | 403 | Russia |
+
+This query identifies potential path traversal attack attempts by counting occurrences of '..' in request URIs, which is a common indicator of directory traversal attempts.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [countof_regex](/apl/scalar-functions/string-functions/countof-regex): Counts substring occurrences using regular expressions. Use this when you need pattern matching instead of exact string matching.
+- [strlen](/apl/scalar-functions/string-functions/strlen): Returns the length of a string. Use this when you need the total character count rather than occurrence counting.
+- [indexof](/apl/scalar-functions/string-functions/indexof): Finds the position of the first occurrence of a substring. Use this when you need to know where a substring appears, not how many times.
+- [extract](/apl/scalar-functions/string-functions/extract): Extracts substrings using regular expressions. Use this when you need to capture matched text rather than count occurrences.
+
+
