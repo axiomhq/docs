@@ -19,20 +19,48 @@ The OpenTelemetry project has published strong specifications for the three main
 
 OpenTelemetry-compatible events flow into Axiom, where they’re organized into datasets for easy segmentation. Users can create a dataset to receive OpenTelemetry data and obtain an API token for ingestion. Axiom provides comprehensive observability through browsing, querying, dashboards, and alerting of OpenTelemetry data.
 
-OTel traces and OTel logs support are already live. Axiom will soon support OpenTelemetry Metrics (OTel Metrics).
-
-| OpenTelemetry component                                            | Currently supported |
+| OpenTelemetry component                                            | Support             |
 | ------------------------------------------------------------------ | ------------------- |
-| [Traces](https://opentelemetry.io/docs/concepts/signals/traces/)   | Yes                 |
-| [Logs](https://opentelemetry.io/docs/concepts/signals/logs/)       | Yes                 |
-| [Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/) | No (coming soon)    |
+| [Logs](https://opentelemetry.io/docs/concepts/signals/logs/)       | ✓                   |
+| [Traces](https://opentelemetry.io/docs/concepts/signals/traces/)   | ✓                   |
+| [Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/) | Public preview      |
+
+<Info>
+Support for OTel metrics is currently in public preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
+
+You must use a different, dedicated dataset for each OTel component. When you create a dataset, select the type of OTel data you want to send to it. For more information, see [Create dataset](/reference/datasets#create-dataset).
+</Info>
 
 <Prerequisites />
 
 ## OpenTelemetry Collector
 
-Configuring the OpenTelemetry collector is as simple as creating an HTTP exporter that sends data to the Axiom API together with headers to set the dataset and API token:
+Configuring the OpenTelemetry collector is as simple as creating an HTTP exporter that sends data to the Axiom API together with headers to set the dataset and API token.
 
+<Tabs>
+<Tab title="Logs">
+```yaml
+exporters:
+  otlphttp:
+    compression: gzip
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-dataset: DATASET_NAME
+
+service:
+  pipelines:
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlphttp
+```
+</Tab>
+<Tab title="Traces">
 ```yaml
 exporters:
   otlphttp:
@@ -53,16 +81,46 @@ service:
       exporters:
         - otlphttp
 ```
+</Tab>
+<Tab title="Metrics">
+```yaml
+exporters:
+  otlphttp:
+    compression: gzip
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-metrics-dataset: DATASET_NAME
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlphttp
+```
+</Tab>
+</Tabs>
 
 <Info>
 <ReplaceDomain />
 <ReplaceDatasetToken />
+When configuring metrics, use the `x-axiom-metrics-dataset` header instead of `x-axiom-dataset`.
 </Info>
 
-When using the OTLP/HTTP endpoint for traces and logs, the following endpoint URLs should be used in your SDK exporter OTel configuration.
+When using the OTLP/HTTP endpoint, the following endpoint URLs should be used in your SDK exporter OTel configuration.
 
 - Traces: `https://AXIOM_DOMAIN/v1/traces`
 - Logs: `https://AXIOM_DOMAIN/v1/logs`
+- Metrics: `https://AXIOM_DOMAIN/v1/metrics`
+
+<Note>
+The `/v1/metrics` endpoint only supports the `application/x-protobuf` content type. JSON format isn’t supported for metrics ingestion.
+</Note>
 
 ## OpenTelemetry for Go
 
