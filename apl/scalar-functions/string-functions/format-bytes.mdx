@@ -1,0 +1,163 @@
+---
+title: 'format_bytes'
+description: 'This page explains how to use the format_bytes function in APL.'
+---
+
+The `format_bytes` function formats a numeric value as a human-readable string representing data size in bytes with appropriate units (KB, MB, GB, etc.). Use this function to make byte values more readable in reports, dashboards, and log analysis.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically need custom eval expressions or lookup tables to format bytes. APL's `format_bytes` provides this functionality natively.
+
+<CodeGroup>
+```sql Splunk example
+| eval size_str=if(bytes<1024, bytes." B", if(bytes<1048576, round(bytes/1024,2)." KB", round(bytes/1048576,2)." MB"))
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend size_str = format_bytes(req_duration_ms)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, formatting bytes requires complex CASE statements. APL's `format_bytes` simplifies this operation.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE 
+  WHEN bytes < 1024 THEN CONCAT(bytes, ' B')
+  WHEN bytes < 1048576 THEN CONCAT(ROUND(bytes/1024, 2), ' KB')
+  ELSE CONCAT(ROUND(bytes/1048576, 2), ' MB')
+END AS size_str FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend size_str = format_bytes(bytes)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+format_bytes(value, precision, units, base)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| value | number | Yes | The numeric value representing bytes to format. |
+| precision | number | No | Number of decimal places (default: 0). |
+| units | string | No | Target units (e.g., 'KB', 'MB', 'GB'). If omitted, units are auto-selected. |
+| base | number | No | Either 2 (default, 1024-based) or 10 (1000-based) for unit calculations. |
+
+### Returns
+
+Returns a formatted string representing the byte value with appropriate units.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Format request duration values as human-readable sizes for better analysis of payload patterns.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend formatted_duration = format_bytes(req_duration_ms, 2)
+| summarize avg_size = avg(req_duration_ms), formatted_avg = format_bytes(toint(avg(req_duration_ms)), 2) by status
+| sort by avg_size desc
+| limit 10
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20formatted_duration%20%3D%20format_bytes(req_duration_ms%2C%202)%20%7C%20summarize%20avg_size%20%3D%20avg(req_duration_ms)%2C%20formatted_avg%20%3D%20format_bytes(toint(avg(req_duration_ms))%2C%202)%20by%20status%20%7C%20sort%20by%20avg_size%20desc%20%7C%20limit%2010%22%7D)
+
+**Output**
+
+| status | avg_size | formatted_avg |
+|--------|----------|---------------|
+| 500 | 8765432 | 8.36 MB |
+| 200 | 3456789 | 3.30 MB |
+| 404 | 1234567 | 1.18 MB |
+| 301 | 456789 | 446.08 KB |
+
+This query formats average request duration values by HTTP status code, making it easier to identify which status codes are associated with larger data transfers.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Format span duration values as byte-size representations for consistent reporting.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend duration_bytes = format_bytes(toint(duration / 1ms), 2)
+| summarize avg_duration_bytes = format_bytes(toint(avg(duration / 1ms)), 2), span_count = count() by ['service.name']
+| sort by span_count desc
+| limit 10
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_bytes%20%3D%20format_bytes(toint(duration%20%2F%201ms)%2C%202)%20%7C%20summarize%20avg_duration_bytes%20%3D%20format_bytes(toint(avg(duration%20%2F%201ms))%2C%202)%2C%20span_count%20%3D%20count()%20by%20%5B%27service.name%27%5D%20%7C%20sort%20by%20span_count%20desc%20%7C%20limit%2010%22%7D)
+
+**Output**
+
+| service.name | avg_duration_bytes | span_count |
+|--------------|-------------------|------------|
+| frontend | 125.50 B | 4532 |
+| checkout | 256.75 B | 3421 |
+| cart | 89.25 B | 2987 |
+
+This query converts span durations to a byte-like format for consistent display alongside other metrics.
+
+</Tab>
+<Tab title="Security logs">
+
+Format numeric identifiers as byte representations for consistent log analysis.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '403' or status == '401'
+| extend id_numeric = strlen(id)
+| extend formatted_id = format_bytes(id_numeric * 100, 1)
+| summarize failed_attempts = count(), avg_id_size = format_bytes(toint(avg(id_numeric) * 100), 1) by status
+| sort by failed_attempts desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27403%27%20or%20status%20%3D%3D%20%27401%27%20%7C%20extend%20id_numeric%20%3D%20strlen(id)%20%7C%20extend%20formatted_id%20%3D%20format_bytes(id_numeric%20*%20100%2C%201)%20%7C%20summarize%20failed_attempts%20%3D%20count()%2C%20avg_id_size%20%3D%20format_bytes(toint(avg(id_numeric)%20*%20100)%2C%201)%20by%20status%20%7C%20sort%20by%20failed_attempts%20desc%22%7D)
+
+**Output**
+
+| status | failed_attempts | avg_id_size |
+|--------|-----------------|-------------|
+| 401 | 1234 | 850.0 B |
+| 403 | 987 | 720.0 B |
+
+This query formats the average identifier length as bytes to provide consistent sizing metrics for failed authentication attempts.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [parse_bytes](/apl/scalar-functions/string-functions/parse-bytes): Parses a formatted byte string back to a numeric value. Use this to reverse the formatting operation.
+- [strlen](/apl/scalar-functions/string-functions/strlen): Returns the length of a string in characters. Use this when you need character count rather than byte formatting.
+
