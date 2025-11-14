@@ -33,3 +33,18 @@ To create a PagerDuty notifier, follow these steps:
 1. Click **Create**.
 
 You can now add your PagerDuty notifier to a specific monitor in Axiom. If any incident happens on your monitor, Axiom notifies you on the PagerDuty Service Activity dashboard.
+
+## Incident lifecycle
+
+Axiom automatically opens and closes PagerDuty incidents based on your monitor state. This ensures that incidents in PagerDuty accurately reflect the current state of your system without manual intervention.
+
+<Info>
+For automatic resolution, ensure the PagerDuty service accepts `resolve` events. Some PagerDuty services have settings that prevent automatic resolution. For more information, see the [PagerDuty documentation](https://support.pagerduty.com/docs/services-and-integrations#resolve-events).
+</Info>
+
+When you configure a threshold monitor with a PagerDuty notifier in Axiom, the following happens:
+
+1. **Incident creation:** When your monitor enters the **alarm** state (the threshold condition is met), Axiom sends a `trigger` event to PagerDuty. This creates a new incident in PagerDuty with a unique deduplication key that links the incident to your specific monitor.
+1. **Automatic resolution** When your monitor returns to the **OK** state (the threshold condition is no longer met), Axiom automatically sends a `resolve` event to PagerDuty using the same deduplication key. This automatically resolves the open incident in PagerDuty.
+
+The deduplication key ensures that if the same monitor triggers multiple times while already in an alarm state, PagerDuty doesn’t create duplicate incidents. All notifications for the same alarm are linked to the original incident.
