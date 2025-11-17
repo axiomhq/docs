@@ -17,101 +17,9 @@ Evaluations (evals) are systematic tests that measure how well your AI features 
 
 ## Prerequisites
 
-Follow the [Quickstart](/ai-engineering/quickstart) to set up instrumentation for your app.
+Follow the [Quickstart](/ai-engineering/quickstart):
+- To run evals within the context of an existing AI app, follow the instrumentation setup in the [Quickstart](/ai-engineering/quickstart):
 - To run evals without an existing AI app, skip the part in the Quickstart about instrumentalising your app.
-- To run evals within the context of an existing AI app, use the following instrumentation setup in the `src/instrumentation.ts` file that you have previously created in the [Quickstart](/ai-engineering/quickstart):
-
-    ```ts /src/instrumentation.ts expandable
-    import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-    import { resourceFromAttributes } from '@opentelemetry/resources';
-    import { BatchSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
-    import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-    import { trace } from "@opentelemetry/api";
-    import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
-
-    // Import the type for the AxiomEvalInstrumentationHook
-    import type { AxiomEvalInstrumentationHook } from 'axiom/ai/config';
-
-    const tracer = trace.getTracer("my-tracer");
-
-    let provider: NodeTracerProvider | undefined;
-
-    // Wrap your logic in the AxiomEvalInstrumentationHook function
-    export const setupAppInstrumentation: AxiomEvalInstrumentationHook = async ({
-      dataset,
-      url,
-      token,
-    }) => {
-      if (provider) {
-        return { provider };
-      }
-
-      if (!dataset || !url || !token) {
-        throw new Error('Missing environment variables');
-      }
-
-      // Replace the environment variables with the parameters passed to the function
-      const exporter = new OTLPTraceExporter({
-        url: `${url}/v1/traces`,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'X-Axiom-Dataset': dataset,
-        },
-      })
-
-      // Configure the provider to export traces to your Axiom dataset
-      provider = new NodeTracerProvider({
-        resource: resourceFromAttributes({
-          [ATTR_SERVICE_NAME]: 'my-app', // Replace with your service name
-        },
-        {
-          // Use the latest schema version
-          // Info: https://opentelemetry.io/docs/specs/semconv/
-          schemaUrl: 'https://opentelemetry.io/schemas/1.37.0',
-        }),
-        spanProcessor: new BatchSpanProcessor(exporter),
-      });
-
-      // Register the provider
-      provider.register();
-
-      // Initialize Axiom AI SDK with the configured tracer
-      initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
-
-      return { provider };
-    };
-    ```
-
-### Create Axiom configuration file
-
-At the root of your project, create the Axiom configuration file `/axiom.config.ts`:
-
-```ts /axiom.config.ts
-import { defineConfig } from 'axiom/ai/config';
-import { setupAppInstrumentation } from './src/instrumentation';
-
-export default defineConfig({
-  eval: {
-    url: process.env.AXIOM_URL,
-    token: process.env.AXIOM_TOKEN,
-    dataset: process.env.AXIOM_DATASET,
-    
-    // Optional: customize which files to run
-    include: ['**/*.eval.{ts,js}'],
-    
-    // Optional: exclude patterns
-    exclude: [],
-    
-    // Optional: timeout for eval execution
-    timeoutMs: 60_000,
-    
-    // Optional: instrumentation hook for OpenTelemetry
-    // (created this in the "Create instrumentation setup" step)
-    instrumentation: ({ url, token, dataset }) => 
-      setupAppInstrumentation({ url, token, dataset }),
-  },
-});
-```
 
 ## Write evalulation function
 
@@ -124,7 +32,7 @@ The key parameters of the `Eval` function:
 - `scorers`: An array of scorer functions that score the `output` against the `expected` value.
 - `metadata`: Optional metadata for the evaluation, such as a description.
 
-As an example, create an evaluation for a support ticket classification system in the file `/src/evals/ticket-classification.eval.ts`.
+The example below creates an evaluation for a support ticket classification system in the file `/src/evals/ticket-classification.eval.ts`.
 
 ```ts /src/evals/ticket-classification.eval.ts expandable
 import { experimental_Eval as Eval, Scorer } from 'axiom/ai/evals';
@@ -160,7 +68,7 @@ async function classifyTicket({ subject, content }: { subject?: string; content:
   return result.object;
 }
 
-// Custom exact-match scorer that returns metadata
+// Custom exact-match scorer that returns score and metadata
 const ExactMatchScorer = Scorer(
   'Exact-Match',
   ({ output, expected }: { output: { response: string }; expected: { response: string } }) => {
@@ -170,7 +78,7 @@ const ExactMatchScorer = Scorer(
     return {
       score: normalizedOutput === normalizedExpected,
       metadata: {
-        details: 'Additional info about this score',
+        details: 'A scorer that checks for exact match',
       },
     };
     });
@@ -233,33 +141,9 @@ Eval('spam-classification', {
 });
 ```
 
-## Run evaluations
+## Set up flags
 
-To run your evaluation suites from your terminal, [install the Axiom CLI](/reference/cli) and use the following commands.
-
-| Description | Command |
-| ----------- | ------- |
-| Run all evals | `axiom eval` |
-| Run specific eval file | `axiom eval src/evals/ticket-classification.eval.ts` |
-| Run evals matching a glob pattern | `axiom eval "**/*spam*.eval.ts"` |
-| Run eval by name | `axiom eval "spam-classification"` |
-| List available evals without running | `axiom eval --list` |
-
-## Custom scorers
-
-A scorer is a function that scores a capability’s output. Scorers receive the `input`, the generated `output`, and the `expected` value, and return a score.
-
-The `autoevals` library that provides prebuilt scorers for common tasks like semantic similarity, factual correctness, and text matching
-
-Use a custom scorer that returns metadata alongside the score:
-
-## Run experiments
-
-Flags let you parameterize your AI behavior (like model choice or prompting strategies) and run experiments with different configurations. They’re type-safe via Zod schemas, and you can override them at runtime.
-
-### Set up flags
-
-Create the file `src/lib/app-scope.ts` that uses the `ticketClassification` flagto test different language models.
+Create the file `src/lib/app-scope.ts`:
 
 ```ts /src/lib/app-scope.ts
 import { createAppScope } from 'axiom/ai/evals';
@@ -276,29 +160,17 @@ const { flag, pickFlags } = createAppScope({ flagSchema });
 export { flag, pickFlags };
 ```
 
-### Override flags at runtime
+## Run evaluations
 
-Override flags directly when you run the eval:
+To run your evaluation suites from your terminal, [install the Axiom CLI](/reference/cli) and use the following commands.
 
-```bash
-axiom eval --flag.ticketClassification.model=gpt-4o
-```
-
-Alternatively, specify the flag overrides in a JSON file.
-
-```json experiment.json
-{
-  "ticketClassification": {
-    "model": "gpt-4o"
-  }
-}
-```
-
-And then specify the JSON file as the value of the `flags-config` parameter when you run the eval:
-
-```bash
-axiom eval --flags-config=experiment.json
-```
+| Description | Command |
+| ----------- | ------- |
+| Run all evals | `axiom eval` |
+| Run specific eval file | `axiom eval src/evals/ticket-classification.eval.ts` |
+| Run evals matching a glob pattern | `axiom eval "**/*spam*.eval.ts"` |
+| Run eval by name | `axiom eval "spam-classification"` |
+| List available evals without running | `axiom eval --list` |
 
 ## Analyze results in Console
 
@@ -311,6 +183,44 @@ The results of evals:
 - Links to view detailed traces in Axiom
 
 The Console features leaderboards and comparison views to track score progression across different versions of a capability, helping you verify that your changes are leading to measurable improvements.
+
+## Additional configuration options
+
+### Custom scorers
+
+A scorer is a function that scores a capability’s output. Scorers receive the `input`, the generated `output`, and the `expected` value, and return a score.
+
+The example above uses two custom scorers. Scorers can return metadata alongside the score.
+
+You can use the [`autoevals` library](https://github.com/braintrustdata/autoevals) instead of custom scorers. `autoevals` provides prebuilt scorers for common tasks like semantic similarity, factual correctness, and text matching.
+
+### Run experiments
+
+Flags let you parameterize your AI behavior (like model choice or prompting strategies) and run experiments with different configurations. They’re type-safe via Zod schemas, and you can override them at runtime.
+
+The example above uses the `ticketClassification` flag to test different language models. Flags have a default value that you can override at runtime in one of the following ways:
+
+- Override flags directly when you run the eval:
+
+    ```bash
+    axiom eval --flag.ticketClassification.model=gpt-4o
+    ```
+
+- Alternatively, specify the flag overrides in a JSON file.
+
+    ```json experiment.json
+    {
+      "ticketClassification": {
+        "model": "gpt-4o"
+      }
+    }
+    ```
+
+    And then specify the JSON file as the value of the `flags-config` parameter when you run the eval:
+
+    ```bash
+    axiom eval --flags-config=experiment.json
+    ```
 
 ## What’s next?
 

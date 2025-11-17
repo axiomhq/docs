@@ -99,50 +99,99 @@ To send data to Axiom, configure a tracer. For example, use a dedicated instrume
 
     </CodeGroup>
 
-1. Create instrumentation file:
+1. Create an instrumentation file:
 
-    ```typescript /src/instrumentation.ts
-    import 'dotenv/config'; // Make sure to load environment variables
+    ```ts /src/instrumentation.ts expandable
     import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
     import { resourceFromAttributes } from '@opentelemetry/resources';
-    import { SimpleSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+    import { BatchSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
     import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
     import { trace } from "@opentelemetry/api";
     import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
+    import type { AxiomEvalInstrumentationHook } from 'axiom/ai/config';
 
     const tracer = trace.getTracer("my-tracer");
 
     let provider: NodeTracerProvider | undefined;
 
-    const exporter = new OTLPTraceExporter({
-        url: `${process.env.AXIOM_URL}/v1/traces`,
+    // Wrap your logic in the AxiomEvalInstrumentationHook function
+    export const setupAppInstrumentation: AxiomEvalInstrumentationHook = async ({
+      dataset,
+      url,
+      token,
+    }) => {
+      if (provider) {
+        return { provider };
+      }
+
+      if (!dataset || !url || !token) {
+        throw new Error('Missing environment variables');
+      }
+
+      // Replace the environment variables with the parameters passed to the function
+      const exporter = new OTLPTraceExporter({
+        url: `${url}/v1/traces`,
         headers: {
-          Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-          'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
+          Authorization: `Bearer ${token}`,
+          'X-Axiom-Dataset': dataset,
         },
       })
 
-    // Configure the provider to export traces to your Axiom dataset
-    provider = new NodeTracerProvider({
-      resource: resourceFromAttributes({
-        [ATTR_SERVICE_NAME]: 'my-app', // Replace with your service name
-      },
-      {
-        // Use the latest schema version
-        // Info: https://opentelemetry.io/docs/specs/semconv/
-        schemaUrl: 'https://opentelemetry.io/schemas/1.37.0',
-      }),
-      spanProcessor: new SimpleSpanProcessor(exporter),
-    });
+      // Configure the provider to export traces to your Axiom dataset
+      provider = new NodeTracerProvider({
+        resource: resourceFromAttributes({
+          [ATTR_SERVICE_NAME]: 'my-app', // Replace with your service name
+        },
+        {
+          // Use the latest schema version
+          // Info: https://opentelemetry.io/docs/specs/semconv/
+          schemaUrl: 'https://opentelemetry.io/schemas/1.37.0',
+        }),
+        spanProcessor: new BatchSpanProcessor(exporter),
+      });
 
-    // Register the provider
-    provider.register();
+      // Register the provider
+      provider.register();
 
-    // Initialize Axiom AI SDK with the configured tracer
-    initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
+      // Initialize Axiom AI SDK with the configured tracer
+      initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
+
+      return { provider };
+    };
     ```
 
 For more information on specifying redaction policies, see [Redaction policies](/ai-engineering/redaction-policies).
+
+### Create Axiom configuration file
+
+At the root of your project, create the Axiom configuration file `/axiom.config.ts`:
+
+```ts /axiom.config.ts
+import { defineConfig } from 'axiom/ai/config';
+import { setupAppInstrumentation } from './src/instrumentation';
+
+export default defineConfig({
+  eval: {
+    url: process.env.AXIOM_URL,
+    token: process.env.AXIOM_TOKEN,
+    dataset: process.env.AXIOM_DATASET,
+    
+    // Optional: customize which files to run
+    include: ['**/*.eval.{ts,js}'],
+    
+    // Optional: exclude patterns
+    exclude: [],
+    
+    // Optional: timeout for eval execution
+    timeoutMs: 60_000,
+    
+    // Optional: instrumentation hook for OpenTelemetry
+    // (created this in the "Create instrumentation setup" step)
+    instrumentation: ({ url, token, dataset }) => 
+      setupAppInstrumentation({ url, token, dataset }),
+  },
+});
+```
 
 ## Store environment variables
 
