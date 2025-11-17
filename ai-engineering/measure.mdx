@@ -15,80 +15,72 @@ The **Measure** stage is where you quantify the quality and effectiveness of you
 
 Evaluations (evals) are systematic tests that measure how well your AI features perform. Instead of manually testing AI outputs, evals automatically run your AI code against test datasets and score the results using custom metrics. This lets you catch regressions, compare different approaches, and confidently improve your AI features over time.
 
-## Initial setup
+## Prerequisites
 
-1. Follow the [Quickstart](/ai-engineering/quickstart) to set up instrumentation for your app.
-1. Run the following command to istall the `autoevals` library. This library provides pre-built scorers for common tasks like semantic similarity, factual correctness, and text matching.
+Follow the [Quickstart](/ai-engineering/quickstart) to set up instrumentation for your app.
+- To run evals without an existing AI app, skip the part in the Quickstart about instrumentalising your app.
+- To run evals within the context of an existing AI app, use the following instrumentation setup in the `src/instrumentation.ts` file that you have previously created in the [Quickstart](/ai-engineering/quickstart):
 
-    ```bash
-    npm install --save-dev autoevals
+    ```ts /src/instrumentation.ts expandable
+    import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+    import { resourceFromAttributes } from '@opentelemetry/resources';
+    import { BatchSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+    import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+    import { trace } from "@opentelemetry/api";
+    import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
+
+    // Import the type for the AxiomEvalInstrumentationHook
+    import type { AxiomEvalInstrumentationHook } from 'axiom/ai/config';
+
+    const tracer = trace.getTracer("my-tracer");
+
+    let provider: NodeTracerProvider | undefined;
+
+    // Wrap your logic in the AxiomEvalInstrumentationHook function
+    export const setupAppInstrumentation: AxiomEvalInstrumentationHook = async ({
+      dataset,
+      url,
+      token,
+    }) => {
+      if (provider) {
+        return { provider };
+      }
+
+      if (!dataset || !url || !token) {
+        throw new Error('Missing environment variables');
+      }
+
+      // Replace the environment variables with the parameters passed to the function
+      const exporter = new OTLPTraceExporter({
+        url: `${url}/v1/traces`,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-Axiom-Dataset': dataset,
+        },
+      })
+
+      // Configure the provider to export traces to your Axiom dataset
+      provider = new NodeTracerProvider({
+        resource: resourceFromAttributes({
+          [ATTR_SERVICE_NAME]: 'my-app', // Replace with your service name
+        },
+        {
+          // Use the latest schema version
+          // Info: https://opentelemetry.io/docs/specs/semconv/
+          schemaUrl: 'https://opentelemetry.io/schemas/1.37.0',
+        }),
+        spanProcessor: new BatchSpanProcessor(exporter),
+      });
+
+      // Register the provider
+      provider.register();
+
+      // Initialize Axiom AI SDK with the configured tracer
+      initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
+
+      return { provider };
+    };
     ```
-
-### Change instrumentation
-
-Change the instrumentation setup in the `src/instrumentation.ts` file that you have previously created in the [Quickstart](/ai-engineering/quickstart).
-
-```ts /src/instrumentation.ts lines highlight={1,9-10,16-28,58-59}
-// Remove `import 'dotenv/config';`
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { resourceFromAttributes } from '@opentelemetry/resources';
-import { SimpleSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
-import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { trace } from "@opentelemetry/api";
-import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
-
-// Import the type for the AxiomEvalInstrumentationHook
-import type { AxiomEvalInstrumentationHook } from 'axiom/ai/config';
-
-const tracer = trace.getTracer("my-tracer");
-
-let provider: NodeTracerProvider | undefined;
-
-// Wrap your logic in the AxiomEvalInstrumentationHook function
-export const setupAppInstrumentation: AxiomEvalInstrumentationHook = async ({
-  dataset,
-  url,
-  token,
-}) => {
-  if (provider) {
-    return { provider };
-  }
-
-  if (!dataset || !url || !token) {
-    throw new Error('Missing environment variables');
-  }
-
-  // Replace the environment variables with the parameters passed to the function
-  const exporter = new OTLPTraceExporter({
-    url: `${url}/v1/traces`,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Axiom-Dataset': dataset,
-    },
-  })
-
-  // Configure the provider to export traces to your Axiom dataset
-  provider = new NodeTracerProvider({
-    resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: 'my-app', // Replace with your service name
-    },
-    {
-      // Use the latest schema version
-      // Info: https://opentelemetry.io/docs/specs/semconv/
-      schemaUrl: 'https://opentelemetry.io/schemas/1.37.0',
-    }),
-    spanProcessor: new SimpleSpanProcessor(exporter),
-  });
-
-  // Register the provider
-  provider.register();
-
-  // Initialize Axiom AI SDK with the configured tracer
-  initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
-
-  return { provider };
-};
-```
 
 ### Create Axiom configuration file
 
@@ -132,7 +124,7 @@ The key parameters of the `Eval` function:
 - `scorers`: An array of scorer functions that score the `output` against the `expected` value.
 - `metadata`: Optional metadata for the evaluation, such as a description.
 
-Create an evaluation for a support ticket classification system in the file `/src/evals/ticket-classification.eval.ts`.
+As an example, create an evaluation for a support ticket classification system in the file `/src/evals/ticket-classification.eval.ts`.
 
 ```ts /src/evals/ticket-classification.eval.ts expandable
 import { experimental_Eval as Eval, Scorer } from 'axiom/ai/evals';
@@ -141,14 +133,6 @@ import { openai } from '@ai-sdk/openai';
 import { wrapAISDKModel } from 'axiom/ai';
 import { flag, pickFlags } from '../lib/app-scope';
 import { z } from 'zod';
-import { ExactMatch } from 'autoevals';
-
-// Define your schemas
-const ticketCategorySchema = z.enum(['spam', 'question', 'feature_request', 'bug_report']);
-const ticketResponseSchema = z.object({
-  category: ticketCategorySchema,
-  response: z.string(),
-});
 
 // The function you want to evaluate
 async function classifyTicket({ subject, content }: { subject?: string; content: string }) {
@@ -160,39 +144,48 @@ async function classifyTicket({ subject, content }: { subject?: string; content:
       {
         role: 'system',
         content: `You are a customer support engineer classifying tickets as: spam, question, feature_request, or bug_report.
-        
-If spam, return a polite auto-close message. Otherwise, say a team member will respond shortly.`,
+        If spam, return a polite auto-close message. Otherwise, say a team member will respond shortly.`,
       },
       {
         role: 'user',
         content: subject ? `Subject: ${subject}\n\n${content}` : content,
       },
     ],
-    schema: ticketResponseSchema,
+    schema: z.object({
+      category: z.enum(['spam', 'question', 'feature_request', 'bug_report']),
+      response: z.string()
+    }),
   });
 
   return result.object;
 }
 
-// Custom exact-match scorer
+// Custom exact-match scorer that returns metadata
 const ExactMatchScorer = Scorer(
   'Exact-Match',
   ({ output, expected }: { output: { response: string }; expected: { response: string } }) => {
-    return ExactMatch({
-      output: output.response,
-      expected: expected.response,
+    const normalizedOutput = output.response.trim().toLowerCase();
+    const normalizedExpected = expected.response.trim().toLowerCase();
+
+    return {
+      score: normalizedOutput === normalizedExpected,
+      metadata: {
+        details: 'Additional info about this score',
+      },
+    };
     });
   }
 );
 
 // Custom spam classification scorer
 const SpamClassificationScorer = Scorer(
-  'Spam-Classification',
-  ({ output, expected }: { 
-    output: { category: string }; 
+  "Spam-Classification",
+  ({ output, expected }: {
+    output: { category: string };
     expected: { category: string };
   }) => {
-    return (expected.category === 'spam') === (output.category === 'spam') ? 1 : 0;
+    const isSpam = (x: { category: string }) => x.category === "spam";
+    return isSpam(output) === isSpam(expected) ? 1 : 0;
   }
 );
 
@@ -240,55 +233,6 @@ Eval('spam-classification', {
 });
 ```
 
-## Set up scorers
-
-A scorer is a function that scores a capability’s output. Scorers receive the `input`, the generated `output`, and the `expected` value, and return a score (typically 0-1).
-
-Examples to set up scorers:
-- Use a simple exact match scorer that returns 1 if the output matches the expected value, and 0 otherwise:
-
-    ```ts
-    import { Scorer } from 'axiom/ai/evals';
-
-    const ExactMatchScorer = Scorer(
-      'Exact-Match',
-      ({ output, expected }: { output: string; expected: string }) => {
-        return output === expected ? 1 : 0;
-      }
-    );
-    ```
-
-- Use the `autoevals` library that provides prebuilt scorers for common tasks like semantic similarity, factual correctness, and text matching:
-
-    ```ts
-    import { Scorer } from 'axiom/ai/evals';
-    import { ExactMatch } from 'autoevals';
-
-    const WrappedExactMatch = Scorer(
-      'Exact-Match',
-      ({ output, expected }: { output: string; expected: string }) => {
-        return ExactMatch({ output, expected });
-      }
-    );
-    ```
-
-- Use a custom scorer that returns metadata alongside the score:
-
-    ```ts
-    const CustomScorer = Scorer(
-      'Custom-Scorer',
-      ({ output, expected }) => {
-        const score = computeScore(output, expected);
-        return {
-          score,
-          metadata: {
-            details: 'Additional info about this score',
-          },
-        };
-      }
-    );
-    ```
-
 ## Run evaluations
 
 To run your evaluation suites from your terminal, [install the Axiom CLI](/reference/cli) and use the following commands.
@@ -300,6 +244,14 @@ To run your evaluation suites from your terminal, [install the Axiom CLI](/refer
 | Run evals matching a glob pattern | `axiom eval "**/*spam*.eval.ts"` |
 | Run eval by name | `axiom eval "spam-classification"` |
 | List available evals without running | `axiom eval --list` |
+
+## Custom scorers
+
+A scorer is a function that scores a capability’s output. Scorers receive the `input`, the generated `output`, and the `expected` value, and return a score.
+
+The `autoevals` library that provides prebuilt scorers for common tasks like semantic similarity, factual correctness, and text matching
+
+Use a custom scorer that returns metadata alongside the score:
 
 ## Run experiments
 
@@ -350,7 +302,7 @@ axiom eval --flags-config=experiment.json
 
 ## Analyze results in Console
 
-<Badge>Coming soon</Badge> When you run an eval, Axiom AI SDK captures a detailed OpenTelemetry trace for the entire run. This includes parent spans for the evaluation suite and child spans for each individual test case, task execution, and scorer result. Axiom enriches the traces with `eval.*` attributes, allowing you to deeply analyze results in the Axiom Console.
+When you run an eval, Axiom AI SDK captures a detailed OpenTelemetry trace for the entire run. This includes parent spans for the evaluation suite and child spans for each individual test case, task execution, and scorer result. Axiom enriches the traces with `eval.*` attributes, allowing you to deeply analyze results in the Axiom Console.
 
 The results of evals:
 - Pass/fail status for each test case
@@ -358,9 +310,7 @@ The results of evals:
 - Comparison to baseline (if available)
 - Links to view detailed traces in Axiom
 
-Additionally, the AI SDK sends the results to your Axiom dataset for long-term tracking and analysis.
-
-The Console will feature leaderboards and comparison views to track score progression across different versions of a capability, helping you verify that your changes are leading to measurable improvements.
+The Console features leaderboards and comparison views to track score progression across different versions of a capability, helping you verify that your changes are leading to measurable improvements.
 
 ## What’s next?
 
