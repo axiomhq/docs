@@ -15,111 +15,36 @@ The **Measure** stage is where you quantify the quality and effectiveness of you
 
 Evaluations (evals) are systematic tests that measure how well your AI features perform. Instead of manually testing AI outputs, evals automatically run your AI code against test datasets and score the results using custom metrics. This lets you catch regressions, compare different approaches, and confidently improve your AI features over time.
 
-## `Eval` function
+## Initial setup
 
-The primary tool for the Measure stage is the `Eval` function, available in the `axiom/ai/evals` package. It provides a simple, declarative way to define a test suite for your capability directly in your codebase.
+1. Follow the [Quickstart](/ai-engineering/quickstart) to set up instrumentation for your app.
+1. Run the following command to istall the `autoevals` library. This library provides pre-built scorers for common tasks like semantic similarity, factual correctness, and text matching.
 
-An `Eval` is structured around a few key parameters:
+    ```bash
+    npm install --save-dev autoevals
+    ```
 
-* `data`: An async function that returns your collection of `{ input, expected }` pairs, which serve as your ground truth.
-* `task`: The function that executes your AI capability, taking an `input` and producing an `output`.
-* `scorers`: An array of scorer functions that score the `output` against the `expected` value.
-* `metadata`: Optional metadata for the evaluation, such as a description.
+### Change instrumentation
 
-Here is an example of a complete evaluation suite:
+Change the instrumentation setup in the `src/instrumentation.ts` file that you have previously created in the [Quickstart](/ai-engineering/quickstart).
 
-```ts /evals/text-match.eval.ts
-import { Eval, Scorer } from 'axiom/ai/evals';
-
-const LevenshteinScorer = Scorer(
-  'Levenshtein',
-  ({ output, expected }: { output: string; expected: string }) => {
-    // Calculate Levenshtein distance score
-    const distance = calculateLevenshtein(output, expected);
-    const maxLen = Math.max(output.length, expected.length);
-    return maxLen === 0 ? 1 : 1 - distance / maxLen;
-  }
-);
-
-Eval('text-match-eval', {
-  // 1. Your ground truth dataset
-  data: async () => {
-    return [
-      {
-        input: 'test',
-        expected: 'hi, test!',
-      },
-      {
-        input: 'foobar',
-        expected: 'hello, foobar!',
-      },
-    ];
-  },
-
-  // 2. The task that runs your capability
-  task: async ({ input }) => {
-    return `hi, ${input}!`;
-  },
-
-  // 3. The scorers that grade the output
-  scorers: [LevenshteinScorer],
-});
-```
-
-## Get started
-
-### Prerequisites
-
-- Node.js 22.20 or higher
-- Existing AI SDK setup (e.g., `@ai-sdk/openai`, `ai`)
-- Axiom account with API token and dataset
-
-### Install dependencies
-
-```bash
-npm install axiom
-npm install --save-dev autoevals
-```
-
-Install required OpenTelemetry dependencies:
-
-```bash
-npm install @opentelemetry/api \
-            @opentelemetry/exporter-trace-otlp-http \
-            @opentelemetry/resources \
-            @opentelemetry/sdk-trace-node \
-            @opentelemetry/semantic-conventions
-```
-
-### Configure
-
-#### Set up environment variables
-
-Create a `.env` file:
-
-```bash
-AXIOM_URL="https://api.axiom.co"
-AXIOM_TOKEN="xaat-******"
-AXIOM_DATASET="my_dataset"
-```
-
-#### Create instrumentation setup (optional)
-
-If you are evaluating components of a production application that is instrumented with OpenTelemetry, you can see your application spans in Axiom. In order to enable this, your instrumentation setup must be a function that can be passed in `axiom.config.ts`. An example is shown below.
-
-Create `src/instrumentation.node.ts`:
-
-```ts /src/instrumentation.node.ts
+```ts /src/instrumentation.ts lines highlight={1,9-10,16-28,58-59}
+// Remove `import 'dotenv/config';`
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
-import { BatchSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { SimpleSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+import { trace } from "@opentelemetry/api";
 import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
+
+// Import the type for the AxiomEvalInstrumentationHook
 import type { AxiomEvalInstrumentationHook } from 'axiom/ai/config';
-import { tracer } from './tracer';
+
+const tracer = trace.getTracer("my-tracer");
 
 let provider: NodeTracerProvider | undefined;
 
+// Wrap your logic in the AxiomEvalInstrumentationHook function
 export const setupAppInstrumentation: AxiomEvalInstrumentationHook = async ({
   dataset,
   url,
@@ -133,43 +58,45 @@ export const setupAppInstrumentation: AxiomEvalInstrumentationHook = async ({
     throw new Error('Missing environment variables');
   }
 
+  // Replace the environment variables with the parameters passed to the function
   const exporter = new OTLPTraceExporter({
     url: `${url}/v1/traces`,
     headers: {
       Authorization: `Bearer ${token}`,
       'X-Axiom-Dataset': dataset,
     },
-  });
+  })
 
+  // Configure the provider to export traces to your Axiom dataset
   provider = new NodeTracerProvider({
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: 'my-app',
+      [ATTR_SERVICE_NAME]: 'my-app', // Replace with your service name
+    },
+    {
+      // Use the latest schema version
+      // Info: https://opentelemetry.io/docs/specs/semconv/
+      schemaUrl: 'https://opentelemetry.io/schemas/1.37.0',
     }),
-    spanProcessors: [new BatchSpanProcessor(exporter)],
+    spanProcessor: new SimpleSpanProcessor(exporter),
   });
 
+  // Register the provider
   provider.register();
+
+  // Initialize Axiom AI SDK with the configured tracer
   initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
 
   return { provider };
 };
 ```
 
-Create `src/tracer.ts`:
+### Create Axiom configuration file
 
-```typescript
-import { trace } from '@opentelemetry/api';
-
-export const tracer = trace.getTracer('my-tracer');
-```
-
-#### Create `axiom.config.ts`
-
-Create a configuration file at the root of your project:
+At the root of your project, create the Axiom configuration file `/axiom.config.ts`:
 
 ```ts /axiom.config.ts
 import { defineConfig } from 'axiom/ai/config';
-import { setupAppInstrumentation } from './src/instrumentation.node';
+import { setupAppInstrumentation } from './src/instrumentation';
 
 export default defineConfig({
   eval: {
@@ -194,34 +121,20 @@ export default defineConfig({
 });
 ```
 
-## Set up flags
+## Write evalulation function
 
-Flags let you parameterize your AI behavior (like model choice or prompting strategies) and run experiments with different configurations. They’re type-safe via Zod schemas and can be overridden at runtime.
+The `Eval` function provides a simple, declarative way to define a test suite for your capability directly in your codebase.
 
-Create `src/lib/app-scope.ts`:
+The key parameters of the `Eval` function:
 
-```ts /src/lib/app-scope.ts
-import { createAppScope } from 'axiom/ai/evals';
-import { z } from 'zod';
+- `data`: An async function that returns your collection of `{ input, expected }` pairs, which serve as your ground truth.
+- `task`: The function that executes your AI capability, taking an `input` and producing an `output`.
+- `scorers`: An array of scorer functions that score the `output` against the `expected` value.
+- `metadata`: Optional metadata for the evaluation, such as a description.
 
-export const flagSchema = z.object({
-  ticketClassification: z.object({
-    model: z.string().default('gpt-4o-mini'),
-  }),
-});
+Create an evaluation for a support ticket classification system in the file `/src/evals/ticket-classification.eval.ts`.
 
-const { flag, pickFlags } = createAppScope({ flagSchema });
-
-export { flag, pickFlags };
-```
-
-## Write real-world evals
-
-Let’s build a practical evaluation for a support ticket classification system.
-
-Create an eval file `src/evals/ticket-classification.eval.ts`:
-
-```typescript
+```ts /src/evals/ticket-classification.eval.ts expandable
 import { experimental_Eval as Eval, Scorer } from 'axiom/ai/evals';
 import { generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
@@ -302,7 +215,7 @@ Eval('spam-classification', {
     },
     {
       input: {
-        subject: 'FREE V1AGRA',
+        subject: 'FREE CA$H',
         content: 'BUY NOW ON WWW.BEST-DEALS.COM!',
       },
       expected: {
@@ -327,111 +240,101 @@ Eval('spam-classification', {
 });
 ```
 
-## Score with scorers
+## Set up scorers
 
 A scorer is a function that scores a capability’s output. Scorers receive the `input`, the generated `output`, and the `expected` value, and return a score (typically 0-1).
 
-### Simple custom scorer
+Examples to set up scorers:
+- Use a simple exact match scorer that returns 1 if the output matches the expected value, and 0 otherwise:
 
-```ts
-import { Scorer } from 'axiom/ai/evals';
+    ```ts
+    import { Scorer } from 'axiom/ai/evals';
 
-const ExactMatchScorer = Scorer(
-  'Exact-Match',
-  ({ output, expected }: { output: string; expected: string }) => {
-    return output === expected ? 1 : 0;
-  }
-);
-```
+    const ExactMatchScorer = Scorer(
+      'Exact-Match',
+      ({ output, expected }: { output: string; expected: string }) => {
+        return output === expected ? 1 : 0;
+      }
+    );
+    ```
 
-### Use AutoEvals library
+- Use the `autoevals` library that provides prebuilt scorers for common tasks like semantic similarity, factual correctness, and text matching:
 
-The `autoevals` library provides pre-built scorers for common tasks like semantic similarity, factual correctness, and text matching:
+    ```ts
+    import { Scorer } from 'axiom/ai/evals';
+    import { ExactMatch } from 'autoevals';
 
-```ts
-import { Scorer } from 'axiom/ai/evals';
-import { ExactMatch } from 'autoevals';
+    const WrappedExactMatch = Scorer(
+      'Exact-Match',
+      ({ output, expected }: { output: string; expected: string }) => {
+        return ExactMatch({ output, expected });
+      }
+    );
+    ```
 
-const WrappedExactMatch = Scorer(
-  'Exact-Match',
-  ({ output, expected }: { output: string; expected: string }) => {
-    return ExactMatch({ output, expected });
-  }
-);
-```
+- Use a custom scorer that returns metadata alongside the score:
 
-### Scorer with metadata
-
-Scorers can return additional metadata alongside the score:
-
-```ts
-const CustomScorer = Scorer(
-  'Custom-Scorer',
-  ({ output, expected }) => {
-    const score = computeScore(output, expected);
-    return {
-      score,
-      metadata: {
-        details: 'Additional info about this score',
-      },
-    };
-  }
-);
-```
+    ```ts
+    const CustomScorer = Scorer(
+      'Custom-Scorer',
+      ({ output, expected }) => {
+        const score = computeScore(output, expected);
+        return {
+          score,
+          metadata: {
+            details: 'Additional info about this score',
+          },
+        };
+      }
+    );
+    ```
 
 ## Run evaluations
 
 To run your evaluation suites from your terminal, [install the Axiom CLI](/reference/cli) and use the following commands.
 
-### Run all evals
+| Description | Command |
+| ----------- | ------- |
+| Run all evals | `axiom eval` |
+| Run specific eval file | `axiom eval src/evals/ticket-classification.eval.ts` |
+| Run evals matching a glob pattern | `axiom eval "**/*spam*.eval.ts"` |
+| Run eval by name | `axiom eval "spam-classification"` |
+| List available evals without running | `axiom eval --list` |
 
-```bash
-axiom eval
+## Run experiments
+
+Flags let you parameterize your AI behavior (like model choice or prompting strategies) and run experiments with different configurations. They’re type-safe via Zod schemas, and you can override them at runtime.
+
+### Set up flags
+
+Create the file `src/lib/app-scope.ts` that uses the `ticketClassification` flagto test different language models.
+
+```ts /src/lib/app-scope.ts
+import { createAppScope } from 'axiom/ai/evals';
+import { z } from 'zod';
+
+export const flagSchema = z.object({
+  ticketClassification: z.object({
+    model: z.string().default('gpt-4o-mini'),
+  }),
+});
+
+const { flag, pickFlags } = createAppScope({ flagSchema });
+
+export { flag, pickFlags };
 ```
 
-This finds and runs all files matching `**/*.eval.{ts,js}`.
+### Override flags at runtime
 
-### Run specific eval file
-
-```bash
-axiom eval src/evals/ticket-classification.eval.ts
-```
-
-### Run evals matching a glob pattern
-
-```bash
-axiom eval "**/*spam*.eval.ts"
-```
-
-### Run eval by name
-
-```bash
-axiom eval "spam-classification"
-```
-
-### List available evals without running
-
-```bash
-axiom eval --list
-```
-
-## Override flags
-
-Flags allow you to run experiments by testing different configurations without changing code.
-
-### From CLI (dot notation)
-
-Override individual flags:
+Override flags directly when you run the eval:
 
 ```bash
 axiom eval --flag.ticketClassification.model=gpt-4o
 ```
 
-### From JSON file
+Alternatively, specify the flag overrides in a JSON file.
 
-Create `experiment.json`:
-
-```json
+```json experiment.json
 {
   "ticketClassification": {
     "model": "gpt-4o"
@@ -439,7 +342,7 @@ Create `experiment.json`:
 }
 ```
 
-Then run:
+And then specify the JSON file as the value of the `flags-config` parameter when you run the eval:
 
 ```bash
 axiom eval --flags-config=experiment.json
@@ -447,25 +350,25 @@ axiom eval --flags-config=experiment.json
 
 ## Analyze results in Console
 
-<Badge>Coming soon</Badge> When you run an <Tooltip tip={definitions.Eval}>eval</Tooltip>, the Axiom SDK captures a detailed OpenTelemetry trace for the entire run. This includes parent spans for the evaluation suite and child spans for each individual test case, task execution, and scorer result. These traces are enriched with `eval.*` attributes, allowing you to deeply analyze results in the Axiom Console.
+<Badge>Coming soon</Badge> When you run an eval, Axiom AI SDK captures a detailed OpenTelemetry trace for the entire run. This includes parent spans for the evaluation suite and child spans for each individual test case, task execution, and scorer result. Axiom enriches the traces with `eval.*` attributes, allowing you to deeply analyze results in the Axiom Console.
 
-After running evals, you’ll see:
+The results of evals:
 - Pass/fail status for each test case
 - Scores from each scorer
 - Comparison to baseline (if available)
 - Links to view detailed traces in Axiom
 
-Results are also sent to your Axiom dataset for long-term tracking and analysis.
+Additionally, the AI SDK sends the results to your Axiom dataset for long-term tracking and analysis.
 
 The Console will feature leaderboards and comparison views to track score progression across different versions of a capability, helping you verify that your changes are leading to measurable improvements.
 
 ## What’s next?
 
-Once your capability meets your quality benchmarks in the Measure stage, it’s ready to be deployed. Additional next steps include:
+A capability is ready to be deployed when it meets your quality benchmarks. After deployment, the next steps can be the following:
 
-- **Baseline comparisons**: Run evals multiple times to track regression over time
-- **Experiment with flags**: Test different models or strategies using flag overrides
-- **Advanced scorers**: Build custom scorers for domain-specific metrics
-- **CI/CD integration**: Add `axiom eval` to your CI pipeline to catch regressions
+- **Baseline comparisons**: Run evals multiple times to track regression over time.
+- **Experiment with flags**: Test different models or strategies using flag overrides.
+- **Advanced scorers**: Build custom scorers for domain-specific metrics.
+- **CI/CD integration**: Add `axiom eval` to your CI pipeline to catch regressions.
 
-The next step is to monitor its performance with real-world traffic. Learn more about this step of the AI engineering workflow in the [Observe](/ai-engineering/observe) docs.
+The next step is to monitor your capability’s performance with real-world traffic. To learn more about this step of the AI engineering workflow, see [Observe](/ai-engineering/observe).
