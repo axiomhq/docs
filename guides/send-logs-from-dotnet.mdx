@@ -9,7 +9,7 @@ logoId: 'dotnet'
 
 import Prerequisites from "/snippets/standard-prerequisites.mdx"
 import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
+import ReplaceEdgeDomain from "/snippets/replace-edge-domain.mdx"
 
 <Prerequisites />
 - [Install the .NET SDK](https://dotnet.microsoft.com/download).
@@ -51,8 +51,8 @@ public static class AxiomLogger
 
         // Specify the Axiom dataset name and construct the API endpoint URL
         var datasetName = "DATASET_NAME";
-        var axiomDomain = "AXIOM_DOMAIN";
-        var axiomUri = $"https://{axiomDomain}/v1/datasets/{datasetName}/ingest";
+        var axiomEdgeDomain = "AXIOM_EDGE_DOMAIN";
+        var axiomUri = $"https://{axiomEdgeDomain}/v1/ingest/{datasetName}";
 
         // Replace with your Axiom API token
         var apiToken = "API_TOKEN"; // Ensure your API token is correct
@@ -95,7 +95,7 @@ public static class AxiomLogger
 
 <Info>
 <ReplaceDatasetToken />
-<ReplaceDomain />
+<ReplaceEdgeDomain />
 </Info>
 
 ### Configure the main program
@@ -244,7 +244,7 @@ public class AxiomConfig
 {
     public const string DatasetName = "DATASET_NAME";
     public const string ApiToken = "API_TOKEN";
-    public const string ApiUrl = "https://AXIOM_DOMAIN/v1/datasets";
+    public const string ApiUrl = "https://AXIOM_DOMAIN/v1";
 }
 
 public class AxiomHttpClient : IHttpClient
@@ -283,7 +283,7 @@ public class Program
             .MinimumLevel.Debug()
             .WriteTo.Console()
             .WriteTo.Http(
-                requestUri: $"{AxiomConfig.ApiUrl}/{AxiomConfig.DatasetName}/ingest",
+                requestUri: $"{AxiomConfig.ApiUrl}/ingest/{AxiomConfig.DatasetName}",
                 queueLimitBytes: null,
                 textFormatter: new ElasticsearchJsonFormatter(renderMessageTemplate: false, inlineFields: true),
                 httpClient: new AxiomHttpClient()
@@ -415,7 +415,7 @@ Set up NLog by creating an `NLog.config` file or configuring it programmatically
                 flushTimeout="5000">
             <target xsi:type="HTTP" 
                     name="axiom"
-                    url="https://AXIOM_DOMAIN/v1/datasets/DATASET_NAME/ingest"
+                    url="https://AXIOM_EDGE_DOMAIN/v1/ingest/DATASET_NAME"
                     HttpHeaders="Authorization: Bearer API_TOKEN"
                     contentType="application/json">
                 <layout xsi:type="JsonLayout" includeAllProperties="true">
@@ -436,7 +436,7 @@ Set up NLog by creating an `NLog.config` file or configuring it programmatically
 
 <Info>
 <ReplaceDatasetToken />
-<ReplaceDomain />
+<ReplaceEdgeDomain />
 </Info>
 
 ### Configure the main program
