@@ -1,0 +1,157 @@
+---
+title: 'genai_estimate_tokens'
+description: 'This page explains how to use the genai_estimate_tokens function in APL.'
+---
+
+The `genai_estimate_tokens` function estimates the number of tokens in a text string. This estimation helps you predict API costs, validate input sizes, and monitor token usage before making actual API calls to LLM services.
+
+You can use this function to validate prompt sizes, estimate costs before API calls, monitor content length, or analyze token efficiency across different prompts.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, there’s no direct equivalent for token estimation. You would typically use character or word count as a rough approximation.
+
+<CodeGroup>
+```sql Splunk example
+| eval estimated_tokens=len(text)/4
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend estimated_tokens = genai_estimate_tokens(text)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would need to use character-based estimations, which are less accurate than proper token counting.
+
+<CodeGroup>
+```sql SQL example
+SELECT 
+  text,
+  LENGTH(text) / 4 as estimated_tokens
+FROM prompts
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend estimated_tokens = genai_estimate_tokens(text)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+genai_estimate_tokens(text)
+```
+
+### Parameters
+
+- **text** (string, required): The text string for which you want to estimate the token count.
+
+### Returns
+
+Returns a long integer representing the estimated number of tokens in the input text.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Estimate token usage from prompts in your logs to predict costs and analyze usage patterns.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/chat'
+| extend prompt_text = tostring(todynamic(request_body)['prompt'])
+| extend estimated_tokens = genai_estimate_tokens(prompt_text)
+| summarize avg_tokens = avg(estimated_tokens), max_tokens = max(estimated_tokens) by ['geo.city']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fchat'%20%7C%20extend%20prompt_text%20%3D%20tostring(todynamic(request_body)%5B'prompt'%5D)%20%7C%20extend%20estimated_tokens%20%3D%20genai_estimate_tokens(prompt_text)%20%7C%20summarize%20avg_tokens%20%3D%20avg(estimated_tokens)%2C%20max_tokens%20%3D%20max(estimated_tokens)%20by%20%5B'geo.city'%5D%22%7D)
+
+**Output**
+
+| geo.city | avg_tokens | max_tokens |
+|----------|------------|------------|
+| New York | 245 | 1024 |
+| London | 198 | 856 |
+
+This query analyzes prompt token usage patterns across different geographic locations.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Monitor token usage across different AI service operations to understand resource consumption.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ['service.name'] == 'frontend' and kind == 'server'
+| extend prompt = tostring(attributes['ai.prompt'])
+| extend estimated_tokens = genai_estimate_tokens(prompt)
+| summarize percentile(estimated_tokens, 50, 95, 99) by ['service.name']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20prompt%20%3D%20tostring(attributes%5B'ai.prompt'%5D)%20%7C%20extend%20estimated_tokens%20%3D%20genai_estimate_tokens(prompt)%20%7C%20summarize%20percentile(estimated_tokens%2C%2050%2C%2095%2C%2099)%20by%20%5B'service.name'%5D%22%7D)
+
+**Output**
+
+| service.name | percentile_estimated_tokens_50 | percentile_estimated_tokens_95 | percentile_estimated_tokens_99 |
+|--------------|--------------------------------|--------------------------------|--------------------------------|
+| frontend | 180 | 450 | 890 |
+
+This query provides percentile distribution of token usage, helping you understand typical and outlier usage patterns.
+
+</Tab>
+<Tab title="Security logs">
+
+Detect unusually large prompts that might indicate prompt injection attacks or abuse.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/ai'
+| extend prompt = tostring(todynamic(request_body)['prompt'])
+| extend token_count = genai_estimate_tokens(prompt)
+| where token_count > 2000
+| project _time, id, ['geo.country'], method, token_count
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20prompt%20%3D%20tostring(todynamic(request_body)%5B'prompt'%5D)%20%7C%20extend%20token_count%20%3D%20genai_estimate_tokens(prompt)%20%7C%20where%20token_count%20%3E%202000%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20method%2C%20token_count%22%7D)
+
+**Output**
+
+| _time | id | geo.country | method | token_count |
+|-------|----|--------------|---------| ------------|
+| 2024-01-15T10:30:00Z | user_789 | US | POST | 2456 |
+| 2024-01-15T10:35:00Z | user_234 | CN | POST | 3124 |
+
+This query identifies requests with unusually large prompts, which could indicate abuse or prompt injection attempts.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [genai_cost](/apl/scalar-functions/genai-functions/genai-cost): Calculates the actual cost based on token usage. Use this in combination with token estimates to predict costs.
+- [strlen](/apl/scalar-functions/string-functions#strlen): Returns string length in characters. Use this for a simpler character count without token estimation.
+- [string_size](/apl/scalar-functions/string-functions/string-size): Returns string length in characters. Use this when you need character count instead of token count.
+- [genai_input_cost](/apl/scalar-functions/genai-functions/genai-input-cost): Calculates input token cost. Combine with token estimation to predict prompt costs.
+
