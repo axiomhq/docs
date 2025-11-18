@@ -1,0 +1,96 @@
+---
+title: "Analyze results"
+description: "Understand how changes to your AI capabilities impact performance, cost, and quality."
+keywords: ["ai engineering", "console", "results", "analysis", "comparison", "baseline"]
+---
+
+After running an evaluation, the CLI provides a link to view results in the Axiom Console:
+
+```
+FINAL EVALUATION REPORT
+
+your-eval-name (your-eval.eval.ts)
+
+  • scorer-one 95.00%
+  • scorer-two 87.50%
+  • scorer-three 100.00%
+
+View full report:
+https://app.axiom.co/:org-id/ai-engineering/evaluations?runId=:run-id
+
+Test Files 1 passed (1)
+Tests 4 passed (4)
+Duration 5.2 s
+```
+
+The evaluation interface helps you answer three core questions:
+1. How well does this configuration perform?
+2. How does it compare to previous versions?
+3. Which tradeoffs are acceptable?
+
+## Compare configurations
+
+The most common workflow is comparing two evaluation runs to understand the impact of a change.
+
+Run a baseline evaluation:
+
+```bash
+axiom eval your-eval-name
+# Note the run ID from the output: run_abc123xyz
+```
+
+Make a change (update a prompt, switch models, adjust temperature), then run again with the baseline:
+
+```bash
+axiom eval your-eval-name --baseline run_abc123xyz
+```
+
+The Console shows you the delta for every metric:
+
+- **Accuracy**: Did scores improve or regress?
+- **Latency**: Is it faster or slower?
+- **Cost**: What's the financial impact?
+
+Example: Switching from `gpt-4o-mini` to `gpt-4o` might show:
+- Accuracy: 85% → 95% (+10%)
+- Latency: 800 ms → 1.6 s (+100%)
+- Cost per run: $0.002 → $0.020 (+900%)
+
+This data helps you decide whether the quality improvement justifies the cost and latency increase for your use case.
+
+## Investigate failures
+
+When test cases fail, click into them to see:
+- The exact input that triggered the failure
+- What your capability output vs what was expected
+- The full trace of LLM calls and tool executions
+
+Look for patterns:
+- Do failures cluster around specific input types?
+- Are certain scorers failing consistently?
+- Is high token usage correlated with failures?
+
+Use these insights to add targeted test cases or refine your capability.
+
+## Experiment with flags
+
+Flags let you test multiple configurations systematically. Run several experiments:
+
+```bash
+axiom eval --flag.model=gpt-4o-mini --flag.temperature=0.7
+axiom eval --flag.model=gpt-4o-mini --flag.temperature=0.2
+axiom eval --flag.model=gpt-4o --flag.temperature=0.7
+axiom eval --flag.model=gpt-4o --flag.temperature=0.2
+```
+
+Compare all four runs in the Console to find the configuration that best balances quality, cost, and latency for your requirements.
+
+## Track progress over time
+
+For teams running evaluations regularly (nightly or in CI), the Console shows whether your capability is improving or regressing across iterations.
+
+Compare your latest run against your initial baseline to verify that accumulated changes are moving in the right direction.
+
+## What's next?
+
+To learn how to use flags for experimentation, see [Flags and experiments](/ai-engineering/evaluate/flags-experiments).
