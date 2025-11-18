@@ -97,6 +97,46 @@ When analyzing logs, some values can be stored as arrays. You can use `mv-expand
 
 This query expands the `territories` array into rows and counts the most frequent territories.
 
+## Working with dynamic map keys
+
+When you have map fields with dynamic keys (keys that vary across events), you can use `mv-expand` with `bag_keys()` to process all keys without knowing them in advance. This is useful for nested objects where the field names change, such as user-defined tags, custom metadata, or dynamic configurations.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| limit 10
+| extend map_keys = bag_keys(customFields)
+| mv-expand map_keys
+| summarize count() by tostring(map_keys)
+```
+
+In this example:
+1. `bag_keys(customFields)` extracts all the keys from the `customFields` map into an array
+2. `mv-expand` splits those keys into separate rows
+3. `summarize` counts how often each key appears across all events
+
+This approach allows you to analyze dynamic maps without manually specifying each potential key name, which is particularly valuable for:
+- Analyzing custom tags or labels with varying names
+- Processing dynamic configurations
+- Aggregating metrics where field names aren't known in advance
+
+**Accessing both keys and values**
+
+To work with both keys and values from a dynamic map:
+
+```kusto
+['sample-http-logs']
+| limit 10
+| mv-expand bagexpansion=array map_items = parse_json(tostring(customFields))
+| extend key = tostring(map_items[0]), value = tostring(map_items[1])
+| summarize avg(todouble(value)) by key
+```
+
+<Tip>
+When using `mv-expand` with `kind=bag` on property bags, each expanded row contains a single key-value pair from the original map, making it easy to aggregate or filter by dynamic fields.
+</Tip>
+
 ## List of related operators
 
 - [project](/apl/tabular-operators/project-operator): Selects or computes columns. Use it when you want to reshape data, not expand arrays.
