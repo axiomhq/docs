@@ -1,57 +1,145 @@
 ---
 title: "Iterate"
-description: "Learn how to iterate on your AI capabilities by using production data and evaluation scores to drive improvements."
-keywords: ["ai engineering", "AI engineering", "iterate", "improvement", "a/b testing", "champion challenger"]
+description: "Run a systematic improvement loop to continuously enhance your AI capabilities based on production data and evaluation results."
+keywords: ["ai engineering", "iterate", "improvement", "feedback", "annotations"]
 ---
 
-import { Badge } from "/snippets/badge.jsx"
 import { definitions } from '/snippets/definitions.mdx'
+import { Badge } from "/snippets/badge.jsx"
 
-<Warning>
-The iteration workflow described here is in active development. Axiom is working with design partners to shape what’s built. [Contact Axiom](https://www.axiom.co/contact) to get early access and join a focused group of teams shaping these tools.
-</Warning>
+The Iterate stage closes the loop in AI engineering. By analyzing production performance, validating changes through evaluation, and deploying improvements with confidence, you create a continuous cycle of data-driven enhancement.
 
-The Iterate stage is where the Axiom AI engineering workflow comes full circle. It’s the process of taking the real-world performance data from the [Observe](/ai-engineering/observe) stage and the quality benchmarks from the [Measure](/ai-engineering/measure) stage, and using them to make concrete improvements to your AI <Tooltip tip={definitions.Capability}>capability</Tooltip>. This creates a cycle of continuous, data-driven enhancement.
+## The improvement loop
 
-## Identifying opportunities for improvement
+Successful AI engineering follows a systematic pattern:
 
-Iteration begins with insight. The telemetry you gather while observing your capability in production is a goldmine for finding areas to improve. By analyzing traces in the Axiom Console, you can:
+1. **Analyze production** - Identify what needs improvement
+2. **Create test cases** - Turn failures into ground truth examples
+3. **Experiment with changes** - Test variations using flags
+4. **Validate improvements** - Run evaluations to confirm progress
+5. **Deploy with confidence** - Ship changes backed by data
+6. **Repeat** - New production data feeds the next iteration
 
-* Find real-world user inputs that caused your capability to fail or produce low-quality output.
-* Identify high-cost or high-latency interactions that could be optimized.
-* Discover common themes in user feedback that point to systemic weaknesses.
+## Identify what to improve
 
-These examples can be used to create a new, more robust <Tooltip tip={definitions.Collection}>collection</Tooltip> of <Tooltip tip={definitions.GroundTruth}>ground truth</Tooltip> data for offline testing.
+Start by understanding how your capability performs in production. The Axiom Console provides multiple signals to help you prioritize:
 
-## Testing changes against ground truth
+### Production traces
 
-<Badge>Coming soon</Badge> Once you’ve created a new version of your `Prompt` object, you need to verify that it’s actually an improvement. The best way to do this is to run an "offline evaluation"—testing your new version against the same ground truth collection you used in the **Measure** stage.
+Review traces in the [Observe](/ai-engineering/observe) section to find:
+- Real-world inputs that caused failures or low-quality outputs
+- High-cost or high-latency interactions that need optimization
+- Unexpected tool calls or reasoning paths
+- Edge cases your evaluations didn’t cover
 
-The Axiom Console will provide views to compare these evaluation runs side-by-side:
+Filter to AI spans and examine the full interaction path, including model choices, token usage, and intermediate steps.
 
-* **A/B Comparison Views:** See the outputs of two different prompt versions for the same input, making it easy to spot regressions or improvements.
-* **Leaderboards:** Track evaluation scores across all versions of a capability to see a clear history of its quality over time.
+### User feedback <Badge>Coming soon</Badge>
 
-This ensures you can validate changes with data before they ever reach your users.
+<Info>
+User feedback capture is coming soon. [Contact Axiom](https://www.axiom.co/contact) to join the design partner program.
+</Info>
 
-## Deploying with confidence
+User feedback provides direct signal about which interactions matter most to your customers. Axiom's AI SDK will include lightweight functions to capture both explicit and implicit feedback as timestamped event data:
 
-<Badge>Coming soon</Badge> After a new version of your capability has proven its superiority in offline tests, you can deploy it with confidence. The Axiom AI engineering workflow will support a champion/challenger pattern, where you can deploy a new "challenger" version to run in shadow mode against a portion of production traffic. This allows for a final validation on real-world data without impacting the user experience.
+- **Explicit feedback** includes direct user signals like thumbs up, thumbs down, and comments on AI-generated outputs.
 
-Once you’re satisfied with the challenger’s performance, you can promote it to become the new "champion" using the SDK’s `deploy` function.
+- **Implicit feedback** captures behavioral signals like copying generated text, regenerating responses, or abandoning interactions.
 
-```typescript
-import { axiom } from './axiom-client';
+Because user feedback is stored as timestamped events linked to specific AI runs, you can easily correlate feedback with traces to understand exactly what went wrong and prioritize high-value failures over edge cases that rarely occur.
 
-// Promote a new version of a prompt to the production environment
-await axiom.prompts.deploy('prompt_123', {
-  environment: 'production',
-  version: '1.1.0',
-});
+### Domain expert annotations <Badge>Coming soon</Badge>
+
+<Info>
+Annotation workflows are coming soon. [Contact Axiom](https://www.axiom.co/contact) to join the design partner program.
+</Info>
+
+Axiom will provide a seamless workflow for domain experts to review production traces and identify patterns in AI capability failures. The Console will surface traces that warrant attention, such as those with negative user feedback or anomalous behavior, and provide an interface for reviewing conversations and annotating failure modes.
+
+Annotations can be categorized into failures modes to guide prioritization. For example:
+
+* **Critical failures** - Complete breakdowns like API outages, unhandled exceptions, or timeout errors
+* **Quality degradation** - Declining accuracy scores, increased hallucinations, or off-topic responses
+* **Coverage gaps** - Out-of-distribution inputs the system wasn’t designed to handle, like unexpected languages or domains
+* **User dissatisfaction** - Negative feedback on outputs that technically succeeded but didn’t meet user needs
+
+This structured analysis helps teams coordinate improvement efforts, prioritize which failure modes to address first, and track patterns over time.
+
+## Create test cases from production
+
+Once you've identified high-priority failures, turn them into test cases for your evaluation <Tooltip tip={definitions.Collection}>collections</Tooltip>. Organizations typically maintain multiple collections for different scenarios, failure modes, or capability variants:
+
+```ts
+const newTestCases = [
+  {
+    input: { 
+      // Real production input that failed
+      subject: 'Refund request for order #12345',
+      content: 'I need a refund because the product arrived damaged.' 
+    },
+    expected: { 
+      category: 'refund_request',
+      priority: 'high' 
+    },
+  },
+];
 ```
 
-## What’s next?
+## Experiment with changes
 
-By completing the Iterate stage, you have closed the loop. Your improved capability is now in production, and you can return to the **Observe** stage to monitor its performance and identify the next opportunity for improvement.
+Use [flags](/ai-engineering/evaluate/flags-experiments) to test different approaches without changing your code:
 
-This cycle of creating, measuring, observing, and iterating is the core of the AI engineering workflow, enabling you to build better AI systems, backed by data.
+```bash
+# Test with a more capable model
+axiom eval ticket-classification --flag.model=gpt-4o
+
+# Try a different temperature
+axiom eval ticket-classification --flag.temperature=0.3
+
+# Experiment with prompt variations
+axiom eval ticket-classification --flag.promptStrategy=detailed
+```
+
+Run multiple experiments to understand the tradeoffs between accuracy, cost, and latency.
+
+## Validate improvements
+
+Before deploying any change, validate it against your full test collection using baseline comparison:
+
+```bash
+# Run baseline evaluation
+axiom eval ticket-classification
+# Note the run ID: run_abc123xyz
+
+# Make your changes (update prompt, adjust config, etc.)
+
+# Run again with baseline comparison
+axiom eval ticket-classification --baseline run_abc123xyz
+```
+
+The Console shows you exactly how your changes impact:
+- **Accuracy**: Did scores improve or regress?
+- **Cost**: Is it more or less expensive?
+- **Latency**: Is it faster or slower?
+
+Only deploy changes that show clear improvements without unacceptable tradeoffs.
+
+## Deploy with confidence
+
+Once your evaluations confirm an improvement, deploy the change to production. Because you've validated against ground truth data, you can ship with confidence that the new version handles both existing cases and the new failures you discovered.
+
+After deployment, return to the **Observe** stage to monitor performance and identify the next opportunity for improvement.
+
+## Best practices
+
+* **Build your collections over time.** Your evaluation collections should grow as you discover new failure modes. Each production issue that makes it through is an opportunity to strengthen your test coverage.
+* **Track improvements systematically.** Use baseline comparisons for every change. This creates a clear history of how your capability has improved and prevents regressions.
+* **Prioritize high-impact changes.** Focus on failures that affect many users or high-value interactions. Not every edge case deserves immediate attention.
+* **Experiment before committing.** Flags let you test multiple approaches quickly. Run several experiments to understand the solution space before making code changes.
+* **Close the loop.** The improvement cycle never ends. Each deployment generates new production data that reveals the next set of improvements to make.
+
+## What's next?
+
+To learn more about the evaluation framework that powers this improvement loop, see [Evaluate](/ai-engineering/evaluate/overview).
+
+To understand how to capture rich telemetry from production, see [Observe](/ai-engineering/observe).
