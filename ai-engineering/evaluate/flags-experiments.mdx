@@ -6,13 +6,13 @@ keywords: ["ai engineering", "flags", "experiments", "configuration", "parameter
 
 import { definitions } from "/snippets/definitions.mdx"
 
-<Tooltip tip={definitions.Flag}>Flags</Tooltip> are configuration parameters that control how your AI capability behaves. By defining flags, you can run <Tooltip tip={definitions.Experiment}>experiments</Tooltip> that systematically compare different models, prompts, temperatures, or architectural approaches - all without changing your code.
+<Tooltip tip={definitions.Flag}>Flags</Tooltip> are configuration parameters that control how your AI capability behaves. By defining flags, you can run <Tooltip tip={definitions.Experiment}>experiments</Tooltip> that systematically compare different models, prompts, retrieval strategies, or architectural approaches - all without changing your code.
 
 This is one of Axiom’s key differentiators: type-safe, version-controlled configuration that integrates seamlessly with your evaluation workflow.
 
 ## Why flags matter
 
-AI capabilities have many tunable parameters: which model to use, what temperature setting, which prompting strategy, how to structure retrieval, and more. Without flags, you’d need to:
+AI capabilities have many tunable parameters: which model to use, which tools to enable, which prompting strategy, how to structure retrieval, and more. Without flags, you'd need to:
 
 - Hard-code values and manually change them between tests
 - Maintain multiple versions of the same code
@@ -42,8 +42,8 @@ export const flagSchema = z.object({
   // Flags for ticket classification capability
   ticketClassification: z.object({
     model: z.string().default('gpt-4o-mini'),
-    temperature: z.number().min(0).max(2).default(0.7),
     systemPrompt: z.enum(['concise', 'detailed']).default('concise'),
+    useStructuredOutput: z.boolean().default(true),
   }),
   
   // Flags for document summarization capability
@@ -79,12 +79,11 @@ const systemPrompts = {
 export async function classifyTicket(input: { subject?: string; content: string }) {
   // Get flag values
   const model = flag('ticketClassification.model');
-  const temperature = flag('ticketClassification.temperature');
   const promptStyle = flag('ticketClassification.systemPrompt');
+  const useStructured = flag('ticketClassification.useStructuredOutput');
   
   const result = await generateObject({
     model: wrapAISDKModel(openai(model)),
-    temperature,
     messages: [
       {
         role: 'system',
@@ -140,14 +139,14 @@ Override individual flags directly in the command:
 # Test with GPT-4o instead of the default
 axiom eval --flag.ticketClassification.model=gpt-4o
 
-# Test with different temperature
-axiom eval --flag.ticketClassification.temperature=0.3
+# Test with different prompt style
+axiom eval --flag.ticketClassification.systemPrompt=detailed
 
 # Test multiple flags
 axiom eval \
   --flag.ticketClassification.model=gpt-4o \
-  --flag.ticketClassification.temperature=0.3 \
-  --flag.ticketClassification.systemPrompt=detailed
+  --flag.ticketClassification.systemPrompt=detailed \
+  --flag.ticketClassification.useStructuredOutput=false
 ```
 
 ### JSON configuration files
@@ -158,8 +157,8 @@ For complex experiments, define flag overrides in JSON files:
 {
   "ticketClassification": {
     "model": "gpt-4o",
-    "temperature": 0.3,
-    "systemPrompt": "detailed"
+    "systemPrompt": "detailed",
+    "useStructuredOutput": true
   }
 }
 ```
@@ -168,8 +167,8 @@ For complex experiments, define flag overrides in JSON files:
 {
   "ticketClassification": {
     "model": "gpt-4o-mini",
-    "temperature": 0.7,
-    "systemPrompt": "concise"
+    "systemPrompt": "concise",
+    "useStructuredOutput": false
   }
 }
 ```
@@ -193,17 +192,17 @@ Store experiment configurations in version control. This makes it easy to reprod
 Run the same evaluation with different flag values to compare approaches:
 
 ```bash
-# Baseline: default flags (gpt-4o-mini, temp 0.7, concise)
+# Baseline: default flags (gpt-4o-mini, concise, structured output)
 axiom eval spam-classification
 
 # Experiment 1: Try GPT-4o
 axiom eval spam-classification --flag.ticketClassification.model=gpt-4o
 
-# Experiment 2: Lower temperature for more consistency
-axiom eval spam-classification --flag.ticketClassification.temperature=0.2
-
-# Experiment 3: Detailed prompting
+# Experiment 2: Use detailed prompting
 axiom eval spam-classification --flag.ticketClassification.systemPrompt=detailed
+
+# Experiment 3: Test without structured output
+axiom eval spam-classification --flag.ticketClassification.useStructuredOutput=false
 ```
 
 Axiom tracks all these runs in the Console, making it easy to compare scores and identify the best configuration.
@@ -243,11 +242,11 @@ ticketClassification: z.object({
   // Default to the fastest, cheapest model
   model: z.string().default('gpt-4o-mini'),
   
-  // Default to moderate temperature
-  temperature: z.number().min(0).max(2).default(0.7),
-  
-  // Default to the approach that works best in production
+  // Default to the prompt style that works best in production
   systemPrompt: z.enum(['concise', 'detailed']).default('concise'),
+  
+  // Default to structured output for reliability
+  useStructuredOutput: z.boolean().default(true),
 }),
 ```
 
@@ -268,17 +267,17 @@ tone: z.string().default('formal'),
 Test multiple dimensions simultaneously:
 
 ```bash
-# Test cost vs quality tradeoff
+# Test quality vs simplicity tradeoff
 axiom eval \
   --flag.ticketClassification.model=gpt-4o-mini \
-  --flag.ticketClassification.temperature=0.3 \
-  --flag.ticketClassification.systemPrompt=detailed
+  --flag.ticketClassification.systemPrompt=detailed \
+  --flag.ticketClassification.useStructuredOutput=true
 
 # Compare against premium configuration
 axiom eval \
   --flag.ticketClassification.model=gpt-4o \
-  --flag.ticketClassification.temperature=0.3 \
-  --flag.ticketClassification.systemPrompt=detailed
+  --flag.ticketClassification.systemPrompt=detailed \
+  --flag.ticketClassification.useStructuredOutput=true
 ```
 
 ## Advanced patterns
