@@ -7,8 +7,6 @@ keywords: ["ai engineering", "console", "results", "analysis", "comparison", "ba
 After running an evaluation, the CLI provides a link to view results in the Axiom Console:
 
 ```
-FINAL EVALUATION REPORT
-
 your-eval-name (your-eval.eval.ts)
 
   • scorer-one 95.00%
@@ -30,26 +28,41 @@ The evaluation interface helps you answer three core questions:
 
 ## Compare configurations
 
-The most common workflow is comparing two evaluation runs to understand the impact of a change.
+To understand the impact of changes, compare evaluation runs to see deltas in accuracy, latency, and cost.
 
-Run a baseline evaluation:
+### Using the Console
+
+Run your evaluation before and after making changes, then compare both runs in the Axiom Console:
 
 ```bash
+# Run baseline
 axiom eval your-eval-name
-# Note the run ID from the output: run_abc123xyz
+
+# Make changes to your capability (update prompt, switch models, etc.)
+
+# Run again
+axiom eval your-eval-name
 ```
 
-Make a change (update a prompt, switch models, adjust temperature), then run again with the baseline:
+The Console shows both runs where you can analyze differences side-by-side.
+
+### Using the baseline flag
+
+For direct CLI comparison, specify a baseline evaluation ID:
 
 ```bash
-axiom eval your-eval-name --baseline run_abc123xyz
+# Run baseline and note the trace ID from the output
+axiom eval your-eval-name
+
+# Make changes, then run with baseline
+axiom eval your-eval-name --baseline <trace-id>
 ```
 
-The Console shows you the delta for every metric:
+The CLI output will show deltas for each metric.
 
-- **Accuracy**: Did scores improve or regress?
-- **Latency**: Is it faster or slower?
-- **Cost**: What's the financial impact?
+<Note>
+The `--baseline` flag expects a trace ID. After running an evaluation, copy the trace ID from the CLI output or Console URL to use as a baseline for comparison.
+</Note>
 
 Example: Switching from `gpt-4o-mini` to `gpt-4o` might show:
 - Accuracy: 85% → 95% (+10%)
