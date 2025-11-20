@@ -108,36 +108,23 @@ export async function classifyTicket(input: { subject?: string; content: string 
 
 ### Declare flags in evaluations
 
-Tell your evaluation which flags it depends on using `pickFlags()`:
+Tell your evaluation which flags it depends on using `pickFlags()`. This provides two key benefits:
+
+- **Documentation**: Makes flag dependencies explicit and visible
+- **Validation**: Warns about undeclared flag usage, catching configuration drift early
 
 ```ts src/lib/capabilities/classify-ticket/evaluations/spam-classification.eval.ts
 import { Eval, Scorer } from 'axiom/ai/evals';
 import { pickFlags } from '../../../app-scope';
 import { classifyTicket } from '../prompts';
 
-const CategoryScorer = Scorer(
-  'category-match',
-  ({ output, expected }) => output.category === expected.category ? 1 : 0
-);
-
 Eval('spam-classification', {
   // Declare which flags this eval uses
   configFlags: pickFlags('ticketClassification'),
   
-  data: () => [
-    {
-      input: {
-        subject: "You've Won!",
-        content: 'Claim your prize now!',
-      },
-      expected: { category: 'spam' },
-    },
-    // ... more test cases
-  ],
-  
+  data: () => [],
   task: async ({ input }) => await classifyTicket(input),
-  
-  scorers: [CategoryScorer],
+  scorers: [],
 });
 ```
 
