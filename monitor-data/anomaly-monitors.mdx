@@ -26,7 +26,17 @@ To create an anomaly monitor, follow these steps:
 1. To define your query, use one of the following options:
     - To use the visual query builder, click **Simple query builder**. Click **Visualize** to select an aggregation method, and then click **Run query** to preview the results.
     - To use Axiom Processing Language (APL), click **Advanced query language**. Write a query where the final clause uses the `summarize` operator and bins the results by `_time`, and then click **Run query** to preview the results. For more information, see [Introduction to APL](/apl/introduction).
-    In the preview, the boundary where the monitor triggers is displayed as a dashed line. Where there isn’t enough data to compute a boundary, the chart is grayed out. If the monitor preview shows that it alerts when you don’t want it to, try increasing the tolerance. Inversely, try decreasing the tolerance if the monitor preview shows that it doesn’t alert when you want it to.
+    
+    <Warning>
+    Anomaly monitors require a time series query. Your query must end with a `summarize` operator that bins data by `_time` using `bin(_time, interval)` or `bin_auto(_time)`. Without time binning, the monitor cannot detect anomalies over time. For example:
+    
+    ```kusto
+    ['your-dataset']
+    | summarize count() by bin(_time, 5m)
+    ```
+    </Warning>
+    
+    In the preview, the boundary where the monitor triggers is displayed as a dashed line. Where there isn't enough data to compute a boundary, the chart is grayed out. If the monitor preview shows that it alerts when you don't want it to, try increasing the tolerance. Inversely, try decreasing the tolerance if the monitor preview shows that it doesn't alert when you want it to.
 1. Click **Create**.
 
 You have created an anomaly monitor. Axiom alerts you when the results from your query are too high or too low compared to what’s expected based on the event history.

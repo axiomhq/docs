@@ -28,6 +28,106 @@ Vercel makes it easy for frontend teams to develop, preview, and ship delightful
 
 Simply install the [Axiom Vercel app from here](https://vercel.com/integrations/axiom) and be streaming logs and web vitals within minutes.
 
+## Best practices for organizing Vercel data
+
+### Use datasets for data ingestion
+
+When setting up the Vercel integration, always use a **dataset** as the destination for your logs and metrics. Datasets are the primary storage mechanism in Axiom and are designed for data ingestion.
+
+**Why use datasets:**
+- Optimized for high-volume ingestion from Vercel drains and next-axiom
+- Support all data types and automatic field detection
+- Enable full retention control
+- Required for the pre-built Vercel dashboard to work properly
+
+<Note>
+The Vercel integration automatically creates a dataset named `vercel` by default. You can customize this name during setup to match your organization's naming convention (for example, `vercel-production` or `vercel-staging`).
+</Note>
+
+### Organize by environment or project
+
+Choose an organization strategy that fits your team's needs:
+
+**Strategy 1: Single dataset with filtering** (recommended for most teams)
+- Use one dataset for all Vercel projects
+- Filter by `vercel.projectName`, `vercel.deploymentURL`, or custom tags in queries
+- Simpler to manage and monitor
+- Better for cost optimization
+
+```kusto
+['vercel']
+| where vercel.projectName == "my-frontend"
+| where vercel.source == "lambda"
+```
+
+**Strategy 2: Separate datasets per environment**
+- Create dedicated datasets like `vercel-production`, `vercel-staging`, `vercel-preview`
+- Provides clear separation and independent retention policies
+- Useful when different teams need access to specific environments
+- Better for compliance requirements that mandate environment isolation
+
+**Strategy 3: Separate datasets per project**
+- Create a dataset for each Vercel project (for example, `vercel-marketing`, `vercel-app`)
+- Provides project-level isolation and access control
+- Easier to manage dataset limits for large organizations with many projects
+
+### Use views for team-specific access
+
+After ingesting data into datasets, use [views](/query-data/views) to create filtered, team-specific perspectives:
+
+**When to create views:**
+- Different teams need access to specific projects or environments
+- You want to hide sensitive fields from certain users
+- You need pre-filtered datasets for common queries
+
+**Example views:**
+- **Frontend team view**: Filter for frontend serverless functions
+- **API team view**: Show only API routes
+- **Production errors view**: Pre-filter for errors in production environment
+- **Performance view**: Include only Web Vitals and slow requests
+
+```kusto
+['vercel']
+| where vercel.source == "lambda"
+| where vercel.route startswith "/api/"
+| project _time, message, vercel.projectName, request.statusCode, request.duration
+```
+
+Save this query as a view named `vercel-api-routes`. Your API team can then query the view instead of writing complex filters each time.
+
+<Tip>
+Views inherit permissions from the underlying dataset, but you can grant additional users access to specific views without giving them access to the entire dataset. This is perfect for sharing filtered Vercel logs with external contractors or read-only stakeholders.
+</Tip>
+
+### Combining next-axiom with drains
+
+If you're using both the Vercel app (drains) and next-axiom:
+
+- **Drains**: Send HTTP logs, function logs, and build logs automatically
+- **next-axiom**: Send application logs and Web Vitals from your Next.js app
+
+**Recommended approach:**
+1. Use the same dataset for both sources to correlate all data
+2. Add a custom field in next-axiom logs to distinguish sources:
+
+```javascript
+log.info('User action', { 
+  source: 'client-side',
+  userId: 42 
+});
+```
+
+3. Query both sources together:
+
+```kusto
+['vercel']
+| where _time > ago(1h)
+| where request.statusCode >= 500 or message contains "error"
+| summarize count() by vercel.source, source
+```
+
+This allows you to see both infrastructure logs (from drains) and application logs (from next-axiom) in one place while maintaining the ability to filter by source.
+
 ## App Overview
 
 ### Request and function logs
