@@ -22,7 +22,7 @@ In Splunk SPL, you use `rex` with `max_match` to count regex matches. APL's `cou
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend pattern_count = countof_regex(uri, 'error|warning')
+| extend pattern_count = countof_regex('error|warning', uri)
 ```
 </CodeGroup>
 
@@ -38,7 +38,7 @@ SELECT REGEXP_COUNT(field, 'pattern') AS count FROM logs;
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend count = countof_regex(field, 'pattern')
+| extend count = countof_regex('pattern', field)
 ```
 </CodeGroup>
 
@@ -50,15 +50,15 @@ SELECT REGEXP_COUNT(field, 'pattern') AS count FROM logs;
 ### Syntax
 
 ```kusto
-countof_regex(text, regex)
+countof_regex(regex, text)
 ```
 
 ### Parameters
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| text | string | Yes | The source string where pattern occurrences are counted. |
 | regex | string | Yes | The regular expression pattern to search for within the text. |
+| text | string | Yes | The source string where pattern occurrences are counted. |
 
 ### Returns
 
@@ -75,13 +75,13 @@ Count numeric patterns in URIs to identify parameterized endpoint usage.
 
 ```kusto
 ['sample-http-logs']
-| extend numeric_params = countof_regex(uri, '[0-9]+')
+| extend numeric_params = countof_regex('[0-9]+', uri)
 | where numeric_params > 0
 | summarize avg_params = avg(numeric_params), request_count = count() by method
 | sort by request_count desc
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20numeric_params%20%3D%20countof_regex(uri%2C%20%27%5B0-9%5D%2B%27)%20%7C%20where%20numeric_params%20%3E%200%20%7C%20summarize%20avg_params%20%3D%20avg(numeric_params)%2C%20request_count%20%3D%20count()%20by%20method%20%7C%20sort%20by%20request_count%20desc%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20numeric_params%20%3D%20countof_regex(%27%5B0-9%5D%2B%27%2C%20uri)%20%7C%20where%20numeric_params%20%3E%200%20%7C%20summarize%20avg_params%20%3D%20avg(numeric_params)%2C%20request_count%20%3D%20count()%20by%20method%20%7C%20sort%20by%20request_count%20desc%22%7D)
 
 **Output**
 
@@ -103,13 +103,13 @@ Count specific character patterns in trace IDs to analyze ID generation patterns
 
 ```kusto
 ['otel-demo-traces']
-| extend hex_chars = countof_regex(trace_id, '[a-f]')
+| extend hex_chars = countof_regex('[a-f]', trace_id)
 | summarize avg_hex_chars = avg(hex_chars), trace_count = count() by ['service.name']
 | sort by trace_count desc
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20hex_chars%20%3D%20countof_regex(trace_id%2C%20%27%5Ba-f%5D%27)%20%7C%20summarize%20avg_hex_chars%20%3D%20avg(hex_chars)%2C%20trace_count%20%3D%20count()%20by%20%5B%27service.name%27%5D%20%7C%20sort%20by%20trace_count%20desc%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20hex_chars%20%3D%20countof_regex(%27%5Ba-f%5D%27%2C%20trace_id)%20%7C%20summarize%20avg_hex_chars%20%3D%20avg(hex_chars)%2C%20trace_count%20%3D%20count()%20by%20%5B%27service.name%27%5D%20%7C%20sort%20by%20trace_count%20desc%20%7C%20limit%2010%22%7D)
 
 **Output**
 
@@ -131,14 +131,14 @@ Identify requests with multiple special characters that might indicate injection
 
 ```kusto
 ['sample-http-logs']
-| extend special_chars = countof_regex(uri, '[<>\'\"%;()&+]')
+| extend special_chars = countof_regex('[<>%;()&+]', uri)
 | where special_chars >= 3
 | project _time, uri, special_chars, id, status, method
 | sort by special_chars desc
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20special_chars%20%3D%20countof_regex(uri%2C%20%27%5B%3C%3E%5C%27%5C%22%25%3B()%26%2B%5D%27)%20%7C%20where%20special_chars%20%3E%3D%203%20%7C%20project%20_time%2C%20uri%2C%20special_chars%2C%20id%2C%20status%2C%20method%20%7C%20sort%20by%20special_chars%20desc%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20special_chars%20%3D%20countof_regex('%5B%3C%3E%25%3B()%26%2B%5D'%2C%20uri)%20%7C%20where%20special_chars%20%3E%3D%203%20%7C%20project%20_time%2C%20uri%2C%20special_chars%2C%20id%2C%20status%2C%20method%20%7C%20sort%20by%20special_chars%20desc%20%7C%20limit%2010%22%7D)
 
 **Output**
 
