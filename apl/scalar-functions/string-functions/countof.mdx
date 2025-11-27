@@ -22,7 +22,7 @@ In Splunk SPL, you might use a combination of `rex` and counting operations. APL
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend error_count = countof(method, 'GET')
+| extend error_count = countof('GET', method)
 ```
 </CodeGroup>
 
@@ -38,7 +38,7 @@ SELECT (LENGTH(field) - LENGTH(REPLACE(field, 'search', ''))) / LENGTH('search')
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend count = countof(field, 'search')
+| extend count = countof('search', field)
 ```
 </CodeGroup>
 
@@ -50,15 +50,15 @@ SELECT (LENGTH(field) - LENGTH(REPLACE(field, 'search', ''))) / LENGTH('search')
 ### Syntax
 
 ```kusto
-countof(text, search)
+countof(search, text)
 ```
 
 ### Parameters
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| text | string | Yes | The source string where occurrences are counted. |
 | search | string | Yes | The plain substring to search for within the text. |
+| text | string | Yes | The source string where occurrences are counted. |
 
 ### Returns
 
@@ -75,12 +75,12 @@ Count how many times specific HTTP methods appear in URIs to identify API usage 
 
 ```kusto
 ['sample-http-logs']
-| extend api_segments = countof(uri, '/')
+| extend api_segments = countof('/', uri)
 | summarize avg_depth = avg(api_segments), request_count = count() by method
 | sort by request_count desc
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20api_segments%20%3D%20countof(uri%2C%20%27%2F%27)%20%7C%20summarize%20avg_depth%20%3D%20avg(api_segments)%2C%20request_count%20%3D%20count()%20by%20method%20%7C%20sort%20by%20request_count%20desc%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20api_segments%20%3D%20countof(%27%2F%27%2C%20uri)%20%7C%20summarize%20avg_depth%20%3D%20avg(api_segments)%2C%20request_count%20%3D%20count()%20by%20method%20%7C%20sort%20by%20request_count%20desc%22%7D)
 
 **Output**
 
@@ -102,12 +102,12 @@ Count occurrences of specific terms in span names to analyze service operation p
 
 ```kusto
 ['otel-demo-traces']
-| extend has_http = countof(['service.name'], 'frontend')
+| extend has_http = countof('frontend', ['service.name'])
 | summarize services_with_frontend = sum(has_http), total_spans = count()
 | extend percentage = round(100.0 * services_with_frontend / total_spans, 2)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20has_http%20%3D%20countof(%5B%27service.name%27%5D%2C%20%27frontend%27)%20%7C%20summarize%20services_with_frontend%20%3D%20sum(has_http)%2C%20total_spans%20%3D%20count()%20%7C%20extend%20percentage%20%3D%20round(100.0%20*%20services_with_frontend%20%2F%20total_spans%2C%202)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20has_http%20%3D%20countof(%27frontend%27%2C%20%5B%27service.name%27%5D)%20%7C%20summarize%20services_with_frontend%20%3D%20sum(has_http)%2C%20total_spans%20%3D%20count()%20%7C%20extend%20percentage%20%3D%20round(100.0%20*%20services_with_frontend%20%2F%20total_spans%2C%202)%22%7D)
 
 **Output**
 
@@ -120,29 +120,29 @@ This query counts how many spans contain 'frontend' in their service name to und
 </Tab>
 <Tab title="Security logs">
 
-Count suspicious patterns in URIs to detect potential security threats like path traversal attempts.
+Count slashes in URIs to analyze URL structure and detect unusual patterns that might indicate security threats.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend dot_dot_count = countof(uri, '..')
-| where dot_dot_count > 0
-| project _time, uri, dot_dot_count, id, status, ['geo.country']
-| sort by dot_dot_count desc
+| extend slash_count = countof('/', uri)
+| where slash_count > 5
+| project _time, uri, slash_count, id, status, ['geo.country']
+| sort by slash_count desc
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20dot_dot_count%20%3D%20countof(uri%2C%20%27..%27)%20%7C%20where%20dot_dot_count%20%3E%200%20%7C%20project%20_time%2C%20uri%2C%20dot_dot_count%2C%20id%2C%20status%2C%20%5B%27geo.country%27%5D%20%7C%20sort%20by%20dot_dot_count%20desc%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20slash_count%20%3D%20countof(%27%2F%27%2C%20uri)%20%7C%20where%20slash_count%20%3E%205%20%7C%20project%20_time%2C%20uri%2C%20slash_count%2C%20id%2C%20status%2C%20%5B%27geo.country%27%5D%20%7C%20sort%20by%20slash_count%20desc%20%7C%20limit%2010%22%7D)
 
 **Output**
 
-| _time | uri | dot_dot_count | id | status | geo.country |
-|-------|-----|---------------|-------|--------|-------------|
-| 2024-11-06T10:00:00Z | /../../etc/passwd | 2 | user123 | 403 | Unknown |
-| 2024-11-06T10:01:00Z | /../config.php | 1 | user456 | 403 | Russia |
+| _time | uri | slash_count | id | status | geo.country |
+|-------|-----|-------------|-------|--------|-------------|
+| 2024-11-06T10:00:00Z | /api/v1/users/12345/posts/67890/comments | 6 | user123 | 200 | US |
+| 2024-11-06T10:01:00Z | /admin/config/settings/advanced/security | 5 | user456 | 200 | UK |
 
-This query identifies potential path traversal attack attempts by counting occurrences of '..' in request URIs, which is a common indicator of directory traversal attempts.
+This query identifies URIs with unusually high slash counts, which can help detect complex or potentially suspicious URL patterns that might warrant further investigation.
 
 </Tab>
 </Tabs>
