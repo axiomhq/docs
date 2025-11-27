@@ -101,12 +101,21 @@ Axiom natively supports the OpenTelemetry Line Protocol (OTLP). Configuring the 
 
 ```yaml
 exporters:
+  # Exporter for logs and traces
   otlphttp:
-    compression: gzip
+    compression: zstd
     endpoint: https://AXIOM_DOMAIN
     headers:
       authorization: Bearer API_TOKEN
       x-axiom-dataset: DATASET_NAME
+  
+  # Exporter for metrics
+  otlphttp/metrics:
+    compression: zstd
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-metrics-dataset: DATASET_NAME
 
 service:
   pipelines:
@@ -118,11 +127,31 @@ service:
         - batch
       exporters:
         - otlphttp
+    
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlphttp
+    
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        memory_limiter:
+        batch:
+          send_batch_max_size: 8192
+      exporters:
+        - otlphttp/metrics
 ```
 
 <Info>
 <ReplaceDomain />
 <ReplaceDatasetToken />
+When configuring metrics, use the `x-axiom-metrics-dataset` header instead of `x-axiom-dataset`.
 </Info>
 
 ### Vector
