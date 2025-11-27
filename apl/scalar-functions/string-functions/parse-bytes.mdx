@@ -3,7 +3,7 @@ title: 'parse_bytes'
 description: 'This page explains how to use the parse_bytes function in APL.'
 ---
 
-The `parse_bytes` function parses a string representation of data size (like '1 KB', '500 MB') and returns the numeric value in bytes. Use this function to convert human-readable byte strings from logs or configuration files into numeric values for calculations and comparisons.
+The `parse_bytes` function parses a string representation of data size (like `1 KB`, `500 MB`) and returns the numeric value in bytes. Use this function to convert human-readable byte strings from logs or configuration files into numeric values for calculations and comparisons.
 
 ## For users of other query languages
 
@@ -63,7 +63,7 @@ parse_bytes(bytes_string, base)
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| bytes_string | string | Yes | A string representing a data size with units (e.g., '1 KB', '500 MB', '2 GB'). |
+| bytes_string | string | Yes | A string representing a data size with units (for example, `1 KB`, `500 MB`, `2 GB`). |
 | base | int | No | Either 2 (default, 1024-based) or 10 (1000-based) for unit calculations. |
 
 ### Returns
@@ -82,13 +82,13 @@ Parse human-readable size strings to analyze and aggregate data transfer volumes
 ```kusto
 ['sample-http-logs']
 | extend size_bytes = parse_bytes('512 KB')
-| where req_duration_ms > 100
+| where req_duration_ms > 3
 | summarize total_bytes = sum(size_bytes), request_count = count() by status
 | sort by total_bytes desc
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20size_bytes%20%3D%20parse_bytes(%27512%20KB%27)%20%7C%20where%20req_duration_ms%20%3E%20100%20%7C%20summarize%20total_bytes%20%3D%20sum(size_bytes)%2C%20request_count%20%3D%20count()%20by%20status%20%7C%20sort%20by%20total_bytes%20desc%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20size_bytes%20%3D%20parse_bytes(%27512%20KB%27)%20%7C%20where%20req_duration_ms%20%3E%203%20%7C%20summarize%20total_bytes%20%3D%20sum(size_bytes)%2C%20request_count%20%3D%20count()%20by%20status%20%7C%20sort%20by%20total_bytes%20desc%20%7C%20limit%2010%22%7D)
 
 **Output**
 
@@ -127,33 +127,6 @@ Convert size strings from span attributes to numeric bytes for threshold-based a
 | cart | 262144 | 2987 |
 
 This query converts size strings to bytes for numeric analysis of payload sizes across different services.
-
-</Tab>
-<Tab title="Security logs">
-
-Parse size limits from security configurations to enforce and monitor data transfer restrictions.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend max_size = parse_bytes('10 MB')
-| extend simulated_size = req_duration_ms * 100
-| where simulated_size > max_size
-| project _time, uri, simulated_size, max_size, id, status
-| limit 10
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20max_size%20%3D%20parse_bytes(%2710%20MB%27)%20%7C%20extend%20simulated_size%20%3D%20req_duration_ms%20*%20100%20%7C%20where%20simulated_size%20%3E%20max_size%20%7C%20project%20_time%2C%20uri%2C%20simulated_size%2C%20max_size%2C%20id%2C%20status%20%7C%20limit%2010%22%7D)
-
-**Output**
-
-| _time | uri | simulated_size | max_size | id | status |
-|-------|-----|----------------|----------|-------|--------|
-| 2024-11-06T10:00:00Z | /api/upload | 15728640 | 10485760 | user123 | 413 |
-| 2024-11-06T10:01:00Z | /api/import | 12582912 | 10485760 | user456 | 413 |
-
-This query parses size limit strings and compares them against actual transfer sizes to identify requests that exceed security-defined limits.
 
 </Tab>
 </Tabs>

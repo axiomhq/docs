@@ -74,16 +74,16 @@ Extract and analyze query parameters from API requests to understand search patt
 
 ```kusto
 ['sample-http-logs']
-| extend query_params = parse_urlquery('page=1&limit=50&sort=date')
-| extend page = toint(query_params.page)
-| extend limit = toint(query_params.limit)
-| extend sort = tostring(query_params.sort)
-| summarize request_count = count() by page, limit, sort
+| extend parameters = parse_urlquery('page=1&limitation=50&sort=date')
+| extend page = toint(parameters.page)
+| extend limitation = toint(parameters.limitation)
+| extend sort = tostring(parameters.sort)
+| summarize request_count = count() by page, limitation, sort
 | sort by request_count desc
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20query_params%20%3D%20parse_urlquery(%27page%3D1%26limit%3D50%26sort%3Ddate%27)%20%7C%20extend%20page%20%3D%20toint(query_params.page)%20%7C%20extend%20limit%20%3D%20toint(query_params.limit)%20%7C%20extend%20sort%20%3D%20tostring(query_params.sort)%20%7C%20summarize%20request_count%20%3D%20count()%20by%20page%2C%20limit%2C%20sort%20%7C%20sort%20by%20request_count%20desc%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20parameters%20%3D%20parse_urlquery('page%3D1%26limitation%3D50%26sort%3Ddate')%20%7C%20extend%20page%20%3D%20toint(parameters.page)%20%7C%20extend%20limitation%20%3D%20toint(parameters.limitation)%20%7C%20extend%20sort%20%3D%20tostring(parameters.sort)%20%7C%20summarize%20request_count%20%3D%20count()%20by%20page%2C%20limitation%2C%20sort%20%7C%20sort%20by%20request_count%20desc%20%7C%20limit%2010%22%7D)
 
 **Output**
 
@@ -134,7 +134,6 @@ Detect potential SQL injection or XSS attacks by analyzing suspicious query para
 | extend query_params = parse_urlquery('search=<script>&id=1 OR 1=1')
 | extend search_param = tostring(query_params.search)
 | extend id_param = tostring(query_params.id)
-| where status == '403' or status == '401'
 | extend has_script = indexof(search_param, '<script>') >= 0
 | extend has_sql = indexof(id_param, 'OR') >= 0
 | where has_script or has_sql
@@ -142,7 +141,7 @@ Detect potential SQL injection or XSS attacks by analyzing suspicious query para
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20query_params%20%3D%20parse_urlquery(%27search%3D%3Cscript%3E%26id%3D1%20OR%201%3D1%27)%20%7C%20extend%20search_param%20%3D%20tostring(query_params.search)%20%7C%20extend%20id_param%20%3D%20tostring(query_params.id)%20%7C%20where%20status%20%3D%3D%20%27403%27%20or%20status%20%3D%3D%20%27401%27%20%7C%20extend%20has_script%20%3D%20indexof(search_param%2C%20%27%3Cscript%3E%27)%20%3E%3D%200%20%7C%20extend%20has_sql%20%3D%20indexof(id_param%2C%20%27OR%27)%20%3E%3D%200%20%7C%20where%20has_script%20or%20has_sql%20%7C%20project%20_time%2C%20uri%2C%20search_param%2C%20id_param%2C%20has_script%2C%20has_sql%2C%20id%2C%20%5B%27geo.country%27%5D%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20query_params%20%3D%20parse_urlquery('search%3D%3Cscript%3E%26id%3D1%20OR%201%3D1')%20%7C%20extend%20search_param%20%3D%20tostring(query_params.search)%20%7C%20extend%20id_param%20%3D%20tostring(query_params.id)%20%7C%20extend%20has_script%20%3D%20indexof(search_param%2C%20'%3Cscript%3E')%20%3E%3D%200%20%7C%20extend%20has_sql%20%3D%20indexof(id_param%2C%20'OR')%20%3E%3D%200%20%7C%20where%20has_script%20or%20has_sql%20%7C%20project%20_time%2C%20uri%2C%20search_param%2C%20id_param%2C%20has_script%2C%20has_sql%2C%20id%2C%20%5B'geo.country'%5D%20%7C%20limit%2010%22%7D)
 
 **Output**
 
