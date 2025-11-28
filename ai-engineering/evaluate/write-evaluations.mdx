@@ -16,7 +16,7 @@ The `Eval` function defines a complete test suite for your capability. Here’s 
 import { Eval, Scorer } from 'axiom/ai/evals';
 
 Eval('evaluation-name', {
-  data: () => [/* test cases */],
+  data: [/* test cases */],
   task: async ({ input }) => {/* run capability */},
   scorers: [/* scoring functions */],
   metadata: {/* optional metadata */},
@@ -40,7 +40,7 @@ For small collections, define test cases directly in the evaluation:
 
 ```ts
 Eval('classify-sentiment', {
-  data: () => [
+  data: [
     {
       input: { text: 'I love this product!' },
       expected: { sentiment: 'positive' },
@@ -97,7 +97,7 @@ async function classifySentiment(text: string) {
 }
 
 Eval('classify-sentiment', {
-  data: () => [/* ... */],
+  data: [/* ... */],
   task: async ({ input }) => {
     return await classifySentiment(input.text);
   },
@@ -123,7 +123,7 @@ import { Scorer } from 'axiom/ai/evals';
 const ExactMatchScorer = Scorer(
   'exact-match',
   ({ output, expected }) => {
-    return output.sentiment === expected.sentiment ? 1 : 0;
+    return output.sentiment === expected.sentiment ? true : false;
   }
 );
 ```
@@ -136,7 +136,7 @@ const DetailedScorer = Scorer(
   ({ output, expected }) => {
     const match = output.sentiment === expected.sentiment;
     return {
-      score: match ? 1 : 0,
+      score: match ? true : false,
       metadata: {
         outputValue: output.sentiment,
         expectedValue: expected.sentiment,
@@ -227,7 +227,7 @@ async function classifyTicket({
 const CategoryScorer = Scorer(
   'category-match',
   ({ output, expected }) => {
-    return output.category === expected.category ? 1 : 0;
+    return output.category === expected.category ? true : false;
   }
 );
 
@@ -235,13 +235,13 @@ const CategoryScorer = Scorer(
 const ConfidenceScorer = Scorer(
   'high-confidence',
   ({ output }) => {
-    return output.confidence >= 0.8 ? 1 : 0;
+    return output.confidence >= 0.8 ? true : false;
   }
 );
 
 // Define the evaluation
 Eval('spam-classification', {
-  data: () => [
+  data: [
     {
       input: {
         subject: "Congratulations! You've Won!",
