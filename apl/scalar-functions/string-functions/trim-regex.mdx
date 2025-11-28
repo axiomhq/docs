@@ -75,13 +75,13 @@ Remove leading and trailing slashes or special characters from URIs.
 
 ```kusto
 ['sample-http-logs']
-| extend cleaned_uri = trim_regex('[/\\\\]+', uri)
+| extend cleaned_uri = trim_regex('[/]+', uri)
 | summarize request_count = count() by cleaned_uri, method
 | sort by request_count desc
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20cleaned_uri%20%3D%20trim_regex(%27%5B%2F%5C%5C%5C%5C%5D%2B%27%2C%20uri)%20%7C%20summarize%20request_count%20%3D%20count()%20by%20cleaned_uri%2C%20method%20%7C%20sort%20by%20request_count%20desc%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20cleaned_uri%20%3D%20trim_regex(%27%5B%2F%5D%2B%27%2C%20uri)%20%7C%20summarize%20request_count%20%3D%20count()%20by%20cleaned_uri%2C%20method%20%7C%20sort%20by%20request_count%20desc%20%7C%20limit%2010%22%7D)
 
 **Output**
 
@@ -128,18 +128,17 @@ Remove leading/trailing whitespace and special characters from user identifiers.
 
 ```kusto
 ['sample-http-logs']
-| where status == '403' or status == '401'
-| extend cleaned_id = trim_regex('[\\s\\W]+', id)
-| summarize failed_attempts = count() by cleaned_id, status
-| sort by failed_attempts desc
+| extend cleaned_id = trim_regex('[^a-zA-Z0-9_]+', id)
+| summarize attempts = count() by cleaned_id, status
+| sort by attempts desc
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27403%27%20or%20status%20%3D%3D%20%27401%27%20%7C%20extend%20cleaned_id%20%3D%20trim_regex(%27%5B%5C%5Cs%5C%5CW%5D%2B%27%2C%20id)%20%7C%20summarize%20failed_attempts%20%3D%20count()%20by%20cleaned_id%2C%20status%20%7C%20sort%20by%20failed_attempts%20desc%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20cleaned_id%20%3D%20trim_regex('%5B%5Ea-zA-Z0-9_%5D%2B'%2C%20id)%20%7C%20summarize%20attempts%20%3D%20count()%20by%20cleaned_id%2C%20status%20%7C%20sort%20by%20attempts%20desc%20%7C%20limit%2010%22%7D)
 
 **Output**
 
-| cleaned_id | status | failed_attempts |
+| cleaned_id | status | attempts |
 |------------|--------|-----------------|
 | user123 | 401 | 45 |
 | admin | 403 | 32 |

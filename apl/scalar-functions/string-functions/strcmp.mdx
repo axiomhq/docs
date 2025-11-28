@@ -125,34 +125,6 @@ Compare service names to establish ordering for service dependency analysis.
 This query categorizes services based on their lexicographic position relative to 'frontend', helping organize service hierarchies.
 
 </Tab>
-<Tab title="Security logs">
-
-Compare user IDs to detect suspicious alphabetical patterns in authentication attempts.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '403' or status == '401'
-| extend id_comparison = strcmp(id, 'admin')
-| extend is_admin = id_comparison == 0
-| extend is_suspicious = is_admin
-| summarize failed_attempts = count() by is_admin, is_suspicious, status
-| sort by failed_attempts desc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27403%27%20or%20status%20%3D%3D%20%27401%27%20%7C%20extend%20id_comparison%20%3D%20strcmp(id%2C%20%27admin%27)%20%7C%20extend%20is_admin%20%3D%20id_comparison%20%3D%3D%200%20%7C%20extend%20is_suspicious%20%3D%20is_admin%20%7C%20summarize%20failed_attempts%20%3D%20count()%20by%20is_admin%2C%20is_suspicious%2C%20status%20%7C%20sort%20by%20failed_attempts%20desc%22%7D)
-
-**Output**
-
-| is_admin | is_suspicious | status | failed_attempts |
-|----------|---------------|--------|-----------------|
-| true | true | 401 | 234 |
-| false | false | 403 | 1987 |
-
-This query identifies failed authentication attempts using privileged usernames like 'admin', helping detect brute-force attacks targeting administrative accounts.
-
-</Tab>
 </Tabs>
 
 ## List of related functions

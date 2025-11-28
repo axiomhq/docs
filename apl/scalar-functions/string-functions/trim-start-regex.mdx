@@ -128,20 +128,19 @@ Remove timestamp or log level prefixes from security event messages.
 
 ```kusto
 ['sample-http-logs']
-| where status == '403' or status == '401'
-| extend simulated_message = strcat('[ERROR] ', uri)
-| extend cleaned_message = trim_start_regex('^\\[(ERROR|WARN|INFO)\\]\\s*', simulated_message)
+| extend simulated_message = strcat('ERROR: ', uri)
+| extend cleaned_message = trim_start_regex('^(ERROR|WARN|INFO): ', simulated_message)
 | project _time, simulated_message, cleaned_message, id, status
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27403%27%20or%20status%20%3D%3D%20%27401%27%20%7C%20extend%20simulated_message%20%3D%20strcat(%27%5BERROR%5D%20%27%2C%20uri)%20%7C%20extend%20cleaned_message%20%3D%20trim_start_regex(%27%5E%5C%5C%5B(ERROR%7CWARN%7CINFO)%5C%5C%5D%5C%5Cs*%27%2C%20simulated_message)%20%7C%20project%20_time%2C%20simulated_message%2C%20cleaned_message%2C%20id%2C%20status%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20simulated_message%20%3D%20strcat('ERROR%3A%20'%2C%20uri)%20%7C%20extend%20cleaned_message%20%3D%20trim_start_regex('%5E(ERROR%7CWARN%7CINFO)%3A%20'%2C%20simulated_message)%20%7C%20project%20_time%2C%20simulated_message%2C%20cleaned_message%2C%20id%2C%20status%20%7C%20limit%2010%22%7D)
 
 **Output**
 
 | _time | simulated_message | cleaned_message | id | status |
 |-------|-------------------|-----------------|-------|--------|
-| 2024-11-06T10:00:00Z | [ERROR] /admin | /admin | user123 | 403 |
+| 2024-11-06T10:00:00Z | ERROR: /admin | /admin | user123 | 403 |
 
 This query removes log level prefixes from security messages, extracting the core message content for analysis.
 

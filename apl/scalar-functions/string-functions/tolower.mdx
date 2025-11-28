@@ -119,35 +119,6 @@ Standardize service names for consistent cross-service analysis.
 This query normalizes service names to lowercase, ensuring consistent grouping regardless of naming convention variations.
 
 </Tab>
-<Tab title="Security logs">
-
-Perform case-insensitive threat detection in URIs and user identifiers.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '403' or status == '401'
-| extend lower_uri = tolower(uri)
-| extend has_sql = indexof(lower_uri, 'union') >= 0 or indexof(lower_uri, 'select') >= 0
-| extend has_xss = indexof(lower_uri, '<script') >= 0 or indexof(lower_uri, 'alert(') >= 0
-| where has_sql or has_xss
-| project _time, uri, lower_uri, has_sql, has_xss, id, ['geo.country']
-| limit 10
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27403%27%20or%20status%20%3D%3D%20%27401%27%20%7C%20extend%20lower_uri%20%3D%20tolower(uri)%20%7C%20extend%20has_sql%20%3D%20indexof(lower_uri%2C%20%27union%27)%20%3E%3D%200%20or%20indexof(lower_uri%2C%20%27select%27)%20%3E%3D%200%20%7C%20extend%20has_xss%20%3D%20indexof(lower_uri%2C%20%27%3Cscript%27)%20%3E%3D%200%20or%20indexof(lower_uri%2C%20%27alert(%27)%20%3E%3D%200%20%7C%20where%20has_sql%20or%20has_xss%20%7C%20project%20_time%2C%20uri%2C%20lower_uri%2C%20has_sql%2C%20has_xss%2C%20id%2C%20%5B%27geo.country%27%5D%20%7C%20limit%2010%22%7D)
-
-**Output**
-
-| _time | uri | lower_uri | has_sql | has_xss | id | geo.country |
-|-------|-----|-----------|---------|---------|-------|-------------|
-| 2024-11-06T10:00:00Z | /api?id=1 UNION SELECT | /api?id=1 union select | true | false | user123 | Unknown |
-| 2024-11-06T10:01:00Z | /search?q=&lt;SCRIPT&gt;alert(1) | /search?q=&lt;script&gt;alert(1) | false | true | user456 | Russia |
-
-This query converts URIs to lowercase before checking for attack patterns, ensuring detection regardless of case obfuscation attempts.
-
-</Tab>
 </Tabs>
 
 ## List of related functions

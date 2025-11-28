@@ -100,13 +100,13 @@ Remove version suffixes from service names using regex patterns.
 
 ```kusto
 ['otel-demo-traces']
-| extend cleaned_service = trim_end_regex('-v[0-9]+\\.[0-9]+$', ['service.name'])
+| extend cleaned_service = trim_end_regex('-v[0-9]+[.][0-9]+$', ['service.name'])
 | summarize span_count = count() by cleaned_service
 | sort by span_count desc
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20cleaned_service%20%3D%20trim_end_regex(%27-v%5B0-9%5D%2B%5C%5C.%5B0-9%5D%2B%24%27%2C%20%5B%27service.name%27%5D)%20%7C%20summarize%20span_count%20%3D%20count()%20by%20cleaned_service%20%7C%20sort%20by%20span_count%20desc%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20cleaned_service%20%3D%20trim_end_regex(%27-v%5B0-9%5D%2B%5B.%5D%5B0-9%5D%2B%24%27%2C%20%5B%27service.name%27%5D)%20%7C%20summarize%20span_count%20%3D%20count()%20by%20cleaned_service%20%7C%20sort%20by%20span_count%20desc%20%7C%20limit%2010%22%7D)
 
 **Output**
 
@@ -127,14 +127,13 @@ Remove trailing hexadecimal session tokens or identifiers from URIs.
 
 ```kusto
 ['sample-http-logs']
-| where status == '403' or status == '401'
 | extend cleaned_uri = trim_end_regex('[a-f0-9]{8,}$', uri)
-| summarize failed_attempts = count() by cleaned_uri, status
-| sort by failed_attempts desc
+| summarize attempts = count() by cleaned_uri, status
+| sort by attempts desc
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27403%27%20or%20status%20%3D%3D%20%27401%27%20%7C%20extend%20cleaned_uri%20%3D%20trim_end_regex(%27%5Ba-f0-9%5D%7B8%2C%7D%24%27%2C%20uri)%20%7C%20summarize%20failed_attempts%20%3D%20count()%20by%20cleaned_uri%2C%20status%20%7C%20sort%20by%20failed_attempts%20desc%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20cleaned_uri%20%3D%20trim_end_regex('%5Ba-f0-9%5D%7B8%2C%7D%24'%2C%20uri)%20%7C%20summarize%20failed_attempts%20%3D%20count()%20by%20cleaned_uri%2C%20status%20%7C%20sort%20by%20failed_attempts%20desc%20%7C%20limit%2010%22%7D)
 
 **Output**
 
@@ -143,7 +142,7 @@ Remove trailing hexadecimal session tokens or identifiers from URIs.
 | /api/session/ | 401 | 234 |
 | /admin/token/ | 403 | 156 |
 
-This query removes trailing hexadecimal tokens from URIs, helping identify which endpoints are targeted in failed authentication attempts without session-specific noise.
+This query removes trailing hexadecimal tokens from URIs, helping identify which endpoints are targeted in authentication attempts without session-specific noise.
 
 </Tab>
 </Tabs>
