@@ -1,0 +1,163 @@
+---
+title: 'genai_input_cost'
+description: 'This page explains how to use the genai_input_cost function in APL.'
+---
+
+The `genai_input_cost` function calculates the cost of input tokens (prompt tokens) for a GenAI API call based on the model name and number of input tokens. This helps you understand and track the cost of prompts separately from responses.
+
+You can use this function to analyze prompt costs, optimize prompt engineering for cost efficiency, track input spending separately, or create detailed cost breakdowns.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would need to lookup pricing and calculate costs manually.
+
+<CodeGroup>
+```sql Splunk example
+| lookup model_pricing model OUTPUT input_price
+| eval input_cost=(input_tokens * input_price / 1000000)
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend input_cost = genai_input_cost(model, input_tokens)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would join with a pricing table and calculate input costs.
+
+<CodeGroup>
+```sql SQL example
+SELECT 
+  l.*,
+  (l.input_tokens * p.input_price / 1000000) as input_cost
+FROM ai_logs l
+JOIN model_pricing p ON l.model = p.model_name
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend input_cost = genai_input_cost(model, input_tokens)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+genai_input_cost(model, input_tokens)
+```
+
+### Parameters
+
+- **model** (string, required): The name of the AI model (for example, 'gpt-4', 'claude-3-opus', 'gpt-3.5-turbo').
+- **input_tokens** (long, required): The number of input tokens (prompt tokens) used in the API call.
+
+### Returns
+
+Returns a real number representing the cost in dollars (USD) for the input tokens based on the model's pricing.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Analyze input costs separately to understand how much you spend on prompts versus responses.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/openai'
+| extend model_name = tostring(todynamic(response_body)['model'])
+| extend prompt_tokens = tolong(todynamic(response_body)['usage']['prompt_tokens'])
+| extend prompt_cost = genai_input_cost(model_name, prompt_tokens)
+| summarize total_prompt_cost = sum(prompt_cost) by model_name, bin(_time, 1h)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fopenai'%20%7C%20extend%20model_name%20%3D%20tostring(todynamic(response_body)%5B'model'%5D)%20%7C%20extend%20prompt_tokens%20%3D%20tolong(todynamic(response_body)%5B'usage'%5D%5B'prompt_tokens'%5D)%20%7C%20extend%20prompt_cost%20%3D%20genai_input_cost(model_name%2C%20prompt_tokens)%20%7C%20summarize%20total_prompt_cost%20%3D%20sum(prompt_cost)%20by%20model_name%2C%20bin(_time%2C%201h)%22%7D)
+
+**Output**
+
+| _time | model_name | total_prompt_cost |
+|-------|------------|-------------------|
+| 2024-01-15T10:00:00Z | gpt-4 | 4.56 |
+| 2024-01-15T10:00:00Z | gpt-3.5-turbo | 0.23 |
+
+This query breaks down prompt costs by model and time, helping you understand where prompt spending occurs.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Track input costs across different services to identify which services have expensive prompts.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| where ['service.name'] == 'frontend' and kind == 'server'
+| extend model = tostring(attributes['ai.model'])
+| extend input_tokens = tolong(attributes['ai.prompt_tokens'])
+| extend prompt_cost = genai_input_cost(model, input_tokens)
+| summarize total_prompt_cost = sum(prompt_cost), avg_prompt_cost = avg(prompt_cost) by ['service.name']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20model%20%3D%20tostring(attributes%5B'ai.model'%5D)%20%7C%20extend%20input_tokens%20%3D%20tolong(attributes%5B'ai.prompt_tokens'%5D)%20%7C%20extend%20prompt_cost%20%3D%20genai_input_cost(model%2C%20input_tokens)%20%7C%20summarize%20total_prompt_cost%20%3D%20sum(prompt_cost)%2C%20avg_prompt_cost%20%3D%20avg(prompt_cost)%20by%20%5B'service.name'%5D%22%7D)
+
+**Output**
+
+| service.name | total_prompt_cost | avg_prompt_cost |
+|--------------|-------------------|-----------------|
+| frontend | 45.67 | 0.0187 |
+
+This query helps you identify which services have the highest prompt costs and average cost per request.
+
+</Tab>
+<Tab title="Security logs">
+
+Monitor for unusually expensive prompts that might indicate abuse or inefficient usage.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where uri contains '/api/ai'
+| extend model = tostring(todynamic(request_body)['model'])
+| extend input_tokens = tolong(todynamic(response_body)['usage']['prompt_tokens'])
+| extend prompt_cost = genai_input_cost(model, input_tokens)
+| where prompt_cost > 0.50
+| project _time, id, ['geo.country'], model, input_tokens, prompt_cost
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20model%20%3D%20tostring(todynamic(request_body)%5B'model'%5D)%20%7C%20extend%20input_tokens%20%3D%20tolong(todynamic(response_body)%5B'usage'%5D%5B'prompt_tokens'%5D)%20%7C%20extend%20prompt_cost%20%3D%20genai_input_cost(model%2C%20input_tokens)%20%7C%20where%20prompt_cost%20%3E%200.50%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20model%2C%20input_tokens%2C%20prompt_cost%22%7D)
+
+**Output**
+
+| _time | id | geo.country | model | input_tokens | prompt_cost |
+|-------|----|--------------|---------| ------------|-------------|
+| 2024-01-15T10:30:00Z | user_789 | US | gpt-4 | 18000 | 0.54 |
+| 2024-01-15T10:35:00Z | user_234 | RU | gpt-4 | 20000 | 0.60 |
+
+This query identifies prompts with unusually high costs, which could indicate prompt optimization opportunities or abuse.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [genai_output_cost](/apl/scalar-functions/genai-functions/genai-output-cost): Calculates output token cost. Use this alongside input costs to understand the full cost breakdown.
+- [genai_cost](/apl/scalar-functions/genai-functions/genai-cost): Calculates total cost (input + output). Use this when you need combined costs.
+- [genai_get_pricing](/apl/scalar-functions/genai-functions/genai-get-pricing): Gets pricing information. Use this to understand the pricing structure behind cost calculations.
+- [genai_estimate_tokens](/apl/scalar-functions/genai-functions/genai-estimate-tokens): Estimates token count from text. Combine with input cost to predict prompt costs before API calls.
+
