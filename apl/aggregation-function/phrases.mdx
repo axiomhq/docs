@@ -75,79 +75,26 @@ summarize phrases(column, max_phrases)
 
 Returns a dynamic array containing the most common phrases found in the specified column, ordered by frequency.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Extract common URL patterns to understand which endpoints are most frequently accessed.
+Extract common phrases from GenAI conversation text to identify trending topics and patterns.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| where status == '404'
-| summarize common_404_paths = phrases(uri, 20)
+['genai-traces']
+| where ['attributes.gen_ai.operation.name'] == 'chat'
+| extend conversation_text = genai_concat_contents(['attributes.gen_ai.input.messages'], ' | ')
+| summarize common_phrases = phrases(conversation_text, 20)
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20%3D%3D%20'404'%20%7C%20summarize%20common_404_paths%20%3D%20phrases(uri%2C%2020)%22%7D)
 
 **Output**
 
-| common_404_paths |
-|------------------|
-| ["/api/v1/users/profile", "/assets/old-logo.png", "/docs/deprecated", ...] |
+| common_phrases |
+|----------------|
+| ["password reset", "business hours", "track order", "account help", ...] |
 
-This query identifies the most common 404 error paths, helping you fix broken links or redirect old URLs.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Analyze common operation names across traces to understand service usage patterns.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ['service.name'] == 'frontend'
-| summarize common_operations = phrases(name, 15) by ['service.name']
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20%7C%20summarize%20common_operations%20%3D%20phrases(name%2C%2015)%20by%20%5B'service.name'%5D%22%7D)
-
-**Output**
-
-| service.name | common_operations |
-|--------------|-------------------|
-| frontend | ["HTTP GET", "cart.checkout", "product.view", "user.login", ...] |
-
-This query reveals the most common operations in your frontend service, helping you understand usage patterns.
-
-</Tab>
-<Tab title="Security logs">
-
-Identify common patterns in potentially malicious requests by analyzing suspicious URIs.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status in ('403', '401') or uri contains '..'
-| summarize suspicious_patterns = phrases(uri, 25)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20in%20('403'%2C%20'401')%20or%20uri%20contains%20'..'%20%7C%20summarize%20suspicious_patterns%20%3D%20phrases(uri%2C%2025)%22%7D)
-
-**Output**
-
-| suspicious_patterns |
-|---------------------|
-| ["../../../etc/passwd", "/admin/login", "/.env", "/wp-admin", ...] |
-
-This query identifies common attack patterns in your logs, helping you understand security threats and improve defenses.
-
-</Tab>
-</Tabs>
+This query identifies the most common phrases in GenAI conversations, helping you discover trending topics and user needs.
 
 ## List of related functions
 

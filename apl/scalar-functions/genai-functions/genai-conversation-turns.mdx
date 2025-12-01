@@ -69,85 +69,26 @@ genai_conversation_turns(messages)
 
 Returns a long integer representing the number of conversation turns. A turn is typically counted as a user-assistant exchange pair.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Track conversation length across different API endpoints to understand user engagement and conversation complexity.
+Count the number of conversation turns in a GenAI chat operation.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| where uri contains '/api/chat'
-| extend turns = genai_conversation_turns(todynamic(response_body)['messages'])
-| summarize avg_turns = avg(turns), max_turns = max(turns) by uri
+['genai-traces']
+| where ['attributes.gen_ai.operation.name'] == 'chat'
+| extend turns = genai_conversation_turns(['attributes.gen_ai.input.messages'])
+| summarize avg_turns = avg(turns), max_turns = max(turns)
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fchat'%20%7C%20extend%20turns%20%3D%20genai_conversation_turns(todynamic(response_body)%5B'messages'%5D)%20%7C%20summarize%20avg_turns%20%3D%20avg(turns)%2C%20max_turns%20%3D%20max(turns)%20by%20uri%22%7D)
 
 **Output**
 
-| uri | avg_turns | max_turns |
-|-----|-----------|-----------|
-| /api/chat/support | 3.5 | 12 |
-| /api/chat/sales | 2.1 | 8 |
+| avg_turns | max_turns |
+|-----------|-----------|
+| 4.2 | 12 |
 
-This query calculates the average and maximum number of conversation turns for different chat endpoints, helping you understand which services have longer conversations.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Monitor conversation complexity across different AI services in your distributed system.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ['service.name'] == 'frontend'
-| extend conversation_turns = genai_conversation_turns(todynamic(attributes['ai.messages']))
-| summarize avg(conversation_turns), percentile(conversation_turns, 95) by ['service.name']
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20%7C%20extend%20conversation_turns%20%3D%20genai_conversation_turns(todynamic(attributes%5B'ai.messages'%5D))%20%7C%20summarize%20avg(conversation_turns)%2C%20percentile(conversation_turns%2C%2095)%20by%20%5B'service.name'%5D%22%7D)
-
-**Output**
-
-| service.name | avg_conversation_turns | percentile_conversation_turns_95 |
-|--------------|------------------------|----------------------------------|
-| frontend | 4.2 | 9 |
-
-This query helps you understand typical conversation patterns in your AI services and identify outliers.
-
-</Tab>
-<Tab title="Security logs">
-
-Detect unusually long conversations that might indicate automated attacks or abuse of AI services.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where uri contains '/api/ai'
-| extend turns = genai_conversation_turns(todynamic(request_body)['messages'])
-| where turns > 15
-| project _time, id, ['geo.country'], uri, turns
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20turns%20%3D%20genai_conversation_turns(todynamic(request_body)%5B'messages'%5D)%20%7C%20where%20turns%20%3E%2015%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20uri%2C%20turns%22%7D)
-
-**Output**
-
-| _time | id | geo.country | uri | turns |
-|-------|----|--------------|----|-------|
-| 2024-01-15T10:30:00Z | user_789 | US | /api/ai/chat | 18 |
-| 2024-01-15T10:35:00Z | user_234 | CN | /api/ai/assistant | 22 |
-
-This query identifies conversations with an unusually high number of turns, which could indicate abuse, testing, or automated behavior.
-
-</Tab>
-</Tabs>
+This query calculates the average and maximum number of conversation turns, helping you understand conversation complexity and engagement patterns.
 
 ## List of related functions
 

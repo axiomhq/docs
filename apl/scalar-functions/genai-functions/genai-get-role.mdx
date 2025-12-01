@@ -70,23 +70,18 @@ genai_get_role(messages, index)
 
 Returns a string containing the role of the message at the specified index (such as 'user', 'assistant', 'system', 'tool', 'function'), or an empty string if the index is out of bounds.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Verify that conversations start with a system prompt by checking the first message role.
+Get the role of the first message in a GenAI conversation.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| where uri contains '/api/chat'
-| extend first_role = genai_get_role(todynamic(response_body)['messages'], 0)
+['genai-traces']
+| where ['attributes.gen_ai.operation.name'] == 'chat'
+| extend first_role = genai_get_role(['attributes.gen_ai.input.messages'], 0)
 | summarize conversations_with_system = countif(first_role == 'system'), total_conversations = count()
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fchat'%20%7C%20extend%20first_role%20%3D%20genai_get_role(todynamic(response_body)%5B'messages'%5D%2C%200)%20%7C%20summarize%20conversations_with_system%20%3D%20countif(first_role%20%3D%3D%20'system')%2C%20total_conversations%20%3D%20count()%22%7D)
 
 **Output**
 
@@ -94,63 +89,7 @@ Verify that conversations start with a system prompt by checking the first messa
 |---------------------------|---------------------|
 | 1250 | 1450 |
 
-This query helps you verify that most conversations are properly initialized with system prompts.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Analyze conversation patterns by examining role sequences across different services.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ['service.name'] == 'frontend' and kind == 'server'
-| extend second_role = genai_get_role(todynamic(attributes['ai.messages']), 1)
-| where isnotempty(second_role)
-| summarize count() by ['service.name'], second_role
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20second_role%20%3D%20genai_get_role(todynamic(attributes%5B'ai.messages'%5D)%2C%201)%20%7C%20where%20isnotempty(second_role)%20%7C%20summarize%20count()%20by%20%5B'service.name'%5D%2C%20second_role%22%7D)
-
-**Output**
-
-| service.name | second_role | count |
-|--------------|-------------|-------|
-| frontend | user | 1234 |
-| frontend | assistant | 45 |
-
-This query shows the typical role at position 1, helping you understand conversation initialization patterns.
-
-</Tab>
-<Tab title="Security logs">
-
-Detect unusual conversation patterns where system prompts appear in unexpected positions.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where uri contains '/api/ai'
-| extend second_role = genai_get_role(todynamic(request_body)['messages'], 1)
-| extend third_role = genai_get_role(todynamic(request_body)['messages'], 2)
-| where second_role == 'system' or third_role == 'system'
-| project _time, id, ['geo.country'], second_role, third_role
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20second_role%20%3D%20genai_get_role(todynamic(request_body)%5B'messages'%5D%2C%201)%20%7C%20extend%20third_role%20%3D%20genai_get_role(todynamic(request_body)%5B'messages'%5D%2C%202)%20%7C%20where%20second_role%20%3D%3D%20'system'%20or%20third_role%20%3D%3D%20'system'%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20second_role%2C%20third_role%22%7D)
-
-**Output**
-
-| _time | id | geo.country | second_role | third_role |
-|-------|----|--------------| ------------|------------|
-| 2024-01-15T10:30:00Z | user_789 | US | system | user |
-| 2024-01-15T10:35:00Z | user_234 | RU | user | system |
-
-This query detects anomalous conversation structures where system prompts appear in non-standard positions, which could indicate prompt injection attempts.
-
-</Tab>
-</Tabs>
+This query verifies that most conversations are properly initialized with system prompts.
 
 ## List of related functions
 

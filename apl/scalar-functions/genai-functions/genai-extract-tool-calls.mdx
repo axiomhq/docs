@@ -70,25 +70,21 @@ genai_extract_tool_calls(messages)
 
 Returns a dynamic object containing the tool calls from the conversation, or null if no tool calls are found. Tool calls typically include function name, arguments, and call ID.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Analyze which tools and functions are being called by your AI system to understand integration patterns.
+Extract tool calls from a GenAI conversation to analyze which functions are being invoked.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| where uri contains '/api/chat'
-| extend tools = genai_extract_tool_calls(todynamic(response_body)['messages'])
-| where isnotnull(tools)
-| extend tool_name = tostring(todynamic(tools)[0]['function']['name'])
+['genai-traces']
+| where ['attributes.gen_ai.operation.name'] == 'chat'
+| extend tool_calls = genai_extract_tool_calls(['attributes.gen_ai.input.messages'])
+| where isnotnull(tool_calls)
+| extend tool_name = tostring(todynamic(tool_calls)[0]['function']['name'])
 | summarize call_count = count() by tool_name
+| top 5 by call_count
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fchat'%20%7C%20extend%20tools%20%3D%20genai_extract_tool_calls(todynamic(response_body)%5B'messages'%5D)%20%7C%20where%20isnotnull(tools)%20%7C%20extend%20tool_name%20%3D%20tostring(todynamic(tools)%5B0%5D%5B'function'%5D%5B'name'%5D)%20%7C%20summarize%20call_count%20%3D%20count()%20by%20tool_name%22%7D)
 
 **Output**
 
@@ -99,63 +95,6 @@ Analyze which tools and functions are being called by your AI system to understa
 | send_email | 123 |
 
 This query shows which tools are most frequently called, helping you understand integration usage patterns.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Monitor tool usage across services to understand which parts of your system rely on function calling.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ['service.name'] == 'frontend' and kind == 'server'
-| extend tool_calls = genai_extract_tool_calls(todynamic(attributes['ai.messages']))
-| where isnotnull(tool_calls)
-| project _time, trace_id, span_id, duration, tool_calls
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20tool_calls%20%3D%20genai_extract_tool_calls(todynamic(attributes%5B'ai.messages'%5D))%20%7C%20where%20isnotnull(tool_calls)%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20duration%2C%20tool_calls%22%7D)
-
-**Output**
-
-| _time | trace_id | span_id | duration | tool_calls |
-|-------|----------|---------|----------|------------|
-| 2024-01-15T10:30:00Z | abc123 | span_001 | 2.3s | `[{"id": "call_1", "function": {"name": "get_weather", "arguments": "{\"location\": \"NYC\"}"}}]` |
-| 2024-01-15T10:31:00Z | def456 | span_002 | 1.8s | `[{"id": "call_2", "function": {"name": "check_inventory", "arguments": "{\"product_id\": \"123\"}"}}]` |
-
-This query correlates tool calls with trace duration, helping you understand the performance impact of function calling.
-
-</Tab>
-<Tab title="Security logs">
-
-Monitor for suspicious tool calls that might indicate privilege escalation or unauthorized actions.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where uri contains '/api/ai'
-| extend tools = genai_extract_tool_calls(todynamic(response_body)['messages'])
-| where isnotnull(tools)
-| extend tool_str = tostring(tools)
-| where tool_str contains 'delete' or tool_str contains 'admin' or tool_str contains 'execute'
-| project _time, id, ['geo.country'], uri, tools
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20tools%20%3D%20genai_extract_tool_calls(todynamic(response_body)%5B'messages'%5D)%20%7C%20where%20isnotnull(tools)%20%7C%20extend%20tool_str%20%3D%20tostring(tools)%20%7C%20where%20tool_str%20contains%20'delete'%20or%20tool_str%20contains%20'admin'%20or%20tool_str%20contains%20'execute'%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20uri%2C%20tools%22%7D)
-
-**Output**
-
-| _time | id | geo.country | uri | tools |
-|-------|----|--------------|----|-------|
-| 2024-01-15T10:30:00Z | user_789 | US | /api/ai/agent | `[{"function": {"name": "delete_user", "arguments": "{\"user_id\": \"admin\"}"}}]` |
-| 2024-01-15T10:35:00Z | user_234 | CN | /api/ai/chat | `[{"function": {"name": "execute_command", "arguments": "{\"cmd\": \"rm -rf\"}"}}]` |
-
-This query identifies potentially dangerous tool calls that might indicate security issues or malicious attempts.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

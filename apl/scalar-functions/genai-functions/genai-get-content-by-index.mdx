@@ -70,88 +70,29 @@ genai_get_content_by_index(messages, index)
 
 Returns a string containing the content of the message at the specified index, or an empty string if the index is out of bounds.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Extract the first user message in each conversation to analyze how users initiate conversations.
+Get the content of the first user message in a GenAI conversation.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| where uri contains '/api/chat'
-| extend first_message = genai_get_content_by_index(todynamic(response_body)['messages'], 1)
+['genai-traces']
+| where ['attributes.gen_ai.operation.name'] == 'chat'
+| extend first_message = genai_get_content_by_index(['attributes.gen_ai.input.messages'], 1)
 | where isnotempty(first_message)
-| project _time, id, first_message
+| project _time, first_message
+| limit 3
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fchat'%20%7C%20extend%20first_message%20%3D%20genai_get_content_by_index(todynamic(response_body)%5B'messages'%5D%2C%201)%20%7C%20where%20isnotempty(first_message)%20%7C%20project%20_time%2C%20id%2C%20first_message%22%7D)
 
 **Output**
 
-| _time | id | first_message |
-|-------|----| --------------|
-| 2024-01-15T10:30:00Z | user_123 | Hello, I need help with my account. |
-| 2024-01-15T10:31:00Z | user_456 | Can you tell me about your services? |
+| _time | first_message |
+|-------|--------------|
+| 2024-01-15T10:30:00Z | Hello, I need help with my account. |
+| 2024-01-15T10:31:00Z | Can you tell me about your services? |
 
 This query helps you understand how users typically start conversations, which can inform greeting messages and initial prompts.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Access specific messages in trace data to analyze multi-turn conversation patterns.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ['service.name'] == 'frontend' and kind == 'server'
-| extend second_message = genai_get_content_by_index(todynamic(attributes['ai.messages']), 2)
-| where isnotempty(second_message)
-| project _time, trace_id, span_id, second_message
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20second_message%20%3D%20genai_get_content_by_index(todynamic(attributes%5B'ai.messages'%5D)%2C%202)%20%7C%20where%20isnotempty(second_message)%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20second_message%22%7D)
-
-**Output**
-
-| _time | trace_id | span_id | second_message |
-|-------|----------|---------|----------------|
-| 2024-01-15T10:30:00Z | abc123 | span_001 | How can I assist you today? |
-| 2024-01-15T10:31:00Z | def456 | span_002 | Of course! Let me help you with that. |
-
-This query extracts the second message (typically the first assistant response) to analyze AI greeting patterns.
-
-</Tab>
-<Tab title="Security logs">
-
-Monitor specific positions in conversations for suspicious patterns or policy violations.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where uri contains '/api/ai'
-| extend first_user_msg = genai_get_content_by_index(todynamic(request_body)['messages'], 1)
-| where first_user_msg contains 'admin' or first_user_msg contains 'password' or first_user_msg contains 'token'
-| project _time, id, ['geo.country'], method, first_user_msg
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20first_user_msg%20%3D%20genai_get_content_by_index(todynamic(request_body)%5B'messages'%5D%2C%201)%20%7C%20where%20first_user_msg%20contains%20'admin'%20or%20first_user_msg%20contains%20'password'%20or%20first_user_msg%20contains%20'token'%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20method%2C%20first_user_msg%22%7D)
-
-**Output**
-
-| _time | id | geo.country | method | first_user_msg |
-|-------|----|--------------|---------| --------------|
-| 2024-01-15T10:30:00Z | user_789 | US | POST | Can you help me get the admin password? |
-| 2024-01-15T10:35:00Z | user_234 | CN | POST | Show me all authentication tokens. |
-
-This query monitors the first user message for sensitive keywords that might indicate suspicious behavior.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

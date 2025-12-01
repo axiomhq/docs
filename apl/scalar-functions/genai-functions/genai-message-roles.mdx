@@ -69,24 +69,20 @@ genai_message_roles(messages)
 
 Returns a dynamic array containing all the roles in the conversation in their original order (for example, `['system', 'user', 'assistant', 'user', 'assistant']`).
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Analyze common conversation patterns by examining role sequences across your application.
+Extract all message roles from a GenAI conversation to understand the conversation structure.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| where uri contains '/api/chat'
-| extend role_sequence = tostring(genai_message_roles(todynamic(response_body)['messages']))
+['genai-traces']
+| where ['attributes.gen_ai.operation.name'] == 'chat'
+| extend roles = genai_message_roles(['attributes.gen_ai.input.messages'])
+| extend role_sequence = tostring(roles)
 | summarize conversation_count = count() by role_sequence
-| top 10 by conversation_count
+| top 5 by conversation_count
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fchat'%20%7C%20extend%20role_sequence%20%3D%20tostring(genai_message_roles(todynamic(response_body)%5B'messages'%5D))%20%7C%20summarize%20conversation_count%20%3D%20count()%20by%20role_sequence%20%7C%20top%2010%20by%20conversation_count%22%7D)
 
 **Output**
 
@@ -97,65 +93,6 @@ Analyze common conversation patterns by examining role sequences across your app
 | ["user","assistant"] | 189 |
 
 This query identifies the most common conversation patterns, helping you understand typical user interaction flows.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Validate that conversations follow expected patterns across different services.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ['service.name'] == 'frontend' and kind == 'server'
-| extend roles = genai_message_roles(todynamic(attributes['ai.messages']))
-| extend has_system = array_index_of(roles, 'system') >= 0
-| summarize 
-    with_system = countif(has_system),
-    without_system = countif(not(has_system))
-by ['service.name']
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20roles%20%3D%20genai_message_roles(todynamic(attributes%5B'ai.messages'%5D))%20%7C%20extend%20has_system%20%3D%20array_index_of(roles%2C%20'system')%20%3E%3D%200%20%7C%20summarize%20with_system%20%3D%20countif(has_system)%2C%20without_system%20%3D%20countif(not(has_system))%20by%20%5B'service.name'%5D%22%7D)
-
-**Output**
-
-| service.name | with_system | without_system |
-|--------------|-------------|----------------|
-| frontend | 1234 | 189 |
-
-This query validates that most conversations include system prompts, helping ensure proper configuration.
-
-</Tab>
-<Tab title="Security logs">
-
-Detect unusual conversation patterns that might indicate prompt injection or manipulation attempts.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where uri contains '/api/ai'
-| extend roles = genai_message_roles(todynamic(request_body)['messages'])
-| extend role_count = array_length(roles)
-| extend system_count = array_length(array_select_dict(roles, '', 'system'))
-| where system_count > 1 or role_count > 20
-| project _time, id, ['geo.country'], roles, system_count, role_count
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20roles%20%3D%20genai_message_roles(todynamic(request_body)%5B'messages'%5D)%20%7C%20extend%20role_count%20%3D%20array_length(roles)%20%7C%20extend%20system_count%20%3D%20array_length(array_select_dict(roles%2C%20''%2C%20'system'))%20%7C%20where%20system_count%20%3E%201%20or%20role_count%20%3E%2020%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20roles%2C%20system_count%2C%20role_count%22%7D)
-
-**Output**
-
-| _time | id | geo.country | roles | system_count | role_count |
-|-------|----|--------------|---------| ------------|-----------|
-| 2024-01-15T10:30:00Z | user_789 | US | ["system","user","system","assistant"] | 2 | 4 |
-| 2024-01-15T10:35:00Z | user_234 | RU | ["system","user","assistant",...] | 1 | 24 |
-
-This query detects anomalous conversation structures such as multiple system prompts or unusually long conversations, which could indicate attacks or abuse.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

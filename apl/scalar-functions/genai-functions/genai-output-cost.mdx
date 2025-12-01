@@ -70,91 +70,28 @@ genai_output_cost(model, output_tokens)
 
 Returns a real number representing the cost in dollars (USD) for the output tokens based on the model's pricing.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Analyze output costs to understand how much you spend on AI-generated responses versus input prompts.
+Calculate the cost of output tokens for a GenAI chat operation.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| where uri contains '/api/openai'
-| extend model_name = tostring(todynamic(response_body)['model'])
-| extend completion_tokens = tolong(todynamic(response_body)['usage']['completion_tokens'])
-| extend response_cost = genai_output_cost(model_name, completion_tokens)
-| summarize total_output_cost = sum(response_cost) by model_name, bin(_time, 1h)
+['genai-traces']
+| where ['attributes.gen_ai.operation.name'] == 'chat'
+| extend model = tostring(['attributes.gen_ai.model.name'])
+| extend output_tokens = tolong(['attributes.gen_ai.output.usage.completion_tokens'])
+| extend output_cost = genai_output_cost(model, output_tokens)
+| summarize total_output_cost = sum(output_cost), avg_output_cost = avg(output_cost)
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fopenai'%20%7C%20extend%20model_name%20%3D%20tostring(todynamic(response_body)%5B'model'%5D)%20%7C%20extend%20completion_tokens%20%3D%20tolong(todynamic(response_body)%5B'usage'%5D%5B'completion_tokens'%5D)%20%7C%20extend%20response_cost%20%3D%20genai_output_cost(model_name%2C%20completion_tokens)%20%7C%20summarize%20total_output_cost%20%3D%20sum(response_cost)%20by%20model_name%2C%20bin(_time%2C%201h)%22%7D)
 
 **Output**
 
-| _time | model_name | total_output_cost |
-|-------|------------|-------------------|
-| 2024-01-15T10:00:00Z | gpt-4 | 8.92 |
-| 2024-01-15T10:00:00Z | gpt-3.5-turbo | 0.45 |
+| total_output_cost | avg_output_cost |
+|-------------------|-----------------|
+| 78.34 | 0.0321 |
 
-This query breaks down output costs by model and time, showing where generation spending occurs.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Track output costs across different services to identify which services generate expensive responses.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ['service.name'] == 'frontend' and kind == 'server'
-| extend model = tostring(attributes['ai.model'])
-| extend output_tokens = tolong(attributes['ai.completion_tokens'])
-| extend generation_cost = genai_output_cost(model, output_tokens)
-| summarize total_output_cost = sum(generation_cost), avg_output_cost = avg(generation_cost) by ['service.name']
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20model%20%3D%20tostring(attributes%5B'ai.model'%5D)%20%7C%20extend%20output_tokens%20%3D%20tolong(attributes%5B'ai.completion_tokens'%5D)%20%7C%20extend%20generation_cost%20%3D%20genai_output_cost(model%2C%20output_tokens)%20%7C%20summarize%20total_output_cost%20%3D%20sum(generation_cost)%2C%20avg_output_cost%20%3D%20avg(generation_cost)%20by%20%5B'service.name'%5D%22%7D)
-
-**Output**
-
-| service.name | total_output_cost | avg_output_cost |
-|--------------|-------------------|-----------------|
-| frontend | 78.34 | 0.0321 |
-
-This query helps you identify which services have the highest output costs and average cost per response.
-
-</Tab>
-<Tab title="Security logs">
-
-Monitor for unusually long responses that might indicate abuse or unoptimized usage.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where uri contains '/api/ai'
-| extend model = tostring(todynamic(request_body)['model'])
-| extend output_tokens = tolong(todynamic(response_body)['usage']['completion_tokens'])
-| extend generation_cost = genai_output_cost(model, output_tokens)
-| where generation_cost > 1.0
-| project _time, id, ['geo.country'], model, output_tokens, generation_cost
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20model%20%3D%20tostring(todynamic(request_body)%5B'model'%5D)%20%7C%20extend%20output_tokens%20%3D%20tolong(todynamic(response_body)%5B'usage'%5D%5B'completion_tokens'%5D)%20%7C%20extend%20generation_cost%20%3D%20genai_output_cost(model%2C%20output_tokens)%20%7C%20where%20generation_cost%20%3E%201.0%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20model%2C%20output_tokens%2C%20generation_cost%22%7D)
-
-**Output**
-
-| _time | id | geo.country | model | output_tokens | generation_cost |
-|-------|----|--------------|---------| -------------|----------------|
-| 2024-01-15T10:30:00Z | user_789 | US | gpt-4 | 18000 | 1.08 |
-| 2024-01-15T10:35:00Z | user_234 | RU | gpt-4 | 22000 | 1.32 |
-
-This query identifies responses with unusually high costs, which could indicate verbosity issues, abuse, or opportunities for optimization.
-
-</Tab>
-</Tabs>
+This query calculates the total and average cost of output tokens, helping you understand generation spending patterns.
 
 ## List of related functions
 

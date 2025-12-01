@@ -77,96 +77,30 @@ Returns a dynamic object containing pricing information with the following struc
 
 Returns null if the model is not recognized.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Display pricing information for models being used to help teams understand cost implications.
+Get pricing information for a GenAI model to understand cost structure.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| where uri contains '/api/openai'
-| extend model_name = tostring(todynamic(response_body)['model'])
-| extend pricing = genai_get_pricing(model_name)
+['genai-traces']
+| where ['attributes.gen_ai.operation.name'] == 'chat'
+| extend model = tostring(['attributes.gen_ai.model.name'])
+| extend pricing = genai_get_pricing(model)
 | where isnotnull(pricing)
-| summarize request_count = count() by model_name, pricing = tostring(pricing)
+| summarize request_count = count() by model, pricing = tostring(pricing)
+| top 3 by request_count
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fopenai'%20%7C%20extend%20model_name%20%3D%20tostring(todynamic(response_body)%5B'model'%5D)%20%7C%20extend%20pricing%20%3D%20genai_get_pricing(model_name)%20%7C%20where%20isnotnull(pricing)%20%7C%20summarize%20request_count%20%3D%20count()%20by%20model_name%2C%20pricing%20%3D%20tostring(pricing)%22%7D)
 
 **Output**
 
-| model_name | pricing | request_count |
+| model | pricing | request_count |
 |------------|---------|---------------|
 | gpt-4 | `{"input_price_per_million": 30.0, "output_price_per_million": 60.0}` | 450 |
 | gpt-3.5-turbo | `{"input_price_per_million": 0.5, "output_price_per_million": 1.5}` | 1250 |
 
 This query shows which models are being used and their associated pricing, helping teams make informed decisions.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Compare pricing across different AI models used in your services to optimize costs.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ['service.name'] == 'frontend' and kind == 'server'
-| extend model = tostring(attributes['ai.model'])
-| extend pricing_info = genai_get_pricing(model)
-| where isnotnull(pricing_info)
-| extend input_price = todouble(todynamic(pricing_info)['input_price_per_million'])
-| summarize model_usage = count() by model, input_price
-| order by input_price desc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20model%20%3D%20tostring(attributes%5B'ai.model'%5D)%20%7C%20extend%20pricing_info%20%3D%20genai_get_pricing(model)%20%7C%20where%20isnotnull(pricing_info)%20%7C%20extend%20input_price%20%3D%20todouble(todynamic(pricing_info)%5B'input_price_per_million'%5D)%20%7C%20summarize%20model_usage%20%3D%20count()%20by%20model%2C%20input_price%20%7C%20order%20by%20input_price%20desc%22%7D)
-
-**Output**
-
-| model | input_price | model_usage |
-|-------|-------------|-------------|
-| gpt-4 | 30.0 | 125 |
-| claude-3-opus | 15.0 | 89 |
-| gpt-3.5-turbo | 0.5 | 456 |
-
-This query helps you identify which models are most expensive and how frequently they're used.
-
-</Tab>
-<Tab title="Security logs">
-
-Monitor for attempts to use expensive models that might indicate resource abuse or unauthorized usage.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where uri contains '/api/ai'
-| extend model = tostring(todynamic(request_body)['model'])
-| extend pricing = genai_get_pricing(model)
-| where isnotnull(pricing)
-| extend input_cost = todouble(todynamic(pricing)['input_price_per_million'])
-| where input_cost > 10.0
-| project _time, id, ['geo.country'], model, input_cost
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20model%20%3D%20tostring(todynamic(request_body)%5B'model'%5D)%20%7C%20extend%20pricing%20%3D%20genai_get_pricing(model)%20%7C%20where%20isnotnull(pricing)%20%7C%20extend%20input_cost%20%3D%20todouble(todynamic(pricing)%5B'input_price_per_million'%5D)%20%7C%20where%20input_cost%20%3E%2010.0%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20model%2C%20input_cost%22%7D)
-
-**Output**
-
-| _time | id | geo.country | model | input_cost |
-|-------|----|--------------|---------| ----------|
-| 2024-01-15T10:30:00Z | user_789 | US | gpt-4 | 30.0 |
-| 2024-01-15T10:35:00Z | user_234 | UK | claude-3-opus | 15.0 |
-
-This query identifies usage of expensive models, which could indicate cost optimization opportunities or unauthorized access.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

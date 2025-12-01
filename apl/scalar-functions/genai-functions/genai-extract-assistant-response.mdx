@@ -73,88 +73,29 @@ genai_extract_assistant_response(messages)
 
 Returns a string containing the content of the last assistant message in the conversation, or an empty string if no assistant message is found.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Extract AI responses from conversation logs to analyze response quality and patterns.
+Extract the assistant's response from a GenAI conversation.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| where uri contains '/api/chat'
-| extend ai_response = genai_extract_assistant_response(todynamic(response_body)['messages'])
+['genai-traces']
+| where ['attributes.gen_ai.operation.name'] == 'chat'
+| extend ai_response = genai_extract_assistant_response(['attributes.gen_ai.input.messages'])
 | where strlen(ai_response) > 0
-| project _time, id, req_duration_ms, ai_response
+| project _time, ai_response
+| limit 3
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fchat'%20%7C%20extend%20ai_response%20%3D%20genai_extract_assistant_response(todynamic(response_body)%5B'messages'%5D)%20%7C%20where%20strlen(ai_response)%20%3E%200%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20ai_response%22%7D)
 
 **Output**
 
-| _time | id | req_duration_ms | ai_response |
-|-------|----|-----------------|--------------| 
-| 2024-01-15T10:30:00Z | user_123 | 1250 | To reset your password, click on the 'Forgot Password' link on the login page. |
-| 2024-01-15T10:31:00Z | user_456 | 980 | Our business hours are Monday to Friday, 9 AM to 5 PM EST. |
+| _time | ai_response |
+|-------|-------------|
+| 2024-01-15T10:30:00Z | To reset your password, click on the 'Forgot Password' link on the login page. |
+| 2024-01-15T10:31:00Z | Our business hours are Monday to Friday, 9 AM to 5 PM EST. |
 
-This query extracts AI responses and correlates them with response times, helping you analyze performance.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Monitor AI assistant responses across different services to track response patterns and quality.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| where ['service.name'] == 'frontend' and kind == 'server'
-| extend assistant_response = genai_extract_assistant_response(todynamic(attributes['ai.messages']))
-| where isnotempty(assistant_response)
-| project _time, trace_id, span_id, duration, assistant_response
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'frontend'%20and%20kind%20%3D%3D%20'server'%20%7C%20extend%20assistant_response%20%3D%20genai_extract_assistant_response(todynamic(attributes%5B'ai.messages'%5D))%20%7C%20where%20isnotempty(assistant_response)%20%7C%20project%20_time%2C%20trace_id%2C%20span_id%2C%20duration%2C%20assistant_response%22%7D)
-
-**Output**
-
-| _time | trace_id | span_id | duration | assistant_response |
-|-------|----------|---------|----------|--------------------|
-| 2024-01-15T10:30:00Z | abc123 | span_001 | 1.2s | I can help you with that! |
-| 2024-01-15T10:31:00Z | def456 | span_002 | 0.9s | Let me explain the process. |
-
-This query extracts assistant responses from trace data, helping you understand AI behavior in distributed systems.
-
-</Tab>
-<Tab title="Security logs">
-
-Monitor AI responses for sensitive information disclosure or inappropriate content.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where uri contains '/api/ai'
-| extend response = genai_extract_assistant_response(todynamic(response_body)['messages'])
-| where response contains 'password' or response contains 'credit card' or response contains 'ssn'
-| project _time, id, ['geo.country'], uri, response
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20uri%20contains%20'%2Fapi%2Fai'%20%7C%20extend%20response%20%3D%20genai_extract_assistant_response(todynamic(response_body)%5B'messages'%5D)%20%7C%20where%20response%20contains%20'password'%20or%20response%20contains%20'credit%20card'%20or%20response%20contains%20'ssn'%20%7C%20project%20_time%2C%20id%2C%20%5B'geo.country'%5D%2C%20uri%2C%20response%22%7D)
-
-**Output**
-
-| _time | id | geo.country | uri | response |
-|-------|----|--------------|----|----------|
-| 2024-01-15T10:30:00Z | user_789 | US | /api/ai/chat | I cannot provide password information for security reasons. |
-| 2024-01-15T10:35:00Z | user_234 | UK | /api/ai/assistant | Credit card details should never be shared. |
-
-This query detects AI responses containing sensitive keywords, helping you monitor for potential security or compliance issues.
-
-</Tab>
-</Tabs>
+This query extracts AI responses, helping you analyze response quality and patterns.
 
 ## List of related functions
 
