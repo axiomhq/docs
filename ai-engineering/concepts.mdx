@@ -1,7 +1,7 @@
 ---
 title: "Concepts"
-description: "Learn about the core concepts in AI engineering: Capabilities, Collections, Graders, Evals, and more."
-keywords: ["ai engineering", "AI engineering", "concepts", "capability", "grader", "eval"]
+description: "Learn about the core concepts in AI engineering: Capabilities, Collections, Evals, Scorers, Annotations, and User Feedback."
+keywords: ["ai engineering", "AI engineering", "concepts", "capability", "collection", "eval", "scorer", "annotations", "feedback", "flags"]
 ---
 
 import { definitions } from '/snippets/definitions.mdx'
@@ -17,10 +17,10 @@ The concepts in AI engineering are best understood within the context of the dev
     Development starts by defining a task and prototyping a <Tooltip tip={definitions.Capability}>capability</Tooltip> with a prompt to solve it.
   </Step>
   <Step title="Evaluate with ground truth">
-    The prototype is then tested against a <Tooltip tip={definitions.Collection}>collection</Tooltip> of reference examples (so called “<Tooltip tip={definitions.GroundTruth}>ground truth</Tooltip>”) to measure its quality and effectiveness using <Tooltip tip={definitions.Grader}>graders</Tooltip>. This process is known as an <Tooltip tip={definitions.Eval}>eval</Tooltip>.
+    The prototype is then tested against a <Tooltip tip={definitions.Collection}>collection</Tooltip> of reference examples (so called "<Tooltip tip={definitions.GroundTruth}>ground truth</Tooltip>") to measure its quality and effectiveness using <Tooltip tip={definitions.Scorer}>scorers</Tooltip>. This process is known as an <Tooltip tip={definitions.Eval}>eval</Tooltip>.
   </Step>
   <Step title="Observe in production">
-    Once a capability meets quality benchmarks, it’s deployed. In production, graders can be applied to live traffic (<Tooltip tip={definitions.OnlineEval}>online evals</Tooltip>) to monitor performance and cost in real-time.
+    Once a capability meets quality benchmarks, it’s deployed. In production, scorers can be applied to live traffic (<Tooltip tip={definitions.OnlineEval}>online evals</Tooltip>) to monitor performance and cost in real-time.
   </Step>
   <Step title="Iterate with new insights">
     Insights from production monitoring reveal edge cases and opportunities for improvement. These new examples are used to refine the capability, expand the ground truth collection, and begin the cycle anew.
@@ -33,40 +33,53 @@ The concepts in AI engineering are best understood within the context of the dev
 
 A generative AI capability is a system that uses large language models to perform a specific task by transforming inputs into desired outputs.
 
-Capabilities exist on a spectrum of complexity. They can be a simple, single-step function (for example, classifying a support ticket’s intent) or evolve into a sophisticated, multi-step agent that uses reasoning and tools to achieve a goal (for example, orchestrating a complete customer support resolution).
+Capabilities exist on a spectrum of complexity, ranging from simple to sophisticated architectures:
+
+- **Single-turn model interactions**: A single prompt and response, such as classifying a support ticket’s intent or summarizing a document.
+- **Workflows**: Multi-step processes where each step’s output feeds into the next, such as research → analysis → report generation.
+- **Single-agent**: An agent that can reasons and make decisions to accomplish a goal, such as a customer support agent that can search documentation, check order status, and draft responses.
+- **Multi-agent**: Multiple specialized agents collaborating to solve complex problems, such as software engineering through architectural planning, coding, testing, and review.
 
 ### Collection
 
 A collection is a curated set of reference records used for development, testing, and evaluation of a capability. Collections serve as the test cases for prompt engineering.
 
-### Record
+### Collection record
 
-Records are the individual input-output pairs within a collection. Each record consists of an input and its corresponding expected output (ground truth).
-
-### Reference
-
-A reference is a historical example of a task completed successfully, serving as a benchmark for AI performance. References provide the input-output pairs that demonstrate the expected behavior and quality standards.
+Collection records are the individual input-output pairs within a collection. Each record consists of an input and its corresponding expected output (ground truth).
 
 ### Ground truth
 
 Ground truth is the validated, expert-approved correct output for a given input. It represents the gold standard that the AI capability should aspire to match.
 
+### Scorer
+
+A scorer is a function that evaluates a capability’s output. It programmatically assesses quality by comparing the generated output against ground truth or other criteria, returning a score.
+
+### Evaluation or "eval"
+
+An evaluation, or eval, is the process of testing a capability against a collection of ground truth data using one or more scorers. An eval runs the capability on every record in the collection and reports metrics like accuracy, pass-rate, and cost. Evals are typically run before deployment to benchmark performance.
+
+### Flag
+
+A flag is a configuration parameter that controls how your AI capability behaves. Flags let you parameterize aspects like model choice, tool availability, prompting strategies, or retrieval approaches. By defining flags, you can run experiments to compare different configurations and systematically determine which approach performs best.
+
+### Experiment
+
+An experiment is an evaluation run with a specific set of flag values. By running multiple experiments with different flag configurations, you can compare performance across different models, prompts, or strategies to find the optimal setup for your capability.
+
+### Online evaluation
+
+An online evaluation is the process of applying a scorer to a capability’s live production traffic. This provides real-time feedback on performance degradation, cost, and quality drift, enabling continuous monitoring and improvement.
+
 ### Annotation
 
-Annotations are expert-provided labels, corrections, or outputs added to records to establish or refine ground truth.
+Annotations are expert-provided observations, labels, or corrections added to production traces or evaluation results. Domain experts review AI capability runs and document what went wrong, what should have happened differently, or categorize failure modes. These annotations help identify patterns in capability failures, validate scorer accuracy, and create new test cases for collections.
 
-### Grader
+### User feedback
 
-A grader is a function that scores a capability’s output. It programmatically assesses quality by comparing the generated output against ground truth or other criteria, returning a score or judgment. Graders are the reusable, atomic scoring logic used in all forms of evaluation.
-
-### Evaluator (eval)
-
-An evaluator, or eval, is the process of testing a capability against a collection of ground truth data using one or more graders. An eval runs the capability on every record in the collection and reports metrics like accuracy, pass-rate, and cost. Evals are typically run before deployment to benchmark performance.
-
-### Online eval
-
-An online eval is the process of applying a grader to a capability’s live production traffic. This provides real-time feedback on performance degradation, cost, and quality drift, enabling continuous monitoring and improvement.
+User feedback is direct signal from end users about AI capability performance, typically collected through ratings (thumbs up/down, stars) or text comments. Feedback events are associated with traces to provide context about both system behavior and user perception. Aggregated feedback reveals quality trends, helps prioritize improvements, and surfaces issues that might not appear in evaluations.
 
 ## What’s next?
 
-Now that you understand the core concepts, see them in action in the AI engineering [workflow](/ai-engineering/quickstart).
+Now that you understand the core concepts, get started with the [Quickstart](/ai-engineering/quickstart) or dive into [Evaluate](/ai-engineering/evaluate/overview) to learn about systematic testing.
