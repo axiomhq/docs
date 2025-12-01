@@ -66,6 +66,18 @@ The maximum value for `N` is 50,000 rows. If you need to export or process more 
 
 The `limit` operator returns the top **`N`** rows from the input dataset. If fewer than **`N`** rows are available, all rows are returned.
 
+### Behavior with grouped queries
+
+When using `limit` with the `summarize` operator and time-based grouping (using `bin(_time, ...)`), the limit behavior works differently:
+
+- Axiom computes the global top **`N`** groups across all time buckets, disregarding time boundaries
+- Each time bucket is then limited to include only those groups that are in the global top **`N`**
+- This means the total number of rows returned can exceed **`N`**, as each time bucket may contain multiple rows for the same top groups
+
+For example, if you use `limit 10` with a query that groups by `bin(_time, 1h)` and another field, and the top 10 groups appear across 5 different time buckets, you could receive up to 50 rows (10 groups × 5 time buckets) instead of 10 rows.
+
+If you need to limit the total number of rows returned, consider using `take` after the `summarize` operation, or apply additional filtering to reduce the number of groups before applying the limit.
+
 ## Use case examples
 
 <Tabs>
