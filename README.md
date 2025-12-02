@@ -62,3 +62,4 @@ We value your input and invite you to help us make the Axiom documentation even 
 
 - If the local build fails, run `mint update`.
 - If a page loads as a 404, make sure you run the local build in the root folder where the file `docs.json` is present.
+
