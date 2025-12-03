@@ -56,7 +56,7 @@ We value your input and invite you to help us make the Axiom documentation even 
 1. Rate pages. Hit the 👍/👎 button on any page to let us know what you like and what you don’t.
 2. Leave feedback. Click **Raise issue** on any documentation page to create a GitHub issue where you can share thoughts and suggestions.
 3. Suggest edits. Found a typo or outdated information? Click **Suggest edits** directly on the page.
-4. Contribute content. If you have in-depth knowledge or unique use cases, we encourage you to contribute by writing new sections or enhancing existing ones. Before contributing, please read the [Contribution guidelines](/.github/CONTRIBUTING.md) and the [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct.html).
+4. Contribute content. If you have in-depth knowledge or unique use cases, we encourage you to contribute by writing new sections or enhancing existing ones. Before contributing, please read the [Contribution guidelines](https://github.com/axiomhq/docs/blob/main/.github/CONTRIBUTING.md) and the [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct.html).
 
 ## Troubleshooting
 
