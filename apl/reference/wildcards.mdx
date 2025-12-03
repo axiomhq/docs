@@ -4,10 +4,10 @@ description: 'This page explains how to use wildcards in APL to match multiple d
 keywords: ['axiom documentation', 'documentation', 'axiom', 'APL', 'wildcard', 'asterisk', 'pattern matching', 'union', 'search', 'pack']
 ---
 
-Wildcards in APL allow you to use pattern matching to select multiple datasets or fields without explicitly listing each one. The asterisk (`*`) is the wildcard character that matches zero or more characters.
+Use wildcards in APL to match multiple datasets or fields without explicitly listing each one. The asterisk (`*`) is the wildcard character that matches zero or more characters.
 
 <Warning>
-Wildcards can make queries significantly slower and more expensive, especially when matching many datasets or fields. Use wildcards sparingly and prefer explicit names when possible.
+Using wildcards makes queries significantly slower and more expensive, especially when matching many datasets or fields. Use wildcards sparingly and prefer explicit names when possible.
 </Warning>
 
 ## Dataset wildcards
@@ -38,7 +38,7 @@ union withsource=dataset github*
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?qid=N2Is0LGymzX-t5igki&relative=1)
 
-This matches datasets such as:
+The pattern matches datasets such as:
 - `github-push-event`
 - `github-pull-request-event`
 - `github-issues-event`
@@ -69,7 +69,7 @@ The `search` operator supports wildcards in dataset names when using the `in` cl
 search in (github*) "error"
 ```
 
-This searches for the term "error" across all datasets matching the `github*` pattern.
+The query searches for the term "error" across all datasets matching the `github*` pattern.
 
 ## Field wildcards
 
@@ -84,7 +84,7 @@ Use `bag_pack(*)` or `pack(*)` to pack all fields from the current row into a dy
 | project _time, all_fields = bag_pack(*)
 ```
 
-This creates a property bag containing all fields from each row. For example:
+The query creates a property bag containing all fields from each row. For example:
 
 | _time | all_fields |
 |-------|------------|
@@ -100,7 +100,7 @@ Use `pack_array(*)` to pack all fields from the current row into an array:
 ```
 
 <Note>
-The `pack_array(*)` wildcard packs all field values into an array, but does not include field names. Use `bag_pack(*)` if you need key-value pairs.
+The `pack_array(*)` wildcard packs all field values into an array, but does not include field names. Use `bag_pack(*)` for key-value pairs.
 </Note>
 
 ### Aggregation functions
@@ -114,7 +114,7 @@ The `spotlight` aggregation function supports wildcards in field parameters to a
 | summarize spotlight(status startswith "5", *)
 ```
 
-This compares error responses (status codes starting with "5") against the baseline across all fields in the dataset.
+The query compares error responses (status codes starting with "5") against the baseline across all fields in the dataset.
 
 #### arg_min and arg_max
 
@@ -125,9 +125,9 @@ Use `*` as a field parameter in `arg_min` and `arg_max` to return all fields fro
 | summarize arg_min(req_duration_ms, *)
 ```
 
-This returns all fields from the row with the minimum `req_duration_ms` value.
+The query returns all fields from the row with the minimum `req_duration_ms` value.
 
-Similarly for `arg_max`:
+Use `arg_max` similarly:
 
 ```kusto
 ['sample-http-logs']
@@ -147,7 +147,7 @@ Use wildcards to exclude multiple fields matching a pattern:
 | project-away status*, user*, ['geo.']*
 ```
 
-This removes all fields starting with `status`, `user`, or `geo.`.
+The query removes all fields starting with `status`, `user`, or `geo.`.
 
 #### project-reorder
 
@@ -158,7 +158,7 @@ Use wildcards to reorder fields:
 | project-reorder method, status, *
 ```
 
-This places `method` and `status` first, followed by all other fields in their original order.
+The query places `method` and `status` first, followed by all other fields in their original order.
 
 ## Search predicate wildcards
 
@@ -177,20 +177,20 @@ For more details, see the [search operator documentation](/apl/tabular-operators
 ## Performance considerations
 
 <Warning>
-Wildcards can significantly impact query performance:
+Wildcards significantly impact query performance:
 
-- **Dataset wildcards** (`union *`): Querying all datasets is extremely expensive and should be avoided in production. Use specific dataset names or prefix patterns when possible.
-- **Field wildcards**: Packing all fields or analyzing all fields can increase memory usage and query time, especially with wide datasets.
-- **Search wildcards**: Pattern matching in search predicates is generally efficient, but complex patterns may be slower than exact matches.
+- **Dataset wildcards** (`union *`): Querying all datasets is extremely expensive. Avoid using `union *` in production. Use specific dataset names or prefix patterns instead.
+- **Field wildcards**: Packing all fields or analyzing all fields increases memory usage and query time, especially with wide datasets.
+- **Search wildcards**: Pattern matching in search predicates is generally efficient, but complex patterns are slower than exact matches.
 
-Always prefer explicit names over wildcards when performance is critical.
+Prefer explicit names over wildcards when performance is critical.
 </Warning>
 
 ## Examples
 
 ### Combine multiple related datasets
 
-Query all GitHub event datasets and count events by type:
+Combine all GitHub event datasets and count events by type:
 
 ```kusto
 union withsource=source github*
@@ -205,7 +205,7 @@ union withsource=source github*
 
 ### Pack all fields for export
 
-Create a single field containing all data for each row:
+Pack all data for each row into a single field:
 
 ```kusto
 ['sample-http-logs']
@@ -215,7 +215,7 @@ Create a single field containing all data for each row:
 
 ### Find minimum with all context
 
-Get the row with the shortest request duration, including all fields:
+Return the row with the shortest request duration, including all fields:
 
 ```kusto
 ['sample-http-logs']
@@ -224,7 +224,7 @@ Get the row with the shortest request duration, including all fields:
 
 ### Analyze all fields with spotlight
 
-Compare error responses to normal traffic across all fields:
+Compare error responses to normal traffic across all fields in the dataset:
 
 ```kusto
 ['sample-http-logs']
