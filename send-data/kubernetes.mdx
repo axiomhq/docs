@@ -500,3 +500,31 @@ spec:
 </Info>
 
 After editing your values, apply the changes to your cluster using `kubectl apply -f daemonset.yaml`
+
+## Extract top-level fields from log body
+
+To extract top-level fields from the log body, configure the `filelog` receiver with operators to parse container log formats and JSON-structured log bodies.
+
+Configure the following settings in your OpenTelemetry Collector configuration:
+
+| Setting | Description |
+|---------|-------------|
+| **Receiver** | Use `filelog` receiver targeting `/var/log/pods/*/*/*.log` |
+| **Container operator** | Add the `container` operator to parse container log formats (Docker, CRI-O, Containerd) and extract the inner log message as the body |
+| **JSON parser operator** | Add the `json_parser` operator to parse JSON-structured log bodies into structured fields |
+| **Transform processor** | Optional: Use the `transform` processor to promote parsed JSON fields to top-level attributes instead of keeping them in the body |
+
+Example configuration:
+
+```yaml
+receivers:
+  filelog/k8s-logs:
+    include: [/var/log/pods/*/*/*.log]
+    start_at: end
+    operators:
+      - type: container
+      - type: json_parser
+        if: body matches '^{.*}$'
+```
+
+For complete configuration details, including optional timestamp and severity extraction, see the [OpenTelemetry Collector documentation](https://opentelemetry.io/docs/collector/).
