@@ -24,7 +24,7 @@ search [kind=CaseSensitivity] SearchPredicate
 or
 
 ```kusto
-search [kind=CaseSensitivity] SearchPredicate
+search [kind=CaseSensitivity] [in (DatasetPattern)] SearchPredicate
 ```
 
 ### Parameters
@@ -32,6 +32,7 @@ search [kind=CaseSensitivity] SearchPredicate
 | Name           |             Type |                   Required |         Description |
 |----------------|-----------------|-------------------------------------|-----------------------------------------------|
 | **CaseSensitivity** | string |          | A flag that controls the behavior of all `string` scalar operators, such as `has`, with respect to case sensitivity. Valid values are `default`, `case_insensitive`, `case_sensitive`. The options `default` and `case_insensitive` are synonymous, since the default behavior is case insensitive.|
+| **DatasetPattern** | string |          | A wildcard pattern to match datasets. The wildcard `*` is useful to match multiple datasets, but it increases query complexity and decreases performance. |
 | **SearchPredicate** | string |  &check; | A Boolean expression to be evaluated for every event in the input. If it returns `true`, the record is outputted.|
 
 ## Returns
@@ -201,6 +202,16 @@ Search the logs for entries that contain either the term "GET" or "covina", irre
 ```
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20search%20%5C%22GET%5C%22%20or%20%5C%22covina%5C%22%22%7D&queryOptions=%7B%22quickRange%22%3A%2230d%22%7D)
+
+### Search across multiple datasets with wildcards
+
+Use the `in` clause with wildcards to search across multiple datasets matching a pattern:
+
+```kusto
+search in (github*) "error"
+```
+
+This searches for the term `error` across all datasets that start with `github`, such as `github-push-event` and `github-pull-request-event`. The wildcard `*` in `in (github*)` is useful to match multiple datasets, but it increases query complexity and decreases performance.
 
 ## Use the search operator efficiently
 
