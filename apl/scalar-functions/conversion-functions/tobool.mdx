@@ -1,0 +1,153 @@
+---
+title: tobool
+description: 'This page explains how to use the tobool function in APL.'
+---
+
+Use the `tobool` function to convert various data types to a boolean value. This is helpful when you need to normalize values from different sources into boolean format for conditional logic, filtering, or boolean operations.
+
+You typically use `tobool` when working with data that represents boolean values as strings (like "true"/"false" or "1"/"0"), numbers, or other types that need to be converted to proper boolean values.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk, you use `if` expressions or `tonumber` with comparisons to convert values to boolean-like results. In APL, `tobool` provides a direct conversion function that handles various input types.
+
+<CodeGroup>
+```sql Splunk example
+... | eval is_active = if(field == "true" OR field == 1, 1, 0)
+```
+
+```kusto APL equivalent
+... | extend is_active = tobool(field)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In standard SQL, you use `CASE` statements or `CAST` to convert values to boolean. In APL, `tobool` provides a simpler way to convert various types to boolean values.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE WHEN status = 'active' THEN TRUE ELSE FALSE END AS is_active FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_active = tobool(['status'] == '200')
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+tobool(value)
+```
+
+### Parameters
+
+| Name  | Type    | Description                        |
+| ----- | ------- | ---------------------------------- |
+| value | dynamic | The value to convert to boolean. |
+
+### Returns
+
+If conversion is successful, the result is a boolean. If conversion isn't successful, the result is `false`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Convert string representations of boolean values to actual boolean types for filtering and analysis.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend success = tobool(['status'] == '200')
+| extend is_slow = tobool(['req_duration_ms'] > 1000)
+| where success == true or is_slow == true
+| project _time, ['uri'], ['status'], ['req_duration_ms'], success, is_slow
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20success%20%3D%20tobool(%5B'status'%5D%20%3D%3D%20'200')%20%7C%20extend%20is_slow%20%3D%20tobool(%5B'req_duration_ms'%5D%20%3E%201000)%20%7C%20where%20success%20%3D%3D%20true%20or%20is_slow%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20%5B'req_duration_ms'%5D%2C%20success%2C%20is_slow%22%7D)
+
+**Output**
+
+| _time | uri | status | req_duration_ms | success | is_slow |
+| ----- | --- | ------ | -------------- | ------- | ------- |
+| Jun 24, 09:28:10 | /api/users | 200 | 150 | true | false |
+
+This example converts comparison results to boolean values, making it easier to use them in boolean logic and filters.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Convert trace status codes to boolean values to identify successful or failed operations.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend is_success = tobool(['status_code'] < '400')
+| extend is_server = tobool(['kind'] == 'server')
+| where is_success == false
+| project _time, ['trace_id'], ['service.name'], ['status_code'], is_success, is_server
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20is_success%20%3D%20tobool(%5B'status_code'%5D%20%3C%20'400')%20%7C%20extend%20is_server%20%3D%20tobool(%5B'kind'%5D%20%3D%3D%20'server')%20%7C%20where%20is_success%20%3D%3D%20false%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'service.name'%5D%2C%20%5B'status_code'%5D%2C%20is_success%2C%20is_server%22%7D)
+
+**Output**
+
+| _time | trace_id | service.name | status_code | is_success | is_server |
+| ----- | -------- | ------------ | ----------- | ---------- | --------- |
+| Jun 24, 09:28:10 | abc123 | frontend | 500 | false | true |
+
+This example converts trace status information to boolean flags, making it easier to filter and analyze trace success rates.
+
+</Tab>
+<Tab title="Security logs">
+
+Convert security event indicators to boolean values for alerting and analysis.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend is_unauthorized = tobool(['status'] == '401')
+| extend is_forbidden = tobool(['status'] == '403')
+| extend is_security_event = tobool(is_unauthorized == true or is_forbidden == true)
+| where is_security_event == true
+| project _time, ['uri'], ['status'], ['geo.country'], is_unauthorized, is_forbidden, is_security_event
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20is_unauthorized%20%3D%20tobool(%5B'status'%5D%20%3D%3D%20'401')%20%7C%20extend%20is_forbidden%20%3D%20tobool(%5B'status'%5D%20%3D%3D%20'403')%20%7C%20extend%20is_security_event%20%3D%20tobool(is_unauthorized%20%3D%3D%20true%20or%20is_forbidden%20%3D%3D%20true)%20%7C%20where%20is_security_event%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20%5B'geo.country'%5D%2C%20is_unauthorized%2C%20is_forbidden%2C%20is_security_event%22%7D)
+
+**Output**
+
+| _time | uri | status | geo.country | is_unauthorized | is_forbidden | is_security_event |
+| ----- | --- | ------ | ----------- | ---------------- | ------------ | ----------------- |
+| Jun 24, 09:28:10 | /admin | 403 | US | false | true | true |
+
+This example converts security status codes to boolean flags, making it easier to identify and filter security-related events.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [isbool](/apl/scalar-functions/conversion-functions/isbool): Checks if a value is a boolean. Use `isbool` to validate types, and `tobool` to convert values to boolean.
+- [case](/apl/scalar-functions/conditional-function#case): Evaluates conditions and returns values. Use `case` for complex conditional logic, and `tobool` for simple conversions.
+- [iff](/apl/scalar-functions/conditional-function#iff): Returns one of two values based on a predicate. Use `iff` for conditional assignment, and `tobool` for type conversion.
