@@ -3,38 +3,149 @@ title: tohex
 description: 'This page explains how to use the tohex function in APL.'
 ---
 
-## tohex()
+Use the `tohex` function to convert integer or long values to hexadecimal string representation. This is helpful when you need to display numeric values in hexadecimal format, work with memory addresses, or convert identifiers to hex format for compatibility with other systems.
 
-Converts input to a hexadecimal string.
+You typically use `tohex` when working with numeric identifiers, memory addresses, or when you need hexadecimal representation for debugging, logging, or system integration purposes.
 
-### Arguments
+## For users of other query languages
 
-- Expr: int or long value that will be converted to a hex string. Other types aren't supported.
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk, you use `printf` with format specifiers like `%x` or `%X` to convert numbers to hexadecimal. In APL, `tohex` provides a direct function for this conversion.
+
+<CodeGroup>
+```sql Splunk example
+... | eval hex_value = printf("%x", numeric_field)
+```
+
+```kusto APL equivalent
+... | extend hex_value = tohex(numeric_field)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In standard SQL, you use `TO_HEX` or `HEX` functions in some databases, or `FORMAT` functions with hex specifiers. In APL, `tohex` provides a straightforward way to convert integers to hexadecimal strings.
+
+<CodeGroup>
+```sql SQL example
+SELECT TO_HEX(546) AS hex_value FROM dual;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend hex_value = tohex(546)
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+tohex(value [, minLength])
+```
+
+### Parameters
+
+| Name      | Type    | Description                                                      |
+| --------- | ------- | ---------------------------------------------------------------- |
+| value     | int     | The integer or long value to convert to hexadecimal string.      |
+| minLength | int     | Optional. Minimum length of the resulting hex string. Default is 0. |
 
 ### Returns
 
-If conversion is successful, result will be a string value. If conversion isn't successful, result will be false.
+If conversion is successful, the result is a string value representing the hexadecimal representation. If conversion isn't successful, the result is `null`.
 
-### Examples
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Convert numeric request IDs to hexadecimal format for display or integration with systems that use hex identifiers.
+
+**Query**
 
 ```kusto
-tohex(value)
+['sample-http-logs']
+| extend request_id_num = tolong(['id'])
+| extend hex_id = tohex(request_id_num, 8)
+| project _time, ['uri'], ['id'], request_id_num, hex_id
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20request_id_num%20%3D%20tolong(%5B'id'%5D)%20%7C%20extend%20hex_id%20%3D%20tohex(request_id_num%2C%208)%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'id'%5D%2C%20request_id_num%2C%20hex_id%22%7D)
+
+**Output**
+
+| _time | uri | id | request_id_num | hex_id |
+| ----- | --- | -- | -------------- | ------ |
+| Jun 24, 09:28:10 | /api/users | 12345 | 12345 | 00003039 |
+
+This example converts numeric request IDs to hexadecimal format with a minimum length, making them suitable for systems that expect hex identifiers.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Convert trace IDs from numeric format to hexadecimal representation for compatibility with trace visualization tools.
+
+**Query**
 
 ```kusto
-tohex(-546) == 'fffffffffffffdde'
+['otel-demo-traces']
+| extend span_id_num = tolong(['span_id'])
+| extend hex_span_id = tohex(span_id_num, 16)
+| project _time, ['trace_id'], ['span_id'], span_id_num, hex_span_id
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20span_id_num%20%3D%20tolong(%5B'span_id'%5D)%20%7C%20extend%20hex_span_id%20%3D%20tohex(span_id_num%2C%2016)%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'span_id'%5D%2C%20span_id_num%2C%20hex_span_id%22%7D)
+
+**Output**
+
+| _time | trace_id | span_id | span_id_num | hex_span_id |
+| ----- | -------- | ------- | ----------- | ----------- |
+| Jun 24, 09:28:10 | abc123 | 98765 | 98765 | 000000000001819d |
+
+This example converts span IDs to hexadecimal format with padding, ensuring compatibility with trace visualization systems that expect hex-encoded identifiers.
+
+</Tab>
+<Tab title="Security logs">
+
+Convert numeric security event identifiers to hexadecimal format for correlation with security tools that use hex identifiers.
+
+**Query**
 
 ```kusto
-tohex(546) == '222'
+['sample-http-logs']
+| extend event_id = tolong(['id'])
+| extend hex_event_id = tohex(event_id, 8)
+| where ['status'] == '403' or ['status'] == '401'
+| project _time, ['uri'], ['status'], event_id, hex_event_id
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20conversion_function%20%3D%20tohex%28-546%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20event_id%20%3D%20tolong(%5B'id'%5D)%20%7C%20extend%20hex_event_id%20%3D%20tohex(event_id%2C%208)%20%7C%20where%20%5B'status'%5D%20%3D%3D%20'403'%20or%20%5B'status'%5D%20%3D%3D%20'401'%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20event_id%2C%20hex_event_id%22%7D)
 
-- Result:
+**Output**
 
-```json
-{
-  "conversion_function": "fffffffffffffdde"
-}
-```
+| _time | uri | status | event_id | hex_event_id |
+| ----- | --- | ------ | -------- | ------------ |
+| Jun 24, 09:28:10 | /admin | 403 | 12345 | 00003039 |
+
+This example converts security event IDs to hexadecimal format, enabling correlation with security information and event management (SIEM) systems that use hex identifiers.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [tolong](/apl/scalar-functions/conversion-functions/tolong): Converts input to long integer. Use `tolong` to convert values to integers before using `tohex`.
+- [toint](/apl/scalar-functions/conversion-functions/toint): Converts input to integer. Use `toint` for smaller integers before converting to hex.
+- [tostring](/apl/scalar-functions/conversion-functions/tostring): Converts input to string. Use `tostring` for general string conversion, and `tohex` specifically for hexadecimal representation.

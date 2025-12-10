@@ -3,34 +3,151 @@ title: tolong
 description: 'This page explains how to use the tolong function in APL.'
 ---
 
-## tolong()
+Use the `tolong` function to convert various data types to a long (signed 64-bit) integer value. This is helpful when you need to normalize numeric values from different sources into long integer format for mathematical operations, comparisons, or when working with large numeric identifiers.
 
-Converts input to long (signed 64-bit) number representation.
+You typically use `tolong` when working with numeric strings, floating-point numbers, or other types that need to be converted to long integers, especially when dealing with large numbers that exceed the standard integer range.
 
-### Arguments
+## For users of other query languages
 
-- Expr: Expression that will be converted to long.
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk, you use `tonumber` to convert values to numbers. In APL, `tolong` specifically converts to long integers, which can handle larger values than standard integers.
+
+<CodeGroup>
+```sql Splunk example
+... | eval timestamp_ms = tonumber(timestamp_string)
+```
+
+```kusto APL equivalent
+... | extend timestamp_ms = tolong(timestamp_string)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In standard SQL, you use `CAST(... AS BIGINT)` or `CAST(... AS LONG)` to convert values to long integers. In APL, `tolong` provides a simpler way to convert to long integer values.
+
+<CodeGroup>
+```sql SQL example
+SELECT CAST('241' AS BIGINT) AS id FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend id = tolong('241')
+```
+
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+tolong(value)
+```
+
+### Parameters
+
+| Name  | Type    | Description                        |
+| ----- | ------- | ---------------------------------- |
+| value | dynamic | The value to convert to long. |
 
 ### Returns
 
-If conversion is successful, result will be a long number. If conversion isn't successful, result will be false.
+If conversion is successful, the result is a long number. If conversion isn't successful, the result is `null`.
 
-### Examples
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Convert string representations of large numeric identifiers to long integers for numeric operations and comparisons.
+
+**Query**
 
 ```kusto
-tolong(Expr)
+['sample-http-logs']
+| extend user_id_long = tolong(['id'])
+| extend is_large_id = user_id_long > 1000000
+| where is_large_id == true
+| project _time, ['uri'], ['id'], user_id_long, is_large_id
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20user_id_long%20%3D%20tolong(%5B'id'%5D)%20%7C%20extend%20is_large_id%20%3D%20user_id_long%20%3E%201000000%20%7C%20where%20is_large_id%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'id'%5D%2C%20user_id_long%2C%20is_large_id%22%7D)
+
+**Output**
+
+| _time | uri | id | user_id_long | is_large_id |
+| ----- | --- | -- | ------------ | ----------- |
+| Jun 24, 09:28:10 | /api/users | 1234567 | 1234567 | true |
+
+This example converts string user IDs to long integers, enabling numeric comparisons to identify users with large identifier values.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Convert trace and span IDs from string format to long integers for numeric operations and correlation.
+
+**Query**
 
 ```kusto
-tolong("241") == 241
+['otel-demo-traces']
+| extend span_id_long = tolong(['span_id'])
+| extend trace_id_long = tolong(['trace_id'])
+| extend is_recent_span = span_id_long > 1000000
+| where is_recent_span == true
+| project _time, ['trace_id'], ['span_id'], span_id_long, trace_id_long
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%5Cn%7C%20project%20conversion_function%20%3D%20tolong%28%5C%22241%5C%22%29%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20span_id_long%20%3D%20tolong(%5B'span_id'%5D)%20%7C%20extend%20trace_id_long%20%3D%20tolong(%5B'trace_id'%5D)%20%7C%20extend%20is_recent_span%20%3D%20span_id_long%20%3E%201000000%20%7C%20where%20is_recent_span%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'span_id'%5D%2C%20span_id_long%2C%20trace_id_long%22%7D)
 
-- Result: 
+**Output**
 
-```json
-{
-  "conversion_function": 241
-}
+| _time | trace_id | span_id | span_id_long | trace_id_long |
+| ----- | -------- | ------- | ------------ | ------------- |
+| Jun 24, 09:28:10 | abc123 | 9876543 | 9876543 | null |
+
+This example converts trace identifiers to long integers, enabling numeric operations on trace and span IDs for correlation and analysis.
+
+</Tab>
+<Tab title="Security logs">
+
+Convert large numeric security event identifiers to long integers for numeric analysis and correlation.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend event_id_long = tolong(['id'])
+| extend is_suspicious_id = event_id_long > 5000000
+| where (['status'] == '403' or ['status'] == '401') and is_suspicious_id == true
+| project _time, ['uri'], ['status'], ['id'], event_id_long, is_suspicious_id
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20event_id_long%20%3D%20tolong(%5B'id'%5D)%20%7C%20extend%20is_suspicious_id%20%3D%20event_id_long%20%3E%205000000%20%7C%20where%20(%5B'status'%5D%20%3D%3D%20'403'%20or%20%5B'status'%5D%20%3D%3D%20'401')%20and%20is_suspicious_id%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20%5B'id'%5D%2C%20event_id_long%2C%20is_suspicious_id%22%7D)
+
+**Output**
+
+| _time | uri | status | id | event_id_long | is_suspicious_id |
+| ----- | --- | ------ | -- | ------------- | ---------------- |
+| Jun 24, 09:28:10 | /admin | 403 | 6000000 | 6000000 | true |
+
+This example converts security event IDs to long integers, enabling numeric threshold analysis to identify potentially suspicious event identifiers.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [toint](/apl/scalar-functions/conversion-functions/toint): Converts input to integer. Use `toint` for standard integer ranges, and `tolong` for larger values.
+- [todouble](/apl/scalar-functions/conversion-functions/todouble): Converts input to real number. Use `todouble` when you need decimal precision, and `tolong` when you need whole numbers.
+- [tohex](/apl/scalar-functions/conversion-functions/tohex): Converts integer to hexadecimal string. Use `tohex` with `tolong` to convert large integers to hex format.
