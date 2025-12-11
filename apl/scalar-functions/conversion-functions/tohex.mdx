@@ -66,83 +66,27 @@ tohex(value [, minLength])
 
 If conversion is successful, the result is a string value representing the hexadecimal representation. If conversion isn't successful, the result is `null`.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Convert numeric request IDs to hexadecimal format for display or integration with systems that use hex identifiers.
+Convert numeric request duration values to hexadecimal format for display or integration with systems that use hex identifiers.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend request_id_num = tolong(['id'])
-| extend hex_id = tohex(request_id_num, 8)
-| project _time, ['uri'], ['id'], request_id_num, hex_id
+| extend duration_ns = req_duration_ms * 1000
+| extend duration_num = tolong(duration_ns) |
+| extend hex_duration = tohex(duration_num, 8)
+| project _time, ['uri'], ['req_duration_ms'], duration_num, hex_duration
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20request_id_num%20%3D%20tolong(%5B'id'%5D)%20%7C%20extend%20hex_id%20%3D%20tohex(request_id_num%2C%208)%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'id'%5D%2C%20request_id_num%2C%20hex_id%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20duration_ns%20%3D%20req_duration_ms%20*%201000%20%7C%20extend%20duration_num%20%3D%20tolong(duration_ns)%20%7C%20%7C%20extend%20hex_duration%20%3D%20tohex(duration_num%2C%208)%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'req_duration_ms'%5D%2C%20duration_num%2C%20hex_duration%22%7D)
 
 **Output**
 
-| _time | uri | id | request_id_num | hex_id |
-| ----- | --- | -- | -------------- | ------ |
+| _time | uri | req_duration_ms | duration_num | hex_duration |
+| ----- | --- | --------------- | ------------ | ------------ |
 | Jun 24, 09:28:10 | /api/users | 12345 | 12345 | 00003039 |
-
-This example converts numeric request IDs to hexadecimal format with a minimum length, making them suitable for systems that expect hex identifiers.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Convert trace IDs from numeric format to hexadecimal representation for compatibility with trace visualization tools.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend span_id_num = tolong(['span_id'])
-| extend hex_span_id = tohex(span_id_num, 16)
-| project _time, ['trace_id'], ['span_id'], span_id_num, hex_span_id
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20span_id_num%20%3D%20tolong(%5B'span_id'%5D)%20%7C%20extend%20hex_span_id%20%3D%20tohex(span_id_num%2C%2016)%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'span_id'%5D%2C%20span_id_num%2C%20hex_span_id%22%7D)
-
-**Output**
-
-| _time | trace_id | span_id | span_id_num | hex_span_id |
-| ----- | -------- | ------- | ----------- | ----------- |
-| Jun 24, 09:28:10 | abc123 | 98765 | 98765 | 000000000001819d |
-
-This example converts span IDs to hexadecimal format with padding, ensuring compatibility with trace visualization systems that expect hex-encoded identifiers.
-
-</Tab>
-<Tab title="Security logs">
-
-Convert numeric security event identifiers to hexadecimal format for correlation with security tools that use hex identifiers.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend event_id = tolong(['id'])
-| extend hex_event_id = tohex(event_id, 8)
-| where ['status'] == '403' or ['status'] == '401'
-| project _time, ['uri'], ['status'], event_id, hex_event_id
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20event_id%20%3D%20tolong(%5B'id'%5D)%20%7C%20extend%20hex_event_id%20%3D%20tohex(event_id%2C%208)%20%7C%20where%20%5B'status'%5D%20%3D%3D%20'403'%20or%20%5B'status'%5D%20%3D%3D%20'401'%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20event_id%2C%20hex_event_id%22%7D)
-
-**Output**
-
-| _time | uri | status | event_id | hex_event_id |
-| ----- | --- | ------ | -------- | ------------ |
-| Jun 24, 09:28:10 | /admin | 403 | 12345 | 00003039 |
-
-This example converts security event IDs to hexadecimal format, enabling correlation with security information and event management (SIEM) systems that use hex identifiers.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

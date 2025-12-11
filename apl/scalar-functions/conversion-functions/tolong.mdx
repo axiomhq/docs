@@ -65,10 +65,7 @@ tolong(value)
 
 If conversion is successful, the result is a long number. If conversion isn't successful, the result is `null`.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 Convert string representations of large numeric identifiers to long integers for numeric operations and comparisons.
 
@@ -91,60 +88,6 @@ Convert string representations of large numeric identifiers to long integers for
 | Jun 24, 09:28:10 | /api/users | 1234567 | 1234567 | true |
 
 This example converts string user IDs to long integers, enabling numeric comparisons to identify users with large identifier values.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Convert trace and span IDs from string format to long integers for numeric operations and correlation.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend span_id_long = tolong(['span_id'])
-| extend trace_id_long = tolong(['trace_id'])
-| extend is_recent_span = span_id_long > 1000000
-| where is_recent_span == true
-| project _time, ['trace_id'], ['span_id'], span_id_long, trace_id_long
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20span_id_long%20%3D%20tolong(%5B'span_id'%5D)%20%7C%20extend%20trace_id_long%20%3D%20tolong(%5B'trace_id'%5D)%20%7C%20extend%20is_recent_span%20%3D%20span_id_long%20%3E%201000000%20%7C%20where%20is_recent_span%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'span_id'%5D%2C%20span_id_long%2C%20trace_id_long%22%7D)
-
-**Output**
-
-| _time | trace_id | span_id | span_id_long | trace_id_long |
-| ----- | -------- | ------- | ------------ | ------------- |
-| Jun 24, 09:28:10 | abc123 | 9876543 | 9876543 | null |
-
-This example converts trace identifiers to long integers, enabling numeric operations on trace and span IDs for correlation and analysis.
-
-</Tab>
-<Tab title="Security logs">
-
-Convert large numeric security event identifiers to long integers for numeric analysis and correlation.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend event_id_long = tolong(['id'])
-| extend is_suspicious_id = event_id_long > 5000000
-| where (['status'] == '403' or ['status'] == '401') and is_suspicious_id == true
-| project _time, ['uri'], ['status'], ['id'], event_id_long, is_suspicious_id
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20event_id_long%20%3D%20tolong(%5B'id'%5D)%20%7C%20extend%20is_suspicious_id%20%3D%20event_id_long%20%3E%205000000%20%7C%20where%20(%5B'status'%5D%20%3D%3D%20'403'%20or%20%5B'status'%5D%20%3D%3D%20'401')%20and%20is_suspicious_id%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20%5B'id'%5D%2C%20event_id_long%2C%20is_suspicious_id%22%7D)
-
-**Output**
-
-| _time | uri | status | id | event_id_long | is_suspicious_id |
-| ----- | --- | ------ | -- | ------------- | ---------------- |
-| Jun 24, 09:28:10 | /admin | 403 | 6000000 | 6000000 | true |
-
-This example converts security event IDs to long integers, enabling numeric threshold analysis to identify potentially suspicious event identifiers.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

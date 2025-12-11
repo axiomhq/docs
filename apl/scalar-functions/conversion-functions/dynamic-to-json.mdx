@@ -22,7 +22,7 @@ In Splunk, you typically use `tojson` or `mvjoin` with JSON formatting to conver
 ```
 
 ```kusto APL equivalent
-print dynamic_value = dynamic({"key": "value"})
+print dynamic_value = bag_pack("key", "value")
 | extend json_output = dynamic_to_json(dynamic_value)
 ```
 
@@ -39,7 +39,7 @@ SELECT JSON_OBJECT('key' VALUE 'value') AS json_output FROM dual;
 ```
 
 ```kusto APL equivalent
-print dynamic_value = dynamic({"key": "value"})
+print dynamic_value = bag_pack("key", "value")
 | extend json_output = dynamic_to_json(dynamic_value)
 ```
 
@@ -81,16 +81,12 @@ Convert a dynamic object containing request metadata to a JSON string for loggin
 
 ```kusto
 ['sample-http-logs']
-| extend metadata = dynamic({
-    'method': ['method'],
-    'status': ['status'],
-    'duration': ['req_duration_ms']
-})
+| extend metadata = bag_pack('method', method, 'status', status, 'duration', req_duration_ms)
 | extend json_metadata = dynamic_to_json(metadata)
 | project _time, ['uri'], json_metadata
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20metadata%20%3D%20dynamic(%7B'method'%3A%20%5B'method'%5D%2C%20'status'%3A%20%5B'status'%5D%2C%20'duration'%3A%20%5B'req_duration_ms'%5D%7D)%20%7C%20extend%20json_metadata%20%3D%20dynamic_to_json(metadata)%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20json_metadata%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20metadata%20%3D%20bag_pack('method'%2C%20method%2C%20'status'%2C%20status%2C%20'duration'%2C%20req_duration_ms)%20%7C%20extend%20json_metadata%20%3D%20dynamic_to_json(metadata)%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20json_metadata%22%7D)
 
 **Output**
 
@@ -109,16 +105,12 @@ Serialize trace attributes stored as dynamic values into JSON strings for analys
 
 ```kusto
 ['otel-demo-traces']
-| extend trace_attributes = dynamic({
-    'service': ['service.name'],
-    'kind': ['kind'],
-    'status': ['status_code']
-})
+| extend trace_attributes = bag_pack('service', ['service.name'], 'kind', ['kind'], 'status', ['status_code'])
 | extend json_attributes = dynamic_to_json(trace_attributes)
 | project _time, ['trace_id'], json_attributes
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20trace_attributes%20%3D%20dynamic(%7B'service'%3A%20%5B'service.name'%5D%2C%20'kind'%3A%20%5B'kind'%5D%2C%20'status'%3A%20%5B'status_code'%5D%7D)%20%7C%20extend%20json_attributes%20%3D%20dynamic_to_json(trace_attributes)%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20json_attributes%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20trace_attributes%20%3D%20bag_pack('service'%2C%20%5B'service.name'%5D%2C%20'kind'%2C%20%5B'kind'%5D%2C%20'status'%2C%20%5B'status_code'%5D)%20%7C%20extend%20json_attributes%20%3D%20dynamic_to_json(trace_attributes)%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20json_attributes%22%7D)
 
 **Output**
 
@@ -137,18 +129,12 @@ Convert dynamic security event data to JSON strings for reporting or integration
 
 ```kusto
 ['sample-http-logs']
-| where ['status'] == '403' or ['status'] == '401'
-| extend security_event = dynamic({
-    'timestamp': _time,
-    'status': ['status'],
-    'uri': ['uri'],
-    'location': strcat(['geo.city'], ', ', ['geo.country'])
-})
+| extend security_event = bag_pack('timestamp', _time, 'status', ['status'], 'uri', ['uri'], 'location', strcat(['geo.city'], ', ', ['geo.country']))
 | extend event_json = dynamic_to_json(security_event)
 | project _time, event_json
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20%5B'status'%5D%20%3D%3D%20'403'%20or%20%5B'status'%5D%20%3D%3D%20'401'%20%7C%20extend%20security_event%20%3D%20dynamic(%7B'timestamp'%3A%20_time%2C%20'status'%3A%20%5B'status'%5D%2C%20'uri'%3A%20%5B'uri'%5D%2C%20'location'%3A%20strcat(%5B'geo.city'%5D%2C%20'%2C%20'%2C%20%5B'geo.country'%5D)%7D)%20%7C%20extend%20event_json%20%3D%20dynamic_to_json(security_event)%20%7C%20project%20_time%2C%20event_json%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20security_event%20%3D%20bag_pack('timestamp'%2C%20_time%2C%20'status'%2C%20%5B'status'%5D%2C%20'uri'%2C%20%5B'uri'%5D%2C%20'location'%2C%20strcat(%5B'geo.city'%5D%2C%20'%2C%20'%2C%20%5B'geo.country'%5D))%20%7C%20extend%20event_json%20%3D%20dynamic_to_json(security_event)%20%7C%20project%20_time%2C%20event_json%22%7D)
 
 **Output**
 

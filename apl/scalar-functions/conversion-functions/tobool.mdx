@@ -101,13 +101,12 @@ Convert trace status codes to boolean values to identify successful or failed op
 
 ```kusto
 ['otel-demo-traces']
-| extend is_success = tobool(['status_code'] < '400')
+| extend is_success = tobool(toint(['status_code']) < 400)
 | extend is_server = tobool(['kind'] == 'server')
-| where is_success == false
 | project _time, ['trace_id'], ['service.name'], ['status_code'], is_success, is_server
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20is_success%20%3D%20tobool(%5B'status_code'%5D%20%3C%20'400')%20%7C%20extend%20is_server%20%3D%20tobool(%5B'kind'%5D%20%3D%3D%20'server')%20%7C%20where%20is_success%20%3D%3D%20false%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'service.name'%5D%2C%20%5B'status_code'%5D%2C%20is_success%2C%20is_server%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20is_success%20%3D%20tobool(toint(%5B'status_code'%5D)%20%3C%20400)%20%7C%20extend%20is_server%20%3D%20tobool(%5B'kind'%5D%20%3D%3D%20'server')%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'service.name'%5D%2C%20%5B'status_code'%5D%2C%20is_success%2C%20is_server%22%7D)
 
 **Output**
 
@@ -116,32 +115,6 @@ Convert trace status codes to boolean values to identify successful or failed op
 | Jun 24, 09:28:10 | abc123 | frontend | 500 | false | true |
 
 This example converts trace status information to boolean flags, making it easier to filter and analyze trace success rates.
-
-</Tab>
-<Tab title="Security logs">
-
-Convert security event indicators to boolean values for alerting and analysis.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend is_unauthorized = tobool(['status'] == '401')
-| extend is_forbidden = tobool(['status'] == '403')
-| extend is_security_event = tobool(is_unauthorized == true or is_forbidden == true)
-| where is_security_event == true
-| project _time, ['uri'], ['status'], ['geo.country'], is_unauthorized, is_forbidden, is_security_event
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20is_unauthorized%20%3D%20tobool(%5B'status'%5D%20%3D%3D%20'401')%20%7C%20extend%20is_forbidden%20%3D%20tobool(%5B'status'%5D%20%3D%3D%20'403')%20%7C%20extend%20is_security_event%20%3D%20tobool(is_unauthorized%20%3D%3D%20true%20or%20is_forbidden%20%3D%3D%20true)%20%7C%20where%20is_security_event%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20%5B'geo.country'%5D%2C%20is_unauthorized%2C%20is_forbidden%2C%20is_security_event%22%7D)
-
-**Output**
-
-| _time | uri | status | geo.country | is_unauthorized | is_forbidden | is_security_event |
-| ----- | --- | ------ | ----------- | ---------------- | ------------ | ----------------- |
-| Jun 24, 09:28:10 | /admin | 403 | US | false | true | true |
-
-This example converts security status codes to boolean flags, making it easier to identify and filter security-related events.
 
 </Tab>
 </Tabs>

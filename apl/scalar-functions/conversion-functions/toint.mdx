@@ -65,10 +65,7 @@ toint(value)
 
 If the conversion is successful, the result is an integer. If the conversion isn't successful, the result is `null`.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Use case example
 
 Convert string representations of HTTP status codes to integers for numeric comparisons and filtering.
 
@@ -76,13 +73,13 @@ Convert string representations of HTTP status codes to integers for numeric comp
 
 ```kusto
 ['sample-http-logs']
-| extend status_int = toint(['status'])
+| extend status_int = toint(status)
 | extend is_error = status_int >= 400
 | where is_error == true
-| project _time, ['uri'], ['status'], status_int, is_error
+| project _time, uri, status, status_int, is_error
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20status_int%20%3D%20toint(%5B'status'%5D)%20%7C%20extend%20is_error%20%3D%20status_int%20%3E%3D%20400%20%7C%20where%20is_error%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20status_int%2C%20is_error%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20status_int%20%3D%20toint(status)%20%7C%20extend%20is_error%20%3D%20status_int%20%3E%3D%20400%20%7C%20where%20is_error%20%3D%3D%20true%20%7C%20project%20_time%2C%20uri%2C%20status%2C%20status_int%2C%20is_error%22%7D)
 
 **Output**
 
@@ -91,59 +88,6 @@ Convert string representations of HTTP status codes to integers for numeric comp
 | Jun 24, 09:28:10 | /api/users | 404 | 404 | true |
 
 This example converts string status codes to integers, enabling numeric range comparisons to identify error responses.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Convert trace status codes from string format to integers for numeric analysis and filtering.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend status_int = toint(['status_code'])
-| extend is_error = status_int >= 400
-| where is_error == true
-| project _time, ['trace_id'], ['service.name'], ['status_code'], status_int, is_error
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20status_int%20%3D%20toint(%5B'status_code'%5D)%20%7C%20extend%20is_error%20%3D%20status_int%20%3E%3D%20400%20%7C%20where%20is_error%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'service.name'%5D%2C%20%5B'status_code'%5D%2C%20status_int%2C%20is_error%22%7D)
-
-**Output**
-
-| _time | trace_id | service.name | status_code | status_int | is_error |
-| ----- | -------- | ------------ | ----------- | ---------- | -------- |
-| Jun 24, 09:28:10 | abc123 | frontend | 500 | 500 | true |
-
-This example converts trace status codes to integers, enabling numeric comparisons to identify failed trace spans.
-
-</Tab>
-<Tab title="Security logs">
-
-Convert security event codes to integers for numeric threshold-based security analysis.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend status_int = toint(['status'])
-| extend is_security_event = status_int == 401 or status_int == 403
-| where is_security_event == true
-| project _time, ['uri'], ['status'], status_int, is_security_event
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20status_int%20%3D%20toint(%5B'status'%5D)%20%7C%20extend%20is_security_event%20%3D%20status_int%20%3D%3D%20401%20or%20status_int%20%3D%3D%20403%20%7C%20where%20is_security_event%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20status_int%2C%20is_security_event%22%7D)
-
-**Output**
-
-| _time | uri | status | status_int | is_security_event |
-| ----- | --- | ------ | ---------- | ----------------- |
-| Jun 24, 09:28:10 | /admin | 403 | 403 | true |
-
-This example converts security status codes to integers, enabling precise numeric matching to identify authentication and authorization failures.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 
