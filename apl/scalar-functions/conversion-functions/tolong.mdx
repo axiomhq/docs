@@ -67,27 +67,27 @@ If conversion is successful, the result is a long number. If conversion isn't su
 
 ## Use case example
 
-Convert string representations of large numeric identifiers to long integers for numeric operations and comparisons.
+Convert string representations of HTTP status codes to long integers for numeric operations and comparisons.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend user_id_long = tolong(['id'])
-| extend is_large_id = user_id_long > 1000000
-| where is_large_id == true
-| project _time, ['uri'], ['id'], user_id_long, is_large_id
+| extend status_long = tolong(status)
+| extend is_error = status_long >= 400
+| where is_error == true
+| project _time, uri, status, status_long, is_error
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20user_id_long%20%3D%20tolong(%5B'id'%5D)%20%7C%20extend%20is_large_id%20%3D%20user_id_long%20%3E%201000000%20%7C%20where%20is_large_id%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'id'%5D%2C%20user_id_long%2C%20is_large_id%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20status_long%20%3D%20tolong(status)%20%7C%20extend%20is_error%20%3D%20status_long%20%3E%3D%20400%20%7C%20where%20is_error%20%3D%3D%20true%20%7C%20project%20_time%2C%20uri%2C%20status%2C%20status_long%2C%20is_error%22%7D)
 
 **Output**
 
-| _time | uri | id | user_id_long | is_large_id |
+| _time | uri | status | status_long | is_error |
 | ----- | --- | -- | ------------ | ----------- |
-| Jun 24, 09:28:10 | /api/users | 1234567 | 1234567 | true |
+| Jun 24, 09:28:10 | /api/users | 500 | 500 | true |
 
-This example converts string user IDs to long integers, enabling numeric comparisons to identify users with large identifier values.
+This example converts string HTTP status codes to long integers, enabling numeric comparisons to identify error responses.
 
 ## List of related functions
 
