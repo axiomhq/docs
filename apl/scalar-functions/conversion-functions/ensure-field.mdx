@@ -119,32 +119,6 @@ Access optional trace attributes that might not be present in all spans.
 This example safely accesses optional HTTP attributes in trace data, ensuring the query works even when these attributes are not present in all spans.
 
 </Tab>
-<Tab title="Security logs">
-
-Prepare queries for fields that might be added to security logs in the future, ensuring your queries continue to work as the schema evolves.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend risk_score = ensure_field('risk_score', typeof(int))
-| extend threat_category = ensure_field('threat_category', typeof(string))
-| where ['status'] == '403' or ['status'] == '401'
-| extend has_risk_data = isnotnull(risk_score) or isnotnull(threat_category)
-| project _time, ['uri'], ['status'], risk_score, threat_category, has_risk_data
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20risk_score%20%3D%20ensure_field('risk_score'%2C%20typeof(int))%20%7C%20extend%20threat_category%20%3D%20ensure_field('threat_category'%2C%20typeof(string))%20%7C%20where%20%5B'status'%5D%20%3D%3D%20'403'%20or%20%5B'status'%5D%20%3D%3D%20'401'%20%7C%20extend%20has_risk_data%20%3D%20isnotnull(risk_score)%20or%20isnotnull(threat_category)%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20risk_score%2C%20threat_category%2C%20has_risk_data%22%7D)
-
-**Output**
-
-| _time | uri | status | risk_score | threat_category | has_risk_data |
-| ----- | --- | ------ | ---------- | --------------- | ------------- |
-| Jun 24, 09:28:10 | /admin | 403 | null | null | false |
-
-This example demonstrates how to write queries that are prepared for future schema changes. When the `risk_score` and `threat_category` fields are added to the data, the query will automatically start using them without modification.
-
-</Tab>
 </Tabs>
 
 ## List of related functions
