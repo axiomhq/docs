@@ -1,0 +1,57 @@
+---
+title: ensure_field
+description: 'This page explains how to use the ensure_field function in APL.'
+---
+
+## ensure_field()
+
+Ensures the existence of a field and returns its value or a typed nil if it doesn't exist.
+
+### Arguments 
+
+| **name**       | **type**   | **description**                |
+|------------|--------|------------------------------------------------------------------------------------|
+| field_name | string | The name of the field to ensure exists.                                             |
+| field_type | type   | The type of the field. See [scalar data types](/apl/data-types/scalar-data-types) for supported types.|
+
+### Returns 
+
+This function returns the value of the specified field if it exists, otherwise it returns a typed nil.
+
+### Examples 
+
+```kusto
+ensure_field(field_name, field_type)
+```
+
+### Handle missing fields
+
+In this example, the value of `show_field` is nil because the `myfield` field doesn't exist.
+
+```kusto
+['sample-http-logs']
+| extend show_field = ensure_field("myfield", typeof(string))
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20show_field%20%3D%20ensure_field%28%27myfield%27%2C%20typeof%28string%29%29%22%7D)
+
+### Access existing fields
+
+In this example, the value of `newstatus` is the value of `status` because the `status` field exists.
+
+```kusto
+['sample-http-logs']
+| extend newstatus = ensure_field("status", typeof(string))
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%5Cn%7C%20extend%20newstatus%20%3D%20ensure_field%28%27status%27%2C%20typeof%28string%29%29%22%7D)
+
+### Future-proof queries
+
+In this example, the query is prepared for a field named `upcoming_field` that's expected to be added to the data soon. By using `ensure_field()`, logic can be written around this future field, and the query will work when the field becomes available.
+
+```kusto
+['sample-http-logs']
+| extend new_field = ensure_field("upcoming_field", typeof(int))
+| where new_field > 100
+```
