@@ -65,35 +65,7 @@ tostring(value)
 
 If the expression value is non-null, the result is a string representation of the expression. If the expression value is null, the result is an empty string.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
-
-Convert numeric values to strings for string concatenation and formatting in log analysis.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend status_str = tostring(['status'])
-| extend duration_str = tostring(['req_duration_ms'])
-| extend log_message = strcat('Status: ', status_str, ', Duration: ', duration_str, 'ms')
-| project _time, ['uri'], status_str, duration_str, log_message
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20status_str%20%3D%20tostring(%5B'status'%5D)%20%7C%20extend%20duration_str%20%3D%20tostring(%5B'req_duration_ms'%5D)%20%7C%20extend%20log_message%20%3D%20strcat('Status%3A%20'%2C%20status_str%2C%20'%2C%20Duration%3A%20'%2C%20duration_str%2C%20'ms')%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20status_str%2C%20duration_str%2C%20log_message%22%7D)
-
-**Output**
-
-| _time | uri | status_str | duration_str | log_message |
-| ----- | --- | ---------- | ------------ | ----------- |
-| Jun 24, 09:28:10 | /api/users | 200 | 150 | Status: 200, Duration: 150ms |
-
-This example converts numeric values to strings and combines them into a formatted log message, enabling custom string formatting for reporting or display.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
+## Use case example
 
 Convert trace attributes to strings for string-based analysis and reporting.
 
@@ -101,13 +73,14 @@ Convert trace attributes to strings for string-based analysis and reporting.
 
 ```kusto
 ['otel-demo-traces']
-| extend status_str = tostring(['status_code'])
-| extend duration_str = tostring(['duration'])
+| where isnotempty(['attributes.http.response.status_code'])
+| extend status_str = tostring(['attributes.http.response.status_code'])
+| extend duration_str = tostring(duration)
 | extend trace_summary = strcat('Service: ', ['service.name'], ', Status: ', status_str, ', Duration: ', duration_str)
-| project _time, ['trace_id'], ['service.name'], status_str, trace_summary
+| project _time, trace_id, ['service.name'], status_str, trace_summary
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20status_str%20%3D%20tostring(%5B'status_code'%5D)%20%7C%20extend%20duration_str%20%3D%20tostring(%5B'duration'%5D)%20%7C%20extend%20trace_summary%20%3D%20strcat('Service%3A%20'%2C%20%5B'service.name'%5D%2C%20'%2C%20Status%3A%20'%2C%20status_str%2C%20'%2C%20Duration%3A%20'%2C%20duration_str)%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'service.name'%5D%2C%20status_str%2C%20trace_summary%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20isnotempty(%5B'attributes.http.response.status_code'%5D)%20%7C%20extend%20status_str%20%3D%20tostring(%5B'attributes.http.response.status_code'%5D)%20%7C%20extend%20duration_str%20%3D%20tostring(duration)%20%7C%20extend%20trace_summary%20%3D%20strcat('Service%3A%20'%2C%20%5B'service.name'%5D%2C%20'%2C%20Status%3A%20'%2C%20status_str%2C%20'%2C%20Duration%3A%20'%2C%20duration_str)%20%7C%20project%20_time%2C%20trace_id%2C%20%5B'service.name'%5D%2C%20status_str%2C%20trace_summary%22%7D)
 
 **Output**
 
@@ -116,35 +89,6 @@ Convert trace attributes to strings for string-based analysis and reporting.
 | Jun 24, 09:28:10 | abc123 | frontend | 200 | Service: frontend, Status: 200, Duration: 150000000 |
 
 This example converts trace attributes to strings and creates a summary message, enabling formatted trace reporting and analysis.
-
-</Tab>
-<Tab title="Security logs">
-
-Convert security event metrics to strings for formatted security reporting and alerting.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend status_str = tostring(['status'])
-| extend id_str = tostring(['id'])
-| extend security_alert = strcat('Event ID: ', id_str, ', Status: ', status_str, ', URI: ', ['uri'])
-| where ['status'] == '403' or ['status'] == '401'
-| project _time, ['uri'], status_str, id_str, security_alert
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20status_str%20%3D%20tostring(%5B'status'%5D)%20%7C%20extend%20id_str%20%3D%20tostring(%5B'id'%5D)%20%7C%20extend%20security_alert%20%3D%20strcat('Event%20ID%3A%20'%2C%20id_str%2C%20'%2C%20Status%3A%20'%2C%20status_str%2C%20'%2C%20URI%3A%20'%2C%20%5B'uri'%5D)%20%7C%20where%20%5B'status'%5D%20%3D%3D%20'403'%20or%20%5B'status'%5D%20%3D%3D%20'401'%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20status_str%2C%20id_str%2C%20security_alert%22%7D)
-
-**Output**
-
-| _time | uri | status_str | id_str | security_alert |
-| ----- | --- | ---------- | ------ | -------------- |
-| Jun 24, 09:28:10 | /admin | 403 | 12345 | Event ID: 12345, Status: 403, URI: /admin |
-
-This example converts security event identifiers to strings and formats them into alert messages, enabling formatted security reporting and integration with alerting systems.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 
