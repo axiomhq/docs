@@ -14,7 +14,7 @@ Axiom is optimized for storing and querying timestamped event data. However, cer
 | [Excessive backfilling, big difference between _time and _sysTime](#excessive-backfilling-and-large-time-vs-systime-gaps) | Critical | Creates overlapping blocks, breaks time-based indexing |
 | [Large number of fields in a dataset](#large-number-of-fields-in-a-dataset) | High | Very high dimensionality slows down query performance |
 | [Failing to use _time](#failing-to-use-the-_time-field-for-event-timestamps) | High | No efficient time-based filtering |
-| [Query memory constraints](#query-memory-constraints) | High | Queries can exceed memory limits and fail with HTTP 432 errors |
+| [Query exceeds memory constraints](#query-exceeds-memory-constraints) | High | Queries can exceed memory limits and fail with HTTP 432 errors |
 | [Overly wide queries (project *)](#overly-wide-queries-returning-more-fields-than-needed) | High | Returns massive unneeded data |
 | [Mixed data types in the same field](#mixing-unrelated-data-in-datasets) | Moderate | Reduces compression, complicates queries |
 | [Using regex when simpler filters suffice](#regular-expressions-when-simple-filters-suffice) | Moderate | More CPU-heavy scanning |
@@ -121,11 +121,11 @@ A single field sometimes stores different data types across events (for instance
 - **Use consistent schemas across services:** If multiple apps write to the same dataset, agree on a schema and data types.
 - **Perform corrections at the source:** If you discover your data has been mixed historically, stop ingesting mismatched types. Over time, new blocks reflect the corrected types even though historical blocks remain mixed.
 
-## Query memory constraints
+## Query exceeds memory constraints
 
 ### Problem
 
-Some queries can exceed the available memory budget on query workers, causing them to fail with an HTTP 432 error (`StatusQueryMemoryExceeded`). This typically happens when queries use memory-intensive operations on large datasets or wide schemas.
+Some queries can exceed the available memory budget on query workers, causing them to fail with an HTTP 432 error (`StatusQueryMemoryExceeded`). This typically happens when queries use memory-intensive operations on large datasets or wide schemas. For example, when you use `parse_json()` on large strings or `pack(*)` on datasets with many fields.
 
 ### Why it matters
 
@@ -133,12 +133,7 @@ Some queries can exceed the available memory budget on query workers, causing th
 - **Resource constraints**: Query workers have fixed memory allocations. Memory-intensive operations can exhaust these allocations.
 - **User experience**: Failed queries provide no results and require query optimization to succeed.
 
-### How to identify memory issues
-
-When a query exceeds memory limits, Axiom returns an HTTP 432 error with a message indicating memory constraints. The error message specifically mentions memory-intensive operations when detected:
-
-- `parse_json()` on large strings
-- `pack(*)` on datasets with many fields
+When a query exceeds memory limits, Axiom returns an HTTP 432 error with a message indicating memory constraints.
 
 ### How to fix it
 
@@ -163,7 +158,7 @@ When a query exceeds memory limits, Axiom returns an HTTP 432 error with a messa
     | where json_payload.status == "error"
     ```
     
-- **Extract frequently used fields:** If you must use `parse_json()`, extract only the fields you need rather than parsing entire objects:
+- **Extract frequently used fields:** Extract only the fields you need rather than parsing entire objects:
     
     ```kusto
     ['logs']
@@ -184,7 +179,7 @@ When a query exceeds memory limits, Axiom returns an HTTP 432 error with a messa
 
 `pack(*)` creates a dictionary from all fields in each row, which can consume significant memory on wide datasets (datasets with many fields).
 
-- **Use `pack()` with specific fields:** Instead of packing all fields, pack only the fields you need:
+- **Use `pack` with specific fields:** Instead of packing all fields, pack only the fields you need:
     
     Instead of:
     
@@ -215,43 +210,7 @@ When a query exceeds memory limits, Axiom returns an HTTP 432 error with a messa
     | extend event = pack(*)
     ```
     
-- **Consider map fields for structured data:** If you frequently need to pack fields, consider restructuring your data to use map fields at ingest time instead.
-
-#### General best practices
-
-- **Reduce query scope:** Use time filters and field-specific filters to reduce the amount of data processed:
-    
-    ```kusto
-    ['logs']
-    | where _time >= ago(1h)
-    | where status == "error"
-    | extend parsed = parse_json(json_payload)
-    ```
-    
-- **Limit result sets:** Use `limit` to reduce the number of rows returned, especially during exploration:
-    
-    ```kusto
-    ['logs']
-    | extend parsed = parse_json(json_payload)
-    | limit 100
-    ```
-    
-- **Avoid chaining memory-intensive operations:** Multiple memory-intensive operations in sequence can compound memory usage:
-    
-    Instead of:
-    
-    ```kusto
-    ['logs']
-    | extend parsed1 = parse_json(field1)
-    | extend parsed2 = parse_json(field2)
-    | extend packed = pack(*)
-    ```
-    
-    Restructure to minimize memory usage or split into separate queries.
-
-- **Monitor query costs:** Check the `X-Axiom-Query-Cost-Gbms` header in query responses to identify queries that consume significant resources. For more information, see [Optimize usage](/reference/optimize-usage#determine-query-cost).
-
-For more information on optimizing query performance and usage, see [Optimize usage](/reference/optimize-usage).
+- **Use map fields at ingest time** instead of using `pack(*)`. Instead of storing JSON as strings and parsing at query time, ingest JSON data as [map fields](/apl/data-types/map-fields#map-fields).
 
 ## Overly wide queries returning more fields than needed
 
