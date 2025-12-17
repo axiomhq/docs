@@ -285,65 +285,11 @@ This demonstrates the three key steps to rich observability:
 1. **`wrapTool`**: Instruments the tool execution with detailed spans
 1. **`withSpan`**: Creates a parent span that ties everything together under a business capability
 
-## Convex DB Actions configuration
+<Note>
+When you use Axiom AI SDK with isolated execution environments like [Convex DB Actions](https://docs.convex.dev/functions/actions), export spans using `SimpleSpanProcessor` instead of `BatchSpanProcessor`. `SimpleSpanProcessor` exports spans immediately when they complete, which is necessary for environments where the process may terminate before batched spans are flushed.
+</Note>
 
-When using Axiom AI SDK with [Convex DB Actions](https://docs.convex.dev/functions/actions), each action runs in an isolated environment. To ensure traces are exported before the action completes, use `SimpleSpanProcessor` instead of `BatchSpanProcessor` to export spans immediately:
-
-```ts /convex/actions/myAction.ts
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { resourceFromAttributes } from '@opentelemetry/resources';
-import { SimpleSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
-import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { trace } from "@opentelemetry/api";
-import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
-
-let providerInstance: NodeTracerProvider | null = null;
-
-export function initializeAxiomForAction() {
-  // Don't reinitialize if already done
-  if (providerInstance) {
-    return { provider: providerInstance, tracer: trace.getTracer("convex-action") };
-  }
-
-  const exporter = new OTLPTraceExporter({
-    url: `${process.env.AXIOM_URL}/v1/traces`,
-    headers: {
-      Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-      'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
-    },
-  });
-
-  // Use SimpleSpanProcessor to export immediately (required for isolated actions)
-  providerInstance = new NodeTracerProvider({
-    resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: 'convex-action',
-    }),
-    spanProcessor: new SimpleSpanProcessor(exporter), // Exports immediately
-  });
-
-  providerInstance.register();
-  initAxiomAI({ 
-    tracer: trace.getTracer("convex-action"), 
-    redactionPolicy: RedactionPolicy.AxiomDefault 
-  });
-
-  return { provider: providerInstance, tracer: trace.getTracer("convex-action") };
-}
-
-// In your action, initialize before using AI SDK
-export const myAction = action(async (ctx) => {
-  initializeAxiomForAction();
-  
-  // Your AI SDK code here
-  // Traces will be exported immediately when spans complete
-});
-```
-
-<Info>
-`SimpleSpanProcessor` exports spans immediately when they complete, which is necessary for isolated execution environments like Convex Actions where the process may terminate before batched spans are flushed.
-</Info>
-
-## What's next?
+## What’s next?
 
 After sending traces to Axiom:
 
