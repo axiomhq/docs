@@ -14,6 +14,7 @@ Axiom is optimized for storing and querying timestamped event data. However, cer
 | [Excessive backfilling, big difference between _time and _sysTime](#excessive-backfilling-and-large-time-vs-systime-gaps) | Critical | Creates overlapping blocks, breaks time-based indexing |
 | [Large number of fields in a dataset](#large-number-of-fields-in-a-dataset) | High | Very high dimensionality slows down query performance |
 | [Failing to use _time](#failing-to-use-the-_time-field-for-event-timestamps) | High | No efficient time-based filtering |
+| [Query exceeds memory constraints](#query-exceeds-memory-constraints) | High | Queries can exceed memory limits and fail with HTTP 432 errors |
 | [Overly wide queries (project *)](#overly-wide-queries-returning-more-fields-than-needed) | High | Returns massive unneeded data |
 | [Mixed data types in the same field](#mixing-unrelated-data-in-datasets) | Moderate | Reduces compression, complicates queries |
 | [Using regex when simpler filters suffice](#regular-expressions-when-simple-filters-suffice) | Moderate | More CPU-heavy scanning |
@@ -119,6 +120,97 @@ A single field sometimes stores different data types across events (for instance
 - **Standardize your types at ingest:** If a field is semantically an integer, always send it as an integer.
 - **Use consistent schemas across services:** If multiple apps write to the same dataset, agree on a schema and data types.
 - **Perform corrections at the source:** If you discover your data has been mixed historically, stop ingesting mismatched types. Over time, new blocks reflect the corrected types even though historical blocks remain mixed.
+
+## Query exceeds memory constraints
+
+### Problem
+
+Some queries can exceed the available memory budget on query workers, causing them to fail with an HTTP 432 error (`StatusQueryMemoryExceeded`). This typically happens when queries use memory-intensive operations on large datasets or wide schemas. For example, when you use `parse_json()` on large strings or `pack(*)` on datasets with many fields.
+
+### Why it matters
+
+- **Query failures**: Queries that exceed memory limits are terminated and return an error instead of results.
+- **Resource constraints**: Query workers have fixed memory allocations. Memory-intensive operations can exhaust these allocations.
+- **User experience**: Failed queries provide no results and require query optimization to succeed.
+
+When a query exceeds memory limits, Axiom returns an HTTP 432 error with a message indicating memory constraints.
+
+### How to fix it
+
+#### Optimize `parse_json()` usage
+
+`parse_json()` can consume significant memory when parsing large JSON strings, especially when applied to many rows.
+
+- **Use map fields at ingest time:** Instead of storing JSON as strings and parsing at query time, ingest JSON data as [map fields](/apl/data-types/map-fields#map-fields). Map fields are stored columnar and don’t require runtime parsing:
+    
+    Instead of:
+    
+    ```kusto
+    ['logs']
+    | extend parsed = parse_json(json_payload)
+    | where parsed.status == "error"
+    ```
+    
+    Ingest `json_payload` as a map field and query directly:
+    
+    ```kusto
+    ['logs']
+    | where json_payload.status == "error"
+    ```
+    
+- **Extract frequently used fields:** Extract only the fields you need rather than parsing entire objects:
+    
+    ```kusto
+    ['logs']
+    | extend status = parse_json(json_payload).status
+    | where status == "error"
+    ```
+    
+- **Filter before parsing:** Apply filters to reduce the dataset size before using `parse_json()`:
+    
+    ```kusto
+    ['logs']
+    | where json_payload contains "error"
+    | extend parsed = parse_json(json_payload)
+    | where parsed.status == "error"
+    ```
+
+#### Optimize `pack(*)` usage
+
+`pack(*)` creates a dictionary from all fields in each row, which can consume significant memory on wide datasets (datasets with many fields).
+
+- **Use `pack` with specific fields:** Instead of packing all fields, pack only the fields you need:
+    
+    Instead of:
+    
+    ```kusto
+    ['logs']
+    | extend event = pack(*)
+    ```
+    
+    Use:
+    
+    ```kusto
+    ['logs']
+    | extend event = pack('timestamp', _time, 'level', level, 'message', message)
+    ```
+    
+    Or use `pack_dictionary()` for explicit key-value pairs:
+    
+    ```kusto
+    ['logs']
+    | extend event = pack_dictionary('timestamp', _time, 'level', level, 'message', message)
+    ```
+    
+- **Use `project` to reduce fields first:** If you need to pack multiple fields, reduce the dataset width first:
+    
+    ```kusto
+    ['logs']
+    | project _time, level, message, user_id
+    | extend event = pack(*)
+    ```
+    
+- **Use map fields at ingest time** instead of using `pack(*)`. Instead of storing JSON as strings and parsing at query time, ingest JSON data as [map fields](/apl/data-types/map-fields#map-fields).
 
 ## Overly wide queries returning more fields than needed
 
