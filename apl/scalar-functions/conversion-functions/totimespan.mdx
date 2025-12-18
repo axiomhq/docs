@@ -39,7 +39,7 @@ SELECT INTERVAL '1' DAY AS duration FROM logs;
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend duration = totimespan('1.00:00:00')
+| extend duration = totimespan('24h')
 ```
 
 </CodeGroup>
@@ -65,6 +65,13 @@ totimespan(value)
 
 If conversion is successful, the result is a timespan value. If conversion isn't successful, the result is `null`.
 
+### Conversion behavior
+
+The `totimespan` function converts values based on their type:
+
+- **Integer/Float**: Interpreted as nanoseconds. For example, `1000000000` represents one second.
+- **String**: Parsed as a duration string. A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as `"300ms"`, `"-1.5h"`, or `"2h45m"`. Valid time units are `"ns"`, `"us"` (or `"µs"`), `"ms"`, `"s"`, `"m"`, `"h"`.
+
 ## Use case examples
 
 <Tabs>
@@ -77,12 +84,12 @@ Convert numeric duration values to timespan format for duration-based analysis a
 ```kusto
 ['sample-http-logs']
 | extend duration_span = totimespan(['req_duration_ms'] * 1000000)
-| extend is_slow = duration_span > totimespan('00:00:01')
+| extend is_slow = duration_span > totimespan('1ms')
 | where is_slow == true
 | project _time, ['uri'], ['req_duration_ms'], duration_span, is_slow
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20duration_span%20%3D%20totimespan(%5B'req_duration_ms'%5D%20*%201000000)%20%7C%20extend%20is_slow%20%3D%20duration_span%20%3E%20totimespan('00%3A00%3A01')%20%7C%20where%20is_slow%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'req_duration_ms'%5D%2C%20duration_span%2C%20is_slow%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20duration_span%20%3D%20totimespan(%5B'req_duration_ms'%5D%20*%201000000)%20%7C%20extend%20is_slow%20%3D%20duration_span%20%3E%20totimespan('1ms')%20%7C%20where%20is_slow%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'req_duration_ms'%5D%2C%20duration_span%2C%20is_slow%22%7D)
 
 **Output**
 
@@ -102,12 +109,12 @@ Convert trace duration values to timespan format for duration analysis and perce
 ```kusto
 ['otel-demo-traces']
 | extend span_duration = totimespan(['duration'])
-| extend is_slow_span = span_duration > totimespan('00:00:00.100')
+| extend is_slow_span = span_duration > totimespan('100ms')
 | where is_slow_span == true
 | project _time, ['trace_id'], ['service.name'], ['duration'], span_duration, is_slow_span
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20span_duration%20%3D%20totimespan(%5B'duration'%5D)%20%7C%20extend%20is_slow_span%20%3D%20span_duration%20%3E%20totimespan('00%3A00%3A00.100')%20%7C%20where%20is_slow_span%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'service.name'%5D%2C%20%5B'duration'%5D%2C%20span_duration%2C%20is_slow_span%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20span_duration%20%3D%20totimespan(%5B'duration'%5D)%20%7C%20extend%20is_slow_span%20%3D%20span_duration%20%3E%20totimespan('100ms')%20%7C%20where%20is_slow_span%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'service.name'%5D%2C%20%5B'duration'%5D%2C%20span_duration%2C%20is_slow_span%22%7D)
 
 **Output**
 
@@ -127,12 +134,12 @@ Convert security event duration metrics to timespan format for time-based securi
 ```kusto
 ['sample-http-logs']
 | extend request_duration = totimespan(['req_duration_ms'] * 1000000)
-| extend is_suspicious_duration = request_duration > totimespan('00:00:05')
+| extend is_suspicious_duration = request_duration > totimespan('5ms')
 | where is_suspicious_duration == true
 | project _time, ['uri'], ['status'], ['req_duration_ms'], request_duration, is_suspicious_duration
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20request_duration%20%3D%20totimespan(%5B'req_duration_ms'%5D%20*%201000000)%20%7C%20extend%20is_suspicious_duration%20%3D%20request_duration%20%3E%20totimespan('00%3A00%3A05')%20%7C%20where%20is_suspicious_duration%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20%5B'req_duration_ms'%5D%2C%20request_duration%2C%20is_suspicious_duration%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20request_duration%20%3D%20totimespan(%5B'req_duration_ms'%5D%20*%201000000)%20%7C%20extend%20is_suspicious_duration%20%3D%20request_duration%20%3E%20totimespan('5ms')%20%7C%20where%20is_suspicious_duration%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20%5B'req_duration_ms'%5D%2C%20request_duration%2C%20is_suspicious_duration%22%7D)
 
 **Output**
 

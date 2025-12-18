@@ -39,7 +39,7 @@ SELECT CASE WHEN status = 'active' THEN TRUE ELSE FALSE END AS is_active FROM lo
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend is_active = tobool(['status'] == '200')
+| extend is_active = tobool(is_active)
 ```
 
 </CodeGroup>
@@ -63,61 +63,38 @@ tobool(value)
 
 ### Returns
 
-If conversion is successful, the result is a boolean. If conversion isn't successful, the result is `false`.
+If conversion is successful, the result is a boolean. If conversion isn’t successful, the result is `false`.
 
-## Use case examples
+### Conversion behavior
 
-<Tabs>
-<Tab title="Log analysis">
+The `tobool` function converts values based on their type:
 
-Convert string representations of boolean values to actual boolean types for filtering and analysis.
+- **Boolean**: Returns the value unchanged.
+- **Integer/Float/Duration**: Returns `true` if the value is not equal to 0, otherwise `false`.
+- **Datetime**: Returns `true` if the value is anything other than epoch (zero time), otherwise `false`.
+- **String**: Returns `true` if the value equals `"1"`, `"t"`, `"T"`, `"TRUE"`, `"true"`, or `"True"`. Returns `false` if the value equals `"0"`, `"f"`, `"F"`, `"FALSE"`, `"false"`, or `"False"`. Returns `null` for any other string value.
+
+## Example
+
+Convert string representations of Boolean values to actual Boolean types for filtering and analysis.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend success = tobool(['status'] == '200')
-| extend is_slow = tobool(['req_duration_ms'] > 1000)
-| where success == true or is_slow == true
-| project _time, ['uri'], ['status'], ['req_duration_ms'], success, is_slow
+| extend is_active = tobool(is_active)
+| extend is_enabled = tobool(enabled)
+| where is_active == true or is_enabled == true
+| project _time, uri, status, is_active, enabled, is_active, is_enabled
 ```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20success%20%3D%20tobool(%5B'status'%5D%20%3D%3D%20'200')%20%7C%20extend%20is_slow%20%3D%20tobool(%5B'req_duration_ms'%5D%20%3E%201000)%20%7C%20where%20success%20%3D%3D%20true%20or%20is_slow%20%3D%3D%20true%20%7C%20project%20_time%2C%20%5B'uri'%5D%2C%20%5B'status'%5D%2C%20%5B'req_duration_ms'%5D%2C%20success%2C%20is_slow%22%7D)
 
 **Output**
 
-| _time | uri | status | req_duration_ms | success | is_slow |
-| ----- | --- | ------ | -------------- | ------- | ------- |
-| Jun 24, 09:28:10 | /api/users | 200 | 150 | true | false |
+| _time | uri | status | is_active | enabled | is_active | is_enabled |
+| ----- | --- | ------ | --------- | ------- | --------- | ---------- |
+| Jun 24, 09:28:10 | /api/users | 200 | "true" | "1" | true | true |
 
-This example converts comparison results to boolean values, making it easier to use them in boolean logic and filters.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Convert trace status codes to boolean values to identify successful or failed operations.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend is_success = tobool(toint(['status_code']) < 400)
-| extend is_server = tobool(['kind'] == 'server')
-| project _time, ['trace_id'], ['service.name'], ['status_code'], is_success, is_server
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20is_success%20%3D%20tobool(toint(%5B'status_code'%5D)%20%3C%20400)%20%7C%20extend%20is_server%20%3D%20tobool(%5B'kind'%5D%20%3D%3D%20'server')%20%7C%20project%20_time%2C%20%5B'trace_id'%5D%2C%20%5B'service.name'%5D%2C%20%5B'status_code'%5D%2C%20is_success%2C%20is_server%22%7D)
-
-**Output**
-
-| _time | trace_id | service.name | status_code | is_success | is_server |
-| ----- | -------- | ------------ | ----------- | ---------- | --------- |
-| Jun 24, 09:28:10 | abc123 | frontend | 500 | false | true |
-
-This example converts trace status information to boolean flags, making it easier to filter and analyze trace success rates.
-
-</Tab>
-</Tabs>
+This example converts string representations of boolean values (like `"true"` and `"1"`) to actual boolean types, enabling proper boolean logic and filtering.
 
 ## List of related functions
 
