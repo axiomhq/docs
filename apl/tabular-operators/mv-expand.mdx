@@ -62,7 +62,7 @@ mv-expand [kind=(bag|array)] [with_itemindex=IndexFieldName] FieldName [to typeo
 
 | Parameter                        | Description                                                                            |
 | -------------------------------- | -------------------------------------------------------------------------------------- |
-| `kind`             | Optional. Specifies whether the column is a bag (object) or an array. Defaults to `array`. |
+| `kind`             | Optional. Specifies whether the column is a bag (object) or an array. Defaults to `bag`. |
 | `with_itemindex=IndexFieldName` | Optional. Outputs an additional column with the zero-based index of the expanded item. |
 | `FieldName`                     | Required. The name of the column that contains an array or object to expand.           |
 | `to typeof(Typename)`            | Optional. Converts each expanded element to the specified type.                        |
@@ -96,6 +96,58 @@ When analyzing logs, some values can be stored as arrays. You can use `mv-expand
 | Japan         | 12     |
 
 This query expands the `territories` array into rows and counts the most frequent territories.
+
+### Work with dynamic map keys
+
+When you have map fields with dynamic keys (keys that vary across events), you can use `mv-expand` with `bag_keys()` to process all keys without knowing them in advance. This is useful for nested objects where the field names change, such as user-defined tags, custom metadata, or dynamic configurations.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| limit 10
+| extend map_keys = bag_keys(['attributes.custom'])
+| mv-expand map_keys
+| summarize count() by tostring(map_keys)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20limit%2010%20%7C%20extend%20map_keys%20%3D%20bag_keys(%5B'attributes.custom'%5D)%20%7C%20mv-expand%20map_keys%20%7C%20summarize%20count()%20by%20tostring(map_keys)%22%7D)
+
+**Output**
+
+| map_keys      | count |
+| ---------------- | ------- |
+| http.status_code          | 6      |
+| http.method     | 4      |
+
+In this example:
+1. `bag_keys` extracts all the keys from the map field into an array
+1. `mv-expand` splits those keys into separate rows
+1. `summarize` counts how often each key appears across all events
+
+### Work with dynamic map keys and values
+
+To work with both keys and values from a dynamic map, use `parse_json` to convert the map field to a JSON object, and then use `mv-expand` with `kind=array` to expand the object into separate rows.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| limit 10
+| extend map_items = parse_json(tostring(['attributes.custom']))
+| mv-expand kind=array map_items
+| extend key = tostring(map_items[0]), value = tostring(map_items[1])
+| summarize avg(todouble(value)) by key
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20limit%2010%20%7C%20extend%20map_items%20%3D%20parse_json(tostring(%5B'attributes.custom'%5D))%20%7C%20mv-expand%20kind%3Darray%20map_items%20%7C%20extend%20key%20%3D%20tostring(map_items%5B0%5D)%2C%20value%20%3D%20tostring(map_items%5B1%5D)%20%7C%20summarize%20avg(todouble(value))%20by%20key%22%7D)
+
+**Output**
+
+| key      | avg_value |
+| ---------------- | ------- |
+| net.peer.port	          | 39,546      |
+| net.host.port	     | 8,080      |
 
 ## List of related operators
 
