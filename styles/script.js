@@ -13,8 +13,8 @@ if (document.querySelectorAll("a")) {
 }
 
 // Make top-left logo link to marketing site. The event listener is necessary to replace Mintlify’s default event listener.
-if (document.querySelector("#sidebar a")) {
-    const logoLink = document.querySelector("#sidebar a");
+if (document.querySelector("#navbar a")) {
+    const logoLink = document.querySelector("#navbar a");
 
     if (logoLink.getAttribute("href") == "/" || logoLink.getAttribute("href") == "/docs") {
         logoLink.addEventListener("click", function(){document.location.href = "https://axiom.co/";});
