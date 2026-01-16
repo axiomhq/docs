@@ -12,7 +12,7 @@ User feedback captures direct signals from end users about your AI capability’
 
 ## Types of feedback
 
-Axiom AI SDK supports several feedback types:
+Axiom AI SDK supports the following feedback types:
 
 | Type | Description | Example |
 |------|-------------|---------|
@@ -27,7 +27,7 @@ Axiom AI SDK supports several feedback types:
 
 - [Create an Axiom account](https://app.axiom.co/register).
 - [Create a dataset in Axiom](/reference/datasets#create-dataset) dedicated for storing feedback data. Feedback events are stored separately from trace data.
-- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created. Axiom recommends scoping the token only to your feedback dataset because it’s exposed in the frontend.
+- [Create an API token in Axiom](/reference/tokens) with minimal permissions because it's exposed in the frontend. Add ingest-only permissions to the feedback dataset you have created.
 - Install Axiom AI SDK in your project. For more information, see [Quickstart](/ai-engineering/quickstart).
 
 ## Create a feedback client
@@ -44,7 +44,11 @@ const { sendFeedback } = createFeedbackClient({
 });
 ```
 
-Store these environment variables:
+<Info>
+For browser-based feedback collection, use environment variables prefixed for your framework. For example, use `NEXT_PUBLIC_` for Next.js.
+</Info>
+
+Store the following environment variables:
 
 ```bash .env
 AXIOM_FEEDBACK_TOKEN="API_TOKEN"
@@ -59,7 +63,7 @@ AXIOM_URL="AXIOM_DOMAIN"
 
 ### Error handling
 
-By default, errors are logged to Console. Pass an `onError` callback to handle errors differently:
+Axiom logs errors to Console by default. To handle errors differently, pass an `onError` callback:
 
 ```ts
 const { sendFeedback } = createFeedbackClient(
@@ -116,9 +120,10 @@ async function runMyCapability(input: string) {
 
 ## Send feedback
 
-Use the `Feedback` helper to create feedback objects, then send them with `sendFeedback`:
+Use the `Feedback` helper to create feedback objects, and send them with `sendFeedback`:
 
-### Thumbs up/down
+<Tabs>
+<Tab title="Thumbs up/down">
 
 ```ts
 // Thumbs up
@@ -147,7 +152,8 @@ await sendFeedback(
 );
 ```
 
-### Numeric ratings
+</Tab>
+<Tab title="Numeric">
 
 ```ts
 // Star rating
@@ -169,7 +175,8 @@ await sendFeedback(
 );
 ```
 
-### Boolean feedback
+</Tab>
+<Tab title="Boolean">
 
 ```ts
 await sendFeedback(
@@ -181,7 +188,8 @@ await sendFeedback(
 );
 ```
 
-### Text feedback
+</Tab>
+<Tab title="Text">
 
 ```ts
 await sendFeedback(
@@ -193,9 +201,10 @@ await sendFeedback(
 );
 ```
 
-### Enum feedback
+</Tab>
+<Tab title="Enum">
 
-Use for constrained text values:
+Use enums for constrained text values:
 
 ```ts
 await sendFeedback(
@@ -207,9 +216,10 @@ await sendFeedback(
 );
 ```
 
-### Signal feedback
+</Tab>
+<Tab title="Signal">
 
-Signals indicate an event occurred without a value. Use for implicit feedback like copying or regenerating:
+Signals indicate an event occurred without a value. Use signals for implicit feedback like copying or regenerating:
 
 ```ts
 // User copied the response
@@ -225,7 +235,8 @@ await sendFeedback(
 );
 ```
 
-### Adding metadata
+</Tab>
+<Tab title="Metadata">
 
 All feedback types support optional metadata for additional context. Metadata can contain an arbitrary set of attributes:
 
@@ -244,52 +255,17 @@ await sendFeedback(
 );
 ```
 
-## Client-side usage
-
-For browser-based feedback collection, use environment variables prefixed for your framework. For example, `NEXT_PUBLIC_` for Next.js.
-
-```ts
-'use client';
-
-import { createFeedbackClient, Feedback } from 'axiom/ai/feedback';
-
-const { sendFeedback } = createFeedbackClient({
-  url: process.env.NEXT_PUBLIC_AXIOM_URL,
-  dataset: process.env.NEXT_PUBLIC_AXIOM_FEEDBACK_DATASET,
-  token: process.env.NEXT_PUBLIC_AXIOM_FEEDBACK_TOKEN,
-});
-
-function FeedbackButtons({ links }) {
-  const handleThumbsUp = async () => {
-    await sendFeedback(
-      links,
-      Feedback.thumbUp({ name: 'response-quality' })
-    );
-  };
-
-  const handleThumbsDown = async () => {
-    await sendFeedback(
-      links,
-      Feedback.thumbDown({ name: 'response-quality' })
-    );
-  };
-
-  return (
-    <div>
-      <button onClick={handleThumbsUp}>👍</button>
-      <button onClick={handleThumbsDown}>👎</button>
-    </div>
-  );
-}
-```
-
-<Warning>
-When using feedback on the client side, the API token is exposed to users. Create a token with minimal permissions: ingest only and scoped to the feedback dataset.
-</Warning>
+</Tab>
+</Tabs>
 
 ## Example: Chat interface with feedback
 
-This example shows a complete pattern for a chat interface with thumbs up/down feedback:
+This example shows a complete pattern for a chat interface with thumbs up/down feedback.
+
+<Tabs>
+<Tab title="Server-side code">
+
+The server-side code returns the trace and span IDs to the client-side code, which is used to link the feedback to the trace:
 
 ```ts expandable
 // Server: Return links from your capability
@@ -310,6 +286,11 @@ export async function chat(messages: Message[]) {
   });
 }
 ```
+
+</Tab>
+<Tab title="Client-side code">
+
+The client-side code captures feedback and sends it to the server:
 
 ```tsx expandable
 // Client: Capture feedback
@@ -354,6 +335,9 @@ function ChatMessage({ message, links }: { message: string; links: FeedbackLinks
   );
 }
 ```
+
+</Tab>
+</Tabs>
 
 ## View feedback in Console
 
