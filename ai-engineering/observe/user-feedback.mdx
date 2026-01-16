@@ -38,9 +38,45 @@ Axiom AI SDK supports the following feedback types:
 - [Create an API token in Axiom](/reference/tokens) with minimal permissions because it's exposed in the frontend. Add ingest-only permissions to the feedback dataset you have created.
 - Install Axiom AI SDK in your project. For more information, see [Quickstart](/ai-engineering/quickstart).
 
-## Create a feedback client
+## Server-side configuration
 
-Initialize a feedback client with your Axiom credentials:
+On the server side, capture trace context with `withSpan` when you run your AI capability, and pass the trace and span IDs to the frontend using `FeedbackLinks`:
+
+```ts
+import { withSpan } from 'axiom/ai';
+import type { FeedbackLinks } from 'axiom/ai/feedback';
+
+async function runMyCapability(input: string) {
+  return await withSpan({ capability: 'my-capability', step: 'generate' }, async (span) => {
+    const links: FeedbackLinks = {
+      traceId: span.spanContext().traceId,
+      spanId: span.spanContext().spanId,
+      capability: 'my-capability',
+    };
+
+    const result = await generateResponse(input);
+
+    return { result, links };
+  });
+}
+```
+
+`FeedbackLinks` links feedback events to traces, and allows you to see what your AI capability did when a user provided feedback.
+
+```ts
+type FeedbackLinks = {
+  traceId: string;      // Required: The trace ID from your AI capability
+  capability: string;   // Required: The name of your capability
+  spanId?: string;      // Optional: Link to a specific span
+  step?: string;        // Optional: Step within the capability
+  conversationId?: string; // Optional: Refers to `attributes.gen_ai.conversation_id`
+  userId?: string;      // Optional: User providing feedback
+};
+```
+
+## Client-side configuration
+
+On the client side, initialize a feedback client with your Axiom credentials:
 
 ```ts
 import { createFeedbackClient, Feedback } from 'axiom/ai/feedback';
@@ -69,64 +105,7 @@ AXIOM_URL="AXIOM_DOMAIN"
 <ReplaceDomain />
 </Info>
 
-### Error handling
-
-The feedback client logs errors to the JavaScript console by default. To handle errors differently, pass an `onError` callback:
-
-```ts
-const { sendFeedback } = createFeedbackClient(
-  {
-    token: process.env.AXIOM_FEEDBACK_TOKEN,
-    dataset: process.env.AXIOM_FEEDBACK_DATASET,
-  },
-  {
-    onError: (error, context) => {
-      // Log to your error tracking service
-      console.error('Feedback failed:', error, context.links);
-    },
-  }
-);
-```
-
-## Link feedback to traces
-
-Feedback events are linked to traces using `FeedbackLinks`. This connection allows you to see what your AI capability did when a user provided feedback.
-
-```ts
-type FeedbackLinks = {
-  traceId: string;      // Required: The trace ID from your AI capability
-  capability: string;   // Required: The name of your capability
-  spanId?: string;      // Optional: Link to a specific span
-  step?: string;        // Optional: Step within the capability
-  conversationId?: string; // Optional: Refers to `attributes.gen_ai.conversation_id`
-  userId?: string;      // Optional: User providing feedback
-};
-```
-
-### Get trace context from your capability
-
-When running your AI capability, capture the trace and span IDs to pass to the frontend:
-
-```ts
-import { withSpan } from 'axiom/ai';
-import type { FeedbackLinks } from 'axiom/ai/feedback';
-
-async function runMyCapability(input: string) {
-  return await withSpan({ capability: 'my-capability', step: 'generate' }, async (span) => {
-    const links: FeedbackLinks = {
-      traceId: span.spanContext().traceId,
-      spanId: span.spanContext().spanId,
-      capability: 'my-capability',
-    };
-
-    const result = await generateResponse(input);
-
-    return { result, links };
-  });
-}
-```
-
-## Send feedback
+### Send feedback
 
 Use the `Feedback` helper to create feedback objects, and send them with `sendFeedback`:
 
@@ -265,6 +244,26 @@ await sendFeedback(
 
 </Tab>
 </Tabs>
+
+### Error handling
+
+The feedback client logs errors to the JavaScript console by default. To handle errors differently, pass an `onError` callback:
+
+```ts
+const { sendFeedback } = createFeedbackClient(
+  {
+    token: process.env.AXIOM_FEEDBACK_TOKEN,
+    dataset: process.env.AXIOM_FEEDBACK_DATASET,
+    url: process.env.AXIOM_URL,
+  },
+  {
+    onError: (error, context) => {
+      // Log to your error tracking service
+      console.error('Feedback failed:', error, context.links);
+    },
+  }
+);
+```
 
 ## Example: Chat interface with feedback
 
