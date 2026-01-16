@@ -27,7 +27,7 @@
     dataset: 'docs-analytics',
     // API token for ingest - use a token with ONLY ingest permissions
     // IMPORTANT: Create a restricted token that can only ingest to this dataset
-    token: "xaat-d4a6fb6d-6b57-42da-8b3d-2298405237c8",
+    token: "xaat-31aceafd-2a71-4313-8a43-1494ea125085",
     // Enable debug logging to console
     debug: false,
     // Batch events and send periodically (milliseconds)
