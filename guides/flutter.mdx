@@ -1,17 +1,17 @@
 ---
-title: "Send logs from a Flutter app to Axiom"
-description: "This guide explains how to send structured logs from a Flutter app to Axiom using a custom logging library."
+title: "Send data from Flutter app"
+description: "This page explains how to send data from Flutter apps to Axiom."
 sidebarTitle: "Flutter"
 ---
 
-This guide explains how to send structured logs from a Flutter app to Axiom using a custom logging library built with the [Dio HTTP client](https://pub.dev/packages/dio).
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 
-## Prerequisites
+This page explains how to send structured logs from Flutter apps to Axiom using a custom logging library built with the [Dio HTTP client](https://pub.dev/packages/dio).
 
-* [Create an Axiom account](https://app.axiom.co/register).
-* [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
-* [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
-* Install Flutter SDK version 3.0.0 or higher.
+<Prerequisites />
+- [Install Flutter SDK](https://docs.flutter.dev/install) version 3.0.0 or higher.
 
 ## Install required dependencies
 
@@ -29,16 +29,22 @@ Then run the following code in your terminal to install dependencies:
 flutter pub get
 ```
 
-### Dependencies overview
+- **dio**: A powerful HTTP client for Dart that handles network requests to send logs to Axiom.
+- **intl**: Provides internationalization and date/time formatting utilities for creating properly formatted timestamps.
 
-* **dio**: A powerful HTTP client for Dart that handles network requests to send logs to Axiom.
-* **intl**: Provides internationalization and date/time formatting utilities for creating properly formatted timestamps.
-
-## Create the axiom_logger.dart file
+## Create axiom_logger.dart file
 
 Create a `lib/axiom_logger.dart` file with the following content. This file defines the logger configuration, log levels, and the main logging functionality that sends structured logs to Axiom.
 
-```dart
+The logger implementation below includes the following key features:
+
+- **Log Levels**: Five severity levels (debug, info, warning, error, critical) for categorizing log entries.
+- **Batching**: Logs are buffered and sent in batches to reduce network overhead and improve performance.
+- **Immediate Sending**: Critical logs are sent immediately to ensure important events are captured right away.
+- **Metadata Support**: Attach custom metadata to logs for richer context and easier filtering.
+- **Automatic Timestamps**: Logs are automatically timestamped in ISO 8601 format.
+
+```dart lib/axiom_logger.dart expandable
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
@@ -240,21 +246,11 @@ class AxiomLogger {
 }
 ```
 
-<Info>
-  This logger implementation includes several key features:
-
-  - **Log Levels**: Five severity levels (debug, info, warning, error, critical) for categorizing log entries.
-  - **Batching**: Logs are buffered and sent in batches to reduce network overhead and improve performance.
-  - **Immediate Sending**: Critical logs are sent immediately to ensure important events are captured right away.
-  - **Metadata Support**: Attach custom metadata to logs for richer context and easier filtering.
-  - **Automatic Timestamps**: Logs are automatically timestamped in ISO 8601 format.
-</Info>
-
-## Create an example main.dart file
+## Create main.dart file
 
 Create an `example/main.dart` file with the following content. This file demonstrates how to use the Axiom Logger with different log levels and metadata.
 
-```dart
+```dart example/main.dart expandable
 import 'package:flutter_logging/axiom_logger.dart';
 
 /// Example usage of the Axiom Logger
@@ -366,38 +362,21 @@ Future<void> main() async {
 ```
 
 <Info>
-  Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
-
-  Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
-
-  Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+<ReplaceDatasetToken />
+<ReplaceDomain />
 </Info>
 
-## Run the app
+## Run the app and observe logs in Axiom
 
-Run the following code in your terminal to run the Flutter example:
+1. Run the following code in your terminal to run the Flutter example:
 
-```bash
-dart run example/main.dart
-```
+    ```bash
+    dart run example/main.dart
+    ```
 
-The app sends logs with different severity levels to Axiom, demonstrating batching, immediate sending for critical logs, and the use of custom metadata.
+    The app sends logs with different severity levels to Axiom, demonstrating batching, immediate sending for critical logs, and the use of custom metadata.
 
-## Observe the log data in Axiom
-
-In Axiom, go the **Stream** tab and click your dataset. This page displays the logs sent to Axiom and enables you to monitor and analyze your app's behavior and performance.
-
-<Frame caption="Observing the log data in Axiom">
-  <img src="https://mintcdn.com/axiom/6UXjyyx-ZiWeEcux/doc-assets/shots/flutter-logging-data-axiom.png?fit=max&auto=format" alt="Observing the log data in Axiom" />
-</Frame>
-
-## Dynamic logging dashboard
-
-In Axiom, go the **Dashboards** tab and click **Flutter Logs** to view pre-built dashboards. These dashboards provide insights into log patterns, error rates, and app performance metrics.
-
-<Frame caption="Dynamic Flutter Logging dashboard">
-  <img src="https://mintcdn.com/axiom/6UXjyyx-ZiWeEcux/doc-assets/shots/flutter-logging-dashboard.png?fit=max&auto=format" alt="Dynamic Flutter Logging dashboard" />
-</Frame>
+1. In Axiom, go to the Stream tab, and then click your dataset. This page displays the logs sent to Axiom and enables you to monitor and analyze your app's behavior and performance.
 
 ## Send data from an existing Flutter project
 
@@ -406,34 +385,33 @@ In Axiom, go the **Dashboards** tab and click **Flutter Logs** to view pre-built
 To add Axiom logging to your existing Flutter app, follow these steps:
 
 1. Add the Axiom Logger to your project by copying the `axiom_logger.dart` file to your `lib` directory.
+1. Initialize the logger early in your app's lifecycle, typically in your `main()` function.
 
-2. Initialize the logger early in your app's lifecycle, typically in your `main()` function.
+    ```dart
+    import 'package:your_app/axiom_logger.dart';
 
-   ```dart
-   import 'package:your_app/axiom_logger.dart';
+    void main() async {
+      // Initialize logger
+      final config = AxiomLoggerConfig(
+        domain: 'https://your-axiom-domain.com',
+        dataset: 'your-dataset',
+        apiToken: 'your-api-token',
+        enableDebugLogs: false, // Set to true for development
+      );
 
-   void main() async {
-     // Initialize logger
-     final config = AxiomLoggerConfig(
-       domain: 'https://your-axiom-domain.com',
-       dataset: 'your-dataset',
-       apiToken: 'your-api-token',
-       enableDebugLogs: false, // Set to true for development
-     );
+      final logger = AxiomLogger(config: config);
 
-     final logger = AxiomLogger(config: config);
+      // Log app startup
+      await logger.info('App started', metadata: {
+        'version': '1.0.0',
+        'platform': 'Flutter',
+      });
 
-     // Log app startup
-     await logger.info('App started', metadata: {
-       'version': '1.0.0',
-       'platform': 'Flutter',
-     });
+      runApp(MyApp(logger: logger));
+    }
+    ```
 
-     runApp(MyApp(logger: logger));
-   }
-   ```
-
-3. Use the logger throughout your app to capture important events, errors, and debug information.
+1. Use the logger throughout your app to capture important events, errors, and debug information. For example:
 
    ```dart
    // Log user actions
@@ -574,15 +552,11 @@ Future<void> performExpensiveOperation(AxiomLogger logger) async {
 
 ### Best practices
 
-1. **Use appropriate log levels**: Reserve `critical` for system failures, `error` for recoverable errors, `warning` for potential issues, `info` for important events, and `debug` for development details.
-
-2. **Add contextual metadata**: Include relevant information like user IDs, session IDs, device info, and operation context to make logs more useful.
-
-3. **Dispose properly**: Always call `logger.dispose()` when your app closes to ensure buffered logs are sent.
-
-4. **Handle errors gracefully**: Wrap logging calls in try-catch blocks to prevent logging failures from crashing your app.
-
-5. **Use batching wisely**: Adjust `batchSize` and `flushInterval` based on your app's logging volume and network conditions.
+- **Use appropriate log levels**: Reserve `critical` for system failures, `error` for recoverable errors, `warning` for potential issues, `info` for important events, and `debug` for development details.
+- **Add contextual metadata**: Include relevant information like user IDs, session IDs, device info, and operation context to make logs more useful.
+- **Dispose properly**: Always call `logger.dispose()` when your app closes to ensure buffered logs are sent.
+- **Handle errors gracefully**: Wrap logging calls in try-catch blocks to prevent logging failures from crashing your app.
+- **Use batching wisely**: Adjust `batchSize` and `flushInterval` based on your app's logging volume and network conditions.
 
 ## Reference
 
