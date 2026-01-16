@@ -10,6 +10,14 @@ import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 User feedback captures direct signals from end users about your AI capability’s performance. By linking feedback events to traces, you can correlate user perception with system behavior to understand exactly what went wrong and prioritize high-impact improvements.
 
+## How user feedback works
+
+User feedback collection works across your server and client in the following way:
+
+1. **Server**: Your AI capability runs inside `withSpan`, which creates a trace. Extract `traceId` and `spanId` from the span and return them to the client alongside the AI response.
+1. **Client**: When users provide feedback (thumbs up/down, ratings, comments), send it to Axiom with the trace IDs. This links the feedback to the exact trace.
+1. **Axiom Console**: View feedback events and click through to see the corresponding AI trace to understand what happened.
+
 ## Types of feedback
 
 Axiom AI SDK supports the following feedback types:
@@ -260,22 +268,25 @@ await sendFeedback(
 
 ## Example: Chat interface with feedback
 
-This example shows a complete pattern for a chat interface with thumbs up/down feedback.
+This example shows a complete pattern for a chat interface with thumbs up/down feedback in Next.js.
 
 <Tabs>
 <Tab title="Server-side code">
 
 The server-side code returns the trace and span IDs to the client-side code, which is used to link the feedback to the trace:
 
-```ts expandable
-// Server: Return links from your capability
+```ts /app/actions.ts expandable
+'use server';
+
 import { withSpan } from 'axiom/ai';
 import type { FeedbackLinks } from 'axiom/ai/feedback';
 
 export async function chat(messages: Message[]) {
   return await withSpan({ capability: 'support-agent', step: 'respond' }, async (span) => {
+    // Add your AI logic here: call OpenAI, Anthropic, etc.
     const response = await generateResponse(messages);
 
+    // Extract trace context to pass to the client
     const links: FeedbackLinks = {
       traceId: span.spanContext().traceId,
       spanId: span.spanContext().spanId,
@@ -292,10 +303,10 @@ export async function chat(messages: Message[]) {
 
 The client-side code captures feedback and sends it to the server:
 
-```tsx expandable
-// Client: Capture feedback
+```tsx expandable /app/components/ChatMessage.tsx expandable
 'use client';
 
+import { useState } from 'react';
 import { createFeedbackClient, Feedback } from 'axiom/ai/feedback';
 import type { FeedbackLinks } from 'axiom/ai/feedback';
 
