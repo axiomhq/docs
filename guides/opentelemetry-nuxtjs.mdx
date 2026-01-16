@@ -1,53 +1,30 @@
 ---
 title: 'OpenTelemetry using Nuxt.js'
-description: 'This guide demonstrates how to configure OpenTelemetry in a Nuxt.js app to send telemetry data to Axiom.'
-overview: 'Nuxt.js with OpenTelemetry for server-side tracing'
+description: 'This page explains how to configure OpenTelemetry in a Nuxt.js app to send telemetry data to Axiom.'
 sidebarTitle: Nuxt.js
 keywords: ['guides', 'nuxtjs', 'opentelemetry', 'otel']
-logoId: 'openTelemetry'
 ---
 
-OpenTelemetry provides a [unified approach to collecting telemetry data](https://opentelemetry.io/docs/languages/js/instrumentation/) from your Nuxt.js and TypeScript apps. This guide demonstrates how to configure OpenTelemetry in a Nuxt.js app to send telemetry data to Axiom using OpenTelemetry SDK.
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
 
-## Prerequisites
+OpenTelemetry provides a [unified approach to collecting telemetry data](https://opentelemetry.io/docs/languages/js/instrumentation/) from your Nuxt.js and TypeScript apps. This page demonstrates how to configure OpenTelemetry in a Nuxt.js app to send telemetry data to Axiom using OpenTelemetry SDK.
 
-To configure OpenTelemetry in a Nuxt.js app for sending telemetry data to Axiom, certain prerequisites are necessary. These include:
+<Prerequisites />
+- [Install Node.js](https://nodejs.org/en/download/package-manager) version 18 or newer.
+- Use your own app written in Nuxt.js, or follow this guide to create a new one.
 
-* Node.js: Node.js version 18 or newer.
-* Nuxt.js app: Use your own app written in Nuxt.js, or follow this guide to create a new one.
-* [Create an Axiom account](https://app.axiom.co/).
-* [Create a dataset in Axiom](/reference/datasets) where you send your data.
-* [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete datasets.
+## Create new Nuxt.js app
 
-## Project Structure
-
-Your Nuxt.js project will have the following structure:
-
-```
-my-nuxt-app/
-├── server/
-│   ├── api/
-│   │   └── hello.ts          # Example API endpoint
-│   └── plugins/
-│       └── instrumentation.ts # OpenTelemetry configuration
-├── .env                       # Environment variables
-├── nuxt.config.ts            # Nuxt configuration
-├── package.json              # Dependencies and scripts
-└── tsconfig.json             # TypeScript configuration (auto-generated)
-```
-
-## Create a New Nuxt.js App
-
-If you're starting from scratch, create a new Nuxt app:
+Run the following command to create a new Nuxt.js app. Accept the default options during the initialization.
 
 ```bash
 npx nuxi@latest init my-nuxt-app
 cd my-nuxt-app
 ```
 
-During the initialization, you can accept the default options.
-
-## Installing the Dependencies
+## Install dependencies
 
 Install the required OpenTelemetry packages:
 
@@ -55,52 +32,25 @@ Install the required OpenTelemetry packages:
 npm install @opentelemetry/api @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node @opentelemetry/exporter-trace-otlp-proto @opentelemetry/sdk-trace-base @opentelemetry/resources @opentelemetry/semantic-conventions
 ```
 
-Your `package.json` should include these dependencies:
-
-```json
-{
-  "name": "my-nuxt-app",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
-  },
-  "dependencies": {
-    "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.67.3",
-    "@opentelemetry/exporter-trace-otlp-proto": "^0.208.0",
-    "@opentelemetry/resources": "^2.2.0",
-    "@opentelemetry/sdk-node": "^0.208.0",
-    "@opentelemetry/sdk-trace-base": "^2.2.0",
-    "@opentelemetry/semantic-conventions": "^1.38.0",
-    "nuxt": "^4.2.2",
-    "vue": "^3.5.26",
-    "vue-router": "^4.6.4"
-  }
-}
-```
-
-## Environment Configuration (.env)
+## Configure environment variables
 
 Create a `.env` file in the root of your project to store your Axiom credentials:
 
 ```env
-AXIOM_TOKEN=your_axiom_api_token_here
-AXIOM_DATASET=your_dataset_name_here
+AXIOM_TOKEN=API_TOKEN
+AXIOM_DATASET=DATASET_NAME
 ```
 
-**Important:** Replace `your_axiom_api_token_here` with your actual Axiom API token and `your_dataset_name_here` with your dataset name.
+<Info>
+<ReplaceDatasetToken />
+<ReplaceDomain />
+</Info>
 
-## Nuxt Configuration (nuxt.config.ts)
+## Configure Nuxt.js app
 
-Configure your Nuxt app to expose the environment variables to the runtime:
+Configure your Nuxt app in `nuxt.config.ts` to expose the environment variables to the runtime:
 
-```typescript
-// nuxt.config.ts
+```typescript nuxt.config.ts
 export default defineNuxtConfig({
   compatibilityDate: '2026-01-05',
   devtools: { enabled: true },
@@ -118,9 +68,9 @@ export default defineNuxtConfig({
 });
 ```
 
-## Server Setup
+## Server setup
 
-### Create Server Directories
+### Create server directories
 
 Create the necessary directories for your server-side code:
 
@@ -130,14 +80,17 @@ mkdir -p server/api
 mkdir -p server/plugins
 ```
 
-### Instrumentation Plugin (server/plugins/instrumentation.ts)
+### Instrumentation plugin
 
 Create the OpenTelemetry instrumentation plugin in `server/plugins/instrumentation.ts`. This file sets up the OpenTelemetry SDK and configures it to send traces to Axiom.
 
-**Important:** In Nuxt.js, OpenTelemetry must be initialized in a Nitro plugin (not in the nuxt.config.ts hooks) because API endpoints run in the Nitro server runtime.
+<Info>
+In Nuxt.js, you must initialize OpenTelemetry in a Nitro plugin, not in the `nuxt.config.ts` hooks, because API endpoints run in the Nitro server runtime.
 
-```typescript
-// server/plugins/instrumentation.ts
+This example uses the `ATTR_SERVICE_NAME` constant instead of the deprecated `SemanticResourceAttributes.SERVICE_NAME`, and `resourceFromAttributes()` instead of `new Resource()` for compatibility with newer OpenTelemetry versions.
+</Info>
+
+```ts server/plugins/instrumentation.ts expandable
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
@@ -188,14 +141,13 @@ export default defineNitroPlugin((nitroApp) => {
 });
 ```
 
-**Note:** The `ATTR_SERVICE_NAME` constant is used instead of the deprecated `SemanticResourceAttributes.SERVICE_NAME`, and `resourceFromAttributes()` is used instead of `new Resource()` for compatibility with newer OpenTelemetry versions.
+### Example API endpoint
 
-### Example API Endpoint (server/api/hello.ts)
+Create an example API endpoint in `server/api/hello.ts` to test your OpenTelemetry setup.
 
-Create an example API endpoint to test your OpenTelemetry setup:
+The example endpoint below demonstrates manual span creation. Each request to `/api/hello` creates a trace span and sends it to Axiom.
 
-```typescript
-// server/api/hello.ts
+```ts server/api/hello.ts
 import { trace } from '@opentelemetry/api';
 
 export default defineEventHandler((event) => {
@@ -223,11 +175,9 @@ export default defineEventHandler((event) => {
 });
 ```
 
-This endpoint demonstrates manual span creation. Each request to `/api/hello` will create a trace span that gets exported to Axiom.
+## Run instrumented app
 
-## Running the Instrumented Application
-
-### In Development Mode
+### In development mode
 
 To run your Nuxt app with OpenTelemetry instrumentation in development mode:
 
@@ -235,12 +185,7 @@ To run your Nuxt app with OpenTelemetry instrumentation in development mode:
 npm run dev
 ```
 
-This command will:
-1. Start the Nuxt development server on `http://localhost:3000`
-2. Initialize OpenTelemetry in the Nitro server
-3. Automatically reload when you make changes to files
-
-You should see output like:
+You see the following output in the console:
 
 ```
 Nuxt 4.2.2 (with Nitro 2.12.9, Vite 7.3.0 and Vue 3.5.26)
@@ -253,7 +198,7 @@ Initializing OpenTelemetry in Nitro server...
 OpenTelemetry started in Nitro server
 ```
 
-### Test Your Setup
+### Test setup
 
 Test your API endpoint to generate traces:
 
@@ -261,7 +206,7 @@ Test your API endpoint to generate traces:
 curl http://localhost:3000/api/hello
 ```
 
-You should see:
+You get the following response from the API endpoint:
 
 ```json
 {
@@ -271,14 +216,14 @@ You should see:
 }
 ```
 
-After making 5-10 requests, you'll see in the console:
+After making 5-10 requests, you see the following output in the console:
 
 ```
 Exporting 5 span(s) to Axiom...
 Spans exported successfully to Axiom
 ```
 
-### In Production Mode
+### In production mode
 
 To build and run in production:
 
@@ -290,108 +235,64 @@ npm run build
 npm run preview
 ```
 
-## Observe the Telemetry Data in Axiom
+After generating some traces by visiting your API endpoints, go to the **Stream** tab in Axiom, and then click your dataset. You see the traces appearing in the stream.
 
-After generating some traces by visiting your API endpoints, navigate to your Axiom dashboard:
+## Project directory structure
 
-1. Log in to [Axiom](https://app.axiom.co/)
-2. Navigate to your dataset (e.g., `nuxt-traces`)
-3. You should see trace data appearing with fields like:
-   - `trace_id`: Unique identifier for each trace
-   - `span_id`: Unique identifier for each span
-   - `service.name`: Your service name (`my-nuxt-app`)
-   - `attributes.http.method`: HTTP method (GET, POST, etc.)
-   - `attributes.http.path`: The API path accessed
-   - `duration`: Time taken for the operation
+Your Nuxt.js project has the following structure:
 
-## Project Directory Structure Explained
+```
+my-nuxt-app/
+├── server/
+│   ├── api/
+│   │   └── hello.ts          # Example API endpoint
+│   └── plugins/
+│       └── instrumentation.ts # OpenTelemetry configuration
+├── .env                       # Environment variables
+├── nuxt.config.ts            # Nuxt configuration
+├── package.json              # Dependencies and scripts
+└── tsconfig.json             # TypeScript configuration (auto-generated)
+```
 
-### Root Level Files
+### Root-level files
 
 - **`.env`**: Stores environment variables (API token, dataset name)
 - **`nuxt.config.ts`**: Nuxt configuration file that exposes environment variables to the runtime
 - **`package.json`**: Lists dependencies and npm scripts
 - **`tsconfig.json`**: TypeScript configuration (auto-generated by Nuxt)
 
-### Server Directory (`server/`)
+### Server directory
 
-The `server/` directory contains all server-side code that runs in Nitro (Nuxt's server engine).
+The `server/` directory contains all server-side code that runs in Nitro, Nuxt's server engine.
 
-#### `server/api/`
+- `server/api/` directory contains API route handlers. Each file becomes an API endpoint:
 
-This directory contains API route handlers. Each file becomes an API endpoint:
+    - `server/api/hello.ts` → `/api/hello`
+    - `server/api/users.ts` → `/api/users`
+    - `server/api/posts/[id].ts` → `/api/posts/:id`
 
-- `server/api/hello.ts` → `/api/hello`
-- `server/api/users.ts` → `/api/users`
-- `server/api/posts/[id].ts` → `/api/posts/:id`
+- `server/plugins/` directory contains Nitro plugins that run when the server starts:
+    - `server/plugins/instrumentation.ts`: Initializes OpenTelemetry SDK
 
-#### `server/plugins/`
-
-This directory contains Nitro plugins that run when the server starts:
-
-- `server/plugins/instrumentation.ts`: Initializes OpenTelemetry SDK
-
-## Send Data from an Existing Nuxt Project
-
-If you already have a Nuxt project, follow these steps:
-
-### 1. Install OpenTelemetry Packages
-
-```bash
-npm install @opentelemetry/api @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node @opentelemetry/exporter-trace-otlp-proto @opentelemetry/sdk-trace-base @opentelemetry/resources @opentelemetry/semantic-conventions
-```
-
-### 2. Create Environment Variables
-
-Add to your `.env` file:
-
-```env
-AXIOM_TOKEN=your_axiom_api_token
-AXIOM_DATASET=your_dataset_name
-```
-
-### 3. Update Nuxt Config
-
-Update `nuxt.config.ts`:
-
-```typescript
-export default defineNuxtConfig({
-  runtimeConfig: {
-    axiomToken: process.env.AXIOM_TOKEN,
-    axiomDataset: process.env.AXIOM_DATASET,
-  }
-});
-```
-
-### 4. Create Instrumentation Plugin
-
-Create `server/plugins/instrumentation.ts` with the code shown above.
-
-### 5. Restart Your Server
-
-```bash
-npm run dev
-```
-
-## Manual Instrumentation
+## Manual instrumentation
 
 Manual instrumentation in Nuxt.js allows you to create custom spans for specific operations.
 
-### 1. Initialize Tracer
+### Initialize tracer
 
-In any server file (API route, server middleware, etc.):
+Import the OpenTelemetry API in any server file, such as `server/api/hello.ts`:
 
-```typescript
+```ts server/api/hello.ts
 import { trace } from '@opentelemetry/api';
 
 const tracer = trace.getTracer('my-nuxt-app');
 ```
 
-### 2. Create Spans
+### Create spans
 
 Wrap operations you want to trace:
 
-```typescript
+```ts
 export default defineEventHandler(async (event) => {
   const span = tracer.startSpan('database.query');
 
@@ -413,9 +314,9 @@ export default defineEventHandler(async (event) => {
 });
 ```
 
-### 3. Annotate Spans
+### Annotate spans
 
-Add metadata to your spans:
+Add metadata to your spans, such as `order.id`, `user.id`, and `order.amount`:
 
 ```typescript
 const span = tracer.startSpan('process.order');
@@ -432,11 +333,11 @@ span.addEvent('payment_processed', {
 span.end();
 ```
 
-### 4. Create Nested Spans
+### Create nested spans
 
 Create parent-child relationships between spans:
 
-```typescript
+```ts
 import { trace, context } from '@opentelemetry/api';
 
 export default defineEventHandler(async (event) => {
@@ -461,13 +362,14 @@ export default defineEventHandler(async (event) => {
 });
 ```
 
-## Automatic Instrumentation
+## Automatic instrumentation
 
 Automatic instrumentation is already set up in the `server/plugins/instrumentation.ts` file:
 
-```typescript
+```ts server/plugins/instrumentation.ts
 instrumentations: [getNodeAutoInstrumentations()]
 ```
+
 This automatically traces:
 - HTTP requests and responses
 - Database queries (MySQL, PostgreSQL, MongoDB, etc.)
@@ -544,11 +446,11 @@ Provides standard attribute names like `ATTR_SERVICE_NAME` for consistent teleme
 
 The OpenTelemetry API package that provides the `trace` and `context` APIs for manual instrumentation. This is a peer dependency that other OpenTelemetry packages rely on.
 
-## Advanced Configuration
+## Advanced configurations
 
-### Custom Span Processor
+### Custom span processor
 
-For more control over span processing:
+For more control over span processing, use the `SimpleSpanProcessor` instead of the `BatchSpanProcessor`:
 
 ```typescript
 import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
@@ -562,7 +464,7 @@ const sdk = new NodeSDK({
 
 ### Sampling
 
-To reduce the volume of traces:
+To reduce the volume of traces, use the `TraceIdRatioBasedSampler` to sample a percentage of traces:
 
 ```typescript
 import { TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-base';
@@ -575,9 +477,9 @@ const sdk = new NodeSDK({
 });
 ```
 
-### Custom Resource Attributes
+### Custom resource attributes
 
-Add custom attributes to all traces:
+Add custom attributes to all traces, such as `service.version` and `deployment.environment`:
 
 ```typescript
 const resource = resourceFromAttributes({
