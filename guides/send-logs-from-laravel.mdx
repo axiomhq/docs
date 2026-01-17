@@ -30,7 +30,7 @@ composer create-project --prefer-dist laravel/laravel laravel-axiom-logger
 
 ## Exploring the logging config file
 
-In your Laravel project, the `config` directory contains several configurations on how different parts of your app work, such as how it connects to the database, manages sessions, and handles caching. Among these files, **`logging.php`**  identifies how you can define your app logs activities and errors. This file is designed to let you specify where your logs go: a file, a cloud service, or other destinations. The configuration file below includes the Axiom logging setup.
+In your Laravel project, the `config` directory contains several configurations on how different parts of your app work, such as how it connects to the database, manages sessions, and handles caching. Among these files, **`logging.php`** identifies how you can define your app logs activities and errors. This file is designed to let you specify where your logs go: a file, a cloud service, or other destinations. The configuration file below includes the Axiom logging setup.
 
 ```bash
 code config/logging.php
@@ -123,29 +123,53 @@ return [
 ];
 ```
 
-At the start of the `logging.php` file in your Laravel project, you’ll find some Monolog handlers like `NullHandler`, `StreamHandler`, and a few more. This shows that Laravel uses Monolog to help with logging, which means it can do a lot of different things with logs.
+At the start of the `logging.php` file in your Laravel project, you'll find some Monolog handlers like `NullHandler`, `StreamHandler`, and a few more. This shows that Laravel uses Monolog to help with logging, which means it can do a lot of different things with logs.
 
 ### Default log channel
 
-The `default` configuration specifies the primary channel Laravel uses for logging. In our setup, this is set through the **`.env`** file with the **`LOG_CHANNEL`** variable, which you’ve set to **`axiom`**. This means that, by default, log messages will be sent to the Axiom channel, using the custom handler you’ve defined to send logs to the dataset.
+The `default` configuration specifies the primary channel Laravel uses for logging. In our setup, this is set through the **`.env`** file with the **`LOG_CHANNEL`** variable, which you've set to **`axiom`**. This means that, by default, log messages will be sent to the Axiom channel, using the custom handler you've defined to send logs to the dataset.
 
+<Tabs>
+<Tab title="US East 1 (AWS)">
 ```bash
 LOG_CHANNEL=axiom
 AXIOM_API_TOKEN=API_TOKEN
 AXIOM_DATASET=DATASET_NAME
-AXIOM_DOMAIN=AXIOM_DOMAIN
+AXIOM_DOMAIN=us-east-1.aws.edge.axiom.co
 LOG_LEVEL=debug
 LOG_DEPRECATIONS_CHANNEL=null
 ```
+</Tab>
+<Tab title="EU Central 1 (AWS)">
+```bash
+LOG_CHANNEL=axiom
+AXIOM_API_TOKEN=API_TOKEN
+AXIOM_DATASET=DATASET_NAME
+AXIOM_DOMAIN=eu-central-1.aws.edge.axiom.co
+LOG_LEVEL=debug
+LOG_DEPRECATIONS_CHANNEL=null
+```
+</Tab>
+</Tabs>
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+  Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+  Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+
+  The `AXIOM_DOMAIN` value depends on your edge deployment region:
+
+  | Edge deployment | Base domain |
+  |-----------------|-------------|
+  | US East 1 (AWS) | `us-east-1.aws.edge.axiom.co` |
+  | EU Central 1 (AWS) | `eu-central-1.aws.edge.axiom.co` |
+
+  For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ### Deprecations log channel
 
-The `deprecations` channel is configured to handle logs about deprecated features in PHP and libraries, helping you prepare for updates. By default, it’s set to ignore these warnings, but you can adjust this to direct deprecation logs to a specific channel if needed.
+The `deprecations` channel is configured to handle logs about deprecated features in PHP and libraries, helping you prepare for updates. By default, it's set to ignore these warnings, but you can adjust this to direct deprecation logs to a specific channel if needed.
 
 ```php
 'deprecations' => [
@@ -178,28 +202,28 @@ The heart of the `logging.php` file lies within the **`channels`** array where y
         ],
 ```
 
-- **Single**: Designed for simplicity, the **`single`** channel writes logs to a single file. It’s a straightforward solution for tracking logs without needing complex log management strategies.
-- Axiom: The custom **`axiom`** channel sends logs to your specified Axiom dataset, providing advanced log management capabilities. This integration enables powerful log analysis and monitoring, supporting better insights into your app’s performance and issues.
-- **Daily**: This channel rotates logs daily, keeping your log files manageable and making it easier to navigate log entries over time.
+* **Single**: Designed for simplicity, the **`single`** channel writes logs to a single file. It's a straightforward solution for tracking logs without needing complex log management strategies.
+* **Axiom**: The custom **`axiom`** channel sends logs to your specified Axiom dataset, providing advanced log management capabilities. This integration enables powerful log analysis and monitoring, supporting better insights into your app's performance and issues.
+* **Daily**: This channel rotates logs daily, keeping your log files manageable and making it easier to navigate log entries over time.
 
 Each channel can be customized further, such as adjusting the log level to control the verbosity of logs captured. The **`LOG_LEVEL`** environment variable sets this, defaulting to **`debug`** for capturing detailed log information.
 
 ## Getting started with log levels in Laravel
 
-Laravel lets you choose from eight different levels of importance for your log messages, just like a list of warnings from very serious to just for info. Here’s what each level means, starting with the most severe:
+Laravel lets you choose from eight different levels of importance for your log messages, just like a list of warnings from very serious to just for info. Here's what each level means, starting with the most severe:
 
-- **EMERGENCY**: Your app is broken and needs immediate attention.
-- **ALERT**: similar to `EMERGENCY`, but less severe.
-- **CRITICAL**: Critical errors within the main parts of your app.
-- **ERROR**: error conditions in your app.
-- **WARNING**: something unusual happened that may need to be addressed later.
-- **NOTICE**: Important info, but not a warning or error.
-- **INFO**: General updates about what your app is doing.
-- **DEBUG**: used to record some debugging messages.
+* **EMERGENCY**: Your app is broken and needs immediate attention.
+* **ALERT**: similar to `EMERGENCY`, but less severe.
+* **CRITICAL**: Critical errors within the main parts of your app.
+* **ERROR**: error conditions in your app.
+* **WARNING**: something unusual happened that may need to be addressed later.
+* **NOTICE**: Important info, but not a warning or error.
+* **INFO**: General updates about what your app is doing.
+* **DEBUG**: used to record some debugging messages.
 
-Not every situation fits into one of these levels. For example, in an online store, you might use **INFO** to log when someone buys something and **ERROR** if a payment doesn’t go through because of a problem.
+Not every situation fits into one of these levels. For example, in an online store, you might use **INFO** to log when someone buys something and **ERROR** if a payment doesn't go through because of a problem.
 
-Here’s a simple way to log messages at each level in Laravel:
+Here's a simple way to log messages at each level in Laravel:
 
 ```php
 use Illuminate\Support\Facades\Log;
@@ -229,11 +253,11 @@ Output:
 
 ## Creating the custom logger class
 
-In this section, we will explain how to create the custom logger class designed for sending your Laravel app’s logs to Axiom. This class named `AxiomHandler` , extends Monolog’s **`AbstractProcessingHandler`** giving us a structured way to handle log messages and forward them to Axiom.
+In this section, we will explain how to create the custom logger class designed for sending your Laravel app's logs to Axiom. This class named `AxiomHandler`, extends Monolog's **`AbstractProcessingHandler`** giving us a structured way to handle log messages and forward them to Axiom.
 
-- **Initializing cURL**: The **`initializeCurl`** method sets up a cURL handle to communicate with Axiom’s API. It prepares the request with the appropriate headers, including the authorization header that uses your Axiom API token and content type set to **`application/json` .**
-- **Handling errors**: If there’s an error during the cURL request, it’s logged to PHP’s error log. This helps in diagnosing issues with log forwarding without disrupting your app’s normal operations.
-- **Formatting logs**: Lastly, we specify the log message format using the **`getDefaultFormatter`** method. By default, we use Monolog’s **`JsonFormatter`** to ensure our log messages are JSON encoded, making them easy to parse and analyze in Axiom.
+* **Initializing cURL**: The **`initializeCurl`** method sets up a cURL handle to communicate with Axiom's API. It prepares the request with the appropriate headers, including the authorization header that uses your Axiom API token and content type set to **`application/json`**.
+* **Handling errors**: If there's an error during the cURL request, it's logged to PHP's error log. This helps in diagnosing issues with log forwarding without disrupting your app's normal operations.
+* **Formatting logs**: Lastly, we specify the log message format using the **`getDefaultFormatter`** method. By default, we use Monolog's **`JsonFormatter`** to ensure our log messages are JSON encoded, making them easy to parse and analyze in Axiom.
 
 ```php
 <?php
@@ -305,11 +329,19 @@ class AxiomHandler extends AbstractProcessingHandler
 }
 ```
 
+<Info>
+  The `AxiomHandler` class uses the ingest endpoint format `https://{AXIOM_DOMAIN}/v1/ingest/{dataset}` which works for all edge deployments (US and EU).
+
+  Make sure to set the correct `AXIOM_DOMAIN` in your `.env` file based on your region:
+  - **US East 1**: `us-east-1.aws.edge.axiom.co`
+  - **EU Central 1**: `eu-central-1.aws.edge.axiom.co`
+</Info>
+
 ## Creating the test controller
 
-In this section, we will demonstrate the process of verifying that your custom Axiom logger is properly set up and functioning within your Laravel app. To do this, we’ll create a simple test controller with a method designed to send a log message using the Axiom channel. Following this, we’ll define a route that triggers this logging action, allowing you to easily test the logger by accessing a specific URL in your browser or using a tool like cURL.
+In this section, we will demonstrate the process of verifying that your custom Axiom logger is properly set up and functioning within your Laravel app. To do this, we'll create a simple test controller with a method designed to send a log message using the Axiom channel. Following this, we'll define a route that triggers this logging action, allowing you to easily test the logger by accessing a specific URL in your browser or using a tool like cURL.
 
-Create a new controller called `TestController` within your `app/Http/Controllers` directory. In this controller, add a method named `logTest` . This method will use Laravel’s logging to send a test log message to your Axiom dataset. Here’s how you set it up:
+Create a new controller called `TestController` within your `app/Http/Controllers` directory. In this controller, add a method named `logTest`. This method will use Laravel's logging to send a test log message to your Axiom dataset. Here's how you set it up:
 
 ```php
 <?php
@@ -368,11 +400,11 @@ use App\Http\Controllers\TestController;
 Route::get('/test-log', [TestController::class, 'logTest']);
 ```
 
-With this route, navigating to `/test-log` on your Laravel app’s domain will execute the `logTest` method, send a log message to Axiom, and display 'Log sent to Axiom' as a confirmation in the browser.
+With this route, navigating to `/test-log` on your Laravel app's domain will execute the `logTest` method, send a log message to Axiom, and display 'Log sent to Axiom' as a confirmation in the browser.
 
 ## Run the app
 
-If you are running the Laravel app locally, to see your custom Axiom logger in action, you’ll need to start your Laravel app. Open your terminal or command prompt, navigate to the root directory of your Laravel project, and run the following command:
+If you are running the Laravel app locally, to see your custom Axiom logger in action, you'll need to start your Laravel app. Open your terminal or command prompt, navigate to the root directory of your Laravel project, and run the following command:
 
 ```bash
 php artisan serve
@@ -380,14 +412,81 @@ php artisan serve
 
 This command launches the built-in development server, making your app accessible via a web browser. By default, Laravel serves your app at `http://localhost:8000/test-log`, but the command output will specify the exact address.
 
+
+<Tabs>
+<Tab title="US East 1 (AWS)">
+Configure your `.env` file for US East 1:
+
+```bash
+LOG_CHANNEL=axiom
+AXIOM_API_TOKEN=xaat-your-token-here
+AXIOM_DATASET=your-dataset-name
+AXIOM_DOMAIN=us-east-1.aws.edge.axiom.co
+LOG_LEVEL=debug
+LOG_DEPRECATIONS_CHANNEL=null
+```
+
+Your logs will be sent to:
+```
+https://us-east-1.aws.edge.axiom.co/v1/ingest/your-dataset-name
+```
+</Tab>
+<Tab title="EU Central 1 (AWS)">
+Configure your `.env` file for EU Central 1:
+
+```bash
+LOG_CHANNEL=axiom
+AXIOM_API_TOKEN=xaat-your-token-here
+AXIOM_DATASET=your-dataset-name
+AXIOM_DOMAIN=eu-central-1.aws.edge.axiom.co
+LOG_LEVEL=debug
+LOG_DEPRECATIONS_CHANNEL=null
+```
+
+Your logs will be sent to:
+```
+https://eu-central-1.aws.edge.axiom.co/v1/ingest/your-dataset-name
+```
+</Tab>
+</Tabs>
+
+<Info>
+  If you're unsure which edge deployment to use, check your Axiom organization settings or contact support. Using the wrong region may result in 403 Forbidden errors when attempting to ingest logs.
+</Info>
+
 ## View the logs in Axiom
 
-Once you’ve set up your Laravel app with Axiom logging and sent test logs via our `TestController`, check your dataset. There, you’ll find your logs categorized by levels like `debug`, `info`, `error`, and `warning`. This confirms everything is working and showcases Axiom’s capabilities in handling log data.
+Once you've set up your Laravel app with Axiom logging and sent test logs via our `TestController`, check your dataset. There, you'll find your logs categorized by levels like `debug`, `info`, `error`, and `warning`. This confirms everything is working and showcases Axiom's capabilities in handling log data.
 
 <Frame caption="View Laravel logs in Axiom">
   <img src="/doc-assets/shots/view-laravel-logs-in-axiom.png" alt="View Laravel logs in Axiom" />
 </Frame>
 
+## Troubleshooting
+
+### 403 Forbidden errors
+
+If you receive a 403 Forbidden error when sending logs, check the following:
+
+1. **Incorrect edge deployment**: Ensure the `AXIOM_DOMAIN` in your `.env` file matches your organization's edge deployment region.
+2. **Invalid API token**: Verify that your `AXIOM_API_TOKEN` is correct and has ingest permissions for the specified dataset.
+3. **Dataset doesn't exist**: Confirm that the dataset specified in `AXIOM_DATASET` exists in your Axiom organization.
+
+<Info>
+  Common causes of 403 errors:
+  - Using `api.axiom.co` instead of the edge domain (`us-east-1.aws.edge.axiom.co` or `eu-central-1.aws.edge.axiom.co`)
+  - API token doesn't have ingest permissions for the specified dataset
+  - Organization is on EU but using US endpoint (or vice versa)
+</Info>
+
+### Logs not appearing
+
+If logs are not appearing in your Axiom dataset:
+
+1. Check your Laravel logs at `storage/logs/laravel.log` for any cURL errors.
+2. Verify that `LOG_CHANNEL` is set to `axiom` in your `.env` file.
+3. Clear Laravel's config cache: `php artisan config:clear`
+
 ## Conclusion
 
-This guide has introduced you to integrating Axiom for logging in Laravel apps. You’ve learned how to create a custom logger, configure log channels, and understand the significance of log levels. With this knowledge, you’re set to track errors and analyze log data effectively using Axiom.
+This guide has introduced you to integrating Axiom for logging in Laravel apps. You've learned how to create a custom logger, configure log channels, and understand the significance of log levels. With this knowledge, you're set to track errors and analyze log data effectively using Axiom.
