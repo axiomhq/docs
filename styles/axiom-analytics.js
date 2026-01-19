@@ -42,7 +42,77 @@
     trackScrollDepth: true,
     // Scroll depth thresholds to track (percentages)
     scrollThresholds: [25, 50, 75, 90],
+    // Allowed domains - restrict where this script can send data from
+    // Set to null to allow any domain, or ['docs.axiom.co'] to restrict
+    allowedDomains: null,
+    // Respect Do Not Track browser setting
+    respectDNT: true,
+    // Maximum retries for failed requests
+    maxRetries: 2,
+    // Retry delay in milliseconds (doubles with each retry)
+    retryDelay: 1000,
+    // Rate limiting: minimum milliseconds between events of the same type
+    rateLimitMs: 100,
   };
+
+  // ============================================================
+  // Security & Privacy Checks
+  // ============================================================
+
+  /**
+   * Check if analytics should be disabled
+   * Returns true if tracking should be blocked
+   */
+  function shouldDisableTracking() {
+    // Respect Do Not Track
+    if (config.respectDNT && (
+      navigator.doNotTrack === '1' || 
+      navigator.doNotTrack === 'yes' ||
+      window.doNotTrack === '1'
+    )) {
+      if (config.debug) {
+        console.log('[Axiom Analytics] Disabled: Do Not Track is enabled');
+      }
+      return true;
+    }
+
+    // Check allowed domains
+    if (config.allowedDomains && config.allowedDomains.length > 0) {
+      const currentDomain = window.location.hostname;
+      const isAllowed = config.allowedDomains.some(function(domain) {
+        return currentDomain === domain || currentDomain.endsWith('.' + domain);
+      });
+      if (!isAllowed) {
+        if (config.debug) {
+          console.log('[Axiom Analytics] Disabled: Domain not allowed:', currentDomain);
+        }
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Sanitize text to remove potential PII and limit length
+   */
+  function sanitizeText(text, maxLength) {
+    if (!text || typeof text !== 'string') return null;
+    
+    maxLength = maxLength || 100;
+    
+    // Remove potential email addresses
+    let sanitized = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[email]');
+    
+    // Remove potential phone numbers (basic patterns)
+    sanitized = sanitized.replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[phone]');
+    
+    // Remove potential SSN patterns
+    sanitized = sanitized.replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[redacted]');
+    
+    // Trim and limit length
+    return sanitized.trim().substring(0, maxLength);
+  }
 
   // ============================================================
   // Session Management (No Cookies)
@@ -53,10 +123,27 @@
    * Uses crypto API for better randomness
    */
   function generateSessionId() {
-    if (window.crypto && window.crypto.randomUUID) {
-      return window.crypto.randomUUID();
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+      }
+      // Fallback using getRandomValues for better entropy
+      if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+        const arr = new Uint8Array(16);
+        window.crypto.getRandomValues(arr);
+        // Set version (4) and variant bits
+        arr[6] = (arr[6] & 0x0f) | 0x40;
+        arr[8] = (arr[8] & 0x3f) | 0x80;
+        const hex = Array.from(arr, function(b) { 
+          return b.toString(16).padStart(2, '0'); 
+        }).join('');
+        return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + 
+               hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+      }
+    } catch (e) {
+      // Fall through to Math.random fallback
     }
-    // Fallback for older browsers
+    // Last resort fallback for very old browsers
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
       const r = Math.random() * 16 | 0;
       const v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -204,7 +291,7 @@
       path: window.location.pathname,
       hash: window.location.hash || null,
       search: window.location.search ? 'has_params' : null, // Don't log actual params
-      title: document.title,
+      title: sanitizeText(document.title, 150),
     };
   }
 
@@ -214,11 +301,28 @@
   
   let eventQueue = [];
   let flushTimeout = null;
+  let lastEventTime = {}; // Rate limiting: track last event time by type
+  let isDisabled = false; // Set after initialization checks
 
   /**
    * Queue an event for sending
    */
   function queueEvent(eventType, eventData) {
+    // Skip if tracking is disabled
+    if (isDisabled) return;
+
+    // Rate limiting per event type
+    const now = Date.now();
+    if (config.rateLimitMs > 0 && lastEventTime[eventType]) {
+      if (now - lastEventTime[eventType] < config.rateLimitMs) {
+        if (config.debug) {
+          console.log('[Axiom Analytics] Rate limited:', eventType);
+        }
+        return;
+      }
+    }
+    lastEventTime[eventType] = now;
+
     const session = getSession();
     
     const event = {
@@ -236,6 +340,14 @@
     }
 
     eventQueue.push(event);
+
+    // Cap queue size to prevent memory issues
+    if (eventQueue.length > 100) {
+      eventQueue = eventQueue.slice(-100);
+      if (config.debug) {
+        console.warn('[Axiom Analytics] Event queue capped at 100 events');
+      }
+    }
 
     // Flush if batch is full
     if (eventQueue.length >= config.maxBatchSize) {
@@ -255,68 +367,158 @@
   }
 
   /**
-   * Send queued events to Axiom
+   * Validate configuration before sending
    */
-  function flush() {
+  function validateConfig() {
+    if (!config.token) {
+      if (config.debug) {
+        console.warn('[Axiom Analytics] No API token configured');
+      }
+      return false;
+    }
+
+    // Validate token format (basic check)
+    if (typeof config.token !== 'string' || config.token.length < 10) {
+      if (config.debug) {
+        console.warn('[Axiom Analytics] Invalid token format');
+      }
+      return false;
+    }
+
+    // Validate endpoint
+    try {
+      new URL(config.endpoint);
+    } catch (e) {
+      if (config.debug) {
+        console.warn('[Axiom Analytics] Invalid endpoint URL');
+      }
+      return false;
+    }
+
+    // Validate dataset name (alphanumeric, hyphens, underscores)
+    if (!/^[a-zA-Z0-9_-]+$/.test(config.dataset)) {
+      if (config.debug) {
+        console.warn('[Axiom Analytics] Invalid dataset name');
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Send queued events to Axiom with retry logic
+   */
+  function flush(retriesLeft) {
     if (flushTimeout) {
       clearTimeout(flushTimeout);
       flushTimeout = null;
     }
 
     if (eventQueue.length === 0) return;
-    if (!config.token) {
-      if (config.debug) {
-        console.warn('[Axiom Analytics] No API token configured');
-      }
-      return;
+    if (!validateConfig()) return;
+
+    // Default retries
+    if (typeof retriesLeft !== 'number') {
+      retriesLeft = config.maxRetries;
     }
+
+    // Copy events and clear queue
+    const events = eventQueue.slice();
+    eventQueue = [];
+
+    const url = config.endpoint + '/v1/datasets/' + encodeURIComponent(config.dataset) + '/ingest';
+
+    sendEvents(url, events, retriesLeft);
+  }
+
+  /**
+   * Send events with fetch and retry support
+   */
+  function sendEvents(url, events, retriesLeft) {
+    // Use fetch with keepalive for better page unload support
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + config.token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(events),
+      keepalive: true, // Allows request to outlive the page
+    }).then(function(response) {
+      if (response.ok) {
+        if (config.debug) {
+          console.log('[Axiom Analytics] Flushed', events.length, 'events');
+        }
+        return;
+      }
+      
+      // Handle retriable errors (5xx, 429)
+      if (retriesLeft > 0 && (response.status >= 500 || response.status === 429)) {
+        if (config.debug) {
+          console.log('[Axiom Analytics] Retrying after error:', response.status);
+        }
+        // Re-add events to queue for retry
+        eventQueue = events.concat(eventQueue);
+        setTimeout(function() {
+          flush(retriesLeft - 1);
+        }, config.retryDelay * (config.maxRetries - retriesLeft + 1));
+        return;
+      }
+
+      // Non-retriable error
+      if (config.debug) {
+        response.text().then(function(text) {
+          console.error('[Axiom Analytics] Ingest failed:', response.status, text);
+        });
+      }
+    }).catch(function(err) {
+      // Network error - retry if possible
+      if (retriesLeft > 0) {
+        if (config.debug) {
+          console.log('[Axiom Analytics] Network error, retrying:', err.message);
+        }
+        eventQueue = events.concat(eventQueue);
+        setTimeout(function() {
+          flush(retriesLeft - 1);
+        }, config.retryDelay * (config.maxRetries - retriesLeft + 1));
+      } else if (config.debug) {
+        console.error('[Axiom Analytics] Failed to send events:', err);
+      }
+    });
+  }
+
+  /**
+   * Fallback flush for page unload (no retry, fire-and-forget)
+   */
+  function flushSync() {
+    if (eventQueue.length === 0) return;
+    if (!validateConfig()) return;
 
     const events = eventQueue;
     eventQueue = [];
 
-    const url = `${config.endpoint}/v1/datasets/${config.dataset}/ingest`;
+    const url = config.endpoint + '/v1/datasets/' + encodeURIComponent(config.dataset) + '/ingest';
 
-    // Use sendBeacon for reliability (works even when page is closing)
-    if (navigator.sendBeacon) {
-      const blob = new Blob([JSON.stringify(events)], {
-        type: 'application/json',
-      });
-      const headers = new Headers({
-        'Authorization': `Bearer ${config.token}`,
-        'Content-Type': 'application/json',
-      });
-      
-      // sendBeacon doesn't support custom headers, so fall back to fetch
+    // Try sendBeacon first (most reliable for page unload)
+    // Note: sendBeacon can't send auth headers, so we encode token in URL if needed
+    // For Axiom, we fall back to fetch with keepalive
+    try {
       fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${config.token}`,
+          'Authorization': 'Bearer ' + config.token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(events),
-        keepalive: true, // Allows request to outlive the page
-      }).then(function(response) {
-        if (!response.ok) {
-          return response.text().then(function(text) {
-            console.error('[Axiom Analytics] Ingest failed:', response.status, text);
-          });
-        }
-      }).catch(function(err) {
-        if (config.debug) {
-          console.error('[Axiom Analytics] Failed to send events:', err);
-        }
+        keepalive: true,
       });
-    } else {
-      // Fallback for older browsers
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', url, true);
-      xhr.setRequestHeader('Authorization', `Bearer ${config.token}`);
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.send(JSON.stringify(events));
+    } catch (e) {
+      // Best effort - ignore errors on page unload
     }
 
     if (config.debug) {
-      console.log('[Axiom Analytics] Flushed', events.length, 'events');
+      console.log('[Axiom Analytics] Sync flushed', events.length, 'events');
     }
   }
 
@@ -385,11 +587,11 @@
         linkType: linkType,
         targetUrl: href,
         targetDomain: targetDomain,
-        linkText: (link.textContent || '').trim().substring(0, 100),
+        linkText: sanitizeText(link.textContent, 100),
         // Track which section of the page the link was in
         linkContext: getLinkContext(link),
         // Track the nearest heading to identify which section
-        linkSection: getNearestHeading(link),
+        linkSection: sanitizeText(getNearestHeading(link), 100),
         // Track link position for disambiguation
         linkIndex: getLinkIndex(link, href),
       });
@@ -458,11 +660,20 @@
    * Helps disambiguate multiple identical links on the page
    */
   function getLinkIndex(link, href) {
-    const allLinks = document.querySelectorAll('a[href="' + CSS.escape(href) + '"]');
-    for (let i = 0; i < allLinks.length; i++) {
-      if (allLinks[i] === link) {
-        return i + 1; // 1-based index
+    try {
+      // Escape the href for use in selector (CSS.escape may not be available)
+      var escapedHref = typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+        ? CSS.escape(href)
+        : href.replace(/["\\]/g, '\\$&'); // Basic escaping fallback
+      
+      var allLinks = document.querySelectorAll('a[href="' + escapedHref + '"]');
+      for (var i = 0; i < allLinks.length; i++) {
+        if (allLinks[i] === link) {
+          return i + 1; // 1-based index
+        }
       }
+    } catch (e) {
+      // Selector failed (malformed href), fall back to 1
     }
     return 1;
   }
@@ -548,18 +759,25 @@
         totalActiveTime += Date.now() - lastActivityTime;
       }
 
-      const totalTime = Date.now() - pageLoadTime;
-      const engagementRatio = totalActiveTime / totalTime;
+      var totalTime = Date.now() - pageLoadTime;
+      // Prevent division by zero
+      var engagementRatio = totalTime > 0 ? totalActiveTime / totalTime : 0;
+      
+      // Safely get max scroll depth (Set spread may fail in old browsers)
+      var maxScroll = 0;
+      trackedScrollDepths.forEach(function(depth) {
+        if (depth > maxScroll) maxScroll = depth;
+      });
 
       queueEvent('page_exit', {
         totalTimeSeconds: Math.round(totalTime / 1000),
         activeTimeSeconds: Math.round(totalActiveTime / 1000),
         engagementRatio: Math.round(engagementRatio * 100) / 100,
-        maxScrollDepth: Math.max(...trackedScrollDepths, 0),
+        maxScrollDepth: maxScroll,
       });
 
-      // Force flush on exit
-      flush();
+      // Force sync flush on exit (no retry, fire-and-forget)
+      flushSync();
     });
   }
 
@@ -618,23 +836,37 @@
   // Initialization
   // ============================================================
 
+  var mutationObserver = null; // Store reference for cleanup
+
   /**
    * Initialize analytics
    */
   function init() {
-    // Check for token in various places
-    if (!config.token) {
-      // Check for token in a meta tag (allows server-side injection)
-      const metaToken = document.querySelector('meta[name="axiom-analytics-token"]');
-      if (metaToken) {
-        config.token = metaToken.getAttribute('content');
-      }
+    // Check for token in a meta tag (secure server-side injection)
+    var metaToken = document.querySelector('meta[name="axiom-analytics-token"]');
+    if (metaToken) {
+      config.token = metaToken.getAttribute('content');
     }
 
     // Check for dataset override
-    const metaDataset = document.querySelector('meta[name="axiom-analytics-dataset"]');
+    var metaDataset = document.querySelector('meta[name="axiom-analytics-dataset"]');
     if (metaDataset) {
       config.dataset = metaDataset.getAttribute('content');
+    }
+
+    // Check for debug mode
+    var metaDebug = document.querySelector('meta[name="axiom-analytics-debug"]');
+    if (metaDebug && metaDebug.getAttribute('content') === 'true') {
+      config.debug = true;
+    }
+
+    // Check for allowed domains override
+    var metaDomains = document.querySelector('meta[name="axiom-analytics-domains"]');
+    if (metaDomains) {
+      var domainsStr = metaDomains.getAttribute('content');
+      if (domainsStr) {
+        config.allowedDomains = domainsStr.split(',').map(function(d) { return d.trim(); });
+      }
     }
 
     if (config.debug) {
@@ -642,7 +874,26 @@
         endpoint: config.endpoint,
         dataset: config.dataset,
         hasToken: !!config.token,
+        allowedDomains: config.allowedDomains,
+        respectDNT: config.respectDNT,
       });
+    }
+
+    // Check if tracking should be disabled
+    if (shouldDisableTracking()) {
+      isDisabled = true;
+      if (config.debug) {
+        console.log('[Axiom Analytics] Tracking disabled');
+      }
+      return;
+    }
+
+    // Warn if no token (but don't fail - allows development without token)
+    if (!config.token) {
+      if (config.debug) {
+        console.warn('[Axiom Analytics] No API token configured. Events will not be sent.');
+        console.warn('[Axiom Analytics] Add <meta name="axiom-analytics-token" content="your-token"> to enable.');
+      }
     }
 
     // Set up tracking
@@ -654,10 +905,10 @@
     setupCopyTracking();
 
     // Handle SPA navigation (Mintlify uses client-side routing)
-    let lastPath = window.location.pathname;
+    var lastPath = window.location.pathname;
     
     // Use MutationObserver to detect page changes
-    const observer = new MutationObserver(function() {
+    mutationObserver = new MutationObserver(function() {
       if (window.location.pathname !== lastPath) {
         lastPath = window.location.pathname;
         // Reset scroll tracking for new page
@@ -670,7 +921,7 @@
       }
     });
 
-    observer.observe(document.body, {
+    mutationObserver.observe(document.body, {
       childList: true,
       subtree: true,
     });
@@ -692,6 +943,21 @@
     }
   }
 
+  /**
+   * Cleanup function for SPA unmount
+   */
+  function cleanup() {
+    if (mutationObserver) {
+      mutationObserver.disconnect();
+      mutationObserver = null;
+    }
+    if (flushTimeout) {
+      clearTimeout(flushTimeout);
+      flushTimeout = null;
+    }
+    flushSync();
+  }
+
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -699,13 +965,38 @@
     init();
   }
 
-  // Expose configuration for debugging
+  // Expose API for debugging and integration
   window.AxiomAnalytics = {
-    config: config,
+    // Read-only config access (don't expose token)
+    getConfig: function() {
+      return {
+        endpoint: config.endpoint,
+        dataset: config.dataset,
+        hasToken: !!config.token,
+        debug: config.debug,
+        isDisabled: isDisabled,
+        allowedDomains: config.allowedDomains,
+        respectDNT: config.respectDNT,
+      };
+    },
+    // Manually flush events
     flush: flush,
+    // Enable/disable debug mode
     debug: function(enabled) {
       config.debug = enabled !== false;
     },
+    // Cleanup for SPA unmount
+    cleanup: cleanup,
+    // Check if tracking is enabled
+    isEnabled: function() {
+      return !isDisabled && !!config.token;
+    },
+    // Get queue size (for debugging)
+    getQueueSize: function() {
+      return eventQueue.length;
+    },
+    // Version for debugging
+    version: '2.0.0',
   };
 
 })();
