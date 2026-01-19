@@ -1,0 +1,169 @@
+---
+title: 'Send data from Google Cloud Platform to Axiom'
+description: 'This page explains how to send data from different Google Cloud Platform (GCP) services to Axiom.'
+overview: 'Overview of Google Cloud Platform'
+sidebarTitle: Overview
+keywords: ['gcp', 'google cloud', 'axiom documentation', 'documentation', 'axiom', 'cloud logging', 'cloud monitoring', 'gke', 'google kubernetes engine', 'pub/sub']
+logoId: 'googleCloud'
+darkLogoId: 'googleClouddark'
+enlargeLogo: true
+---
+
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+
+For most Google Cloud Platform (GCP) services, the recommended way to send data to Axiom is through the [OpenTelemetry Collector](/send-data/opentelemetry) or [Vector](/send-data/vector). These tools can collect logs, metrics, and traces from GCP services and forward them to Axiom.
+
+## Choose the best method to send data
+
+GCP generates three main types of observability data:
+
+- **Cloud Logging**: Centralized logging for GCP services and custom applications running on GCP.
+- **Cloud Monitoring metrics**: Metrics from GCP services and custom metrics from your applications.
+- **Traces**: Distributed traces from applications using Cloud Trace or OpenTelemetry.
+
+The table below summarizes the recommended methods to send data from GCP to Axiom:
+
+| Data type | Recommended methods |
+|-----------|---------------------|
+| Cloud Logging logs | [OpenTelemetry Collector](#opentelemetry-collector), [Pub/Sub to Vector](#vector-with-pubsub) |
+| Cloud Monitoring metrics | [OpenTelemetry Collector](#opentelemetry-collector) |
+| Application logs from GKE | [OpenTelemetry Collector](#opentelemetry-collector), [Fluent Bit](/send-data/fluent-bit) |
+| Application traces | [OpenTelemetry](/send-data/opentelemetry) |
+
+## OpenTelemetry Collector
+
+The OpenTelemetry Collector with the [Google Cloud receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/googlecloudpubsubreceiver) is the most flexible option for sending GCP data to Axiom. It can collect logs from Cloud Logging via Pub/Sub and metrics from Cloud Monitoring.
+
+### Prerequisites
+
+- A GCP project with the necessary APIs enabled (Cloud Logging, Cloud Monitoring, Pub/Sub)
+- Service account credentials with appropriate permissions
+- OpenTelemetry Collector installed
+
+### Send Cloud Monitoring metrics
+
+To send GCP Cloud Monitoring metrics to Axiom, configure the OpenTelemetry Collector with the [Google Cloud Monitoring receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/googlecloudmonitoringreceiver):
+
+```yaml
+receivers:
+  googlecloudmonitoring:
+    project_id: YOUR_GCP_PROJECT_ID
+    collection_interval: 60s
+    metrics_list:
+      - metric_name: "compute.googleapis.com/instance/cpu/utilization"
+      - metric_name: "compute.googleapis.com/instance/disk/read_bytes_count"
+      # Add more metrics as needed
+
+exporters:
+  otlphttp:
+    compression: zstd
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-metrics-dataset: DATASET_NAME
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - googlecloudmonitoring
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlphttp
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+
+Replace `YOUR_GCP_PROJECT_ID` with your actual GCP project ID. For a full list of available GCP metrics, see [Google Cloud metrics](https://cloud.google.com/monitoring/api/metrics_gcp).
+</Info>
+
+### Send Cloud Logging logs
+
+To send GCP Cloud Logging to Axiom, first set up a Pub/Sub subscription for your logs, then use the OpenTelemetry Collector with the Google Cloud Pub/Sub receiver:
+
+1. Create a Pub/Sub topic and subscription in GCP.
+2. Create a log sink to route logs to the Pub/Sub topic.
+3. Configure the OpenTelemetry Collector:
+
+```yaml
+receivers:
+  googlecloudpubsub:
+    project_id: YOUR_GCP_PROJECT_ID
+    subscription: projects/YOUR_GCP_PROJECT_ID/subscriptions/YOUR_SUBSCRIPTION_NAME
+
+exporters:
+  otlphttp:
+    compression: zstd
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-dataset: DATASET_NAME
+
+service:
+  pipelines:
+    logs:
+      receivers:
+        - googlecloudpubsub
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlphttp
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+
+Replace `YOUR_GCP_PROJECT_ID` with your GCP project ID and `YOUR_SUBSCRIPTION_NAME` with your Pub/Sub subscription name.
+</Info>
+
+## Vector with Pub/Sub
+
+[Vector](/send-data/vector) can also collect logs from GCP Cloud Logging via Pub/Sub and forward them to Axiom:
+
+```toml
+[sources.gcp_logs]
+type = "gcp_pubsub"
+project = "YOUR_GCP_PROJECT_ID"
+subscription = "YOUR_SUBSCRIPTION_NAME"
+
+[sinks.axiom]
+type = "axiom"
+inputs = ["gcp_logs"]
+dataset = "DATASET_NAME"
+token = "API_TOKEN"
+```
+
+<Info>
+<ReplaceDatasetToken />
+
+Replace `YOUR_GCP_PROJECT_ID` with your GCP project ID and `YOUR_SUBSCRIPTION_NAME` with your Pub/Sub subscription name.
+</Info>
+
+## Google Kubernetes Engine (GKE)
+
+For applications running on Google Kubernetes Engine, you have several options:
+
+- **OpenTelemetry Collector as a DaemonSet**: Deploy the collector to each node to collect logs and metrics from all pods.
+- **Fluent Bit**: Use the [Fluent Bit Axiom integration](/send-data/fluent-bit) to forward container logs.
+- **Application-level instrumentation**: Instrument your applications directly with [OpenTelemetry SDKs](/send-data/opentelemetry).
+
+For Kubernetes-specific configuration, see [Send data from Kubernetes](/send-data/kubernetes).
+
+## Authentication
+
+GCP services require authentication. The OpenTelemetry Collector and Vector support the following authentication methods:
+
+- **Service account key file**: Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable to the path of your service account key file.
+- **Workload Identity**: For GKE workloads, use Workload Identity to authenticate without managing service account keys.
+- **Default credentials**: When running on GCP, the collector can use the default service account associated with the compute instance.
+
+<Note>
+For security best practices, use Workload Identity when running on GKE, and avoid storing service account keys in your configuration files.
+</Note>
