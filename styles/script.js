@@ -397,82 +397,33 @@ if (document.querySelector("#navbar a")) {
         });
     }
     
-    // Handle dynamic content with MutationObserver
-    var debounceTimer = null;
-    var observer = new MutationObserver(function(mutations) {
-        var shouldProcess = false;
-        
-        mutations.forEach(function(mutation) {
-            // Only trigger on significant changes - new code blocks or major content changes
-            mutation.addedNodes.forEach(function(node) {
-                if (node.nodeType === 1) {
-                    // Only process if we find actual code blocks being added
-                    if ((node.classList && node.classList.contains("code-block")) ||
-                        (node.querySelector && node.querySelector(".code-block"))) {
-                        shouldProcess = true;
-                    }
-                }
-            });
-        });
-        
-        if (shouldProcess) {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(function() {
-                cleanupOrphanedBars();
-                var result = processCodeBlocks();
-                
-                // If we have stored values but found nothing, retry once
-                // (content might still be loading)
-                if (result.hasStoredValues && result.processed === 0) {
-                    setTimeout(function() {
-                        cleanupOrphanedBars();
-                        processCodeBlocks();
-                    }, 300);
-                }
-            }, 150);
-        }
-    });
-    
-    // Full reprocess - clears state and processes fresh
-    var isInPageNavigation = false;
-    function reprocess() {
-        if (isInPageNavigation) return;
-        document.querySelectorAll(".axiom-placeholder-bar").forEach(function(bar) {
-            bar.remove();
-        });
-        document.querySelectorAll("[data-placeholder-processed]").forEach(function(el) {
-            el.removeAttribute("data-placeholder-processed");
-        });
-        processCodeBlocks();
-    }
-    
     function init() {
+        // Process on initial page load
         processCodeBlocks();
-        observer.observe(document.body, { childList: true, subtree: true });
         
-        // Handle browser back/forward navigation
-        window.addEventListener("popstate", function() {
-            setTimeout(reprocess, 150);
-        });
-        
-        // Handle SPA navigation via link clicks
-        // Mintlify's navigation may not trigger MutationObserver reliably
-        var reprocessTimer = null;
-        document.addEventListener("click", function(e) {
-            var link = e.target.closest("a");
-            if (link && link.href && link.href.startsWith(location.origin)) {
-                // Skip anchor links on the same page (in-page navigation)
-                var linkUrl = new URL(link.href);
-                if (linkUrl.pathname === location.pathname && linkUrl.hash) {
-                    // Temporarily block reprocessing during in-page navigation
-                    isInPageNavigation = true;
-                    setTimeout(function() { isInPageNavigation = false; }, 500);
-                    return;
-                }
-                clearTimeout(reprocessTimer);
-                reprocessTimer = setTimeout(reprocess, 300);
+        // Watch for new code blocks (SPA navigation, theme switch, etc.)
+        var debounceTimer = null;
+        var observer = new MutationObserver(function(mutations) {
+            // Check if any code blocks were added
+            var hasNewCodeBlocks = mutations.some(function(mutation) {
+                return Array.from(mutation.addedNodes).some(function(node) {
+                    return node.nodeType === 1 && (
+                        (node.classList && node.classList.contains("code-block")) ||
+                        (node.querySelector && node.querySelector(".code-block"))
+                    );
+                });
+            });
+            
+            if (hasNewCodeBlocks) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function() {
+                    cleanupOrphanedBars();
+                    processCodeBlocks();
+                }, 100);
             }
         });
+        
+        observer.observe(document.body, { childList: true, subtree: true });
     }
     
     if (document.readyState === "loading") {
