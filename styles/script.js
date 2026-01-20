@@ -35,7 +35,7 @@ if (document.querySelector("#navbar a")) {
         "AXIOM_DOMAIN": { 
             label: "Edge domain", 
             placeholder: "us-east-1.aws.edge.axiom.co",
-            help: "The base domain of your edge deployment. For more information, see Edge deployments."
+            help: 'The base domain of your edge deployment. For more information, see <a class="link" href="/reference/edge-deployments">Edge deployments</a>.'
         },
         "API_TOKEN": { 
             label: "API token", 
@@ -165,7 +165,7 @@ if (document.querySelector("#navbar a")) {
             // Help text below the input
             if (config.help) {
                 var helpText = document.createElement("p");
-                helpText.textContent = config.help;
+                helpText.innerHTML = config.help;
                 helpText.className = "axiom-placeholder-help text-neutral-500 dark:text-neutral-400";
                 fieldContainer.appendChild(helpText);
             }
