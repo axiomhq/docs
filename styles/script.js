@@ -34,7 +34,7 @@ if (document.querySelector("#navbar a")) {
     var PLACEHOLDERS = {
         "AXIOM_DOMAIN": { label: "Axiom Domain", placeholder: "api.axiom.co" },
         "DATASET_NAME": { label: "Dataset Name", placeholder: "my-dataset" },
-        "API_TOKEN": { label: "API Token", placeholder: "xaat-xxx...", isSecret: true }
+        "API_TOKEN": { label: "API Token", placeholder: "xaat-xxx..." }
     };
     var PLACEHOLDER_PATTERNS = Object.keys(PLACEHOLDERS);
     
@@ -131,7 +131,7 @@ if (document.querySelector("#navbar a")) {
             fieldLabel.style.cssText = "font-size: 11px; color: #666; font-family: system-ui, sans-serif; white-space: nowrap;";
             
             var input = document.createElement("input");
-            input.type = config.isSecret ? "password" : "text";
+            input.type = "text";
             input.placeholder = config.placeholder;
             input.value = values[key] || "";
             input.setAttribute("data-key", key);
@@ -159,13 +159,6 @@ if (document.querySelector("#navbar a")) {
         
         bar.appendChild(inputsContainer);
         
-        // Status indicator
-        var status = document.createElement("span");
-        status.className = "axiom-placeholder-status";
-        status.style.cssText = "font-size: 10px; color: #666; font-family: system-ui, sans-serif; display: none;";
-        status.innerHTML = '<span style="display: inline-block; width: 6px; height: 6px; background: #22c55e; border-radius: 50%; margin-right: 4px;"></span>Applied';
-        bar.appendChild(status);
-        
         // Insert after the pre element
         preElement.parentNode.insertBefore(bar, preElement.nextSibling);
         
@@ -181,15 +174,6 @@ if (document.querySelector("#navbar a")) {
         var bars = document.querySelectorAll(".axiom-placeholder-bar");
         
         bars.forEach(function(bar) {
-            var placeholders = bar._placeholders || [];
-            var hasValues = placeholders.some(function(p) { return values[p]; });
-            
-            // Update status indicator
-            var status = bar.querySelector(".axiom-placeholder-status");
-            if (status) {
-                status.style.display = hasValues ? "inline-flex" : "none";
-            }
-            
             // Sync input values across all bars
             var inputs = bar.querySelectorAll("input[data-key]");
             inputs.forEach(function(input) {
