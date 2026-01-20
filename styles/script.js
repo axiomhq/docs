@@ -58,6 +58,11 @@ if (document.querySelector("#navbar a")) {
             label: "Dataset name", 
             placeholder: "dataset-name",
             help: "The name of the Axiom dataset where you send your data."
+        },
+        "ORGANIZATION_ID": { 
+            label: "Organization ID", 
+            placeholder: "org-id",
+            help: 'The ID of your Axiom organization. For more information, see <a class="link" href="/reference/tokens#determine-organization-id">Determine organization ID</a>.'
         }
     };
     var PLACEHOLDER_PATTERNS = Object.keys(PLACEHOLDERS);
