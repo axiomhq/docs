@@ -30,6 +30,18 @@ if (document.querySelector("#navbar a")) {
 // sessionStorage and never leave the client.
 
 (function() {
+    // Check if sessionStorage is available
+    var storageAvailable = (function() {
+        try {
+            var test = "__storage_test__";
+            sessionStorage.setItem(test, test);
+            sessionStorage.removeItem(test);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    })();
+    
     var STORAGE_KEY = "axiom-docs-placeholders";
     var PLACEHOLDERS = {
         "AXIOM_DOMAIN": { 
@@ -59,6 +71,7 @@ if (document.querySelector("#navbar a")) {
     }
     
     function loadStoredValues() {
+        if (!storageAvailable) return {};
         try {
             var stored = sessionStorage.getItem(STORAGE_KEY);
             return stored ? JSON.parse(stored) : {};
@@ -68,6 +81,7 @@ if (document.querySelector("#navbar a")) {
     }
     
     function saveValues(values) {
+        if (!storageAvailable) return;
         try {
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify(values));
         } catch (e) {}
@@ -78,9 +92,12 @@ if (document.querySelector("#navbar a")) {
     }
     
     // Check if text contains stored values (meaning placeholders were already replaced)
+    // Only match values that are long enough to be unlikely false positives
+    var MIN_VALUE_LENGTH_FOR_DETECTION = 6;
     function getReplacedPlaceholdersInText(text, values) {
         return PLACEHOLDER_PATTERNS.filter(function(p) { 
-            return values[p] && text.includes(values[p]); 
+            var val = values[p];
+            return val && val.length >= MIN_VALUE_LENGTH_FOR_DETECTION && text.includes(val); 
         });
     }
     
@@ -241,7 +258,9 @@ if (document.querySelector("#navbar a")) {
     
     function processCodeBlocks() {
         var values = loadStoredValues();
+        var hasStoredValues = Object.keys(values).length > 0;
         var codeBlocks = document.querySelectorAll("pre");
+        var processedCount = 0;
         
         // Track which .code-block containers have been processed this run
         var processedContainers = new Set();
@@ -294,7 +313,7 @@ if (document.querySelector("#navbar a")) {
                     originalCodeContent.set(codeElement, text);
                     originalCodeHTML.set(codeElement, codeElement.innerHTML);
                 } else if (replacedPlaceholders.length > 0) {
-                    // Content was already replaced - reconstruct original by reversing replacements
+                    // Content was already replaced - try to reconstruct original by reversing replacements
                     var reconstructedText = text;
                     var reconstructedHTML = codeElement.innerHTML;
                     replacedPlaceholders.forEach(function(pattern) {
@@ -304,8 +323,13 @@ if (document.querySelector("#navbar a")) {
                             reconstructedHTML = reconstructedHTML.replace(new RegExp(escapedValue, 'g'), pattern);
                         }
                     });
-                    originalCodeContent.set(codeElement, reconstructedText);
-                    originalCodeHTML.set(codeElement, reconstructedHTML);
+                    // Verify reconstruction worked - placeholders should now be present
+                    var verifyPlaceholders = getPlaceholdersInText(reconstructedText);
+                    if (verifyPlaceholders.length > 0) {
+                        originalCodeContent.set(codeElement, reconstructedText);
+                        originalCodeHTML.set(codeElement, reconstructedHTML);
+                    }
+                    // If verification fails, don't store - updates won't work but at least we won't corrupt content
                 }
             }
             
@@ -314,14 +338,18 @@ if (document.querySelector("#navbar a")) {
             
             // Create config bar below the code block
             createConfigBar(preElement, codeElement, allPlaceholders);
+            processedCount++;
             
             // Apply stored values
-            if (Object.keys(values).length > 0) {
+            if (hasStoredValues) {
                 updateCodeBlock(codeElement, values);
             }
         });
         
         updateAllBars();
+        
+        // Return status for retry logic
+        return { processed: processedCount, hasStoredValues: hasStoredValues };
     }
     
     // Intercept the copy button to copy replaced content
@@ -427,7 +455,16 @@ if (document.querySelector("#navbar a")) {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(function() {
                 cleanupOrphanedBars();
-                processCodeBlocks();
+                var result = processCodeBlocks();
+                
+                // If we have stored values but found nothing, retry once
+                // (content might still be loading)
+                if (result.hasStoredValues && result.processed === 0) {
+                    setTimeout(function() {
+                        cleanupOrphanedBars();
+                        processCodeBlocks();
+                    }, 300);
+                }
             }, 150);
         }
     });
