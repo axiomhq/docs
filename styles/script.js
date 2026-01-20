@@ -53,6 +53,11 @@ if (document.querySelector("#navbar a")) {
     var originalCodeContent = new WeakMap();
     var originalCodeHTML = new WeakMap();
     
+    // Generate unique IDs using timestamp + random
+    function generateUniqueId(key) {
+        return "axiom-" + key.toLowerCase().replace(/_/g, "-") + "-" + Date.now() + "-" + Math.random().toString(36).substr(2, 9);
+    }
+    
     function loadStoredValues() {
         try {
             var stored = sessionStorage.getItem(STORAGE_KEY);
@@ -123,6 +128,7 @@ if (document.querySelector("#navbar a")) {
         
         placeholdersInCode.forEach(function(key) {
             var config = PLACEHOLDERS[key];
+            var inputId = generateUniqueId(key);
             
             // Outer wrapper for the entire field including help text
             var fieldContainer = document.createElement("div");
@@ -135,9 +141,12 @@ if (document.querySelector("#navbar a")) {
             var fieldLabel = document.createElement("label");
             fieldLabel.textContent = config.label;
             fieldLabel.className = "axiom-placeholder-label text-sm font-medium text-neutral-800 dark:text-neutral-300 min-w-[100px]";
+            fieldLabel.setAttribute("for", inputId);
             
             var input = document.createElement("input");
             input.type = "text";
+            input.id = inputId;
+            input.name = inputId;
             input.placeholder = config.placeholder;
             input.value = values[key] || "";
             input.setAttribute("data-key", key);
