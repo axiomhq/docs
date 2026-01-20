@@ -77,6 +77,13 @@ if (document.querySelector("#navbar a")) {
         return PLACEHOLDER_PATTERNS.filter(function(p) { return text.includes(p); });
     }
     
+    // Check if text contains stored values (meaning placeholders were already replaced)
+    function getReplacedPlaceholdersInText(text, values) {
+        return PLACEHOLDER_PATTERNS.filter(function(p) { 
+            return values[p] && text.includes(values[p]); 
+        });
+    }
+    
     function replacePlaceholders(text, values) {
         var result = text;
         PLACEHOLDER_PATTERNS.forEach(function(pattern) {
@@ -264,22 +271,49 @@ if (document.querySelector("#navbar a")) {
             var text = codeElement.textContent;
             var placeholdersInCode = getPlaceholdersInText(text);
             
-            if (placeholdersInCode.length === 0) return;
+            // Also check for already-replaced placeholders (stored values in the text)
+            var replacedPlaceholders = getReplacedPlaceholdersInText(text, values);
+            
+            // Combine both - use Set to avoid duplicates
+            var allPlaceholders = placeholdersInCode.slice();
+            replacedPlaceholders.forEach(function(p) {
+                if (allPlaceholders.indexOf(p) === -1) {
+                    allPlaceholders.push(p);
+                }
+            });
+            
+            if (allPlaceholders.length === 0) return;
             
             // Mark as processed
             codeBlockContainer.setAttribute("data-placeholder-processed", "true");
             
             // Store original content (both text and HTML for syntax-highlighted code)
             if (!originalCodeContent.has(codeElement)) {
-                originalCodeContent.set(codeElement, text);
-                originalCodeHTML.set(codeElement, codeElement.innerHTML);
+                if (placeholdersInCode.length > 0) {
+                    // Content has actual placeholders - store as-is
+                    originalCodeContent.set(codeElement, text);
+                    originalCodeHTML.set(codeElement, codeElement.innerHTML);
+                } else if (replacedPlaceholders.length > 0) {
+                    // Content was already replaced - reconstruct original by reversing replacements
+                    var reconstructedText = text;
+                    var reconstructedHTML = codeElement.innerHTML;
+                    replacedPlaceholders.forEach(function(pattern) {
+                        if (values[pattern]) {
+                            var escapedValue = values[pattern].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            reconstructedText = reconstructedText.replace(new RegExp(escapedValue, 'g'), pattern);
+                            reconstructedHTML = reconstructedHTML.replace(new RegExp(escapedValue, 'g'), pattern);
+                        }
+                    });
+                    originalCodeContent.set(codeElement, reconstructedText);
+                    originalCodeHTML.set(codeElement, reconstructedHTML);
+                }
             }
             
             // Intercept copy button to copy replaced content
             interceptCopyButton(codeBlockContainer, codeElement);
             
             // Create config bar below the code block
-            createConfigBar(preElement, codeElement, placeholdersInCode);
+            createConfigBar(preElement, codeElement, allPlaceholders);
             
             // Apply stored values
             if (Object.keys(values).length > 0) {
@@ -390,7 +424,7 @@ if (document.querySelector("#navbar a")) {
         }
     });
     
-    function init() {
+    function reinitialize() {
         // Clean up any existing bars first (in case of re-initialization)
         document.querySelectorAll(".axiom-placeholder-bar").forEach(function(bar) {
             bar.remove();
@@ -398,9 +432,41 @@ if (document.querySelector("#navbar a")) {
         document.querySelectorAll("[data-placeholder-processed]").forEach(function(el) {
             el.removeAttribute("data-placeholder-processed");
         });
+        // Note: Don't clear WeakMaps - they're keyed by DOM elements,
+        // so new elements automatically get new entries
         
         processCodeBlocks();
+    }
+    
+    function init() {
+        reinitialize();
         observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Listen for SPA navigation (popstate for back/forward, and track URL changes)
+        var lastUrl = location.href;
+        window.addEventListener("popstate", reinitialize);
+        
+        // Poll for URL changes (catches programmatic navigation)
+        setInterval(function() {
+            if (location.href !== lastUrl) {
+                lastUrl = location.href;
+                setTimeout(reinitialize, 150);
+            }
+        }, 200);
+        
+        // Listen for clicks on navigation links (catches same-page clicks)
+        var navClickTimer = null;
+        document.addEventListener("click", function(e) {
+            var link = e.target.closest("a");
+            if (link && link.href) {
+                // Clear any pending reinitialize and schedule new ones
+                // Multiple attempts to catch different timing scenarios
+                clearTimeout(navClickTimer);
+                setTimeout(reinitialize, 200);
+                setTimeout(reinitialize, 500);
+                navClickTimer = setTimeout(reinitialize, 1000);
+            }
+        });
     }
     
     if (document.readyState === "loading") {
