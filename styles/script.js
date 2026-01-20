@@ -92,12 +92,9 @@ if (document.querySelector("#navbar a")) {
     }
     
     // Check if text contains stored values (meaning placeholders were already replaced)
-    // Only match values that are long enough to be unlikely false positives
-    var MIN_VALUE_LENGTH_FOR_DETECTION = 6;
     function getReplacedPlaceholdersInText(text, values) {
         return PLACEHOLDER_PATTERNS.filter(function(p) { 
-            var val = values[p];
-            return val && val.length >= MIN_VALUE_LENGTH_FOR_DETECTION && text.includes(val); 
+            return values[p] && text.includes(values[p]); 
         });
     }
     
@@ -469,13 +466,35 @@ if (document.querySelector("#navbar a")) {
         }
     });
     
+    // Full reprocess - clears state and processes fresh
+    function reprocess() {
+        document.querySelectorAll(".axiom-placeholder-bar").forEach(function(bar) {
+            bar.remove();
+        });
+        document.querySelectorAll("[data-placeholder-processed]").forEach(function(el) {
+            el.removeAttribute("data-placeholder-processed");
+        });
+        processCodeBlocks();
+    }
+    
     function init() {
         processCodeBlocks();
         observer.observe(document.body, { childList: true, subtree: true });
         
         // Handle browser back/forward navigation
         window.addEventListener("popstate", function() {
-            setTimeout(processCodeBlocks, 150);
+            setTimeout(reprocess, 150);
+        });
+        
+        // Handle SPA navigation via link clicks
+        // Mintlify's navigation may not trigger MutationObserver reliably
+        var reprocessTimer = null;
+        document.addEventListener("click", function(e) {
+            var link = e.target.closest("a");
+            if (link && link.href && link.href.startsWith(location.origin)) {
+                clearTimeout(reprocessTimer);
+                reprocessTimer = setTimeout(reprocess, 300);
+            }
         });
     }
     
