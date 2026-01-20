@@ -108,7 +108,7 @@ if (document.querySelector("#navbar a")) {
         // Create the bar container
         var bar = document.createElement("div");
         bar.className = "axiom-placeholder-bar";
-        bar.style.cssText = "display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: linear-gradient(to bottom, #1a1a1a, #111); border: 1px solid #333; border-top: none; border-radius: 0 0 8px 8px; margin-top: -4px; flex-wrap: wrap;";
+        bar.style.cssText = "display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; margin-top: 8px; margin-bottom: 16px; flex-wrap: wrap;";
         
         // Label
         var label = document.createElement("span");
@@ -159,8 +159,14 @@ if (document.querySelector("#navbar a")) {
         
         bar.appendChild(inputsContainer);
         
-        // Insert after the pre element
-        preElement.parentNode.insertBefore(bar, preElement.nextSibling);
+        // Find the .code-block container and insert after it
+        var codeBlockContainer = preElement.closest(".code-block");
+        if (codeBlockContainer) {
+            codeBlockContainer.parentNode.insertBefore(bar, codeBlockContainer.nextSibling);
+        } else {
+            // Fallback: insert after pre element
+            preElement.parentNode.insertBefore(bar, preElement.nextSibling);
+        }
         
         // Store references
         bar._codeElement = codeElement;
@@ -209,7 +215,11 @@ if (document.querySelector("#navbar a")) {
         
         codeBlocks.forEach(function(preElement) {
             // Skip if already processed
-            if (preElement.nextElementSibling && preElement.nextElementSibling.classList.contains("axiom-placeholder-bar")) return;
+            var codeBlockContainer = preElement.closest(".code-block");
+            if (codeBlockContainer && codeBlockContainer.nextElementSibling && 
+                codeBlockContainer.nextElementSibling.classList.contains("axiom-placeholder-bar")) {
+                return;
+            }
             
             var codeElement = preElement.querySelector("code") || preElement;
             var text = codeElement.textContent;
