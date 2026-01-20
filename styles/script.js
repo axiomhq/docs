@@ -96,12 +96,6 @@ if (document.querySelector("#navbar a")) {
         return PLACEHOLDER_PATTERNS.filter(function(p) { return text.includes(p); });
     }
     
-    // Check if text contains stored values (meaning placeholders were already replaced)
-    function getReplacedPlaceholdersInText(text, values) {
-        return PLACEHOLDER_PATTERNS.filter(function(p) { 
-            return values[p] && text.includes(values[p]); 
-        });
-    }
     
     function replacePlaceholders(text, values) {
         var result = text;
@@ -292,54 +286,23 @@ if (document.querySelector("#navbar a")) {
             var text = codeElement.textContent;
             var placeholdersInCode = getPlaceholdersInText(text);
             
-            // Also check for already-replaced placeholders (stored values in the text)
-            var replacedPlaceholders = getReplacedPlaceholdersInText(text, values);
-            
-            // Combine both - use Set to avoid duplicates
-            var allPlaceholders = placeholdersInCode.slice();
-            replacedPlaceholders.forEach(function(p) {
-                if (allPlaceholders.indexOf(p) === -1) {
-                    allPlaceholders.push(p);
-                }
-            });
-            
-            if (allPlaceholders.length === 0) return;
+            // Only show configurator for code blocks with actual placeholder strings
+            if (placeholdersInCode.length === 0) return;
             
             // Mark as processed
             codeBlockContainer.setAttribute("data-placeholder-processed", "true");
             
             // Store original content (both text and HTML for syntax-highlighted code)
             if (!originalCodeContent.has(codeElement)) {
-                if (placeholdersInCode.length > 0) {
-                    // Content has actual placeholders - store as-is
-                    originalCodeContent.set(codeElement, text);
-                    originalCodeHTML.set(codeElement, codeElement.innerHTML);
-                } else if (replacedPlaceholders.length > 0) {
-                    // Content was already replaced - try to reconstruct original by reversing replacements
-                    var reconstructedText = text;
-                    var reconstructedHTML = codeElement.innerHTML;
-                    replacedPlaceholders.forEach(function(pattern) {
-                        if (values[pattern]) {
-                            var escapedValue = values[pattern].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                            reconstructedText = reconstructedText.replace(new RegExp(escapedValue, 'g'), pattern);
-                            reconstructedHTML = reconstructedHTML.replace(new RegExp(escapedValue, 'g'), pattern);
-                        }
-                    });
-                    // Verify reconstruction worked - placeholders should now be present
-                    var verifyPlaceholders = getPlaceholdersInText(reconstructedText);
-                    if (verifyPlaceholders.length > 0) {
-                        originalCodeContent.set(codeElement, reconstructedText);
-                        originalCodeHTML.set(codeElement, reconstructedHTML);
-                    }
-                    // If verification fails, don't store - updates won't work but at least we won't corrupt content
-                }
+                originalCodeContent.set(codeElement, text);
+                originalCodeHTML.set(codeElement, codeElement.innerHTML);
             }
             
             // Intercept copy button to copy replaced content
             interceptCopyButton(codeBlockContainer, codeElement);
             
             // Create config bar below the code block
-            createConfigBar(preElement, codeElement, allPlaceholders);
+            createConfigBar(preElement, codeElement, placeholdersInCode);
             processedCount++;
             
             // Apply stored values
