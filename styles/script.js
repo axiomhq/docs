@@ -32,9 +32,9 @@ if (document.querySelector("#navbar a")) {
 (function() {
     var STORAGE_KEY = "axiom-docs-placeholders";
     var PLACEHOLDERS = {
-        "AXIOM_DOMAIN": { label: "Axiom Domain", placeholder: "api.axiom.co" },
-        "DATASET_NAME": { label: "Dataset Name", placeholder: "my-dataset" },
-        "API_TOKEN": { label: "API Token", placeholder: "xaat-xxx..." }
+        "AXIOM_DOMAIN": { label: "Edge domain", placeholder: "us-east-1.aws.edge.axiom.co" },
+        "DATASET_NAME": { label: "Dataset name", placeholder: "dataset-name" },
+        "API_TOKEN": { label: "API token", placeholder: "xaat-api-token" }
     };
     var PLACEHOLDER_PATTERNS = Object.keys(PLACEHOLDERS);
     
