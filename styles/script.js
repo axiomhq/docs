@@ -105,37 +105,27 @@ if (document.querySelector("#navbar a")) {
     function createConfigBar(preElement, codeElement, placeholdersInCode) {
         var values = loadStoredValues();
         
-        // Create the bar container
+        // Create the bar container - uses CSS variables for theme support
         var bar = document.createElement("div");
         bar.className = "axiom-placeholder-bar";
-        bar.style.cssText = "display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; margin-top: 8px; margin-bottom: 16px; flex-wrap: wrap;";
-        
-        // Label
-        var label = document.createElement("span");
-        label.textContent = "Configure:";
-        label.style.cssText = "font-size: 11px; color: #888; font-family: system-ui, sans-serif; font-weight: 500;";
-        bar.appendChild(label);
-        
-        // Create inputs container
-        var inputsContainer = document.createElement("div");
-        inputsContainer.style.cssText = "display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1;";
+        bar.style.cssText = "display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--background-light, #f5f5f5); border: 1px solid var(--border-color, #e5e5e5); border-radius: 8px; margin-top: 12px; margin-bottom: 16px;";
         
         placeholdersInCode.forEach(function(key) {
             var config = PLACEHOLDERS[key];
             
             var fieldWrapper = document.createElement("div");
-            fieldWrapper.style.cssText = "display: flex; align-items: center; gap: 4px;";
+            fieldWrapper.style.cssText = "display: flex; align-items: center; gap: 8px;";
             
             var fieldLabel = document.createElement("label");
-            fieldLabel.textContent = config.label + ":";
-            fieldLabel.style.cssText = "font-size: 11px; color: #666; font-family: system-ui, sans-serif; white-space: nowrap;";
+            fieldLabel.textContent = config.label;
+            fieldLabel.style.cssText = "font-size: 13px; color: var(--text-secondary, #666); font-family: system-ui, sans-serif; min-width: 100px;";
             
             var input = document.createElement("input");
             input.type = "text";
             input.placeholder = config.placeholder;
             input.value = values[key] || "";
             input.setAttribute("data-key", key);
-            input.style.cssText = "width: 140px; padding: 4px 8px; font-size: 11px; border: 1px solid #444; border-radius: 4px; background: #0a0a0a; color: #fff; font-family: ui-monospace, monospace;";
+            input.style.cssText = "flex: 1; padding: 8px 12px; font-size: 13px; border: 1px solid var(--border-color, #e5e5e5); border-radius: 6px; background: var(--input-bg, #fff); color: var(--text-primary, #333); font-family: ui-monospace, SFMono-Regular, monospace;";
             input.autocomplete = "off";
             input.setAttribute("data-1p-ignore", "true");
             input.setAttribute("data-lpignore", "true");
@@ -154,10 +144,8 @@ if (document.querySelector("#navbar a")) {
             
             fieldWrapper.appendChild(fieldLabel);
             fieldWrapper.appendChild(input);
-            inputsContainer.appendChild(fieldWrapper);
+            bar.appendChild(fieldWrapper);
         });
-        
-        bar.appendChild(inputsContainer);
         
         // Find the .code-block container and insert after it
         var codeBlockContainer = preElement.closest(".code-block");
