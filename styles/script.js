@@ -252,6 +252,9 @@ if (document.querySelector("#navbar a")) {
                 originalCodeHTML.set(codeElement, codeElement.innerHTML);
             }
             
+            // Intercept copy button to copy replaced content
+            interceptCopyButton(codeBlockContainer, codeElement);
+            
             // Create config bar below the code block
             createConfigBar(preElement, codeElement, placeholdersInCode);
             
@@ -262,6 +265,47 @@ if (document.querySelector("#navbar a")) {
         });
         
         updateAllBars();
+    }
+    
+    // Intercept the copy button to copy replaced content
+    function interceptCopyButton(codeBlockContainer, codeElement) {
+        // Find copy button - it's usually a button inside the code block header
+        var copyButtons = codeBlockContainer.querySelectorAll("button");
+        
+        copyButtons.forEach(function(btn) {
+            // Skip if already intercepted
+            if (btn.hasAttribute("data-copy-intercepted")) return;
+            btn.setAttribute("data-copy-intercepted", "true");
+            
+            // Add our click handler that runs first
+            btn.addEventListener("click", function(e) {
+                var values = loadStoredValues();
+                var hasReplacements = Object.keys(values).length > 0;
+                
+                if (hasReplacements) {
+                    // Get the current text content (with replacements applied)
+                    var textToCopy = codeElement.textContent;
+                    
+                    // Copy to clipboard
+                    navigator.clipboard.writeText(textToCopy).catch(function(err) {
+                        // Fallback for older browsers
+                        var textArea = document.createElement("textarea");
+                        textArea.value = textToCopy;
+                        textArea.style.position = "fixed";
+                        textArea.style.left = "-9999px";
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(textArea);
+                    });
+                    
+                    // Prevent the default copy behavior
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                }
+                // If no replacements, let the default copy behavior work
+            }, true); // Use capture to run before other handlers
+        });
     }
     
     // Clean up orphaned bars (bars whose code block was removed/re-rendered)
