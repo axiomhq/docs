@@ -392,24 +392,12 @@ if (document.querySelector("#navbar a")) {
         var shouldProcess = false;
         
         mutations.forEach(function(mutation) {
-            // Check for code blocks being added
+            // Only trigger on significant changes - new code blocks or major content changes
             mutation.addedNodes.forEach(function(node) {
                 if (node.nodeType === 1) {
-                    if (node.tagName === "PRE" || 
-                        node.tagName === "ARTICLE" ||
-                        node.tagName === "MAIN" ||
-                        (node.classList && node.classList.contains("code-block")) ||
-                        (node.querySelector && node.querySelector("pre"))) {
-                        shouldProcess = true;
-                    }
-                }
-            });
-            // Check for code blocks or content being removed (navigation/theme switch)
-            mutation.removedNodes.forEach(function(node) {
-                if (node.nodeType === 1) {
+                    // Only process if we find actual code blocks being added
                     if ((node.classList && node.classList.contains("code-block")) ||
-                        node.tagName === "ARTICLE" ||
-                        node.tagName === "MAIN") {
+                        (node.querySelector && node.querySelector(".code-block"))) {
                         shouldProcess = true;
                     }
                 }
@@ -435,7 +423,9 @@ if (document.querySelector("#navbar a")) {
     });
     
     // Full reprocess - clears state and processes fresh
+    var isInPageNavigation = false;
     function reprocess() {
+        if (isInPageNavigation) return;
         document.querySelectorAll(".axiom-placeholder-bar").forEach(function(bar) {
             bar.remove();
         });
@@ -460,6 +450,14 @@ if (document.querySelector("#navbar a")) {
         document.addEventListener("click", function(e) {
             var link = e.target.closest("a");
             if (link && link.href && link.href.startsWith(location.origin)) {
+                // Skip anchor links on the same page (in-page navigation)
+                var linkUrl = new URL(link.href);
+                if (linkUrl.pathname === location.pathname && linkUrl.hash) {
+                    // Temporarily block reprocessing during in-page navigation
+                    isInPageNavigation = true;
+                    setTimeout(function() { isInPageNavigation = false; }, 500);
+                    return;
+                }
                 clearTimeout(reprocessTimer);
                 reprocessTimer = setTimeout(reprocess, 300);
             }
