@@ -320,7 +320,7 @@ if (document.querySelector("#navbar a")) {
     // Intercept the copy button to copy replaced content
     function interceptCopyButton(codeBlockContainer, codeElement) {
         // Find copy button - it's usually a button inside the code block header
-        var copyButtons = codeBlockContainer.querySelectorAll("button");
+        var copyButtons = codeBlockContainer.querySelectorAll("button[data-testid='copy-code-button']");
         
         copyButtons.forEach(function(btn) {
             // Skip if already intercepted
