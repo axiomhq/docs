@@ -393,12 +393,12 @@ if (document.querySelector("#navbar a")) {
         });
     }
     
-    // Show "Copied!" feedback on the button
+    // Show feedback when the code is copied to the clipboard
     function showCopyFeedback(btn) {
         // Store original content
         var originalHTML = btn.innerHTML;
         
-        // Show copied state - use currentColor to match theme
+        // Show copied state in checkmark
         btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
         
         // Revert after delay
