@@ -374,7 +374,7 @@ if (document.querySelector("#navbar a")) {
         var originalTooltipText = null;
         if (tooltip) {
             originalTooltipText = tooltip.textContent;
-            tooltip.textContent = "Copied";
+            tooltip.textContent = "Copied!";
         }
         
         // Revert after delay
