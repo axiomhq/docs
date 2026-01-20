@@ -166,7 +166,7 @@ if (document.querySelector("#navbar a")) {
             if (config.help) {
                 var helpText = document.createElement("p");
                 helpText.textContent = config.help;
-                helpText.className = "axiom-placeholder-help";
+                helpText.className = "axiom-placeholder-help text-neutral-500 dark:text-neutral-400";
                 fieldContainer.appendChild(helpText);
             }
             
