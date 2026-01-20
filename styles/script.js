@@ -161,12 +161,12 @@ if (document.querySelector("#navbar a")) {
         
         // Find the .code-block container and insert after it
         var codeBlockContainer = preElement.closest(".code-block");
-        if (codeBlockContainer) {
-            codeBlockContainer.parentNode.insertBefore(bar, codeBlockContainer.nextSibling);
-        } else {
-            // Fallback: insert after pre element
-            preElement.parentNode.insertBefore(bar, preElement.nextSibling);
+        if (!codeBlockContainer) {
+            // No .code-block container - don't add a bar
+            return null;
         }
+        
+        codeBlockContainer.parentNode.insertBefore(bar, codeBlockContainer.nextSibling);
         
         // Store references
         bar._codeElement = codeElement;
@@ -213,11 +213,27 @@ if (document.querySelector("#navbar a")) {
         var values = loadStoredValues();
         var codeBlocks = document.querySelectorAll("pre");
         
+        // Track which .code-block containers have been processed this run
+        var processedContainers = new Set();
+        
         codeBlocks.forEach(function(preElement) {
-            // Skip if already processed
             var codeBlockContainer = preElement.closest(".code-block");
-            if (codeBlockContainer && codeBlockContainer.nextElementSibling && 
-                codeBlockContainer.nextElementSibling.classList.contains("axiom-placeholder-bar")) {
+            
+            // Skip if no .code-block container (not a proper code block)
+            if (!codeBlockContainer) return;
+            
+            // Skip if we already processed this container in this run
+            if (processedContainers.has(codeBlockContainer)) return;
+            processedContainers.add(codeBlockContainer);
+            
+            // Check if a bar already exists for this code block
+            var existingBar = codeBlockContainer.nextElementSibling;
+            if (existingBar && existingBar.classList.contains("axiom-placeholder-bar")) {
+                return;
+            }
+            
+            // Also check if the code block is already marked as processed
+            if (codeBlockContainer.hasAttribute("data-placeholder-processed")) {
                 return;
             }
             
@@ -226,6 +242,9 @@ if (document.querySelector("#navbar a")) {
             var placeholdersInCode = getPlaceholdersInText(text);
             
             if (placeholdersInCode.length === 0) return;
+            
+            // Mark as processed
+            codeBlockContainer.setAttribute("data-placeholder-processed", "true");
             
             // Store original content (both text and HTML for syntax-highlighted code)
             if (!originalCodeContent.has(codeElement)) {
@@ -245,24 +264,57 @@ if (document.querySelector("#navbar a")) {
         updateAllBars();
     }
     
+    // Clean up orphaned bars (bars whose code block was removed/re-rendered)
+    function cleanupOrphanedBars() {
+        var bars = document.querySelectorAll(".axiom-placeholder-bar");
+        bars.forEach(function(bar) {
+            var prevSibling = bar.previousElementSibling;
+            if (!prevSibling || !prevSibling.classList.contains("code-block")) {
+                bar.remove();
+            }
+        });
+    }
+    
     // Handle dynamic content
+    var debounceTimer = null;
     var observer = new MutationObserver(function(mutations) {
-        var hasNewPre = false;
+        var hasChanges = false;
         mutations.forEach(function(mutation) {
             mutation.addedNodes.forEach(function(node) {
                 if (node.nodeType === 1) {
-                    if (node.tagName === "PRE" || (node.querySelector && node.querySelector("pre"))) {
-                        hasNewPre = true;
+                    if (node.tagName === "PRE" || 
+                        node.classList && node.classList.contains("code-block") ||
+                        (node.querySelector && node.querySelector("pre"))) {
+                        hasChanges = true;
                     }
                 }
             });
+            // Also check for removed nodes (theme switch removes and re-adds)
+            mutation.removedNodes.forEach(function(node) {
+                if (node.nodeType === 1 && node.classList && node.classList.contains("code-block")) {
+                    hasChanges = true;
+                }
+            });
         });
-        if (hasNewPre) {
-            setTimeout(processCodeBlocks, 50);
+        if (hasChanges) {
+            // Debounce to avoid multiple rapid calls
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function() {
+                cleanupOrphanedBars();
+                processCodeBlocks();
+            }, 100);
         }
     });
     
     function init() {
+        // Clean up any existing bars first (in case of re-initialization)
+        document.querySelectorAll(".axiom-placeholder-bar").forEach(function(bar) {
+            bar.remove();
+        });
+        document.querySelectorAll("[data-placeholder-processed]").forEach(function(el) {
+            el.removeAttribute("data-placeholder-processed");
+        });
+        
         processCodeBlocks();
         observer.observe(document.body, { childList: true, subtree: true });
     }
