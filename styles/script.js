@@ -287,7 +287,9 @@ if (document.querySelector("#navbar a")) {
                     var textToCopy = codeElement.textContent;
                     
                     // Copy to clipboard
-                    navigator.clipboard.writeText(textToCopy).catch(function(err) {
+                    navigator.clipboard.writeText(textToCopy).then(function() {
+                        showCopyFeedback(btn);
+                    }).catch(function(err) {
                         // Fallback for older browsers
                         var textArea = document.createElement("textarea");
                         textArea.value = textToCopy;
@@ -297,6 +299,7 @@ if (document.querySelector("#navbar a")) {
                         textArea.select();
                         document.execCommand("copy");
                         document.body.removeChild(textArea);
+                        showCopyFeedback(btn);
                     });
                     
                     // Prevent the default copy behavior
@@ -306,6 +309,20 @@ if (document.querySelector("#navbar a")) {
                 // If no replacements, let the default copy behavior work
             }, true); // Use capture to run before other handlers
         });
+    }
+    
+    // Show "Copied!" feedback on the button
+    function showCopyFeedback(btn) {
+        // Store original content
+        var originalHTML = btn.innerHTML;
+        
+        // Show copied state - use currentColor to match theme
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
+        
+        // Revert after delay
+        setTimeout(function() {
+            btn.innerHTML = originalHTML;
+        }, 2000);
     }
     
     // Clean up orphaned bars (bars whose code block was removed/re-rendered)
