@@ -393,79 +393,52 @@ if (document.querySelector("#navbar a")) {
         });
     }
     
-    // Handle dynamic content
+    // Handle dynamic content with MutationObserver
     var debounceTimer = null;
     var observer = new MutationObserver(function(mutations) {
-        var hasChanges = false;
+        var shouldProcess = false;
+        
         mutations.forEach(function(mutation) {
+            // Check for code blocks being added
             mutation.addedNodes.forEach(function(node) {
                 if (node.nodeType === 1) {
                     if (node.tagName === "PRE" || 
-                        node.classList && node.classList.contains("code-block") ||
+                        node.tagName === "ARTICLE" ||
+                        node.tagName === "MAIN" ||
+                        (node.classList && node.classList.contains("code-block")) ||
                         (node.querySelector && node.querySelector("pre"))) {
-                        hasChanges = true;
+                        shouldProcess = true;
                     }
                 }
             });
-            // Also check for removed nodes (theme switch removes and re-adds)
+            // Check for code blocks or content being removed (navigation/theme switch)
             mutation.removedNodes.forEach(function(node) {
-                if (node.nodeType === 1 && node.classList && node.classList.contains("code-block")) {
-                    hasChanges = true;
+                if (node.nodeType === 1) {
+                    if ((node.classList && node.classList.contains("code-block")) ||
+                        node.tagName === "ARTICLE" ||
+                        node.tagName === "MAIN") {
+                        shouldProcess = true;
+                    }
                 }
             });
         });
-        if (hasChanges) {
-            // Debounce to avoid multiple rapid calls
+        
+        if (shouldProcess) {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(function() {
                 cleanupOrphanedBars();
                 processCodeBlocks();
-            }, 100);
+            }, 150);
         }
     });
     
-    function reinitialize() {
-        // Clean up any existing bars first (in case of re-initialization)
-        document.querySelectorAll(".axiom-placeholder-bar").forEach(function(bar) {
-            bar.remove();
-        });
-        document.querySelectorAll("[data-placeholder-processed]").forEach(function(el) {
-            el.removeAttribute("data-placeholder-processed");
-        });
-        // Note: Don't clear WeakMaps - they're keyed by DOM elements,
-        // so new elements automatically get new entries
-        
-        processCodeBlocks();
-    }
-    
     function init() {
-        reinitialize();
+        processCodeBlocks();
         observer.observe(document.body, { childList: true, subtree: true });
         
-        // Listen for SPA navigation (popstate for back/forward, and track URL changes)
-        var lastUrl = location.href;
-        window.addEventListener("popstate", reinitialize);
-        
-        // Poll for URL changes (catches programmatic navigation)
-        setInterval(function() {
-            if (location.href !== lastUrl) {
-                lastUrl = location.href;
-                setTimeout(reinitialize, 150);
-            }
-        }, 200);
-        
-        // Listen for clicks on navigation links (catches same-page clicks)
-        var navClickTimer = null;
-        document.addEventListener("click", function(e) {
-            var link = e.target.closest("a");
-            if (link && link.href) {
-                // Clear any pending reinitialize and schedule new ones
-                // Multiple attempts to catch different timing scenarios
-                clearTimeout(navClickTimer);
-                setTimeout(reinitialize, 200);
-                setTimeout(reinitialize, 500);
-                navClickTimer = setTimeout(reinitialize, 1000);
-            }
+        // Handle browser back/forward navigation
+        window.addEventListener("popstate", function() {
+            setTimeout(processCodeBlocks, 150);
         });
     }
     
