@@ -247,18 +247,30 @@
             if (processedContainers.has(codeBlockContainer)) return;
             processedContainers.add(codeBlockContainer);
             
+            var codeElement = preElement.querySelector("code") || preElement;
+            
+            // Check if this code element is already tracked in our WeakMap
+            // This is the authoritative check - DOM attributes can persist across
+            // SPA navigation but the actual element reference will be new
+            var isAlreadyTracked = originalCodeContent.has(codeElement);
+            
             // Check if a bar already exists for this code block
             var existingBar = codeBlockContainer.nextElementSibling;
-            if (existingBar && existingBar.classList.contains("axiom-placeholder-bar")) {
+            var hasExistingBar = existingBar && existingBar.classList.contains("axiom-placeholder-bar");
+            
+            // If we have a bar but the code element isn't tracked, the DOM was replaced
+            // during SPA navigation - remove the orphaned bar and re-process
+            if (hasExistingBar && !isAlreadyTracked) {
+                existingBar.remove();
+                codeBlockContainer.removeAttribute("data-placeholder-processed");
+                hasExistingBar = false;
+            }
+            
+            // Skip if already fully processed (tracked in WeakMap AND has bar)
+            if (isAlreadyTracked && hasExistingBar) {
                 return;
             }
             
-            // Also check if the code block is already marked as processed
-            if (codeBlockContainer.hasAttribute("data-placeholder-processed")) {
-                return;
-            }
-            
-            var codeElement = preElement.querySelector("code") || preElement;
             var text = codeElement.textContent;
             var placeholdersInCode = getPlaceholdersInText(text);
             
@@ -269,7 +281,7 @@
             codeBlockContainer.setAttribute("data-placeholder-processed", "true");
             
             // Store original content (both text and HTML for syntax-highlighted code)
-            if (!originalCodeContent.has(codeElement)) {
+            if (!isAlreadyTracked) {
                 originalCodeContent.set(codeElement, text);
                 originalCodeHTML.set(codeElement, codeElement.innerHTML);
             }
@@ -277,9 +289,11 @@
             // Intercept copy button to copy replaced content
             interceptCopyButton(codeBlockContainer, codeElement);
             
-            // Create config bar below the code block
-            createConfigBar(preElement, codeElement, placeholdersInCode);
-            processedCount++;
+            // Create config bar below the code block if it doesn't exist
+            if (!hasExistingBar) {
+                createConfigBar(preElement, codeElement, placeholdersInCode);
+                processedCount++;
+            }
             
             // Apply stored values
             if (hasStoredValues) {
@@ -367,8 +381,17 @@
         var bars = document.querySelectorAll(".axiom-placeholder-bar");
         bars.forEach(function(bar) {
             var prevSibling = bar.previousElementSibling;
+            // Remove bar if it's not preceded by a code block
             if (!prevSibling || !prevSibling.classList.contains("code-block")) {
                 bar.remove();
+                return;
+            }
+            // Also check if the code element in the preceding block is still tracked
+            var codeElement = prevSibling.querySelector("code") || prevSibling.querySelector("pre");
+            if (codeElement && !originalCodeContent.has(codeElement)) {
+                // The code element was replaced - remove the orphaned bar
+                bar.remove();
+                prevSibling.removeAttribute("data-placeholder-processed");
             }
         });
     }
@@ -380,17 +403,21 @@
         // Watch for new code blocks (SPA navigation, theme switch, etc.)
         var debounceTimer = null;
         var observer = new MutationObserver(function(mutations) {
-            // Check if any code blocks were added
-            var hasNewCodeBlocks = mutations.some(function(mutation) {
+            // Check if any code blocks were added or if main content changed
+            var shouldReprocess = mutations.some(function(mutation) {
                 return Array.from(mutation.addedNodes).some(function(node) {
-                    return node.nodeType === 1 && (
-                        (node.classList && node.classList.contains("code-block")) ||
-                        (node.querySelector && node.querySelector(".code-block"))
-                    );
+                    if (node.nodeType !== 1) return false;
+                    // Check for code blocks
+                    if (node.classList && node.classList.contains("code-block")) return true;
+                    if (node.querySelector && node.querySelector(".code-block")) return true;
+                    // Check for main content container changes (SPA navigation)
+                    if (node.tagName === "MAIN" || node.querySelector && node.querySelector("main")) return true;
+                    if (node.tagName === "ARTICLE" || node.querySelector && node.querySelector("article")) return true;
+                    return false;
                 });
             });
             
-            if (hasNewCodeBlocks) {
+            if (shouldReprocess) {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(function() {
                     cleanupOrphanedBars();
@@ -400,6 +427,43 @@
         });
         
         observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Handle browser back/forward navigation
+        window.addEventListener("popstate", function() {
+            // Delay slightly to let the DOM update
+            setTimeout(function() {
+                cleanupOrphanedBars();
+                processCodeBlocks();
+            }, 150);
+        });
+        
+        // Handle clicks on navigation links (left nav, right nav TOC, etc.)
+        // This catches SPA navigation that might not trigger MutationObserver properly
+        document.addEventListener("click", function(e) {
+            var link = e.target.closest("a");
+            if (!link) return;
+            
+            var href = link.getAttribute("href");
+            if (!href) return;
+            
+            // Check if it's an internal navigation link (not external)
+            var isInternal = href.startsWith("/") || href.startsWith("#") || 
+                            (link.hostname === location.hostname);
+            
+            if (isInternal) {
+                // Delay to let the SPA router update the DOM
+                setTimeout(function() {
+                    cleanupOrphanedBars();
+                    processCodeBlocks();
+                }, 200);
+                
+                // Also check again after a longer delay for slower renders
+                setTimeout(function() {
+                    cleanupOrphanedBars();
+                    processCodeBlocks();
+                }, 500);
+            }
+        });
     }
     
     if (document.readyState === "loading") {
