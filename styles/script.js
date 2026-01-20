@@ -32,9 +32,21 @@ if (document.querySelector("#navbar a")) {
 (function() {
     var STORAGE_KEY = "axiom-docs-placeholders";
     var PLACEHOLDERS = {
-        "AXIOM_DOMAIN": { label: "Edge domain", placeholder: "us-east-1.aws.edge.axiom.co" },
-        "DATASET_NAME": { label: "Dataset name", placeholder: "dataset-name" },
-        "API_TOKEN": { label: "API token", placeholder: "xaat-api-token" }
+        "AXIOM_DOMAIN": { 
+            label: "Edge domain", 
+            placeholder: "us-east-1.aws.edge.axiom.co",
+            help: "The base domain of your edge deployment. For more information, see Edge deployments."
+        },
+        "API_TOKEN": { 
+            label: "API token", 
+            placeholder: "xaat-api-token",
+            help: "The Axiom API token you have generated. For added security, store the API token in an environment variable."
+        },
+        "DATASET_NAME": { 
+            label: "Dataset name", 
+            placeholder: "dataset-name",
+            help: "The name of the Axiom dataset where you send your data."
+        }
     };
     var PLACEHOLDER_PATTERNS = Object.keys(PLACEHOLDERS);
     
@@ -112,8 +124,13 @@ if (document.querySelector("#navbar a")) {
         placeholdersInCode.forEach(function(key) {
             var config = PLACEHOLDERS[key];
             
-            var fieldWrapper = document.createElement("div");
-            fieldWrapper.className = "axiom-placeholder-field flex items-center gap-3";
+            // Outer wrapper for the entire field including help text
+            var fieldContainer = document.createElement("div");
+            fieldContainer.className = "axiom-placeholder-field-container";
+            
+            // Row with label and input
+            var fieldRow = document.createElement("div");
+            fieldRow.className = "axiom-placeholder-field flex items-center gap-3";
             
             var fieldLabel = document.createElement("label");
             fieldLabel.textContent = config.label;
@@ -141,9 +158,19 @@ if (document.querySelector("#navbar a")) {
                 updateAllBars();
             });
             
-            fieldWrapper.appendChild(fieldLabel);
-            fieldWrapper.appendChild(input);
-            bar.appendChild(fieldWrapper);
+            fieldRow.appendChild(fieldLabel);
+            fieldRow.appendChild(input);
+            fieldContainer.appendChild(fieldRow);
+            
+            // Help text below the input
+            if (config.help) {
+                var helpText = document.createElement("p");
+                helpText.textContent = config.help;
+                helpText.className = "axiom-placeholder-help";
+                fieldContainer.appendChild(helpText);
+            }
+            
+            bar.appendChild(fieldContainer);
         });
         
         // Find the .code-block container and insert after it
