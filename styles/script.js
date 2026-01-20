@@ -105,26 +105,26 @@ if (document.querySelector("#navbar a")) {
     function createConfigBar(preElement, codeElement, placeholdersInCode) {
         var values = loadStoredValues();
         
-        // Create the bar container - matches Mintlify's callout box styling
+        // Create the bar container - uses same Tailwind classes as Mintlify's callout box
         var bar = document.createElement("div");
-        bar.className = "axiom-placeholder-bar";
+        bar.className = "axiom-placeholder-bar my-4 px-5 py-4 overflow-hidden rounded-2xl flex flex-col gap-3 border border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-white/10";
         
         placeholdersInCode.forEach(function(key) {
             var config = PLACEHOLDERS[key];
             
             var fieldWrapper = document.createElement("div");
-            fieldWrapper.className = "axiom-placeholder-field";
+            fieldWrapper.className = "axiom-placeholder-field flex items-center gap-3";
             
             var fieldLabel = document.createElement("label");
             fieldLabel.textContent = config.label;
-            fieldLabel.className = "axiom-placeholder-label";
+            fieldLabel.className = "axiom-placeholder-label text-sm font-medium text-neutral-800 dark:text-neutral-300 min-w-[100px]";
             
             var input = document.createElement("input");
             input.type = "text";
             input.placeholder = config.placeholder;
             input.value = values[key] || "";
             input.setAttribute("data-key", key);
-            input.className = "axiom-placeholder-input";
+            input.className = "axiom-placeholder-input flex-1 px-3 py-2 text-sm font-mono border border-neutral-200 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500";
             input.autocomplete = "off";
             input.setAttribute("data-1p-ignore", "true");
             input.setAttribute("data-lpignore", "true");
