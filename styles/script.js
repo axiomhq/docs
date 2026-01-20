@@ -363,15 +363,26 @@ if (document.querySelector("#navbar a")) {
     
     // Show feedback when the code is copied to the clipboard
     function showCopyFeedback(btn) {
-        // Store original content
+        // Store original button content
         var originalHTML = btn.innerHTML;
         
         // Show copied state in checkmark
         btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
         
+        // Update the tooltip text
+        var tooltip = btn.parentElement && btn.parentElement.querySelector(".text-tooltip-foreground");
+        var originalTooltipText = null;
+        if (tooltip) {
+            originalTooltipText = tooltip.textContent;
+            tooltip.textContent = "Copied";
+        }
+        
         // Revert after delay
         setTimeout(function() {
             btn.innerHTML = originalHTML;
+            if (tooltip && originalTooltipText !== null) {
+                tooltip.textContent = originalTooltipText;
+            }
         }, 2000);
     }
     
