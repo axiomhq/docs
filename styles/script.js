@@ -105,10 +105,10 @@ if (document.querySelector("#navbar a")) {
     function createConfigBar(preElement, codeElement, placeholdersInCode) {
         var values = loadStoredValues();
         
-        // Create the bar container - uses CSS variables for theme support
+        // Create the bar container - uses Mintlify CSS variables for theme support
         var bar = document.createElement("div");
         bar.className = "axiom-placeholder-bar";
-        bar.style.cssText = "display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--background-light, #f5f5f5); border: 1px solid var(--border-color, #e5e5e5); border-radius: 8px; margin-top: 12px; margin-bottom: 16px;";
+        bar.style.cssText = "display: flex; flex-direction: column; gap: 8px; padding: 12px; background: rgb(var(--muted)); border: 1px solid rgb(var(--border)); border-radius: 8px; margin-top: 12px; margin-bottom: 16px;";
         
         placeholdersInCode.forEach(function(key) {
             var config = PLACEHOLDERS[key];
@@ -118,14 +118,14 @@ if (document.querySelector("#navbar a")) {
             
             var fieldLabel = document.createElement("label");
             fieldLabel.textContent = config.label;
-            fieldLabel.style.cssText = "font-size: 13px; color: var(--text-secondary, #666); font-family: system-ui, sans-serif; min-width: 100px;";
+            fieldLabel.style.cssText = "font-size: 13px; color: rgb(var(--muted-foreground)); font-family: system-ui, sans-serif; min-width: 100px;";
             
             var input = document.createElement("input");
             input.type = "text";
             input.placeholder = config.placeholder;
             input.value = values[key] || "";
             input.setAttribute("data-key", key);
-            input.style.cssText = "flex: 1; padding: 8px 12px; font-size: 13px; border: 1px solid var(--border-color, #e5e5e5); border-radius: 6px; background: var(--input-bg, #fff); color: var(--text-primary, #333); font-family: ui-monospace, SFMono-Regular, monospace;";
+            input.style.cssText = "flex: 1; padding: 8px 12px; font-size: 13px; border: 1px solid rgb(var(--border)); border-radius: 6px; background: rgb(var(--background)); color: rgb(var(--foreground)); font-family: ui-monospace, SFMono-Regular, monospace;";
             input.autocomplete = "off";
             input.setAttribute("data-1p-ignore", "true");
             input.setAttribute("data-lpignore", "true");
