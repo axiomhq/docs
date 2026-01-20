@@ -401,6 +401,27 @@ if (document.querySelector("#navbar a")) {
         // Process on initial page load
         processCodeBlocks();
         
+        // Prevent clicks on links to the current page (avoids unnecessary re-render)
+        document.addEventListener("click", function(e) {
+            var link = e.target.closest("a");
+            if (!link) return;
+            
+            var href = link.getAttribute("href");
+            if (!href) return;
+            
+            // Check if this link points to the current page (same path, ignore hash)
+            try {
+                var linkUrl = new URL(href, window.location.origin);
+                if (linkUrl.pathname === window.location.pathname && linkUrl.origin === window.location.origin) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                }
+            } catch (err) {
+                // Invalid URL, ignore
+            }
+        }, true); // Use capture phase to intercept before other handlers
+        
         // Watch for new code blocks (SPA navigation, theme switch, etc.)
         var debounceTimer = null;
         var observer = new MutationObserver(function(mutations) {
