@@ -23,7 +23,13 @@
         "AXIOM_DOMAIN": { 
             label: "Edge domain", 
             placeholder: "us-east-1.aws.edge.axiom.co",
-            help: 'The base domain of your edge deployment. For more information, see <a class="link" href="/reference/edge-deployments">Edge deployments</a>.'
+            help: 'The base domain of your edge deployment. For more information, see <a class="link" href="/reference/edge-deployments">Edge deployments</a>.',
+            type: "select",
+            options: [
+                { value: "", label: "Select edge deployment..." },
+                { value: "us-east-1.aws.edge.axiom.co", label: "US East 1 (AWS)" },
+                { value: "eu-central-1.aws.edge.axiom.co", label: "EU Central 1 (AWS)" }
+            ]
         },
         "API_TOKEN": { 
             label: "API token", 
@@ -130,7 +136,7 @@
             var fieldContainer = document.createElement("div");
             fieldContainer.className = "axiom-placeholder-field-container";
             
-            // Row with label and input
+            // Row with label and input/select
             var fieldRow = document.createElement("div");
             fieldRow.className = "axiom-placeholder-field flex items-center gap-3";
             
@@ -139,32 +145,66 @@
             fieldLabel.className = "axiom-placeholder-label text-sm font-medium text-neutral-800 dark:text-neutral-300 min-w-[100px]";
             fieldLabel.setAttribute("for", inputId);
             
-            var input = document.createElement("input");
-            input.type = "text";
-            input.id = inputId;
-            input.name = inputId;
-            input.placeholder = config.placeholder;
-            input.value = values[key] || "";
-            input.setAttribute("data-key", key);
-            input.className = "axiom-placeholder-input flex-1 px-3 py-2 text-sm font-mono border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500";
-            input.autocomplete = "off";
-            input.setAttribute("data-1p-ignore", "true");
-            input.setAttribute("data-lpignore", "true");
+            var inputElement;
             
-            input.addEventListener("input", function() {
-                var vals = loadStoredValues();
-                if (input.value.trim()) {
-                    vals[key] = input.value;
-                } else {
-                    delete vals[key];
-                }
-                saveValues(vals);
-                updateAllCodeBlocks();
-                updateAllBars();
-            });
+            if (config.type === "select" && config.options) {
+                // Create dropdown for select-type fields
+                inputElement = document.createElement("select");
+                inputElement.id = inputId;
+                inputElement.name = inputId;
+                inputElement.setAttribute("data-key", key);
+                inputElement.className = "axiom-placeholder-input flex-1 px-3 py-2 text-sm font-mono border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer";
+                
+                config.options.forEach(function(opt) {
+                    var option = document.createElement("option");
+                    option.value = opt.value;
+                    option.textContent = opt.label;
+                    if (values[key] === opt.value) {
+                        option.selected = true;
+                    }
+                    inputElement.appendChild(option);
+                });
+                
+                inputElement.addEventListener("change", function() {
+                    var vals = loadStoredValues();
+                    if (inputElement.value) {
+                        vals[key] = inputElement.value;
+                    } else {
+                        delete vals[key];
+                    }
+                    saveValues(vals);
+                    updateAllCodeBlocks();
+                    updateAllBars();
+                });
+            } else {
+                // Create text input for regular fields
+                inputElement = document.createElement("input");
+                inputElement.type = "text";
+                inputElement.id = inputId;
+                inputElement.name = inputId;
+                inputElement.placeholder = config.placeholder;
+                inputElement.value = values[key] || "";
+                inputElement.setAttribute("data-key", key);
+                inputElement.className = "axiom-placeholder-input flex-1 px-3 py-2 text-sm font-mono border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500";
+                inputElement.autocomplete = "off";
+                inputElement.setAttribute("data-1p-ignore", "true");
+                inputElement.setAttribute("data-lpignore", "true");
+                
+                inputElement.addEventListener("input", function() {
+                    var vals = loadStoredValues();
+                    if (inputElement.value.trim()) {
+                        vals[key] = inputElement.value;
+                    } else {
+                        delete vals[key];
+                    }
+                    saveValues(vals);
+                    updateAllCodeBlocks();
+                    updateAllBars();
+                });
+            }
             
             fieldRow.appendChild(fieldLabel);
-            fieldRow.appendChild(input);
+            fieldRow.appendChild(inputElement);
             fieldContainer.appendChild(fieldRow);
             
             // Help text below the input
@@ -199,13 +239,13 @@
         var bars = document.querySelectorAll(".axiom-placeholder-bar");
         
         bars.forEach(function(bar) {
-            // Sync input values across all bars
-            var inputs = bar.querySelectorAll("input[data-key]");
-            inputs.forEach(function(input) {
-                var key = input.getAttribute("data-key");
+            // Sync input and select values across all bars
+            var fields = bar.querySelectorAll("input[data-key], select[data-key]");
+            fields.forEach(function(field) {
+                var key = field.getAttribute("data-key");
                 var newVal = values[key] || "";
-                if (input.value !== newVal && document.activeElement !== input) {
-                    input.value = newVal;
+                if (field.value !== newVal && document.activeElement !== field) {
+                    field.value = newVal;
                 }
             });
         });
