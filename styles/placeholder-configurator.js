@@ -78,16 +78,26 @@
         return PLACEHOLDER_PATTERNS.filter(function(p) { return text.includes(p); });
     }
     
-    // Update select element color based on value and dark mode
+    // Update select element color based on whether a value is selected
     function updateSelectColor(selectElement, hasValue) {
-        var isDarkMode = document.documentElement.classList.contains("dark");
-        if (hasValue) {
-            // Normal text color
-            selectElement.style.color = isDarkMode ? "#e5e5e5" : "#262626"; // neutral-200 / neutral-800
-        } else {
-            // Placeholder color
-            selectElement.style.color = isDarkMode ? "#737373" : "#9ca3af"; // neutral-500 / neutral-400
-        }
+        selectElement.classList.toggle("is-placeholder", !hasValue);
+    }
+    
+    // Inject styles for select element colors
+    // Uses Tailwind color values - equivalent classes noted in comments
+    function injectSelectStyles() {
+        if (document.getElementById("axiom-placeholder-styles")) return;
+        var style = document.createElement("style");
+        style.id = "axiom-placeholder-styles";
+        style.textContent = [
+            // Normal state: text-neutral-800 / dark:text-neutral-200
+            ".axiom-placeholder-select { color: rgb(38 38 38); }",
+            ".dark .axiom-placeholder-select { color: rgb(229 229 229); }",
+            // Placeholder state: text-neutral-400 / dark:text-neutral-500
+            ".axiom-placeholder-select.is-placeholder { color: rgb(163 163 163); }",
+            ".dark .axiom-placeholder-select.is-placeholder { color: rgb(115 115 115); }"
+        ].join("\n");
+        document.head.appendChild(style);
     }
     
     
@@ -466,6 +476,9 @@
     }
     
     function init() {
+        // Inject styles for select placeholder state
+        injectSelectStyles();
+        
         // Process on initial page load
         processCodeBlocks();
 
@@ -496,22 +509,6 @@
         });
         
         observer.observe(document.body, { childList: true, subtree: true });
-        
-        // Watch for dark mode changes to update select colors
-        var darkModeObserver = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.attributeName === "class") {
-                    // Update all select element colors when dark mode toggles
-                    var values = loadStoredValues();
-                    var selects = document.querySelectorAll(".axiom-placeholder-select");
-                    selects.forEach(function(select) {
-                        var key = select.getAttribute("data-key");
-                        updateSelectColor(select, values[key]);
-                    });
-                }
-            });
-        });
-        darkModeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
         
         // Handle browser back/forward navigation
         window.addEventListener("popstate", function() {
