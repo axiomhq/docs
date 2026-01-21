@@ -26,7 +26,7 @@
             help: 'The base domain of your edge deployment. For more information, see <a class="link" href="/reference/edge-deployments">Edge deployments</a>.',
             type: "select",
             options: [
-                { value: "", label: "Select edge deployment..." },
+                { value: "", label: "Select edge deployment" },
                 { value: "us-east-1.aws.edge.axiom.co", label: "US East 1 (AWS)" },
                 { value: "eu-central-1.aws.edge.axiom.co", label: "EU Central 1 (AWS)" }
             ]
@@ -76,6 +76,18 @@
     
     function getPlaceholdersInText(text) {
         return PLACEHOLDER_PATTERNS.filter(function(p) { return text.includes(p); });
+    }
+    
+    // Update select element color based on value and dark mode
+    function updateSelectColor(selectElement, hasValue) {
+        var isDarkMode = document.documentElement.classList.contains("dark");
+        if (hasValue) {
+            // Normal text color
+            selectElement.style.color = isDarkMode ? "#e5e5e5" : "#262626"; // neutral-200 / neutral-800
+        } else {
+            // Placeholder color
+            selectElement.style.color = isDarkMode ? "#737373" : "#9ca3af"; // neutral-500 / neutral-400
+        }
     }
     
     
@@ -153,17 +165,29 @@
                 inputElement.id = inputId;
                 inputElement.name = inputId;
                 inputElement.setAttribute("data-key", key);
-                inputElement.className = "axiom-placeholder-input flex-1 px-3 py-2 text-sm font-mono border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer";
+                inputElement.className = "axiom-placeholder-select flex-1 px-3 py-2 pr-8 text-sm font-mono border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer";
                 
-                config.options.forEach(function(opt) {
+                // Custom styling for dropdown arrow and placeholder state
+                inputElement.style.appearance = "none";
+                inputElement.style.WebkitAppearance = "none";
+                inputElement.style.MozAppearance = "none";
+                inputElement.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")";
+                inputElement.style.backgroundRepeat = "no-repeat";
+                inputElement.style.backgroundPosition = "right 0.75rem center";
+                inputElement.style.backgroundSize = "12px";
+                
+                config.options.forEach(function(opt, index) {
                     var option = document.createElement("option");
                     option.value = opt.value;
                     option.textContent = opt.label;
-                    if (values[key] === opt.value) {
+                    if (values[key] === opt.value || (!values[key] && index === 0)) {
                         option.selected = true;
                     }
                     inputElement.appendChild(option);
                 });
+                
+                // Apply placeholder or normal text color
+                updateSelectColor(inputElement, values[key]);
                 
                 inputElement.addEventListener("change", function() {
                     var vals = loadStoredValues();
@@ -173,6 +197,7 @@
                         delete vals[key];
                     }
                     saveValues(vals);
+                    updateSelectColor(inputElement, inputElement.value);
                     updateAllCodeBlocks();
                     updateAllBars();
                 });
@@ -246,6 +271,10 @@
                 var newVal = values[key] || "";
                 if (field.value !== newVal && document.activeElement !== field) {
                     field.value = newVal;
+                    // Update placeholder styling for select elements
+                    if (field.tagName === "SELECT") {
+                        updateSelectColor(field, newVal);
+                    }
                 }
             });
         });
@@ -467,6 +496,22 @@
         });
         
         observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Watch for dark mode changes to update select colors
+        var darkModeObserver = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === "class") {
+                    // Update all select element colors when dark mode toggles
+                    var values = loadStoredValues();
+                    var selects = document.querySelectorAll(".axiom-placeholder-select");
+                    selects.forEach(function(select) {
+                        var key = select.getAttribute("data-key");
+                        updateSelectColor(select, values[key]);
+                    });
+                }
+            });
+        });
+        darkModeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
         
         // Handle browser back/forward navigation
         window.addEventListener("popstate", function() {
