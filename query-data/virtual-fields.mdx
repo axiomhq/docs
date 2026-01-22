@@ -41,6 +41,38 @@ Virtual fields are available in the filter menu and all filter options are prese
 
 Virtual fields can be used for segmentation in the same way as any standard field.
 
+## Virtual fields vs. ingest-time parsing
+
+When deciding how to structure your data, it's important to understand the trade-offs between using virtual fields (query-time parsing) and parsing fields at ingest time.
+
+### When to use virtual fields
+
+Virtual fields are ideal when:
+
+- You need flexibility to experiment with different data transformations.
+- Your query patterns are still evolving and you're not sure which fields you'll need.
+- You want to derive new fields without re-ingesting historical data.
+- The fields are used infrequently or for ad-hoc analysis.
+
+### When to parse at ingest time
+
+For high-performance use cases, parsing fields at ingest time is often the better choice:
+
+- **Query performance**: Virtual fields re-parse data on every query execution. For frequently queried fields, especially during incident response when teams run many ad-hoc queries, this adds latency. Parsed fields at ingest time are pre-indexed and faster to query.
+- **Compression benefits**: When you parse fields from a JSON body to top-level fields, Axiom uses specialized data-aware compression techniques based on the detected data types. This results in more efficient storage compared to keeping data as unparsed strings.
+
+### Storage considerations
+
+Parsing fields from a body to top-level attributes does not double your storage usage. Here's why:
+
+- Axiom's compression is optimized for typed, structured data at the top level, so parsed fields are stored efficiently.
+- There will be some data redundancy if you keep the original body field alongside the parsed fields.
+- To minimize redundancy, remove the parsed fields from the body after extraction during your ingest pipeline.
+
+<Tip>
+For a balance between flexibility and performance, parse your most frequently queried fields at ingest time while using virtual fields for less common or experimental transformations.
+</Tip>
+
 ## Reference
 
 Virtual fields are APL expressions and share all the same functions and syntax as APL expressions. For more information, see [Introduction to APL](/apl/introduction).
