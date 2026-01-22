@@ -1,0 +1,89 @@
+---
+title: 'Set membership operators'
+description: 'Learn how to use set membership operators to check if a value equals one of a set of elements.'
+sidebarTitle: Set membership
+keywords: ['axiom documentation', 'documentation', 'axiom', 'in operator', 'set membership', 'equality', 'any type']
+---
+
+The set membership operators check whether a value equals one of the elements in a set. These operators work with any scalar type, including strings, numbers, booleans, and datetime values.
+
+| Operator | Description                       | Case sensitive | Example                              |
+| -------- | --------------------------------- | -------------- | ------------------------------------ |
+| `in`     | Equals to one of the elements     | Yes            | `"abc" in ("123", "345", "abc")`     |
+| `!in`    | Not equals to any of the elements | Yes            | `"bca" !in ("123", "345", "abc")`    |
+| `in~`    | Equals to one of the elements     | No             | `"abc" in~ ("123", "345", "ABC")`    |
+| `!in~`   | Not equals to any of the elements | No             | `"bca" !in~ ("123", "345", "ABC")`   |
+
+## Syntax
+
+```kusto
+value in (set_of_elements)
+value !in (set_of_elements)
+value in~ (set_of_elements)
+value !in~ (set_of_elements)
+```
+
+## Parameters
+
+| Name             | Type  | Description                                      |
+| ---------------- | ----- | ------------------------------------------------ |
+| value            | scalar | The value to check for membership               |
+| set_of_elements  | set   | A comma-separated list of scalar values in parentheses |
+
+## Returns
+
+Returns `true` or `false` depending on whether the value is found in the set.
+
+## Use with different types
+
+The `in` operator works with any scalar type:
+
+```kusto
+// Strings
+"get" in ("get", "post", "put") // true
+
+// Numbers
+5 in (1, 5, 10) // true
+3 !in (1, 2, 4) // true
+
+// Booleans
+true in (true, false) // true
+
+// Datetime
+now() in (datetime(2024-01-01), datetime(2024-12-31)) // depends on current time
+```
+
+## Case sensitivity
+
+- Use `in` or `!in` for case-sensitive comparisons.
+- Use `in~` or `!in~` for case-insensitive comparisons when working with strings.
+
+```kusto
+"GET" in ("get", "post") // false (case-sensitive)
+"GET" in~ ("get", "post") // true (case-insensitive)
+```
+
+When two operators do the same task, use the case-sensitive one for better performance.
+
+## Query examples
+
+Filter HTTP logs by method:
+
+```kusto
+['sample-http-logs']
+| where method in ("GET", "POST")
+```
+
+Filter out specific status codes:
+
+```kusto
+['sample-http-logs']
+| where status !in (200, 201, 204)
+```
+
+Case-insensitive matching:
+
+```kusto
+['sample-http-logs']
+| where method in~ ("get", "post")
+```
