@@ -103,6 +103,35 @@ Find out which datasets are used the most:
 
 This query helps you understand how your team interacts with Axiom and identifies datasets that may need optimization.
 
+### Track ingest by dataset
+
+Track how much data each dataset ingests over time:
+
+```kusto
+['axiom-audit']
+| where action == "usageCalculated"
+| extend ingest_gb = tolong(['properties.hourlyIngestBytes']) / pow(1024, 3)
+| summarize IngestGB = sum(ingest_gb) by bin_auto(_time), tostring(['properties.dataset'])
+| sort by IngestGB desc
+```
+
+### Determine total data ingest
+
+Determine total data ingest across all datasets over time:
+
+```kusto
+['axiom-audit']
+| where action == "usageCalculated"
+| extend ingest_gb = tolong(['properties.hourlyIngestBytes']) / pow(1024, 3)
+| summarize TotalIngestGB = sum(ingest_gb) by bin_auto(_time)
+```
+
+<Tip>
+[Create a dashboard](/dashboards/overview) with these queries to continuously monitor your ingestion patterns.
+
+[Create a monitor](/monitor-data/monitors) to alert you when ingestion exceeds a threshold.
+</Tip>
+
 ### Track query sources
 
 See the distribution of queries across different sources:
