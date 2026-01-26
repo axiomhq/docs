@@ -6,7 +6,7 @@ sidebarTitle: Glossary
 
 {/* vale off */}
 
-[A](#a) B [C](#c) [D](#d) [E](#e) [F](#f) [G](#g) H [I](#i) K [L](#l) [M](#m) [N](#n) [O](#o) [P](#p) [Q](#q) [R](#r) [S](#s) [T](#t) [U](#u) [V](#v) W X Y Z​
+[A](#a) [B](#b) [C](#c) [D](#d) [E](#e) [F](#f) [G](#g) H [I](#i) K [L](#l) [M](#m) [N](#n) [O](#o) [P](#p) [Q](#q) [R](#r) [S](#s) [T](#t) [U](#u) [V](#v) W X Y Z​
 
 {/* vale on */}
 
@@ -58,6 +58,16 @@ For more information, see [Axiom MCP Server](/console/intelligence/mcp-server).
 Axiom Processing Language (APL) is a query language that's perfect for getting deeper insights from your data. Whether logs, events, analytics, or similar, APL provides the flexibility to filter, manipulate, and summarize your data exactly the way you need it.
 
 For more information, see [Introduction to APL](/apl/introduction).
+
+## B
+
+### Backtesting
+
+Backtesting is a form of evaluation that runs a capability against historical production traces from a specified time period. Unlike online evaluation which runs in real-time as conversations happen, backtesting performs batch evaluation over many stored conversations at once. This allows you to compare how a new version of your capability performs on previous real-world conversations compared to the original version.
+
+Backtesting can always use reference-free scorers. It can also use reference-based scorers if domain experts have reviewed the historical traces and provided ground truth expected values, but this requires significant effort for large volumes of conversations.
+
+For more information, see [Concepts in AI engineering](/ai-engineering/concepts).
 
 ## C
 
@@ -115,9 +125,16 @@ For more information, see [Edge deployments](/reference/edge-deployments).
 
 ### Evaluation
 
-An evaluation, or eval, is the process of testing a capability against a collection of ground truth data using one or more scorers. An eval runs the capability on every record in the collection and reports metrics like accuracy, pass-rate, and cost. Evals are typically run before deployment to benchmark performance.
+An evaluation, or eval, is the process of testing a capability's performance using one or more scorers. There are three ways to run evaluations: offline evaluation, online evaluation, and backtesting.
 
-For more information, see [Concepts in AI engineering](/ai-engineering/concepts).
+|  | Offline evaluation | Online evaluation | Backtesting |
+|---|---|---|---|
+| **Data source** | Curated set of test cases (collection records) | Live production traffic (sample of traces) | Historical production traces from a specified time period |
+| **Timing** | Before deployment | Real-time, just after conversations happen | After collecting production data |
+| **Expected values** | Available because you curate what good looks like | Not available (no domain expert review on live data) | Available if historical traces have been reviewed by domain experts |
+| **Supported scorers** | Reference-based and reference-free | Reference-free only | Reference-free always; reference-based if traces have been reviewed |
+
+For more information, see [Offline evaluation](#offline-evaluation), [Online evaluation](#online-evaluation), [Backtesting](#backtesting), and [Concepts in AI engineering](/ai-engineering/concepts).
 
 ### Event
 
@@ -233,11 +250,21 @@ In essence, observability transforms raw event data into actionable insights, he
 
 For more information, see [Axiom for observability](/getting-started-guide/observability).
 
+### Offline evaluation
+
+Offline evaluation is the process of testing a capability against a curated set of test cases (collection records) before deployment. You curate what good looks like with domain expert knowledge and provide expected values for your test cases.
+
+Offline evaluation can use both reference-based scorers (which compare output to expected values) and reference-free scorers (which assess output quality without needing expected values).
+
+For more information, see [Evaluation](#evaluation) and [Concepts in AI engineering](/ai-engineering/concepts).
+
 ### Online evaluation
 
-An online evaluation is the process of applying a scorer to a capability's live production traffic. This provides real-time feedback on performance degradation, cost, and quality drift, enabling continuous monitoring and improvement of AI capabilities in production.
+Online evaluation is the process of applying scorers to a capability's live production traffic in real-time, just after conversations or interactions finish. Online evaluation runs on a sample of traces to provide feedback on performance degradation, cost, and quality drift.
 
-For more information, see [Concepts in AI engineering](/ai-engineering/concepts).
+Because online evaluation happens on live data without domain expert review, it can only use reference-free scorers. Reference-based scorers require expected values that don't exist for live production traffic.
+
+For more information, see [Evaluation](#evaluation) and [Concepts in AI engineering](/ai-engineering/concepts).
 
 ### OpenTelemetry
 
@@ -273,6 +300,31 @@ For more information, see [Optimize usage](/reference/optimize-usage).
 
 ## R
 
+### Reference-based scorer
+
+A reference-based scorer is a type of scorer that depends on an expected value (ground truth) to evaluate a capability's output. It compares the generated output against a domain expert knowledge to determine correctness or similarity.
+
+Examples include:
+- **Exact match scorer**: Checks if the output exactly matches the expected value. For example, if a user asks for their password and the expected response is "no" (a flat refusal), the scorer verifies the output is exactly "no" 100% of the time.
+- **Similarity scorer**: Measures how similar the output is to the expected value when an exact match isn't required.
+
+Reference-based scorers require domain expert knowledge and can be used in offline evaluation and backtesting (if historical traces have been reviewed by domain experts). They can't be used in online evaluation because live production data lacks expected values.
+
+For more information, see [Scorer](#scorer) and [Concepts in AI engineering](/ai-engineering/concepts).
+
+### Reference-free scorer
+
+A reference-free scorer is a type of scorer that evaluates a capability's output without needing an expected value. It uses an LLM or other criteria to assess output quality based on general standards rather than comparison to ground truth.
+
+Examples include:
+- **Toxicity scorer**: Uses an LLM to assess whether the output is offensive, harmful, or could upset the recipient.
+- **Coherence scorer**: Evaluates whether the output is logically consistent and well-structured.
+- **Relevance scorer**: Assesses whether the output appropriately addresses the input query.
+
+Reference-free scorers can be used in all evaluation contexts: offline evaluation, online evaluation, and backtesting. They're the only type of scorer available for online evaluation because live production data hasn't been reviewed by domain experts.
+
+For more information, see [Scorer](#scorer) and [Concepts in AI engineering](/ai-engineering/concepts).
+
 ### Review
 
 Reviews are expert-provided observations, labels, or corrections added to production traces or evaluation results. Domain experts review AI capability runs and document what went wrong, what should have happened differently, or categorize failure modes. These reviews help identify patterns in capability failures, validate scorer accuracy, and create new test cases for collections.
@@ -289,9 +341,17 @@ For more information, see [Access](/reference/settings).
 
 ### Scorer
 
-A scorer is a function that evaluates a capability's output. It programmatically assesses quality by comparing the generated output against ground truth or other criteria, returning a score. Scorers are used during evaluations and can also be applied to live production traffic in online evaluations.
+A scorer is a function that evaluates a capability's output, returning a score that indicates quality or correctness.
 
-For more information, see [Concepts in AI engineering](/ai-engineering/concepts).
+There are two types of scorers: reference-based scorers and reference-free scorers.
+
+|  | Reference-based scorers | Reference-free scorers |
+|---|---|---|
+| **Expected value** | Depend on an expected value (ground truth) based on domain expert knowledge | Evaluate output without needing an expected value |
+| **Evaluation method** | Compare output to the expected value using methods like exact match or similarity scoring | Use an LLM or other criteria to assess qualities like toxicity, coherence, or relevance |
+| **Evaluation contexts** | Offline evaluation and backtesting (if historical traces have been reviewed by domain experts) | All evaluation contexts including online evaluation |
+
+For more information, see [Reference-based scorer](#reference-based-scorer), [Reference-free scorer](#reference-free-scorer), and [Concepts in AI engineering](/ai-engineering/concepts).
 
 ### Span
 
