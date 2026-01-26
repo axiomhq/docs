@@ -157,6 +157,38 @@ This query calculates the rate of HTTP request duration per second.
 </Tab>
 </Tabs>
 
+## Calculate event throughput
+
+A common use case is calculating how many events occur per second (event throughput) rather than the rate of change of a field value. For this, use `count()` with time binning instead of the `rate` function.
+
+### Find maximum events per second
+
+To find the peak event rate over a time period:
+
+```kusto
+['sample-http-logs']
+| summarize events_per_second = count() by bin(_time, 1s)
+| summarize max_events_per_second = max(events_per_second)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20events_per_second%20%3D%20count()%20by%20bin(_time%2C%201s)%20%7C%20summarize%20max_events_per_second%20%3D%20max(events_per_second)%22%2C%20%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+
+### Visualize event rate over time
+
+To see how event throughput varies over time, use a two-step aggregation:
+
+```kusto
+['sample-http-logs']
+| summarize events_per_second = count() by bin(_time, 1s)
+| summarize avg_events_per_second = avg(events_per_second) by bin(_time, 1h)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20events_per_second%20%3D%20count()%20by%20bin(_time%2C%201s)%20%7C%20summarize%20avg_events_per_second%20%3D%20avg(events_per_second)%20by%20bin(_time%2C%201h)%22%2C%20%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+
+<Note>
+The `rate` aggregation function calculates the rate of change of a numeric field value per second. To calculate event throughput (events per second), use `count()` with time binning as shown above.
+</Note>
+
 ## List of related aggregations
 
 - [**count**](/apl/aggregation-function/count): Returns the total number of records. Use `count` when you want an absolute total instead of a rate over time.
