@@ -15,12 +15,27 @@ import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
 
 Axiom CloudWatch Forwarder is a set of easy-to-use AWS CloudFormation stacks designed to forward logs from Amazon CloudWatch to Axiom. It includes a Lambda function to handle the forwarding and stacks to create Amazon CloudWatch log group subscription filters for both existing and future log groups.
 
+## Understanding the modules
+
 Axiom CloudWatch Forwarder includes templates for the following CloudFormation stacks:
 
-- **Forwarder** creates a Lambda function that forwards logs from Amazon CloudWatch to Axiom.
-- **Subscriber** runs once to create subscription filters on Forwarder for Amazon CloudWatch log groups specified by a combination of names, prefix, and regular expression filters.
-- **Listener** creates a Lambda function that listens for new log groups and creates subscription filters for them on Forwarder. This way, you don’t have to create subscription filters manually for new log groups.
-- **Unsubscriber** runs once to remove subscription filters on Forwarder for Amazon CloudWatch log groups specified by a combination of names, prefix, and regular expression filters.
+- **Forwarder** creates a Lambda function that forwards logs from Amazon CloudWatch to Axiom. This is the core component that runs continuously and processes log events.
+- **Subscriber** subscribes existing log groups to the Forwarder. It runs once at deployment time (`terraform apply` or CloudFormation stack creation) and creates subscription filters for log groups specified by a combination of names, prefix, and regular expression filters.
+- **Listener** automatically subscribes new log groups created after deployment. It runs continuously via Amazon EventBridge and creates subscription filters for future log groups matching your filters. This way, you don't have to manually subscribe new log groups.
+- **Unsubscriber** removes subscription filters from log groups. It runs once at deployment time and is used for cleanup.
+
+<Tip>
+**Why you need both Subscriber and Listener:** The Subscriber only handles log groups that exist at deployment time. The Listener handles log groups created after deployment. For complete coverage of both existing and future log groups, use both modules together.
+</Tip>
+
+## Which modules do you need?
+
+| Scenario | Modules needed |
+|----------|----------------|
+| Forward logs from existing log groups only | Forwarder + Subscriber |
+| Forward logs from future log groups only | Forwarder + Listener |
+| Forward logs from both existing and future log groups | Forwarder + Subscriber + Listener |
+| Stop forwarding logs from specific log groups | Unsubscriber |
 
 <AwsDisclaimer />
 
@@ -49,14 +64,14 @@ To install the Axiom CloudWatch Forwarder, choose one of the following:
 <Steps>
 <Step>
 
-Create a new Forwarder module in your Terraform file in the following way:
+Create a new Forwarder module in your Terraform file. This is the core component that sends logs to Axiom:
 
 ```hcl
+# Required: Creates the Lambda function that forwards logs to Axiom
 module "forwarder" {
-  source           = "axiomhq/axiom-cloudwatch-forwarder/aws//modules/forwarder"
-  axiom_dataset    = "DATASET_NAME"
-  axiom_token      = "API_TOKEN"
-  prefix           = "axiom-cloudwatch-forwarder"
+  source        = "axiomhq/axiom-cloudwatch-forwarder/aws//modules/forwarder"
+  axiom_dataset = "DATASET_NAME"
+  axiom_token   = "API_TOKEN"
 }
 ```
 
@@ -69,30 +84,34 @@ Alternatively, create a dataset with the [Axiom Terraform provider](/apps/terraf
 </Step>
 <Step>
 
-Create a new Subscriber module in your Terraform file in the following way:
+Create a new Subscriber module to subscribe existing log groups. This runs once at `terraform apply`:
 
 ``` hcl
+# Subscribes existing log groups matching the prefix (runs once)
 module "subscriber" {
   source               = "axiomhq/axiom-cloudwatch-forwarder/aws//modules/subscriber"
-  prefix               = "axiom-cloudwatch-forwarder"
   forwarder_lambda_arn = module.forwarder.lambda_arn
-  log_groups_prefix    = "/aws/lambda/"
+  log_groups_prefix    = "/aws/lambda/"  # Change to your prefix
 }
 ```
 
 </Step>
 <Step>
 
-Create a new Listener module in your Terraform file in the following way:
+Create a new Listener module to automatically subscribe future log groups. This runs continuously via EventBridge:
 
 ```hcl
+# Auto-subscribes new log groups matching the prefix (runs continuously)
 module "listener" {
   source               = "axiomhq/axiom-cloudwatch-forwarder/aws//modules/listener"
-  prefix               = "axiom-cloudwatch-forwarder"
   forwarder_lambda_arn = module.forwarder.lambda_arn
-  log_groups_prefix    = "/aws/lambda/"
+  log_groups_prefix    = "/aws/lambda/"  # Use the same prefix as Subscriber
 }
 ```
+
+<Note>
+Use the same `log_groups_prefix` value in both Subscriber and Listener to ensure consistent coverage for existing and future log groups.
+</Note>
 
 </Step>
 <Step>
@@ -105,7 +124,15 @@ Run `terraform plan` to check the changes, and then run `terraform apply`.
 
 ## Filter Amazon CloudWatch log groups
 
-The Subscriber and Unsubscriber stacks allow you to filter the log groups by a combination of names, prefix, and regular expression filters. If no filters are specified, the stacks subscribe to or unsubscribe from all log groups. You can also whitelist a specific set of log groups using filters in the CloudFormation stack parameters. The log group names, prefix, and regular expression filters included are additive, meaning the union of all provided inputs is matched.
+The Subscriber, Listener, and Unsubscriber modules allow you to filter which log groups to subscribe using three methods:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `log_groups_prefix` | Subscribe log groups starting with this prefix | `/aws/lambda/my-app-` |
+| `log_groups_names` | Subscribe specific log groups (comma-separated) | `/aws/lambda/func1,/aws/lambda/func2` |
+| `log_groups_pattern` | Subscribe log groups matching a regex pattern | `.*production.*` |
+
+These filters are additive, meaning the union of all provided inputs is matched. If no filters are specified, all log groups are subscribed.
 
 ### Example
 
