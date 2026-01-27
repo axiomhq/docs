@@ -154,39 +154,6 @@ This query parses JSON-formatted security events to extract and analyze threat i
 </Tab>
 </Tabs>
 
-## Parse JSON from a field
-
-A common scenario is parsing JSON that's stored as a string in a field like `body` or `message`. This happens when logs are ingested as plain text containing JSON.
-
-**Query**
-
-```kusto
-['logs']
-| where body startswith "{"
-| extend parsed = parse_json(body)
-| extend level = tostring(parsed.level)
-| extend message = tostring(parsed.message)
-| extend timestamp = tostring(parsed.timestamp)
-| project _time, level, message, timestamp
-```
-
-If your `body` field sometimes contains JSON and sometimes plain text, filter for JSON-formatted entries first using `startswith` or `contains` to avoid parsing errors.
-
-### Handle mixed content
-
-When the same field contains both JSON and non-JSON content:
-
-```kusto
-['logs']
-| extend is_json = body startswith "{" or body startswith "["
-| extend parsed = iff(is_json, parse_json(body), dynamic(null))
-| extend level = iff(is_json, tostring(parsed.level), "unknown")
-| extend message = iff(is_json, tostring(parsed.message), body)
-| project _time, level, message
-```
-
-This query safely handles mixed content by only parsing rows that appear to contain JSON.
-
 ## Best practices
 
 When working with JSON data in Axiom, consider the following best practices:
