@@ -10,7 +10,11 @@ One of the most powerful features of Axiom are virtual fields. With virtual fiel
 
 The feature is also known as derived fields, but Axiom’s virtual fields have some unique properties that make them much more powerful.
 
-In this guide, you’ll be introduced to virtual fields, their features, how to manage them, and how to get the best out of them.
+<Tip>
+Virtual fields are query-time representations only. They don't create new data in storage.
+</Tip>
+
+This page introduces you to virtual fields, their features, how to manage them, and how to get the best out of them.
 
 ## Creating a virtual field
 
@@ -40,6 +44,34 @@ Virtual fields are available in the filter menu and all filter options are prese
 ## Group By
 
 Virtual fields can be used for segmentation in the same way as any standard field.
+
+## Virtual fields vs ingest-time parsing
+
+When deciding how to structure your data, consider the trade-offs between using virtual fields (query-time parsing) and parsing fields at ingest time.
+
+### When to use virtual fields
+
+Virtual fields are ideal when:
+
+- You need flexibility to experiment with different data transformations.
+- Your query patterns are still evolving and you're not sure which fields you'll need.
+- You want to derive new fields without re-ingesting historical data.
+- The fields are used infrequently or for ad-hoc analysis.
+
+### When to parse at ingest time
+
+For high-performance use cases, parsing fields at ingest time is often the better choice:
+
+- **Query performance**: Virtual fields re-parse data on every query execution. For frequently queried fields, especially during incident response when teams run many ad-hoc queries, this adds latency. Parsed fields at ingest time reduce your storage and query hours usage. For more information, see [Virtual fields for simple transformations](/reference/performance#virtual-fields-for-simple-transformations).
+- **Compression benefits**: When you parse fields from a JSON body to top-level fields, Axiom uses specialized data-aware compression techniques based on the detected data types. This results in more efficient storage compared to keeping data as unparsed strings. For more information, see [Overusing runtime JSON parsing](/reference/performance#overusing-runtime-json-parsing-parse_json).
+
+### Storage considerations
+
+Parsing fields from a body to top-level attributes doesn't double your storage usage. Axiom's compression is optimized for typed, structured data at the top level, and stores parsed fields efficiently. However, there is some data redundancy if you keep the original body field alongside the parsed fields. To minimize redundancy, remove the parsed fields from the body after extraction during your ingest pipeline.
+
+<Tip>
+For a balance between flexibility and performance, parse your most frequently queried fields at ingest time while using virtual fields for less common or experimental transformations.
+</Tip>
 
 ## Reference
 
