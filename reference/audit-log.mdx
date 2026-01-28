@@ -66,7 +66,7 @@ Identify queries that consume significant resources:
 This query lists queries costing more than 1000 query units and helps you spot expensive queries and optimize them before they impact your budget.
 
 <Tip>
-[Create a monitor](/monitor-data/monitors) using this query to receive alerts when expensive queries run. Adjust the `query_cost_gbms` threshold based on your organization’s usage patterns.
+[Create a threshold monitor](/monitor-data/threshold-monitors) using this query to receive alerts when expensive queries run. Adjust the `query_cost_gbms` threshold based on your organization’s usage patterns.
 </Tip>
 
 ### Track monitor query load
@@ -103,6 +103,35 @@ Find out which datasets are used the most:
 
 This query helps you understand how your team interacts with Axiom and identifies datasets that may need optimization.
 
+### Track ingest by dataset
+
+Track how much data each dataset ingests over time:
+
+```kusto
+['axiom-audit']
+| where action == "usageCalculated"
+| extend ingest_gb = tolong(['properties.hourlyIngestBytes']) / pow(1024, 3)
+| summarize IngestGB = sum(ingest_gb) by bin_auto(_time), tostring(['properties.dataset'])
+| sort by IngestGB desc
+```
+
+### Determine total data ingest
+
+Determine total data ingest across all datasets over time:
+
+```kusto
+['axiom-audit']
+| where action == "usageCalculated"
+| extend ingest_gb = tolong(['properties.hourlyIngestBytes']) / pow(1024, 3)
+| summarize TotalIngestGB = sum(ingest_gb) by bin_auto(_time)
+```
+
+<Tip>
+[Create a dashboard](/dashboards/overview) with these queries to continuously monitor your ingestion patterns.
+
+[Create a threshold monitor](/monitor-data/threshold-monitors) to alert you when ingestion exceeds a threshold.
+</Tip>
+
 ### Track query sources
 
 See the distribution of queries across different sources:
@@ -129,6 +158,7 @@ The `action` field specifies the type of activity that happened in your Axiom or
 - createFlowConfiguration
 - createFlowDestination
 - createFlowReplay
+- createFlowStream
 - createGroup
 - createMapField
 - createMonitor
@@ -180,10 +210,9 @@ The `action` field specifies the type of activity that happened in your Axiom or
 - resolveMonitor
 - resolveMonitorAll
 - resumeFlowReplay
+- resumeFlowStream
 - rotateSharedAccessKeys
 - runAPLQuery
-- runAPLQueryCost
-- runMetricsQuery
 - sendOrgDeletedEmails
 - sendOrgMonthlyIngestedExceededEmail
 - sendOrgMonthlyIngestedNearLimitEmail
@@ -192,6 +221,7 @@ The `action` field specifies the type of activity that happened in your Axiom or
 - setEnableAI
 - shareRepo
 - stopFlowReplay
+- stopFlowStream
 - streamDataset
 - triggerNotifier
 - triggerNotifierWithID
