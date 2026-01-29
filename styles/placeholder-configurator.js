@@ -112,6 +112,24 @@
         return result;
     }
     
+    // Detect if dark mode is active (only check explicit site theme, not system preference)
+    function isDarkMode() {
+        return document.documentElement.classList.contains("dark") ||
+               document.body.classList.contains("dark") ||
+               document.documentElement.getAttribute("data-theme") === "dark" ||
+               document.body.getAttribute("data-theme") === "dark";
+    }
+    
+    // Get the highlight color based on current theme
+    function getHighlightColor() {
+        return isDarkMode() ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)";  // blue-400 / blue-500
+    }
+    
+    // Create highlight span with inline style for guaranteed color
+    function createHighlightSpan(text) {
+        return '<span class="axiom-placeholder-highlight" style="color: ' + getHighlightColor() + ' !important;">' + text + '</span>';
+    }
+    
     function updateCodeBlock(codeElement, values) {
         var original = originalCodeContent.get(codeElement);
         if (!original) return;
@@ -120,27 +138,37 @@
         
         // Always start from original content for replacements
         if (originalHTML && codeElement.children.length > 0) {
-            // For syntax-highlighted code, replace in the original HTML
+            // For syntax-highlighted code, replace placeholders with highlighted values
             var html = originalHTML;
             PLACEHOLDER_PATTERNS.forEach(function(pattern) {
-                if (values[pattern]) {
-                    var escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    html = html.replace(new RegExp(escapedPattern, 'g'), values[pattern]);
-                }
+                var escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                var displayValue = values[pattern] || pattern;
+                html = html.replace(
+                    new RegExp(escapedPattern, 'g'),
+                    createHighlightSpan(displayValue)
+                );
             });
             codeElement.innerHTML = html;
         } else {
             // For plain text code blocks
-            var replaced = replacePlaceholders(original, values);
-            codeElement.textContent = replaced;
+            var tempDiv = document.createElement("div");
+            tempDiv.textContent = original;
+            var html = tempDiv.innerHTML;
+            PLACEHOLDER_PATTERNS.forEach(function(pattern) {
+                var escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                var displayValue = values[pattern] || pattern;
+                html = html.replace(
+                    new RegExp(escapedPattern, 'g'),
+                    createHighlightSpan(displayValue)
+                );
+            });
+            codeElement.innerHTML = html;
         }
     }
     
     function resetCodeBlock(codeElement) {
-        var original = originalCodeContent.get(codeElement);
-        if (original) {
-            codeElement.textContent = original;
-        }
+        // Just call updateCodeBlock with empty values to show original placeholders highlighted
+        updateCodeBlock(codeElement, {});
     }
     
     // Find info callout that follows a code block and extract placeholder info
@@ -484,10 +512,8 @@
                 processedCount++;
             }
             
-            // Apply stored values
-            if (hasStoredValues) {
-                updateCodeBlock(codeElement, values);
-            }
+            // Apply stored values and/or highlight placeholders
+            updateCodeBlock(codeElement, values);
         });
         
         updateAllBars();
@@ -508,34 +534,28 @@
             
             // Add our click handler that runs first
             btn.addEventListener("click", function(e) {
-                var values = loadStoredValues();
-                var hasReplacements = Object.keys(values).length > 0;
+                // Get the current text content (with replacements applied, highlights stripped)
+                var textToCopy = codeElement.textContent;
                 
-                if (hasReplacements) {
-                    // Get the current text content (with replacements applied)
-                    var textToCopy = codeElement.textContent;
-                    
-                    // Copy to clipboard
-                    navigator.clipboard.writeText(textToCopy).then(function() {
-                        showCopyFeedback(btn);
-                    }).catch(function(err) {
-                        // Fallback for older browsers
-                        var textArea = document.createElement("textarea");
-                        textArea.value = textToCopy;
-                        textArea.style.position = "fixed";
-                        textArea.style.left = "-9999px";
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        document.execCommand("copy");
-                        document.body.removeChild(textArea);
-                        showCopyFeedback(btn);
-                    });
-                    
-                    // Prevent the default copy behavior
-                    e.stopImmediatePropagation();
-                    e.preventDefault();
-                }
-                // If no replacements, let the default copy behavior work
+                // Copy to clipboard
+                navigator.clipboard.writeText(textToCopy).then(function() {
+                    showCopyFeedback(btn);
+                }).catch(function(err) {
+                    // Fallback for older browsers
+                    var textArea = document.createElement("textarea");
+                    textArea.value = textToCopy;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(textArea);
+                    showCopyFeedback(btn);
+                });
+                
+                // Prevent the default copy behavior
+                e.stopImmediatePropagation();
+                e.preventDefault();
             }, true); // Use capture to run before other handlers
         });
     }
@@ -639,6 +659,20 @@
         });
         
         observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Watch for theme changes (dark/light mode toggle)
+        var themeObserver = new MutationObserver(function(mutations) {
+            var themeChanged = mutations.some(function(mutation) {
+                return mutation.attributeName === "class" || mutation.attributeName === "data-theme";
+            });
+            if (themeChanged) {
+                // Re-render all code blocks to update highlight colors
+                updateAllCodeBlocks();
+            }
+        });
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme"] });
+        themeObserver.observe(document.body, { attributes: true, attributeFilter: ["class", "data-theme"] });
+        
         
         // Handle browser back/forward navigation
         window.addEventListener("popstate", function() {
