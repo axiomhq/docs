@@ -51,6 +51,7 @@
     
     var originalCodeContent = new WeakMap();
     var originalCodeHTML = new WeakMap();
+    var additionalPlaceholders = new WeakMap();  // Track extra placeholders from info callouts
     
     // Generate unique IDs using timestamp + random
     function generateUniqueId(key) {
@@ -135,12 +136,16 @@
         if (!original) return;
         
         var originalHTML = originalCodeHTML.get(codeElement);
+        var extraPlaceholders = additionalPlaceholders.get(codeElement) || [];
+        
+        // Combine standard and additional placeholders
+        var allPatterns = PLACEHOLDER_PATTERNS.concat(extraPlaceholders);
         
         // Always start from original content for replacements
         if (originalHTML && codeElement.children.length > 0) {
             // For syntax-highlighted code, replace placeholders with highlighted values
             var html = originalHTML;
-            PLACEHOLDER_PATTERNS.forEach(function(pattern) {
+            allPatterns.forEach(function(pattern) {
                 var escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 var displayValue = values[pattern] || pattern;
                 html = html.replace(
@@ -154,7 +159,7 @@
             var tempDiv = document.createElement("div");
             tempDiv.textContent = original;
             var html = tempDiv.innerHTML;
-            PLACEHOLDER_PATTERNS.forEach(function(pattern) {
+            allPatterns.forEach(function(pattern) {
                 var escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 var displayValue = values[pattern] || pattern;
                 html = html.replace(
@@ -257,6 +262,9 @@
         
         // If there are uncovered descriptions, add them to the config bar
         if (parsed.uncoveredDescriptions.length > 0 && bar) {
+            // Collect all unique uncovered placeholders
+            var allUncoveredPlaceholders = [];
+            
             // Create a section for additional info
             var additionalSection = document.createElement("div");
             additionalSection.className = "axiom-placeholder-additional mt-2 pt-3 border-t border-neutral-200 dark:border-neutral-700";
@@ -264,11 +272,32 @@
             parsed.uncoveredDescriptions.forEach(function(desc) {
                 var infoRow = document.createElement("div");
                 infoRow.className = "axiom-placeholder-info-row text-sm text-neutral-600 dark:text-neutral-400";
-                infoRow.innerHTML = desc.html;
+                
+                // Highlight placeholder patterns in the description
+                var highlightedHtml = desc.html;
+                desc.placeholders.forEach(function(placeholder) {
+                    var escapedPattern = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    highlightedHtml = highlightedHtml.replace(
+                        new RegExp(escapedPattern, 'g'),
+                        '<span class="axiom-placeholder-highlight">' + placeholder + '</span>'
+                    );
+                    // Collect unique placeholders
+                    if (allUncoveredPlaceholders.indexOf(placeholder) === -1) {
+                        allUncoveredPlaceholders.push(placeholder);
+                    }
+                });
+                
+                infoRow.innerHTML = highlightedHtml;
                 additionalSection.appendChild(infoRow);
             });
             
             bar.appendChild(additionalSection);
+            
+            // Store additional placeholders and re-render code block to highlight them
+            if (bar._codeElement && allUncoveredPlaceholders.length > 0) {
+                additionalPlaceholders.set(bar._codeElement, allUncoveredPlaceholders);
+                updateCodeBlock(bar._codeElement, loadStoredValues());
+            }
             
             // Hide the callout since we've extracted the uncovered info to the bar
             callout.style.display = "none";
@@ -395,12 +424,12 @@
         
         codeBlockContainer.parentNode.insertBefore(bar, codeBlockContainer.nextSibling);
         
-        // Process any info callout that follows the code block
-        processInfoCallout(codeBlockContainer, bar);
-        
-        // Store references
+        // Store references before processing callout (so it can access _codeElement)
         bar._codeElement = codeElement;
         bar._placeholders = placeholdersInCode;
+        
+        // Process any info callout that follows the code block
+        processInfoCallout(codeBlockContainer, bar);
         
         return bar;
     }
