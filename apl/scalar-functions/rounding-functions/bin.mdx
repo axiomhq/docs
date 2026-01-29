@@ -80,18 +80,15 @@ Aggregate HTTP requests into 5-minute intervals to analyze traffic patterns.
 ```kusto
 ['sample-http-logs']
 | summarize request_count = count(), avg_duration = avg(req_duration_ms) by bin(_time, 5m)
-| order by _time asc
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20request_count%20%3D%20count()%2C%20avg_duration%20%3D%20avg(req_duration_ms)%20by%20bin(_time%2C%205m)%20%7C%20order%20by%20_time%20asc%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20request_count%20%3D%20count()%2C%20avg_duration%20%3D%20avg(req_duration_ms)%20by%20bin(_time%2C%205m)%22%7D)
 
 **Output**
 
-| _time               | request_count | avg_duration |
-| ------------------- | ------------- | ------------ |
-| 2025-01-29 08:00:00 | 1250          | 145.3        |
-| 2025-01-29 08:05:00 | 1340          | 152.7        |
-| 2025-01-29 08:10:00 | 1180          | 138.9        |
+| request_count | avg_duration |
+| ------------- | ------------ |
+| 581,330       | 0.8631ms        |
 
 This query groups all HTTP requests into 5-minute windows, providing a time-series view of traffic volume and average response times.
 
@@ -105,47 +102,20 @@ Analyze trace durations by grouping them into 1-minute intervals per service.
 ```kusto
 ['otel-demo-traces']
 | summarize span_count = count(), p95_duration = percentile(duration, 95) by bin(_time, 1m), ['service.name']
-| order by _time asc, ['service.name'] asc
+| order by span_count desc
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20span_count%20%3D%20count()%2C%20p95_duration%20%3D%20percentile(duration%2C%2095)%20by%20bin(_time%2C%201m)%2C%20%5B'service.name'%5D%20%7C%20order%20by%20_time%20asc%2C%20%5B'service.name'%5D%20asc%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20span_count%20%3D%20count()%2C%20p95_duration%20%3D%20percentile(duration%2C%2095)%20by%20bin(_time%2C%201m)%2C%20%5B'service.name'%5D%20%7C%20order%20by%20span_count%20desc%22%7D)
 
 **Output**
 
-| _time               | service.name | span_count | p95_duration |
-| ------------------- | ------------ | ---------- | ------------ |
-| 2025-01-29 08:00:00 | cart         | 230        | 00:00:00.450 |
-| 2025-01-29 08:00:00 | checkout     | 85         | 00:00:01.200 |
-| 2025-01-29 08:00:00 | frontend     | 520        | 00:00:00.180 |
+| service.name | span_count | p95_duration |
+| ------------------- | ------------ | ---------- |
+| frontend     | 520        | 24.2ms |
+| cart         | 230        | 12.4ms |
+| checkout     | 85         | 10.2ms |
 
 This query creates a per-minute breakdown of span counts and 95th percentile durations for each service.
-
-</Tab>
-<Tab title="Security logs">
-
-Group requests by response time buckets to identify performance anomalies.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend duration_bucket = bin(req_duration_ms, 50)
-| summarize request_count = count() by duration_bucket, status
-| order by duration_bucket asc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20duration_bucket%20%3D%20bin(req_duration_ms%2C%2050)%20%7C%20summarize%20request_count%20%3D%20count()%20by%20duration_bucket%2C%20status%20%7C%20order%20by%20duration_bucket%20asc%22%7D)
-
-**Output**
-
-| duration_bucket | status | request_count |
-| --------------- | ------ | ------------- |
-| 0               | 200    | 2340          |
-| 50              | 200    | 1890          |
-| 50              | 500    | 45            |
-| 100             | 200    | 1250          |
-
-This query bins request durations into 50ms buckets and correlates them with HTTP status codes to identify patterns in slow or failed requests.
 
 </Tab>
 </Tabs>

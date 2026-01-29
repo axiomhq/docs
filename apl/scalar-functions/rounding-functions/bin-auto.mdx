@@ -79,18 +79,15 @@ Create a time-series view of HTTP traffic with automatic time granularity.
 ```kusto
 ['sample-http-logs']
 | summarize request_count = count() by bin_auto(_time)
-| order by _time asc
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20request_count%20%3D%20count()%20by%20bin_auto(_time)%20%7C%20order%20by%20_time%20asc%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20request_count%20%3D%20count()%20by%20bin_auto(_time)%22%7D)
 
 **Output**
 
-| _time               | request_count |
-| ------------------- | ------------- |
-| 2025-01-29 08:00:00 | 4520          |
-| 2025-01-29 08:15:00 | 4890          |
-| 2025-01-29 08:30:00 | 5120          |
+| request_count |
+| ------------- |
+| 4520          |
 
 This query automatically groups HTTP requests into time buckets based on the query time range, making it easy to visualize traffic patterns without manually specifying bin sizes.
 
@@ -104,45 +101,20 @@ Monitor span counts over time with adaptive time resolution.
 ```kusto
 ['otel-demo-traces']
 | summarize span_count = count() by bin_auto(_time), ['service.name']
-| order by _time asc
+| order by span_count desc
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20span_count%20%3D%20count()%20by%20bin_auto(_time)%2C%20%5B'service.name'%5D%20%7C%20order%20by%20_time%20asc%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20summarize%20span_count%20%3D%20count()%20by%20bin_auto(_time)%2C%20%5B'service.name'%5D%20%7C%20order%20by%20span_count%20desc%22%7D)
 
 **Output**
 
-| _time               | service.name | span_count |
-| ------------------- | ------------ | ---------- |
-| 2025-01-29 08:00:00 | frontend     | 1250       |
-| 2025-01-29 08:00:00 | cart         | 430        |
-| 2025-01-29 08:00:00 | checkout     | 180        |
+| service.name | span_count |
+| ------------ | ---------- |
+| frontend     | 1250       |
+| cart         | 430        |
+| checkout     | 180        |
 
 This query provides a time-series breakdown of span activity per service, with the time granularity automatically adjusted based on the query's time range.
-
-</Tab>
-<Tab title="Security logs">
-
-Track request patterns by status code with automatic time binning.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize request_count = count() by bin_auto(_time), status
-| order by _time asc, status asc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20request_count%20%3D%20count()%20by%20bin_auto(_time)%2C%20status%20%7C%20order%20by%20_time%20asc%2C%20status%20asc%22%7D)
-
-**Output**
-
-| _time               | status | request_count |
-| ------------------- | ------ | ------------- |
-| 2025-01-29 08:00:00 | 200    | 4230          |
-| 2025-01-29 08:00:00 | 404    | 89            |
-| 2025-01-29 08:00:00 | 500    | 12            |
-
-This query tracks HTTP status codes over time, enabling you to identify spikes in errors or unusual request patterns with automatic time resolution.
 
 </Tab>
 </Tabs>

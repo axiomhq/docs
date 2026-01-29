@@ -51,8 +51,7 @@ SELECT JSON_OBJECT('key', key_col, 'value', value_col) AS tag FROM logs
 ### Syntax
 
 ```kusto
-pair(key, value)
-pair(key, value, separator)
+pair(key, value, [separator])
 ```
 
 ### Parameters
@@ -70,10 +69,7 @@ A dynamic object with the following properties:
 - `value`: The value component of the pair.
 - `separator`: The separator used in the pair.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
+## Example
 
 Create pair objects to represent request metadata.
 
@@ -82,79 +78,20 @@ Create pair objects to represent request metadata.
 ```kusto
 ['sample-http-logs']
 | extend method_pair = pair('method', method)
-| extend status_pair = pair('status', status)
-| project _time, uri, method_pair, status_pair
-| take 3
+| project _time, uri, method_pair
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20method_pair%20%3D%20pair('method'%2C%20method)%20%7C%20extend%20status_pair%20%3D%20pair('status'%2C%20status)%20%7C%20project%20_time%2C%20uri%2C%20method_pair%2C%20status_pair%20%7C%20take%203%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20method_pair%20%3D%20pair('method'%2C%20method)%20%7C%20project%20_time%2C%20uri%2C%20method_pair%20%7C%20take%203%22%7D)
 
 **Output**
 
-| _time               | uri                    | method_pair                                          | status_pair                                          |
-| ------------------- | ---------------------- | ---------------------------------------------------- | ---------------------------------------------------- |
-| 2025-01-29 10:48:08 | /api/v1/textdata/change | {"key": "method", "separator": ":", "value": "GET"}  | {"key": "status", "separator": ":", "value": "200"}  |
-| 2025-01-29 10:48:07 | /api/v1/sell/bucket    | {"key": "method", "separator": ":", "value": "PUT"}  | {"key": "status", "separator": ":", "value": "201"}  |
-| 2025-01-29 10:48:06 | /api/v1/user/notify    | {"key": "method", "separator": ":", "value": "POST"} | {"key": "status", "separator": ":", "value": "500"}  |
+| _time               | uri                    | method_pair                                          |
+| ------------------- | ---------------------- | ---------------------------------------------------- |
+| 2025-01-29 10:48:08 | /api/v1/textdata/change | {"key": "method", "separator": ":", "value": "GET"}  |
+| 2025-01-29 10:48:07 | /api/v1/sell/bucket    | {"key": "method", "separator": ":", "value": "PUT"}  |
+| 2025-01-29 10:48:06 | /api/v1/user/notify    | {"key": "method", "separator": ":", "value": "POST"} |
 
 This query creates pair objects from request fields, storing both the key name and value in a structured format.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Build service pair objects for trace identification.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend service_pair = pair('service', ['service.name'])
-| extend kind_pair = pair('kind', kind)
-| project _time, trace_id, service_pair, kind_pair
-| take 3
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20service_pair%20%3D%20pair('service'%2C%20%5B'service.name'%5D)%20%7C%20extend%20kind_pair%20%3D%20pair('kind'%2C%20kind)%20%7C%20project%20_time%2C%20trace_id%2C%20service_pair%2C%20kind_pair%20%7C%20take%203%22%7D)
-
-**Output**
-
-| _time               | trace_id         | service_pair                                              | kind_pair                                            |
-| ------------------- | ---------------- | --------------------------------------------------------- | ---------------------------------------------------- |
-| 2025-01-29 10:48:08 | abc123def456     | {"key": "service", "separator": ":", "value": "frontend"} | {"key": "kind", "separator": ":", "value": "server"} |
-| 2025-01-29 10:48:07 | def456ghi789     | {"key": "service", "separator": ":", "value": "cart"}     | {"key": "kind", "separator": ":", "value": "client"} |
-| 2025-01-29 10:48:06 | ghi789jkl012     | {"key": "service", "separator": ":", "value": "checkout"} | {"key": "kind", "separator": ":", "value": "server"} |
-
-This query creates structured pair objects from trace attributes for consistent labeling.
-
-</Tab>
-<Tab title="Security logs">
-
-Create pair objects with a custom separator.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend geo_pair = pair(['geo.country'], ['geo.city'], '/')
-| extend access_pair = pair('access', status)
-| project _time, id, uri, geo_pair, access_pair
-| take 3
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20geo_pair%20%3D%20pair(%5B'geo.country'%5D%2C%20%5B'geo.city'%5D%2C%20'%2F')%20%7C%20extend%20access_pair%20%3D%20pair('access'%2C%20status)%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20geo_pair%2C%20access_pair%20%7C%20take%203%22%7D)
-
-**Output**
-
-| _time               | id       | uri              | geo_pair                                                 | access_pair                                           |
-| ------------------- | -------- | ---------------- | -------------------------------------------------------- | ----------------------------------------------------- |
-| 2025-01-29 10:48:08 | user-123 | /api/user        | {"key": "US", "separator": "/", "value": "New York"}     | {"key": "access", "separator": ":", "value": "200"}   |
-| 2025-01-29 10:48:07 | user-456 | /api/data        | {"key": "UK", "separator": "/", "value": "London"}       | {"key": "access", "separator": ":", "value": "200"}   |
-| 2025-01-29 10:48:06 | user-789 | /api/admin       | {"key": "DE", "separator": "/", "value": "Berlin"}       | {"key": "access", "separator": ":", "value": "403"}   |
-
-This query creates geographic pair objects using `/` as a separator and access status pair objects for security analysis.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

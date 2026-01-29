@@ -75,12 +75,12 @@ Round request durations up to whole milliseconds for consistent bucketing.
 
 ```kusto
 ['sample-http-logs']
-| extend duration_bucket = ceiling(req_duration_ms / 100) * 100
+| extend duration_bucket = ceiling(req_duration_ms) * 100
 | summarize request_count = count() by duration_bucket
 | order by duration_bucket asc
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20duration_bucket%20%3D%20ceiling(req_duration_ms%20%2F%20100)%20*%20100%20%7C%20summarize%20request_count%20%3D%20count()%20by%20duration_bucket%20%7C%20order%20by%20duration_bucket%20asc%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20duration_bucket%20%3D%20ceiling(req_duration_ms)%20*%20100%20%7C%20summarize%20request_count%20%3D%20count()%20by%20duration_bucket%20%7C%20order%20by%20duration_bucket%20asc%22%7D)
 
 **Output**
 
@@ -119,33 +119,6 @@ Calculate the minimum number of seconds to allocate for trace processing.
 | frontend        | 1                    |
 
 This query rounds span durations up to whole seconds to estimate resource allocation per service.
-
-</Tab>
-<Tab title="Security logs">
-
-Determine the minimum number of rate-limit buckets needed for IP addresses.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize request_count = count() by id
-| extend buckets_needed = ceiling(request_count / 100.0)
-| where buckets_needed > 1
-| order by buckets_needed desc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20request_count%20%3D%20count()%20by%20id%20%7C%20extend%20buckets_needed%20%3D%20ceiling(request_count%20%2F%20100.0)%20%7C%20where%20buckets_needed%20%3E%201%20%7C%20order%20by%20buckets_needed%20desc%22%7D)
-
-**Output**
-
-| id       | request_count | buckets_needed |
-| -------- | ------------- | -------------- |
-| user-123 | 542           | 6              |
-| user-456 | 301           | 4              |
-| user-789 | 198           | 2              |
-
-This query calculates how many rate-limit buckets each user ID requires, rounding up to ensure adequate capacity.
 
 </Tab>
 </Tabs>
