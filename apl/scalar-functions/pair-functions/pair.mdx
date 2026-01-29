@@ -3,9 +3,9 @@ title: pair
 description: 'This page explains how to use the pair function in APL.'
 ---
 
-Use the `pair` function to create a key-value pair string from separate key and value components. This function is useful for constructing tag strings, metadata entries, or any structured key-value data that needs to be stored or compared as a single string.
+Use the `pair` function to create a dynamic object representing a key-value pair from separate key and value components. This function is useful for constructing structured pair objects that you can use with functions like `find_pair` to search arrays of pairs.
 
-Use `pair` when you need to programmatically build key-value pairs for filtering, matching, or data construction. For example, you can create tag strings like `host:server1` or `env:production` to match against existing pair arrays in your logs.
+Use `pair` when you need to programmatically build key-value pair objects for filtering or matching against pair arrays in your logs. The function returns a dynamic object with `key`, `value`, and `separator` properties.
 
 ## For users of other query languages
 
@@ -14,7 +14,7 @@ If you come from other query languages, this section explains how to adjust your
 <AccordionGroup>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, you typically use string concatenation with `+` or the `printf` function to create key-value strings. APL's `pair` function provides a dedicated way to construct these strings with configurable separators.
+In Splunk SPL, you typically work with key-value pairs as strings. APL's `pair` function creates a structured object instead, which you can use for pattern matching with `find_pair`.
 
 <CodeGroup>
 ```sql Splunk example
@@ -30,11 +30,11 @@ In Splunk SPL, you typically use string concatenation with `+` or the `printf` f
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, you use `CONCAT` to build key-value strings. APL's `pair` function simplifies this with built-in separator handling.
+In ANSI SQL, you use `CONCAT` to build key-value strings or JSON functions to create objects. APL's `pair` function creates a structured dynamic object directly.
 
 <CodeGroup>
 ```sql SQL example
-SELECT CONCAT(key_col, ':', value_col) AS tag FROM logs
+SELECT JSON_OBJECT('key', key_col, 'value', value_col) AS tag FROM logs
 ```
 
 ```kusto APL equivalent
@@ -61,100 +61,103 @@ pair(key, value, separator)
 | ---- | ---- | -------- | ----------- |
 | `key` | `string` | Required | The key component of the pair. |
 | `value` | `string` | Required | The value component of the pair. |
-| `separator` | `string` | Optional | The separator between the key and value. Defaults to `:`. |
+| `separator` | `string` | Optional | The separator to store in the pair object. Defaults to `:`. |
 
 ### Returns
 
-A string containing the key and value joined by the separator, in the format `key<separator>value`.
+A dynamic object with the following properties:
+- `key`: The key component of the pair.
+- `value`: The value component of the pair.
+- `separator`: The separator used in the pair.
 
 ## Use case examples
 
 <Tabs>
 <Tab title="Log analysis">
 
-Create tag strings to filter requests by constructed metadata.
+Create pair objects to represent request metadata.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend method_tag = pair('method', method)
-| extend status_tag = pair('status', status)
-| project _time, uri, method_tag, status_tag
-| take 5
+| extend method_pair = pair('method', method)
+| extend status_pair = pair('status', status)
+| project _time, uri, method_pair, status_pair
+| take 3
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20method_tag%20%3D%20pair('method'%2C%20method)%20%7C%20extend%20status_tag%20%3D%20pair('status'%2C%20status)%20%7C%20project%20_time%2C%20uri%2C%20method_tag%2C%20status_tag%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20method_pair%20%3D%20pair('method'%2C%20method)%20%7C%20extend%20status_pair%20%3D%20pair('status'%2C%20status)%20%7C%20project%20_time%2C%20uri%2C%20method_pair%2C%20status_pair%20%7C%20take%203%22%7D)
 
 **Output**
 
-| _time               | uri        | method_tag  | status_tag  |
-| ------------------- | ---------- | ----------- | ----------- |
-| 2025-01-29 08:15:30 | /api/user  | method:GET  | status:200  |
-| 2025-01-29 08:16:45 | /api/data  | method:POST | status:201  |
-| 2025-01-29 08:17:20 | /api/login | method:POST | status:401  |
+| _time               | uri                    | method_pair                                          | status_pair                                          |
+| ------------------- | ---------------------- | ---------------------------------------------------- | ---------------------------------------------------- |
+| 2025-01-29 10:48:08 | /api/v1/textdata/change | {"key": "method", "separator": ":", "value": "GET"}  | {"key": "status", "separator": ":", "value": "200"}  |
+| 2025-01-29 10:48:07 | /api/v1/sell/bucket    | {"key": "method", "separator": ":", "value": "PUT"}  | {"key": "status", "separator": ":", "value": "201"}  |
+| 2025-01-29 10:48:06 | /api/v1/user/notify    | {"key": "method", "separator": ":", "value": "POST"} | {"key": "status", "separator": ":", "value": "500"}  |
 
-This query constructs method and status tags from request fields, creating standardized key-value pairs for downstream processing or filtering.
+This query creates pair objects from request fields, storing both the key name and value in a structured format.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
 
-Build service tags for trace identification.
+Build service pair objects for trace identification.
 
 **Query**
 
 ```kusto
 ['otel-demo-traces']
-| extend service_tag = pair('service', ['service.name'])
-| extend kind_tag = pair('kind', kind)
-| project _time, trace_id, service_tag, kind_tag
-| take 5
+| extend service_pair = pair('service', ['service.name'])
+| extend kind_pair = pair('kind', kind)
+| project _time, trace_id, service_pair, kind_pair
+| take 3
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20service_tag%20%3D%20pair('service'%2C%20%5B'service.name'%5D)%20%7C%20extend%20kind_tag%20%3D%20pair('kind'%2C%20kind)%20%7C%20project%20_time%2C%20trace_id%2C%20service_tag%2C%20kind_tag%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20service_pair%20%3D%20pair('service'%2C%20%5B'service.name'%5D)%20%7C%20extend%20kind_pair%20%3D%20pair('kind'%2C%20kind)%20%7C%20project%20_time%2C%20trace_id%2C%20service_pair%2C%20kind_pair%20%7C%20take%203%22%7D)
 
 **Output**
 
-| _time               | trace_id                         | service_tag      | kind_tag    |
-| ------------------- | -------------------------------- | ---------------- | ----------- |
-| 2025-01-29 08:15:30 | abc123def456                     | service:frontend | kind:server |
-| 2025-01-29 08:16:45 | def456ghi789                     | service:cart     | kind:client |
-| 2025-01-29 08:17:20 | ghi789jkl012                     | service:checkout | kind:server |
+| _time               | trace_id         | service_pair                                              | kind_pair                                            |
+| ------------------- | ---------------- | --------------------------------------------------------- | ---------------------------------------------------- |
+| 2025-01-29 10:48:08 | abc123def456     | {"key": "service", "separator": ":", "value": "frontend"} | {"key": "kind", "separator": ":", "value": "server"} |
+| 2025-01-29 10:48:07 | def456ghi789     | {"key": "service", "separator": ":", "value": "cart"}     | {"key": "kind", "separator": ":", "value": "client"} |
+| 2025-01-29 10:48:06 | ghi789jkl012     | {"key": "service", "separator": ":", "value": "checkout"} | {"key": "kind", "separator": ":", "value": "server"} |
 
-This query creates standardized service and kind tags from trace attributes for consistent labeling.
+This query creates structured pair objects from trace attributes for consistent labeling.
 
 </Tab>
 <Tab title="Security logs">
 
-Create custom tags with a different separator for security classifications.
+Create pair objects with a custom separator.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend geo_tag = pair(['geo.country'], ['geo.city'], '/')
-| extend access_tag = pair('access', status)
-| project _time, id, uri, geo_tag, access_tag
-| take 5
+| extend geo_pair = pair(['geo.country'], ['geo.city'], '/')
+| extend access_pair = pair('access', status)
+| project _time, id, uri, geo_pair, access_pair
+| take 3
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20geo_tag%20%3D%20pair(%5B'geo.country'%5D%2C%20%5B'geo.city'%5D%2C%20'%2F')%20%7C%20extend%20access_tag%20%3D%20pair('access'%2C%20status)%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20geo_tag%2C%20access_tag%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20geo_pair%20%3D%20pair(%5B'geo.country'%5D%2C%20%5B'geo.city'%5D%2C%20'%2F')%20%7C%20extend%20access_pair%20%3D%20pair('access'%2C%20status)%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20geo_pair%2C%20access_pair%20%7C%20take%203%22%7D)
 
 **Output**
 
-| _time               | id       | uri        | geo_tag        | access_tag |
-| ------------------- | -------- | ---------- | -------------- | ---------- |
-| 2025-01-29 08:15:30 | user-123 | /api/user  | US/New York    | access:200 |
-| 2025-01-29 08:16:45 | user-456 | /api/data  | UK/London      | access:200 |
-| 2025-01-29 08:17:20 | user-789 | /api/admin | DE/Berlin      | access:403 |
+| _time               | id       | uri              | geo_pair                                                 | access_pair                                           |
+| ------------------- | -------- | ---------------- | -------------------------------------------------------- | ----------------------------------------------------- |
+| 2025-01-29 10:48:08 | user-123 | /api/user        | {"key": "US", "separator": "/", "value": "New York"}     | {"key": "access", "separator": ":", "value": "200"}   |
+| 2025-01-29 10:48:07 | user-456 | /api/data        | {"key": "UK", "separator": "/", "value": "London"}       | {"key": "access", "separator": ":", "value": "200"}   |
+| 2025-01-29 10:48:06 | user-789 | /api/admin       | {"key": "DE", "separator": "/", "value": "Berlin"}       | {"key": "access", "separator": ":", "value": "403"}   |
 
-This query creates geographic location tags using `/` as a separator and access status tags for security analysis.
+This query creates geographic pair objects using `/` as a separator and access status pair objects for security analysis.
 
 </Tab>
 </Tabs>
 
 ## List of related functions
 
-- [parse_pair](/apl/scalar-functions/pair-functions/parse-pair): Parses a pair string back into its key and value components. Use `pair` to create pairs and `parse_pair` to decompose them.
-- [find_pair](/apl/scalar-functions/pair-functions/find-pair): Searches an array of pairs for a matching key-value pattern. Use `pair` to construct the search pattern.
-- [strcat](/apl/scalar-functions/string-functions/strcat): Concatenates strings. Use `pair` when you specifically need key-value formatting with separators.
+- [parse_pair](/apl/scalar-functions/pair-functions/parse-pair): Parses a pair string into a dynamic object with key and value properties. Use `pair` to create pair objects directly from components.
+- [find_pair](/apl/scalar-functions/pair-functions/find-pair): Searches an array of pairs for a matching key-value pattern. Use `pair` to construct pair objects for comparison.
+- [bag_pack](/apl/scalar-functions/array-functions/bag-pack): Creates a dynamic property bag from key-value pairs. Use `pair` when you specifically need the pair object structure with separator.
