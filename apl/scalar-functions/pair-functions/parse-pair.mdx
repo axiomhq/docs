@@ -1,0 +1,173 @@
+---
+title: parse_pair
+description: 'This page explains how to use the parse_pair function in APL.'
+---
+
+Use the `parse_pair` function to parse a string containing a key-value pair into its constituent key and value components. This function is useful when you need to extract structured data from strings that follow a key-value format, such as tags, labels, or configuration entries.
+
+Use `parse_pair` when you have strings like `host:server1` or `env=production` and need to access the key or value individually for filtering, grouping, or analysis.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use `rex` or `split` commands to extract key-value components from strings. APL's `parse_pair` provides a dedicated function for this common operation.
+
+<CodeGroup>
+```sql Splunk example
+| rex field=tag "(?<key>[^:]+):(?<value>.*)"
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend parsed = parse_pair('host:server1')
+| extend key = parsed.key, value = parsed.value
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you use `SUBSTRING` with `POSITION` or `SPLIT_PART` to extract key-value components. APL's `parse_pair` simplifies this with a dedicated function.
+
+<CodeGroup>
+```sql SQL example
+SELECT 
+  SPLIT_PART(tag, ':', 1) AS key,
+  SPLIT_PART(tag, ':', 2) AS value
+FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend parsed = parse_pair('host:server1')
+| extend key = parsed.key, value = parsed.value
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+parse_pair(pair_string)
+parse_pair(pair_string, separator)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+| `pair_string` | `string` | Required | The string containing the key-value pair to parse. |
+| `separator` | `string` | Optional | The separator between the key and value. Defaults to `:`. |
+
+### Returns
+
+A dynamic object with the following properties:
+- `key`: The extracted key portion of the pair.
+- `value`: The extracted value portion of the pair.
+- `separator`: The separator used in the pair.
+
+If the separator is not found in the input string, the function returns a pair with the entire input as the `value` and an empty `key`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Extract and analyze tag components from HTTP request metadata.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend tag_string = strcat('method:', method)
+| extend parsed = parse_pair(tag_string)
+| project _time, uri, tag_string, tag_key = parsed.key, tag_value = parsed.value
+| take 5
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20tag_string%20%3D%20strcat('method%3A'%2C%20method)%20%7C%20extend%20parsed%20%3D%20parse_pair(tag_string)%20%7C%20project%20_time%2C%20uri%2C%20tag_string%2C%20tag_key%20%3D%20parsed.key%2C%20tag_value%20%3D%20parsed.value%20%7C%20take%205%22%7D)
+
+**Output**
+
+| _time               | uri        | tag_string  | tag_key | tag_value |
+| ------------------- | ---------- | ----------- | ------- | --------- |
+| 2025-01-29 08:15:30 | /api/user  | method:GET  | method  | GET       |
+| 2025-01-29 08:16:45 | /api/data  | method:POST | method  | POST      |
+| 2025-01-29 08:17:20 | /api/login | method:POST | method  | POST      |
+
+This query constructs tag strings and then parses them to extract individual key and value components for analysis.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Parse service identifiers from formatted span attributes.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend service_pair = strcat('service:', ['service.name'])
+| extend parsed = parse_pair(service_pair)
+| where parsed.key == 'service'
+| summarize span_count = count() by service = parsed.value
+| order by span_count desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20service_pair%20%3D%20strcat('service%3A'%2C%20%5B'service.name'%5D)%20%7C%20extend%20parsed%20%3D%20parse_pair(service_pair)%20%7C%20where%20parsed.key%20%3D%3D%20'service'%20%7C%20summarize%20span_count%20%3D%20count()%20by%20service%20%3D%20parsed.value%20%7C%20order%20by%20span_count%20desc%22%7D)
+
+**Output**
+
+| service         | span_count |
+| --------------- | ---------- |
+| frontend        | 12540      |
+| cart            | 4320       |
+| product-catalog | 3890       |
+| checkout        | 2150       |
+
+This query parses service pair strings to extract service names for aggregation and analysis.
+
+</Tab>
+<Tab title="Security logs">
+
+Parse and filter configuration-style strings with custom separators.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend config_string = strcat(method, '=', status)
+| extend parsed = parse_pair(config_string, '=')
+| summarize request_count = count() by http_method = parsed.key, http_status = parsed.value
+| order by request_count desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20config_string%20%3D%20strcat(method%2C%20'%3D'%2C%20status)%20%7C%20extend%20parsed%20%3D%20parse_pair(config_string%2C%20'%3D')%20%7C%20summarize%20request_count%20%3D%20count()%20by%20http_method%20%3D%20parsed.key%2C%20http_status%20%3D%20parsed.value%20%7C%20order%20by%20request_count%20desc%22%7D)
+
+**Output**
+
+| http_method | http_status | request_count |
+| ----------- | ----------- | ------------- |
+| GET         | 200         | 8450          |
+| POST        | 200         | 3210          |
+| GET         | 404         | 890           |
+| POST        | 500         | 124           |
+
+This query uses a custom `=` separator to parse method-status pairs and aggregate request counts by both dimensions.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [pair](/apl/scalar-functions/pair-functions/pair): Creates a pair string from key and value components. Use `parse_pair` to decompose existing pairs.
+- [find_pair](/apl/scalar-functions/pair-functions/find-pair): Searches an array of pairs for a matching pattern. Use `parse_pair` when you need to extract components from a single pair string.
+- [split](/apl/scalar-functions/string-functions/split): Splits a string by a delimiter into an array. Use `parse_pair` when you specifically need key-value extraction with structured output.
+- [extract](/apl/scalar-functions/string-functions/extract): Extracts substrings using regex. Use `parse_pair` for simpler key-value parsing without regex.

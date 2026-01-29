@@ -1,0 +1,160 @@
+---
+title: pair
+description: 'This page explains how to use the pair function in APL.'
+---
+
+Use the `pair` function to create a key-value pair string from separate key and value components. This function is useful for constructing tag strings, metadata entries, or any structured key-value data that needs to be stored or compared as a single string.
+
+Use `pair` when you need to programmatically build key-value pairs for filtering, matching, or data construction. For example, you can create tag strings like `host:server1` or `env:production` to match against existing pair arrays in your logs.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use string concatenation with `+` or the `printf` function to create key-value strings. APL's `pair` function provides a dedicated way to construct these strings with configurable separators.
+
+<CodeGroup>
+```sql Splunk example
+| eval tag = host . ":" . value
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend tag = pair('host', 'server1')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you use `CONCAT` to build key-value strings. APL's `pair` function simplifies this with built-in separator handling.
+
+<CodeGroup>
+```sql SQL example
+SELECT CONCAT(key_col, ':', value_col) AS tag FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend tag = pair('host', 'server1')
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+pair(key, value)
+pair(key, value, separator)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+| `key` | `string` | Required | The key component of the pair. |
+| `value` | `string` | Required | The value component of the pair. |
+| `separator` | `string` | Optional | The separator between the key and value. Defaults to `:`. |
+
+### Returns
+
+A string containing the key and value joined by the separator, in the format `key<separator>value`.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Create tag strings to filter requests by constructed metadata.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend method_tag = pair('method', method)
+| extend status_tag = pair('status', status)
+| project _time, uri, method_tag, status_tag
+| take 5
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20method_tag%20%3D%20pair('method'%2C%20method)%20%7C%20extend%20status_tag%20%3D%20pair('status'%2C%20status)%20%7C%20project%20_time%2C%20uri%2C%20method_tag%2C%20status_tag%20%7C%20take%205%22%7D)
+
+**Output**
+
+| _time               | uri        | method_tag  | status_tag  |
+| ------------------- | ---------- | ----------- | ----------- |
+| 2025-01-29 08:15:30 | /api/user  | method:GET  | status:200  |
+| 2025-01-29 08:16:45 | /api/data  | method:POST | status:201  |
+| 2025-01-29 08:17:20 | /api/login | method:POST | status:401  |
+
+This query constructs method and status tags from request fields, creating standardized key-value pairs for downstream processing or filtering.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Build service tags for trace identification.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend service_tag = pair('service', ['service.name'])
+| extend kind_tag = pair('kind', kind)
+| project _time, trace_id, service_tag, kind_tag
+| take 5
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20service_tag%20%3D%20pair('service'%2C%20%5B'service.name'%5D)%20%7C%20extend%20kind_tag%20%3D%20pair('kind'%2C%20kind)%20%7C%20project%20_time%2C%20trace_id%2C%20service_tag%2C%20kind_tag%20%7C%20take%205%22%7D)
+
+**Output**
+
+| _time               | trace_id                         | service_tag      | kind_tag    |
+| ------------------- | -------------------------------- | ---------------- | ----------- |
+| 2025-01-29 08:15:30 | abc123def456                     | service:frontend | kind:server |
+| 2025-01-29 08:16:45 | def456ghi789                     | service:cart     | kind:client |
+| 2025-01-29 08:17:20 | ghi789jkl012                     | service:checkout | kind:server |
+
+This query creates standardized service and kind tags from trace attributes for consistent labeling.
+
+</Tab>
+<Tab title="Security logs">
+
+Create custom tags with a different separator for security classifications.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend geo_tag = pair(['geo.country'], ['geo.city'], '/')
+| extend access_tag = pair('access', status)
+| project _time, id, uri, geo_tag, access_tag
+| take 5
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20extend%20geo_tag%20%3D%20pair(%5B'geo.country'%5D%2C%20%5B'geo.city'%5D%2C%20'%2F')%20%7C%20extend%20access_tag%20%3D%20pair('access'%2C%20status)%20%7C%20project%20_time%2C%20id%2C%20uri%2C%20geo_tag%2C%20access_tag%20%7C%20take%205%22%7D)
+
+**Output**
+
+| _time               | id       | uri        | geo_tag        | access_tag |
+| ------------------- | -------- | ---------- | -------------- | ---------- |
+| 2025-01-29 08:15:30 | user-123 | /api/user  | US/New York    | access:200 |
+| 2025-01-29 08:16:45 | user-456 | /api/data  | UK/London      | access:200 |
+| 2025-01-29 08:17:20 | user-789 | /api/admin | DE/Berlin      | access:403 |
+
+This query creates geographic location tags using `/` as a separator and access status tags for security analysis.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [parse_pair](/apl/scalar-functions/pair-functions/parse-pair): Parses a pair string back into its key and value components. Use `pair` to create pairs and `parse_pair` to decompose them.
+- [find_pair](/apl/scalar-functions/pair-functions/find-pair): Searches an array of pairs for a matching key-value pattern. Use `pair` to construct the search pattern.
+- [strcat](/apl/scalar-functions/string-functions/strcat): Concatenates strings. Use `pair` when you specifically need key-value formatting with separators.
