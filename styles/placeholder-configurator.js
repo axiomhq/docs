@@ -143,6 +143,111 @@
         }
     }
     
+    // Find info callout that follows a code block and extract placeholder info
+    function findFollowingInfoCallout(codeBlockContainer) {
+        var sibling = codeBlockContainer.nextElementSibling;
+        
+        // Skip any existing placeholder bar to find the callout
+        while (sibling && sibling.classList.contains("axiom-placeholder-bar")) {
+            sibling = sibling.nextElementSibling;
+        }
+        
+        // Check if sibling is an info callout
+        if (sibling && sibling.classList.contains("callout") && 
+            sibling.getAttribute("data-callout-type") === "info") {
+            return sibling;
+        }
+        
+        return null;
+    }
+    
+    // Parse callout content to extract placeholder mentions and their descriptions
+    function parseCalloutPlaceholders(callout) {
+        var result = {
+            coveredPlaceholders: [],      // Placeholders we handle
+            uncoveredDescriptions: []     // Descriptions for placeholders we don't handle
+        };
+        
+        // Get the callout content element
+        var contentEl = callout.querySelector("[data-component-part='callout-content']");
+        if (!contentEl) return result;
+        
+        // Find all paragraph-like elements (spans with data-as="p" or actual p tags)
+        var paragraphs = contentEl.querySelectorAll("span[data-as='p'], p");
+        
+        paragraphs.forEach(function(p) {
+            var text = p.textContent;
+            var html = p.innerHTML;
+            
+            // Check which placeholders are mentioned in this paragraph
+            var mentionedPlaceholders = PLACEHOLDER_PATTERNS.filter(function(pattern) {
+                return text.includes(pattern);
+            });
+            
+            if (mentionedPlaceholders.length > 0) {
+                // All mentioned placeholders are covered by our config
+                mentionedPlaceholders.forEach(function(placeholder) {
+                    if (result.coveredPlaceholders.indexOf(placeholder) === -1) {
+                        result.coveredPlaceholders.push(placeholder);
+                    }
+                });
+            } else {
+                // Check if this paragraph mentions any placeholder-like pattern (ALL_CAPS_WITH_UNDERSCORES)
+                var placeholderPattern = /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/g;
+                var matches = text.match(placeholderPattern);
+                
+                if (matches && matches.length > 0) {
+                    // This paragraph mentions placeholders we don't handle
+                    result.uncoveredDescriptions.push({
+                        html: html,
+                        placeholders: matches
+                    });
+                }
+            }
+        });
+        
+        return result;
+    }
+    
+    // Process info callout - hide if fully covered, extract uncovered info
+    function processInfoCallout(codeBlockContainer, bar) {
+        var callout = findFollowingInfoCallout(codeBlockContainer);
+        if (!callout) return;
+        
+        // Skip if already processed
+        if (callout.hasAttribute("data-placeholder-callout-processed")) return;
+        callout.setAttribute("data-placeholder-callout-processed", "true");
+        
+        var parsed = parseCalloutPlaceholders(callout);
+        
+        // If all content is about placeholders we handle, hide the callout
+        if (parsed.coveredPlaceholders.length > 0 && parsed.uncoveredDescriptions.length === 0) {
+            callout.style.display = "none";
+            callout.setAttribute("data-placeholder-hidden", "true");
+            return;
+        }
+        
+        // If there are uncovered descriptions, add them to the config bar
+        if (parsed.uncoveredDescriptions.length > 0 && bar) {
+            // Create a section for additional info
+            var additionalSection = document.createElement("div");
+            additionalSection.className = "axiom-placeholder-additional mt-2 pt-3 border-t border-neutral-200 dark:border-neutral-700";
+            
+            parsed.uncoveredDescriptions.forEach(function(desc) {
+                var infoRow = document.createElement("div");
+                infoRow.className = "axiom-placeholder-info-row text-sm text-neutral-600 dark:text-neutral-400";
+                infoRow.innerHTML = desc.html;
+                additionalSection.appendChild(infoRow);
+            });
+            
+            bar.appendChild(additionalSection);
+            
+            // Hide the callout since we've extracted the uncovered info to the bar
+            callout.style.display = "none";
+            callout.setAttribute("data-placeholder-hidden", "true");
+        }
+    }
+    
     function createConfigBar(preElement, codeElement, placeholdersInCode) {
         var values = loadStoredValues();
         
@@ -262,6 +367,9 @@
         
         codeBlockContainer.parentNode.insertBefore(bar, codeBlockContainer.nextSibling);
         
+        // Process any info callout that follows the code block
+        processInfoCallout(codeBlockContainer, bar);
+        
         // Store references
         bar._codeElement = codeElement;
         bar._placeholders = placeholdersInCode;
@@ -347,6 +455,8 @@
             
             // Skip if already fully processed (tracked in WeakMap AND has bar)
             if (isAlreadyTracked && hasExistingBar) {
+                // Still process info callout in case it wasn't done before
+                processInfoCallout(codeBlockContainer, existingBar);
                 return;
             }
             
@@ -455,6 +565,24 @@
         }, 2000);
     }
     
+    // Restore a hidden callout when its associated bar is removed
+    function restoreHiddenCallout(bar) {
+        // Look for hidden callout after the bar
+        var sibling = bar.nextElementSibling;
+        while (sibling) {
+            if (sibling.classList.contains("callout") && 
+                sibling.hasAttribute("data-placeholder-hidden")) {
+                sibling.style.display = "";
+                sibling.removeAttribute("data-placeholder-hidden");
+                sibling.removeAttribute("data-placeholder-callout-processed");
+                break;
+            }
+            // Stop if we hit another code block
+            if (sibling.classList.contains("code-block")) break;
+            sibling = sibling.nextElementSibling;
+        }
+    }
+    
     // Clean up orphaned bars (bars whose code block was removed/re-rendered)
     function cleanupOrphanedBars() {
         var bars = document.querySelectorAll(".axiom-placeholder-bar");
@@ -462,6 +590,7 @@
             var prevSibling = bar.previousElementSibling;
             // Remove bar if it's not preceded by a code block
             if (!prevSibling || !prevSibling.classList.contains("code-block")) {
+                restoreHiddenCallout(bar);
                 bar.remove();
                 return;
             }
@@ -469,6 +598,7 @@
             var codeElement = prevSibling.querySelector("code") || prevSibling.querySelector("pre");
             if (codeElement && !originalCodeContent.has(codeElement)) {
                 // The code element was replaced - remove the orphaned bar
+                restoreHiddenCallout(bar);
                 bar.remove();
                 prevSibling.removeAttribute("data-placeholder-processed");
             }
