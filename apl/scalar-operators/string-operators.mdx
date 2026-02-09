@@ -2,10 +2,10 @@
 title: 'String operators'
 description: 'Learn how to use and combine different query operators for searching string data types.'
 sidebarTitle: String
-keywords: ['axiom documentation', 'documentation', 'axiom', 'string operators', 'contains', '!contains', 'contains_cs', 'endswith', 'in', 'has', 'startswith', 'macthes regex', 'in']
+keywords: ['axiom documentation', 'documentation', 'axiom', 'string operators', 'contains', '!contains', 'contains_cs', 'endswith', 'has', 'has_any', 'startswith', 'matches regex']
 ---
 
-The table summarizes the string operators available in APL.
+The table summarizes the string operators available in APL. For set membership operators (`in`, `!in`, `in~`, `!in~`), see [Set membership operators](/apl/scalar-operators/in-operators/overview).
 
 | Operator       | Description                             | Case sensitive     | Example                                |
 | -------------- | --------------------------------------- | ------------------ | -------------------------------------- |
@@ -25,16 +25,14 @@ The table summarizes the string operators available in APL.
 | !endswith      | RHS isn’t a closing subsequence of LHS  | No                 | `"parentSpanId" !endswith "Span"`        |
 | endswith_cs    | RHS is a closing subsequence of LHS     | Yes                | `"parentSpanId" endswith_cs "Id"`        |
 | !endswith_cs   | RHS isn’t a closing subsequence of LHS  | Yes                | `"parentSpanId" !endswith_cs "Span"`     |
-| in             | Equals to one of the elements           | Yes                | `"abc" in ("123", "345", "abc")`         |
-| !in            | Not equals to any of the elements       | Yes                | `"bca" !in ("123", "345", "abc")`        |
-| in~            | Equals to one of the elements           | No                 | `"abc" in~ ("123", "345", "ABC")`        |
-| !in~           | Not equals to any of the elements       | No                 | `"bca" !in~ ("123", "345", "ABC")`       |
 | matches regex  | LHS contains a match for RHS            | Yes                | `"parentSpanId" matches regex "g.*r"`    |
 | !matches regex | LHS doesn’t contain a match for RHS     | Yes                | `"parentSpanId" !matches regex "g.*r"`   |
 | has            | RHS is a whole term in LHS              | No                 | `"North America" has "america"`             |
 | !has            | RHS isn’t a whole term in LHS          | No                 | `"North America" !has "america"`             |
 | has_cs         | RHS is a whole term in LHS              | Yes                | `"North America" has_cs "America"`          |
 | !has_cs         | RHS isn’t a whole term in LHS          | Yes                | `"North America" !has_cs "America"`          |
+| has_any        | RHS has any whole term in LHS           | No                 | `"North America" has_any ("America", "Europe")` |
+| has_any_cs     | RHS has any whole term in LHS           | Yes                | `"North America" has_any_cs ("America", "Europe")` |
 | hasprefix      | LHS string starts with the RHS string   | No                 | `"Admin_User" hasprefix "Admin"`            |
 | !hasprefix      | LHS string doesn’t start with the RHS string   | No                 | `"Admin_User" !hasprefix "Admin"`            |
 | hasprefix_cs   | LHS string starts with the RHS string   | Yes                | `"DOCS_file" hasprefix_cs "DOCS"`           |
@@ -56,7 +54,7 @@ When two operators do the same task, use the case-sensitive one for better perfo
 For example:
 
 - Instead of `=~`, use `==`
-- Instead of `in~`, use `in`
+- Instead of `has_any`, use `has_any_cs`
 - Instead of `contains`, use `contains_cs`
 
 ## Best practices
@@ -86,12 +84,10 @@ Query examples:
 "get" != "GET"
 "get" =~ "GET"
 "get" !~ "put"
-"get" in ("get", "put", "delete")
 ```
 
 - Use `==` or `!=` for exact match comparisons when case sensitivity is important.
-- Use `=~` or `!~` for case-insensitive comparisons or when you don’t know the exact case.
-- Use `in` or `!in` for checking membership within a set of values which can be efficient for a small set of values.
+- Use `=~` or `!~` for case-insensitive comparisons or when you don't know the exact case.
 
 ## Subsequence-matching operators
 
@@ -147,6 +143,8 @@ Operators:
 - `!has`
 - `has_cs`
 - `!has_cs`
+- `has_any`
+- `has_any_cs`
 - `hasprefix`
 - `!hasprefix`
 - `hasprefix_cs`
@@ -163,6 +161,8 @@ Query examples:
 "North America" !has "america" // False
 "North America" has_cs "America" // True
 "North America" !has_cs "America" // False
+"North America" has_any ("america", "asia") // True
+"North America" has_any_cs ("America", "Asia") // True
 "Admin_User" hasprefix "Admin" // True
 "Admin_User" !hasprefix "Admin" // False
 "DOCS_file" hasprefix_cs "DOCS" // True
@@ -174,5 +174,6 @@ Query examples:
 ```
 
 - Use `has` or `has_cs` for term matching which can be more efficient than regular expression matching for simple term searches.
-- Use `has_cs` when you know the case to improve performance.
+- Use `has_any` or `has_any_cs` for matching against multiple possible terms.
+- Use `has_cs` or `has_any_cs` when you know the case to improve performance.
 - Unlike the `contains` operator, which matches any substring, the `has` operator looks for exact terms, ensuring more precise results.
