@@ -19,8 +19,8 @@ To create a threshold monitor, follow these steps:
     - The comparison operator is the rule to apply when comparing the results to the threshold. The possible values are **above**, **above or equal**, **below**, and **below or equal**.
     - The frequency is how often the monitor runs. This is a positive integer number of minutes.
     - The range is the time range for your query. This is a positive integer number of minutes. The end time is the time the monitor runs.
-    - **Alert on no data** triggers the monitor when your query doesn’t return any data. Your query returns no data if no events match your filters and an aggregation used in the query is undefined. For example, you take the average of a field not present in any matching events. The monitor sends a notification when data returns after a no-data alert state. Notifications about crossing the threshold take precedence over notifications about data returning after a no-data state.
-    - You can group by attributes when defining your query. By default, your monitor enters the alert state if any of the values returned for the group-by attributes cross the threshold, and remains in the alert state until none of the values returned cross the threshold. To trigger the monitor separately for each group that crosses the threshold, enable **Notify by group**. At most one trigger notification is sent per monitor run. This option only has an effect if the monitor’s query groups by a non-time field.
+    - **Alert on no data** triggers the monitor when your query doesn't return any data. Your query returns no data if no events match your filters and an aggregation used in the query is undefined. For example, you take the average of a field not present in any matching events. The monitor sends a notification when data returns after a no-data alert state. Notifications about crossing the threshold take precedence over notifications about data returning after a no-data state.
+    - You can group by attributes when defining your query. By default, your monitor enters the alert state if any of the values returned for the group-by attributes cross the threshold, and remains in the alert state until none of the values returned cross the threshold. To trigger the monitor separately for each group that crosses the threshold, enable **Notify by group**. At most one trigger notification is sent per monitor run. This option only has an effect if the monitor's query groups by a non-time field.
 1. Click **Add notifier**, and then select the notifiers that define how you want to receive notifications for this monitor. For more information, see [Notifiers](#notifiers).
 1. To define your query, use one of the following options:
     - To use the visual query builder, click **Simple query builder**. Click **Visualize** to select an aggregation method, and then click **Run query** to preview the results in a chart. The monitor enters the alert state if any points on the chart cross the threshold. Optionally, use filters to specify which events to aggregate, and group by fields to split the aggregation across the values of these fields.
@@ -28,6 +28,20 @@ To create a threshold monitor, follow these steps:
 1. Click **Create**.
 
 You have created a threshold monitor, and Axiom alerts you when the results from your query cross the threshold.
+
+## Notify by group behavior
+
+When you enable **Notify by group** on a threshold monitor with a group-by attribute, the monitor tracks the alert state independently for each group. This means:
+
+- Each group can independently enter and exit the alert state.
+- Axiom sends a separate notification for each group that crosses the threshold.
+- At most one trigger notification is sent per group per monitor run. If multiple groups cross the threshold in the same run, each group generates its own notification.
+
+For example, if your query groups by `service.name` and two services cross the threshold, you receive two separate notifications, each identifying the specific service.
+
+<Note>
+The notification includes the group value that triggered the alert. However, Axiom's native notifier integrations (such as Slack) bundle notifications in a single message per monitor run. If you need fully separate, individually formatted notifications for each group, consider using a [custom webhook notifier](/monitor-data/notifiers-overview) with a cloud function that processes and routes each group notification separately.
+</Note>
 
 ## Examples
 
