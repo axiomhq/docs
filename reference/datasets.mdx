@@ -11,7 +11,7 @@ This reference article explains how to manage datasets in Axiom, including creat
 
 ## What datasets are
 
-Axiom’s datastore is tuned for the efficient collection, storage, and analysis of timestamped event data. An individual piece of data is an event, and a dataset is a collection of related events. Datasets contain incoming event data.
+Axiom's datastore is tuned for the efficient collection, storage, and analysis of timestamped event data. An individual piece of data is an event, and a dataset is a collection of related events. Datasets contain incoming event data.
 
 ## Best practices for organizing datasets
 
@@ -21,7 +21,7 @@ Use datasets to organize your data ready for querying based on the event schema.
 
 If you work with data sourced from different environments, separate them into different datasets. For example, use one dataset for events from production and another dataset for events from your development environment.
 
-You might be tempted to use a single `environment` attribute instead, but this risks causing confusion when results show up side-by-side in query results. Although some organizations choose to collect events from all environments in one dataset, they’ll often rely on applying an `environment` filter to all queries, which becomes a chore and is error-prone for newcomers.
+You might be tempted to use a single `environment` attribute instead, but this risks causing confusion when results show up side-by-side in query results. Although some organizations choose to collect events from all environments in one dataset, they'll often rely on applying an `environment` filter to all queries, which becomes a chore and is error-prone for newcomers.
 
 ### Separate by signal type
 
@@ -42,23 +42,23 @@ Another common practice is to separate datasets by service. This approach allows
 
 For example, you might separate engineering services with datasets like `kubernetes`, `billing`, or `vpn`, or include events from your wider company collectors like `product-analytics`, `security-logs`, or `marketing-attribution`.
 
-This separation enables teams to focus on their relevant data and simplifies querying within a specific domain. It also works well with Axiom’s role-based access control feature as you can restrict access to sensitive datasets to those who need it.
+This separation enables teams to focus on their relevant data and simplifies querying within a specific domain. It also works well with Axiom's role-based access control feature as you can restrict access to sensitive datasets to those who need it.
 
 <Note>
 While separating by service is beneficial, avoid over-segmentation. Creating a dataset for every microservice or function can lead to unnecessary complexity and management overhead. Instead, group related services or functions into logical datasets that align with your organizational structure or major system components.
 
-When you work with OpenTelemetry trace data, keep all spans of a given trace in the same dataset. To investigate spans for different services, don’t send them to different datasets. Instead, keep the spans in the same dataset and filter on the `service.name` field. For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
+When you work with OpenTelemetry trace data, keep all spans of a given trace in the same dataset. To investigate spans for different services, don't send them to different datasets. Instead, keep the spans in the same dataset and filter on the `service.name` field. For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
 </Note>
 
-### Avoid the “kitchen sink”
+### Avoid the "kitchen sink"
 
-While it might seem convenient to send all events to a single dataset, this “kitchen sink” approach is generally not advisable for several reasons:
+While it might seem convenient to send all events to a single dataset, this "kitchen sink" approach is generally not advisable for several reasons:
 - Field count explosion: As you add more event types to a single dataset, the number of fields grows rapidly. This can make it harder to understand the structure of your data and impacts query performance.
 - Query inefficiency: With a large, mixed dataset, queries often require multiple filters to isolate the relevant data. This is tedious, but without those filters, queries take longer to execute since they scan through more irrelevant data.
 - Schema conflicts: Different event types may have conflicting field names or data types, leading to unnecessary type coercion at query time.
 - Access management: With all data in one dataset, it becomes challenging to provide granular access controls. You might end up giving users access to more data than they need.
 
-Don’t create multiple Axiom organizations to separate your data. For example, don’t use a different Axiom organization for each deployment. If you’re on the Axiom Cloud (Personal) plan, this might go against [Axiom’s fair use policy](https://axiom.co/terms). Instead, separate data by creating a different dataset for each deployment within the same Axiom organization.
+Don't create multiple Axiom organizations to separate your data. For example, don't use a different Axiom organization for each deployment. If you're on the Axiom Cloud (Personal) plan, this might go against [Axiom's fair use policy](https://axiom.co/terms). Instead, separate data by creating a different dataset for each deployment within the same Axiom organization.
 
 <AccessToDatasets />
 
@@ -74,8 +74,11 @@ To create a dataset using the Axiom app, follow these steps:
 1. Click **New dataset**.
 1. Name the dataset and add an optional description.
 1. In **Kind**, select one of the following:
-    - Select **Axiom Events** if you plan to use the dataset for event data that doesn’t follow OpenTelemetry (OTel) conventions.
-    - If you plan to send OTel data to the dataset, select the type of OTel data you want to use the dataset for. You must use dedicated datasets for each OTel component. For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
+    - Select **Axiom Events** if you plan to use the dataset for event data that doesn't follow OpenTelemetry (OTel) conventions.
+    - Select **OpenTelemetry Logs** if you plan to send OTel log data to the dataset.
+    - Select **OpenTelemetry Traces** if you plan to send OTel trace (span) data to the dataset. Traces are stored as events with trace-specific fields such as `trace_id`, `span_id`, and `parent_span_id`.
+    - Select **OpenTelemetry Metrics** if you plan to send OTel metric data to the dataset. This option is currently in public preview.
+    You must use dedicated datasets for each OTel component. For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
 1. In **Data retention**, select for how long to store your data in this dataset. For more information, see [Specify data retention period](#specify-data-retention-period).
 1. Click **Save dataset**.
 
@@ -95,12 +98,26 @@ To import data to a dataset, follow these steps:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
 1. In the list, find the dataset where you want to import data, and then click <Icon icon="upload" iconType="regular"/> **Import** on the right.
-1. Optional: Specify the timestamp field. This is only necessary if your data contains a timestamp field and it’s different from `_time`.
+1. Optional: Specify the timestamp field. This is only necessary if your data contains a timestamp field and it's different from `_time`.
 1. Upload the file, and then click **Import**.
+
+## Export data
+
+You can export query results from the Explorer tab in JSON, CSV, TOON (structured), or TOON (list) format. For more information, see [Export query](/query-data/explore#export-query).
+
+To export data from a dataset:
+
+1. Go to the **Query** tab and run a query against the dataset you want to export. To export all data in a dataset, use a query like `['my-dataset']` with an appropriate time range.
+1. Click <Icon icon="ellipsis-vertical" iconType="solid"/> **More** in the top bar.
+1. Click **Download results** and select the format you want.
+
+<Note>
+Query results are subject to [result size limits](/reference/limits). To export large datasets, break your queries into smaller time ranges and export them separately. Alternatively, use the [Axiom API](/restapi/query) to query data programmatically with pagination.
+</Note>
 
 ## Trim dataset
 
-Trimming permanently deletes data stored in blocks that are older than a date you specify. Note that this action doesn’t delete data that’s older than the specified date but shares a block with newer data.
+Trimming permanently deletes data stored in blocks that are older than a date you specify. Note that this action doesn't delete data that's older than the specified date but shares a block with newer data.
 
 This can be useful if your dataset contains too many fields or takes up too much storage space, and you want to reduce its size to ensure you stay within the [allowed limits](/reference/limits#pricing-based-limits).
 
@@ -127,7 +144,7 @@ The data schema of your dataset is defined on read. Axiom continuously creates a
 
 In this case, vacuuming fields in a dataset can help you reduce the number of fields associated with a dataset and stay within the allowed limits. Vacuuming fields resets the number of fields associated with a dataset to the fields that occur in events within your retention period. Technically, it wipes the data schema and rebuilds it from the data you currently have in the dataset, which is partly defined by the retention period. For example, you have ingested 500 fields over the last year and 50 fields in the last 95 days, which is your retention period. In this case, before vacuuming, your data schema contains 500 fields. After vacuuming, the dataset only contains 50 fields.
 
-Vacuuming fields doesn’t delete any events from your dataset. To delete events, [trim the dataset](#trim-dataset). You can use trimming and vacuuming in combination. For example, if you accidentally ingested events with fields you didn’t want to send to Axiom, and these events are within your retention period, vacuuming alone doesn’t solve your problem. In this case, first trim the dataset to delete the events with the unintended fields, and then vacuum the fields to rebuild the data schema.
+Vacuuming fields doesn't delete any events from your dataset. To delete events, [trim the dataset](#trim-dataset). You can use trimming and vacuuming in combination. For example, if you accidentally ingested events with fields you didn't want to send to Axiom, and these events are within your retention period, vacuuming alone doesn't solve your problem. In this case, first trim the dataset to delete the events with the unintended fields, and then vacuum the fields to rebuild the data schema.
 
 <Note>
 You can only vacuum fields once per day for each dataset.
@@ -145,8 +162,8 @@ You can share your datasets with other Axiom organizations. The receiving organi
 
 - can query the shared dataset.
 - can create other Axiom resources that rely on query access such as dashboards and monitors.
-- can’t ingest data into the shared dataset.
-- can‘t modify the shared dataset.
+- can't ingest data into the shared dataset.
+- can't modify the shared dataset.
 
 No ingest usage associated with the shared dataset accrues to the receiving organization. Query usage associated with the shared dataset accrues to the organization running the query.  
 
@@ -161,7 +178,7 @@ To share a dataset with another Axiom organization:
 
 ### Delete sharing link
 
-Organizations can gain access to the dataset with an active sharing link. To deactivate the sharing link, delete the sharing link. Deleting a sharing link means that organizations that don’t have access to the dataset can’t use the sharing link to join the dataset in the future. Deleting a sharing link doesn’t affect the access of organizations that already have access to the shared dataset.
+Organizations can gain access to the dataset with an active sharing link. To deactivate the sharing link, delete the sharing link. Deleting a sharing link means that organizations that don't have access to the dataset can't use the sharing link to join the dataset in the future. Deleting a sharing link doesn't affect the access of organizations that already have access to the shared dataset.
 
 To delete a sharing link:
 
@@ -172,7 +189,7 @@ To delete a sharing link:
 
 ### Remove access to shared dataset
 
-If your organization has previously shared a dataset with a receiving organization, and you want to remove the receiving organization’s access to the dataset, follow these steps:
+If your organization has previously shared a dataset with a receiving organization, and you want to remove the receiving organization's access to the dataset, follow these steps:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
 1. In the list, find the dataset, and then click <img src="/doc-assets/icons/share-dataset.svg" className="inline-icon" alt="Share dataset icon" /> **Share dataset** on the right.
@@ -189,17 +206,17 @@ If your organization has previously received access to a dataset from a sending 
 1. Enter the name of the dataset, and then click **Remove**.
 
 <Note>
-This procedure only removes the shared dataset from your organization. The underlying dataset in the sending organization isn’t affected.
+This procedure only removes the shared dataset from your organization. The underlying dataset in the sending organization isn't affected.
 </Note>
 
 ## Specify data retention period
 
-The data retention period determines how long Axiom stores your data. By default, the data retention period is the same for all datasets. You can configure custom retention periods for individual datasets. As a result, Axiom automatically trims data after the specified time period instead of the default period. For example, this can be useful if your dataset contains sensitive event data that you don’t want to retain for a long time.
+The data retention period determines how long Axiom stores your data. By default, the data retention period is the same for all datasets. You can configure custom retention periods for individual datasets. As a result, Axiom automatically trims data after the specified time period instead of the default period. For example, this can be useful if your dataset contains sensitive event data that you don't want to retain for a long time.
 
-The custom data retention period you set for a dataset must be shorter than the default data retention period. For example, if you’re on the Personal plan, the default data retention period is 30 days and you can only specify a shorter period. For more information, see [Pricing-based limits](/reference/limits#pricing-based-limits) and [Set default dataset retention period](/reference/organization-settings#set-default-dataset-retention-period).
+The custom data retention period you set for a dataset must be shorter than the default data retention period. For example, if you're on the Personal plan, the default data retention period is 30 days and you can only specify a shorter period. For more information, see [Pricing-based limits](/reference/limits#pricing-based-limits) and [Set default dataset retention period](/reference/organization-settings#set-default-dataset-retention-period).
 
 <Warning>
-When you specify a data retention period for a dataset that’s shorter than the previous setting, all data older than the new retention period is automatically deleted. This process can’t be undone.
+When you specify a data retention period for a dataset that's shorter than the previous setting, all data older than the new retention period is automatically deleted. This process can't be undone.
 </Warning>
 
 To change the data retention period for a dataset, follow these steps:
