@@ -1,5 +1,5 @@
 /**
- * Axiom Docs Analytics - Privacy-First Analytics
+ * Axiom Documentation Observability (do11y) - Privacy-First Analytics
  * 
  * This script collects anonymous usage analytics without:
  * - Cookies (uses sessionStorage only - cleared when browser closes)
@@ -53,6 +53,13 @@
     retryDelay: 1000,
     // Rate limiting: minimum milliseconds between events of the same type
     rateLimitMs: 100,
+    // CSS selector for search trigger elements
+    // Adapt this to your docs framework. Examples:
+    //   Mintlify:   '#search-bar-entry, #search-bar-entry-mobile, [class*="search"]'
+    //   Docusaurus: '.DocSearch, .DocSearch-Button'
+    //   Nextra:     '.nextra-search input'
+    //   GitBook:    '[data-testid="search"]'
+    searchSelector: '#search-bar-entry, #search-bar-entry-mobile, [class*="search"]',
   };
 
   // ============================================================
@@ -789,11 +796,9 @@
    * Track documentation search usage
    */
   function setupSearchTracking() {
-    // Track clicks on search elements (Mintlify's search)
+    // Track clicks on search elements (configured via config.searchSelector)
     document.addEventListener('click', function(e) {
-      const searchTrigger = e.target.closest(
-        '#search-bar-entry, #search-bar-entry-mobile, [class*="search"]'
-      );
+      const searchTrigger = e.target.closest(config.searchSelector);
       if (searchTrigger) {
         queueEvent('search_opened', {});
       }
@@ -904,7 +909,7 @@
     setupSearchTracking();
     setupCopyTracking();
 
-    // Handle SPA navigation (Mintlify uses client-side routing)
+    // Handle SPA navigation
     var lastPath = window.location.pathname;
     
     // Use MutationObserver to detect page changes
