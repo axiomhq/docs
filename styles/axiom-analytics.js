@@ -27,8 +27,11 @@
   // Configuration
   // ============================================================
   const config = {
-    // Axiom API base URL (use edge deployment domain if applicable)
-    endpoint: 'https://api.axiom.co',
+    // Axiom ingest API base URL
+    // Use an edge deployment domain for lower latency and data residency:
+    //   US East 1 (AWS):    'https://us-east-1.aws.edge.axiom.co'
+    //   EU Central 1 (AWS): 'https://eu-central-1.aws.edge.axiom.co'
+    endpoint: 'https://us-east-1.aws.edge.axiom.co',
     // Dataset name - update this to your Axiom dataset
     dataset: 'docs-analytics',
     // API token for ingest - use a token with ONLY ingest permissions
@@ -462,7 +465,7 @@
     const events = eventQueue.slice();
     eventQueue = [];
 
-    const url = config.endpoint + '/v1/datasets/' + encodeURIComponent(config.dataset) + '/ingest';
+    const url = config.endpoint + '/v1/ingest/' + encodeURIComponent(config.dataset);
 
     sendEvents(url, events, retriesLeft);
   }
@@ -533,7 +536,7 @@
     const events = eventQueue;
     eventQueue = [];
 
-    const url = config.endpoint + '/v1/datasets/' + encodeURIComponent(config.dataset) + '/ingest';
+    const url = config.endpoint + '/v1/ingest/' + encodeURIComponent(config.dataset);
 
     // Try sendBeacon first (most reliable for page unload)
     // Note: sendBeacon can't send auth headers, so we encode token in URL if needed
