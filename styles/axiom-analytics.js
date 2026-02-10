@@ -17,7 +17,10 @@
  * No GDPR consent banner required.
  * 
  * Configuration:
- * Set AXIOM_INGEST_TOKEN and AXIOM_DATASET in the config object below.
+ * Set API token and dataset name in the config object below,
+ * or in an HTML <meta> tag:
+ * <meta name="axiom-analytics-token" content="your-token">
+ * <meta name="axiom-analytics-dataset" content="your-dataset">
  */
 
 (function() {
@@ -29,8 +32,8 @@
   const config = {
     // Axiom ingest API base URL
     // Use an edge deployment domain for lower latency and data residency:
-    //   US East 1 (AWS):    'https://us-east-1.aws.edge.axiom.co'
-    //   EU Central 1 (AWS): 'https://eu-central-1.aws.edge.axiom.co'
+    //   US East 1 (AWS):    'us-east-1.aws.edge.axiom.co'
+    //   EU Central 1 (AWS): 'eu-central-1.aws.edge.axiom.co'
     // For more information, see https://axiom.co/docs/reference/edge-deployments
     'axiom-domain': 'https://us-east-1.aws.edge.axiom.co',
     // Dataset name - update this to your Axiom dataset
@@ -53,8 +56,8 @@
     // Scroll depth thresholds to track (percentages)
     scrollThresholds: [25, 50, 75, 90],
     // Allowed domains - restrict where this script can send data from
-    // Set to null to allow any domain, or ['docs.axiom.co'] to restrict
-    allowedDomains: null,
+    // Set to null to allow any domain, or ['docs.example.com'] to restrict
+    allowedDomains: ['axiom.co'],
     // Respect Do Not Track browser setting
     respectDNT: true,
     // Maximum retries for failed requests
