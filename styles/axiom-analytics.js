@@ -1,5 +1,5 @@
 /**
- * Axiom Documentation Observability (do11y) - Privacy-First Analytics
+ * Axiom Documentation Observability (do11y)
  * 
  * Framework-agnostic documentation observability. Works with any static-site
  * generator or docs framework including Mintlify, Docusaurus, Nextra,
@@ -8,7 +8,7 @@
  * Defaults are configured for Mintlify. To adapt to another framework,
  * update the "Framework-specific selectors" section in the config object.
  *
- * This script collects anonymous usage analytics without:
+ * This script collects anonymous usage data without:
  * - Cookies (uses sessionStorage only - cleared when browser closes)
  * - Personal identifiable information (PII)
  * - Device fingerprinting
@@ -102,8 +102,7 @@
   // ============================================================
 
   /**
-   * Check if analytics should be disabled
-   * Returns true if tracking should be blocked
+   * Check if do11y should be disabled
    */
   function shouldDisableTracking() {
     // Respect Do Not Track
@@ -113,7 +112,7 @@
       window.doNotTrack === '1'
     )) {
       if (config.debug) {
-        console.log('[Axiom Analytics] Disabled: Do Not Track is enabled');
+        console.log('[Axiom Do11y] Disabled: Do Not Track is enabled');
       }
       return true;
     }
@@ -126,7 +125,7 @@
       });
       if (!isAllowed) {
         if (config.debug) {
-          console.log('[Axiom Analytics] Disabled: Domain not allowed:', currentDomain);
+          console.log('[Axiom Do11y] Disabled: Domain not allowed:', currentDomain);
         }
         return true;
       }
@@ -358,7 +357,7 @@
     if (config.rateLimitMs > 0 && lastEventTime[eventType]) {
       if (now - lastEventTime[eventType] < config.rateLimitMs) {
         if (config.debug) {
-          console.log('[Axiom Analytics] Rate limited:', eventType);
+          console.log('[Axiom Do11y] Rate limited:', eventType);
         }
         return;
       }
@@ -378,7 +377,7 @@
     };
 
     if (config.debug) {
-      console.log('[Axiom Analytics] Event queued:', event);
+      console.log('[Axiom Do11y] Event queued:', event);
     }
 
     eventQueue.push(event);
@@ -387,7 +386,7 @@
     if (eventQueue.length > 100) {
       eventQueue = eventQueue.slice(-100);
       if (config.debug) {
-        console.warn('[Axiom Analytics] Event queue capped at 100 events');
+        console.warn('[Axiom Do11y] Event queue capped at 100 events');
       }
     }
 
@@ -414,7 +413,7 @@
   function validateConfig() {
     if (!config['api-token']) {
       if (config.debug) {
-        console.warn('[Axiom Analytics] No API token configured');
+        console.warn('[Axiom Do11y] No API token configured');
       }
       return false;
     }
@@ -422,7 +421,7 @@
     // Validate token format (basic check)
     if (typeof config['api-token'] !== 'string' || config['api-token'].length < 10) {
       if (config.debug) {
-        console.warn('[Axiom Analytics] Invalid token format');
+        console.warn('[Axiom Do11y] Invalid token format');
       }
       return false;
     }
@@ -430,7 +429,7 @@
     // Validate domain (must be a valid hostname, no protocol or path)
     if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(config['axiom-domain'])) {
       if (config.debug) {
-        console.warn('[Axiom Analytics] Invalid edge deployment domain:', config['axiom-domain']);
+        console.warn('[Axiom Do11y] Invalid edge deployment domain:', config['axiom-domain']);
       }
       return false;
     }
@@ -438,7 +437,7 @@
     // Validate dataset name (alphanumeric, hyphens, underscores)
     if (!/^[a-zA-Z0-9_-]+$/.test(config['dataset-name'])) {
       if (config.debug) {
-        console.warn('[Axiom Analytics] Invalid dataset name');
+        console.warn('[Axiom Do11y] Invalid dataset name');
       }
       return false;
     }
@@ -488,7 +487,7 @@
     }).then(function(response) {
       if (response.ok) {
         if (config.debug) {
-          console.log('[Axiom Analytics] Flushed', events.length, 'events');
+          console.log('[Axiom Do11y] Flushed', events.length, 'events');
         }
         return;
       }
@@ -496,7 +495,7 @@
       // Handle retriable errors (5xx, 429)
       if (retriesLeft > 0 && (response.status >= 500 || response.status === 429)) {
         if (config.debug) {
-          console.log('[Axiom Analytics] Retrying after error:', response.status);
+          console.log('[Axiom Do11y] Retrying after error:', response.status);
         }
         // Re-add events to queue for retry
         eventQueue = events.concat(eventQueue);
@@ -509,21 +508,21 @@
       // Non-retriable error
       if (config.debug) {
         response.text().then(function(text) {
-          console.error('[Axiom Analytics] Ingest failed:', response.status, text);
+          console.error('[Axiom Do11y] Ingest failed:', response.status, text);
         });
       }
     }).catch(function(err) {
       // Network error - retry if possible
       if (retriesLeft > 0) {
         if (config.debug) {
-          console.log('[Axiom Analytics] Network error, retrying:', err.message);
+          console.log('[Axiom Do11y] Network error, retrying:', err.message);
         }
         eventQueue = events.concat(eventQueue);
         setTimeout(function() {
           flush(retriesLeft - 1);
         }, config.retryDelay * (config.maxRetries - retriesLeft + 1));
       } else if (config.debug) {
-        console.error('[Axiom Analytics] Failed to send events:', err);
+        console.error('[Axiom Do11y] Failed to send events:', err);
       }
     });
   }
@@ -558,7 +557,7 @@
     }
 
     if (config.debug) {
-      console.log('[Axiom Analytics] Sync flushed', events.length, 'events');
+      console.log('[Axiom Do11y] Sync flushed', events.length, 'events');
     }
   }
 
@@ -877,7 +876,7 @@
   var mutationObserver = null; // Store reference for cleanup
 
   /**
-   * Initialize analytics
+   * Initialize do11y
    */
   function init() {
     // Check for token in a meta tag (secure server-side injection)
@@ -908,7 +907,7 @@
     }
 
     if (config.debug) {
-      console.log('[Axiom Analytics] Initializing with config:', {
+      console.log('[Axiom Do11y] Initializing with config:', {
         endpoint: config['axiom-domain'],
         dataset: config['dataset-name'],
         hasToken: !!config['api-token'],
@@ -921,7 +920,7 @@
     if (shouldDisableTracking()) {
       isDisabled = true;
       if (config.debug) {
-        console.log('[Axiom Analytics] Tracking disabled');
+        console.log('[Axiom Do11y] Tracking disabled');
       }
       return;
     }
@@ -929,8 +928,8 @@
     // Warn if no token (but don't fail - allows development without token)
     if (!config['api-token']) {
       if (config.debug) {
-        console.warn('[Axiom Analytics] No API token configured. Events will not be sent.');
-        console.warn('[Axiom Analytics] Add <meta name="axiom-do11y-token" content="api-token"> to enable.');
+        console.warn('[Axiom Do11y] No API token configured. Events will not be sent.');
+        console.warn('[Axiom Do11y] Add <meta name="axiom-do11y-token" content="api-token"> to enable.');
       }
     }
 
@@ -977,7 +976,7 @@
     });
 
     if (config.debug) {
-      console.log('[Axiom Analytics] Initialized successfully');
+      console.log('[Axiom Do11y] Initialized successfully');
     }
   }
 
@@ -1004,7 +1003,7 @@
   }
 
   // Expose API for debugging and integration
-  window.AxiomAnalytics = {
+  window.AxiomDo11y = {
     // Read-only config access (don't expose token)
     getConfig: function() {
       return {
@@ -1025,7 +1024,7 @@
     },
     // Cleanup for SPA unmount
     cleanup: cleanup,
-    // Check if tracking is enabled
+    // Check if do11y is enabled
     isEnabled: function() {
       return !isDisabled && !!config['api-token'];
     },
@@ -1034,7 +1033,7 @@
       return eventQueue.length;
     },
     // Version for debugging
-    version: '2.0.0',
+    version: '1.0.0',
   };
 
 })();
