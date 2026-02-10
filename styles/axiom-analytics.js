@@ -17,10 +17,10 @@
  * No GDPR consent banner required.
  * 
  * Configuration:
- * Set API token and dataset name in the config object below,
+ * Set `api-token` and `dataset-name` in the config object below,
  * or in an HTML <meta> tag:
- * <meta name="axiom-analytics-token" content="your-token">
- * <meta name="axiom-analytics-dataset" content="your-dataset">
+ * <meta name="axiom-do11y-token" content="api-token">
+ * <meta name="axiom-do11y-dataset" content="dataset-name">
  */
 
 (function() {
@@ -881,25 +881,25 @@
    */
   function init() {
     // Check for token in a meta tag (secure server-side injection)
-    var metaToken = document.querySelector('meta[name="axiom-analytics-token"]');
+    var metaToken = document.querySelector('meta[name="axiom-do11y-token"]');
     if (metaToken) {
       config['api-token'] = metaToken.getAttribute('content');
     }
 
     // Check for dataset override
-    var metaDataset = document.querySelector('meta[name="axiom-analytics-dataset"]');
+    var metaDataset = document.querySelector('meta[name="axiom-do11y-dataset"]');
     if (metaDataset) {
       config['dataset-name'] = metaDataset.getAttribute('content');
     }
 
     // Check for debug mode
-    var metaDebug = document.querySelector('meta[name="axiom-analytics-debug"]');
+    var metaDebug = document.querySelector('meta[name="axiom-do11y-debug"]');
     if (metaDebug && metaDebug.getAttribute('content') === 'true') {
       config.debug = true;
     }
 
     // Check for allowed domains override
-    var metaDomains = document.querySelector('meta[name="axiom-analytics-domains"]');
+    var metaDomains = document.querySelector('meta[name="axiom-do11y-domains"]');
     if (metaDomains) {
       var domainsStr = metaDomains.getAttribute('content');
       if (domainsStr) {
@@ -930,7 +930,7 @@
     if (!config['api-token']) {
       if (config.debug) {
         console.warn('[Axiom Analytics] No API token configured. Events will not be sent.');
-        console.warn('[Axiom Analytics] Add <meta name="axiom-analytics-token" content="your-token"> to enable.');
+        console.warn('[Axiom Analytics] Add <meta name="axiom-do11y-token" content="api-token"> to enable.');
       }
     }
 
