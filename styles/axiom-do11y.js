@@ -1,5 +1,5 @@
 /**
- * Axiom Documentation Observability (do11y)
+ * Axiom Documentation Observability (Axiom Do11y)
  * 
  * Framework-agnostic documentation observability. Works with any static-site
  * generator or docs framework including Mintlify, Docusaurus, Nextra,
