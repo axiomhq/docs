@@ -31,12 +31,13 @@
     // Use an edge deployment domain for lower latency and data residency:
     //   US East 1 (AWS):    'https://us-east-1.aws.edge.axiom.co'
     //   EU Central 1 (AWS): 'https://eu-central-1.aws.edge.axiom.co'
-    endpoint: 'https://us-east-1.aws.edge.axiom.co',
+    // For more information, see https://axiom.co/docs/reference/edge-deployments
+    'axiom-domain': 'https://us-east-1.aws.edge.axiom.co',
     // Dataset name - update this to your Axiom dataset
-    dataset: 'docs-analytics',
+    'dataset-name': 'docs-analytics',
     // API token for ingest - use a token with ONLY ingest permissions
     // IMPORTANT: Create a restricted token that can only ingest to this dataset
-    token: "xaat-31aceafd-2a71-4313-8a43-1494ea125085",
+    'api-token': "xaat-31aceafd-2a71-4313-8a43-1494ea125085",
     // Enable debug logging to console
     debug: false,
     // Batch events and send periodically (milliseconds)
@@ -408,7 +409,7 @@
    * Validate configuration before sending
    */
   function validateConfig() {
-    if (!config.token) {
+    if (!config['api-token']) {
       if (config.debug) {
         console.warn('[Axiom Analytics] No API token configured');
       }
@@ -416,7 +417,7 @@
     }
 
     // Validate token format (basic check)
-    if (typeof config.token !== 'string' || config.token.length < 10) {
+    if (typeof config['api-token'] !== 'string' || config['api-token'].length < 10) {
       if (config.debug) {
         console.warn('[Axiom Analytics] Invalid token format');
       }
@@ -425,7 +426,7 @@
 
     // Validate endpoint
     try {
-      new URL(config.endpoint);
+      new URL(config['axiom-domain']);
     } catch (e) {
       if (config.debug) {
         console.warn('[Axiom Analytics] Invalid endpoint URL');
@@ -434,7 +435,7 @@
     }
 
     // Validate dataset name (alphanumeric, hyphens, underscores)
-    if (!/^[a-zA-Z0-9_-]+$/.test(config.dataset)) {
+    if (!/^[a-zA-Z0-9_-]+$/.test(config['dataset-name'])) {
       if (config.debug) {
         console.warn('[Axiom Analytics] Invalid dataset name');
       }
@@ -465,7 +466,7 @@
     const events = eventQueue.slice();
     eventQueue = [];
 
-    const url = config.endpoint + '/v1/ingest/' + encodeURIComponent(config.dataset);
+    const url = config['axiom-domain'] + '/v1/ingest/' + encodeURIComponent(config['dataset-name']);
 
     sendEvents(url, events, retriesLeft);
   }
@@ -478,7 +479,7 @@
     fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer ' + config.token,
+        'Authorization': 'Bearer ' + config['api-token'],
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(events),
@@ -536,7 +537,7 @@
     const events = eventQueue;
     eventQueue = [];
 
-    const url = config.endpoint + '/v1/ingest/' + encodeURIComponent(config.dataset);
+    const url = config['axiom-domain'] + '/v1/ingest/' + encodeURIComponent(config['dataset-name']);
 
     // Try sendBeacon first (most reliable for page unload)
     // Note: sendBeacon can't send auth headers, so we encode token in URL if needed
@@ -545,7 +546,7 @@
       fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer ' + config.token,
+          'Authorization': 'Bearer ' + config['api-token'],
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(events),
@@ -881,13 +882,13 @@
     // Check for token in a meta tag (secure server-side injection)
     var metaToken = document.querySelector('meta[name="axiom-analytics-token"]');
     if (metaToken) {
-      config.token = metaToken.getAttribute('content');
+      config['api-token'] = metaToken.getAttribute('content');
     }
 
     // Check for dataset override
     var metaDataset = document.querySelector('meta[name="axiom-analytics-dataset"]');
     if (metaDataset) {
-      config.dataset = metaDataset.getAttribute('content');
+      config['dataset-name'] = metaDataset.getAttribute('content');
     }
 
     // Check for debug mode
@@ -907,9 +908,9 @@
 
     if (config.debug) {
       console.log('[Axiom Analytics] Initializing with config:', {
-        endpoint: config.endpoint,
-        dataset: config.dataset,
-        hasToken: !!config.token,
+        endpoint: config['axiom-domain'],
+        dataset: config['dataset-name'],
+        hasToken: !!config['api-token'],
         allowedDomains: config.allowedDomains,
         respectDNT: config.respectDNT,
       });
@@ -925,7 +926,7 @@
     }
 
     // Warn if no token (but don't fail - allows development without token)
-    if (!config.token) {
+    if (!config['api-token']) {
       if (config.debug) {
         console.warn('[Axiom Analytics] No API token configured. Events will not be sent.');
         console.warn('[Axiom Analytics] Add <meta name="axiom-analytics-token" content="your-token"> to enable.');
@@ -1006,9 +1007,9 @@
     // Read-only config access (don't expose token)
     getConfig: function() {
       return {
-        endpoint: config.endpoint,
-        dataset: config.dataset,
-        hasToken: !!config.token,
+        endpoint: config['axiom-domain'],
+        dataset: config['dataset-name'],
+        hasToken: !!config['api-token'],
         debug: config.debug,
         isDisabled: isDisabled,
         allowedDomains: config.allowedDomains,
@@ -1025,7 +1026,7 @@
     cleanup: cleanup,
     // Check if tracking is enabled
     isEnabled: function() {
-      return !isDisabled && !!config.token;
+      return !isDisabled && !!config['api-token'];
     },
     // Get queue size (for debugging)
     getQueueSize: function() {
