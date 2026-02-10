@@ -30,12 +30,12 @@
   // Configuration
   // ============================================================
   const config = {
-    // Axiom ingest API base URL
+    // Axiom ingest API domain
     // Use an edge deployment domain for lower latency and data residency:
     //   US East 1 (AWS):    'us-east-1.aws.edge.axiom.co'
     //   EU Central 1 (AWS): 'eu-central-1.aws.edge.axiom.co'
     // For more information, see https://axiom.co/docs/reference/edge-deployments
-    'axiom-domain': 'https://us-east-1.aws.edge.axiom.co',
+    'axiom-domain': 'us-east-1.aws.edge.axiom.co',
     // Dataset name - update this to your Axiom dataset
     'dataset-name': 'docs-analytics',
     // API token for ingest - use a token with ONLY ingest permissions
@@ -427,12 +427,10 @@
       return false;
     }
 
-    // Validate endpoint
-    try {
-      new URL(config['axiom-domain']);
-    } catch (e) {
+    // Validate domain (must be a valid hostname, no protocol or path)
+    if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(config['axiom-domain'])) {
       if (config.debug) {
-        console.warn('[Axiom Analytics] Invalid endpoint URL');
+        console.warn('[Axiom Analytics] Invalid edge deployment domain:', config['axiom-domain']);
       }
       return false;
     }
@@ -469,7 +467,7 @@
     const events = eventQueue.slice();
     eventQueue = [];
 
-    const url = config['axiom-domain'] + '/v1/ingest/' + encodeURIComponent(config['dataset-name']);
+    const url = 'https://' + config['axiom-domain'] + '/v1/ingest/' + encodeURIComponent(config['dataset-name']);
 
     sendEvents(url, events, retriesLeft);
   }
@@ -540,7 +538,7 @@
     const events = eventQueue;
     eventQueue = [];
 
-    const url = config['axiom-domain'] + '/v1/ingest/' + encodeURIComponent(config['dataset-name']);
+    const url = 'https://' + config['axiom-domain'] + '/v1/ingest/' + encodeURIComponent(config['dataset-name']);
 
     // Try sendBeacon first (most reliable for page unload)
     // Note: sendBeacon can't send auth headers, so we encode token in URL if needed
