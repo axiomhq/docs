@@ -1,6 +1,13 @@
 /**
  * Axiom Documentation Observability (do11y) - Privacy-First Analytics
  * 
+ * Framework-agnostic documentation observability. Works with any static-site
+ * generator or docs framework including Mintlify, Docusaurus, Nextra,
+ * GitBook, MkDocs Material, VitePress, and plain HTML.
+ * 
+ * Defaults are configured for Mintlify. To adapt to another framework,
+ * update the "Framework-specific selectors" section in the config object.
+ *
  * This script collects anonymous usage analytics without:
  * - Cookies (uses sessionStorage only - cleared when browser closes)
  * - Personal identifiable information (PII)
@@ -10,8 +17,7 @@
  * No GDPR consent banner required.
  * 
  * Configuration:
- * Set AXIOM_INGEST_TOKEN and AXIOM_DATASET in your environment,
- * or update the config object below.
+ * Set AXIOM_INGEST_TOKEN and AXIOM_DATASET in the config object below.
  */
 
 (function() {
@@ -53,13 +59,35 @@
     retryDelay: 1000,
     // Rate limiting: minimum milliseconds between events of the same type
     rateLimitMs: 100,
-    // CSS selector for search trigger elements
-    // Adapt this to your docs framework. Examples:
-    //   Mintlify:   '#search-bar-entry, #search-bar-entry-mobile, [class*="search"]'
-    //   Docusaurus: '.DocSearch, .DocSearch-Button'
-    //   Nextra:     '.nextra-search input'
-    //   GitBook:    '[data-testid="search"]'
+    // ---- Framework-specific selectors ----
+    // The selectors below default to Mintlify. Adapt them to your docs
+    // framework by uncommenting or replacing with the appropriate values.
+    //
+    // CSS selector for the search trigger element(s)
+    //   Mintlify:        '#search-bar-entry, #search-bar-entry-mobile, [class*="search"]'
+    //   Docusaurus:      '.DocSearch, .DocSearch-Button'
+    //   Nextra:          '.nextra-search input'
+    //   GitBook:         '[data-testid="search"]'
+    //   MkDocs Material: '.md-search__input'
+    //   VitePress:       '.VPNavBarSearch button, #local-search'
     searchSelector: '#search-bar-entry, #search-bar-entry-mobile, [class*="search"]',
+    // CSS selector for "copy code" buttons
+    //   Mintlify:        '[class*="copy"], button[aria-label*="copy" i]'
+    //   Docusaurus:      '.clean-btn[class*="copy"], button[class*="copyButton"]'
+    //   Nextra:          'button[class*="copy"]'
+    //   MkDocs Material: '.md-clipboard'
+    //   VitePress:       '.vp-code-copy'
+    copyButtonSelector: '[class*="copy"], button[aria-label*="copy" i]',
+    // CSS selector for code block containers (parent of copy button)
+    //   Works across most frameworks as-is. Adjust if your framework
+    //   uses a non-standard wrapper around code blocks.
+    codeBlockSelector: 'pre, [class*="code"]',
+    // CSS selectors for page regions used in link context detection.
+    // These use semantic HTML elements plus common class-name patterns
+    // and should work with most frameworks without changes.
+    navigationSelector: 'nav, [role="navigation"], #navbar, #sidebar, [class*="nav"], [class*="sidebar"]',
+    footerSelector: 'footer, [role="contentinfo"], [class*="footer"]',
+    contentSelector: 'main, article, [role="main"], [class*="content"]',
   };
 
   // ============================================================
@@ -614,16 +642,16 @@
    * Get context about where the link is on the page
    */
   function getLinkContext(link) {
-    // Check if in navigation
-    if (link.closest('nav, #navbar, #sidebar, [class*="nav"]')) {
+    // Check if in navigation (configured via config.navigationSelector)
+    if (link.closest(config.navigationSelector)) {
       return 'navigation';
     }
-    // Check if in footer
-    if (link.closest('footer, [class*="footer"]')) {
+    // Check if in footer (configured via config.footerSelector)
+    if (link.closest(config.footerSelector)) {
       return 'footer';
     }
-    // Check if in main content
-    if (link.closest('main, article, [class*="content"]')) {
+    // Check if in main content (configured via config.contentSelector)
+    if (link.closest(config.contentSelector)) {
       return 'content';
     }
     return 'other';
@@ -823,9 +851,9 @@
    */
   function setupCopyTracking() {
     document.addEventListener('click', function(e) {
-      const copyButton = e.target.closest('[class*="copy"], button[aria-label*="copy" i]');
+      const copyButton = e.target.closest(config.copyButtonSelector);
       if (copyButton) {
-        const codeBlock = copyButton.closest('pre, [class*="code"]');
+        const codeBlock = copyButton.closest(config.codeBlockSelector);
         const language = codeBlock?.getAttribute('data-language') || 
                          codeBlock?.className.match(/language-(\w+)/)?.[1] || 
                          'unknown';
@@ -909,7 +937,7 @@
     setupSearchTracking();
     setupCopyTracking();
 
-    // Handle SPA navigation
+    // Handle SPA navigation (works with any client-side router via MutationObserver)
     var lastPath = window.location.pathname;
     
     // Use MutationObserver to detect page changes
