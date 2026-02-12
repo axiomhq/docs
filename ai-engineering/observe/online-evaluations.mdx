@@ -1,0 +1,348 @@
+---
+title: "Online evaluations"
+description: "Score AI outputs on live production traffic using lightweight scorers and sampling."
+sidebarTitle: "Online evaluations"
+tag: "NEW"
+keywords: ["ai engineering", "online evaluations", "production monitoring", "scorers", "sampling", "onlineEval"]
+---
+
+import { definitions } from "/snippets/definitions.mdx"
+
+Online evaluations let you score your AI capability's outputs on live production traffic. Unlike [offline evaluations](/ai-engineering/evaluate/overview) that run against a fixed collection of test cases with expected values, online evaluations are reference-free — they only see the input and output of a real request, not ground truth.
+
+Use online evaluations to monitor quality in production: catch format regressions, run heuristic checks, or sample traffic for LLM-as-judge scoring — all without affecting your capability's response.
+
+## When to use online evaluations
+
+| | Online evaluations | Offline evaluations |
+|---|---|---|
+| **When** | Production, on live traffic | Development, before deploy |
+| **Expected values** | No ground truth needed | Requires expected output per case |
+| **Scorers** | Reference-free (output-only or input+output) | Can compare output to expected |
+| **Execution** | Fire-and-forget inside your app | CLI runner with vitest |
+| **Sampling** | Per-scorer sampling rate | Runs every case |
+| **Telemetry** | OTel spans linked to production traces | OTel spans in eval dataset |
+
+Use online evaluations when you want to continuously monitor production quality. Use offline evaluations when you need to test against known-good answers before shipping.
+
+## Getting started
+
+Import `onlineEval` and `Scorer` from the Axiom AI SDK:
+
+```ts
+import { onlineEval } from 'axiom/ai/evals/online';
+import { Scorer } from 'axiom/ai/evals/scorers';
+```
+
+Define a scorer and call `onlineEval` inside `withSpan`:
+
+```ts
+import { withSpan } from 'axiom/ai';
+import { onlineEval } from 'axiom/ai/evals/online';
+import { Scorer } from 'axiom/ai/evals/scorers';
+
+const formatScorer = Scorer('format', ({ output }: { output: string }) => {
+  const trimmed = output.trim();
+  return /[.!?]$/.test(trimmed) && !trimmed.includes('\n') && trimmed.length <= 200;
+});
+
+const result = await withSpan({ capability: 'demo', step: 'generate' }, async () => {
+  const response = await generateText({
+    model,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  // Fire-and-forget — doesn't block the response
+  void onlineEval(
+    { capability: 'demo', step: 'generate' },
+    { output: response.text, scorers: [formatScorer] },
+  );
+
+  return response.text;
+});
+```
+
+<Info>
+Online evaluations never throw errors into your application code. Scorer failures are recorded on the eval span as OTel events, so a broken scorer won't affect your capability's response.
+</Info>
+
+## Writing scorers
+
+Create scorers with the `Scorer` factory from `axiom/ai/evals/scorers`. Scorers used in online evaluations are **reference-free** — they receive `input` and `output` but no `expected` value.
+
+<Tip>
+Scorers work the same way as in offline evaluations. See [Write evaluations](/ai-engineering/evaluate/write-evaluations#creating-scorers) for more on the `Scorer` API.
+</Tip>
+
+### Boolean scorers
+
+Return `true` or `false` for simple pass/fail checks. The SDK automatically converts booleans to `1` (pass) or `0` (fail) and marks the score as boolean in telemetry.
+
+```ts
+const isKnownCategory = Scorer(
+  'is-known-category',
+  ({ output }: { output: string }) => {
+    return ['support', 'complaint', 'spam', 'unknown'].includes(output);
+  },
+);
+```
+
+### Numeric scorers
+
+Return a number between `0` and `1` for graded scoring:
+
+```ts
+const formatConfidence = Scorer(
+  'format-confidence',
+  ({ output }: { output: string }) => {
+    const trimmed = output.trim().toLowerCase();
+    const isSingleWord = !trimmed.includes(' ');
+    const isClean = /^[a-z_]+$/.test(trimmed);
+
+    return (isSingleWord ? 0.5 : 0) + (isClean ? 0.5 : 0);
+  },
+);
+```
+
+### Scorers with metadata
+
+Return an object with `score` and `metadata` to attach additional context to the eval span:
+
+```ts
+const validCategory = Scorer(
+  'valid-category',
+  ({ output }: { output: string }) => {
+    const validCategories = ['support', 'complaint', 'spam', 'unknown'];
+    return {
+      score: validCategories.includes(output),
+      metadata: {
+        category: output,
+        validCategories,
+      },
+    };
+  },
+);
+```
+
+### Async scorers (LLM judges)
+
+Scorers can be async. Use this for LLM-as-judge patterns where a second model evaluates the output:
+
+```ts
+import { generateObject } from 'ai';
+import { z } from 'zod';
+
+const relevanceScorer = Scorer(
+  'relevance',
+  async ({ input, output }: { input: string; output: string }) => {
+    const result = await generateObject({
+      model: judgeModel,
+      schema: z.object({
+        relevant: z.boolean().describe('Whether the response answers the question'),
+      }),
+      system: 'You evaluate if an AI response answers the user question.',
+      prompt: `Question: ${input}\n\nResponse: ${output}`,
+    });
+    return result.object.relevant;
+  },
+);
+```
+
+<Note>
+LLM judge scorers add latency and cost per evaluation. Use [sampling](#sampling) to control how often they run.
+</Note>
+
+## Sampling
+
+Use sampling to control the percentage of production traffic that gets evaluated. This is useful for expensive scorers like LLM judges.
+
+```ts
+void onlineEval(
+  { capability: 'support-agent', step: 'categorize-message' },
+  {
+    input: userMessage,
+    output: result,
+    scorers: [validCategoryScorer, formatConfidenceScorer],
+    sampling: { rate: 0.1 }, // Evaluate 10% of traffic
+  },
+);
+```
+
+| Rate | Behavior |
+|------|----------|
+| `1.0` (default) | Evaluate every request |
+| `0.5` | Evaluate ~50% of requests |
+| `0.1` | Evaluate ~10% of requests |
+| `0.0` | Never evaluate |
+
+When a request is not sampled, `onlineEval` returns immediately with an empty result array.
+
+## Connecting to traces
+
+Online evaluations create OTel spans that link back to the originating generation span. The linking mechanism depends on where you call `onlineEval`.
+
+### Inside withSpan (recommended)
+
+When called inside `withSpan`, the active span is automatically detected and linked. The eval span becomes a child of the `withSpan` span.
+
+```ts
+await withSpan({ capability: 'qa', step: 'answer' }, async () => {
+  const response = await generateText({ model, messages });
+
+  void onlineEval(
+    { capability: 'qa', step: 'answer' },
+    { output: response.text, scorers: [formatScorer] },
+  );
+
+  return response.text;
+});
+```
+
+### Deferred evaluation
+
+For cases where you want to evaluate after `withSpan` returns, capture `span.spanContext()` and pass it as `link`:
+
+```ts
+import type { SpanContext } from '@opentelemetry/api';
+
+let originCtx: SpanContext;
+const result = await withSpan(
+  { capability: 'demo', step: 'answer' },
+  async (span) => {
+    originCtx = span.spanContext();
+    return await generateText({ model, messages });
+  },
+);
+
+// Called outside withSpan — explicit link connects eval to originating span
+void onlineEval(
+  { capability: 'demo', step: 'answer', link: originCtx },
+  {
+    input: question,
+    output: result,
+    scorers: [relevanceScorer],
+    sampling: { rate: 0.5 },
+  },
+);
+```
+
+### Awaitable (short-lived processes)
+
+In CLI tools or serverless functions, `await` the eval to ensure spans are created before flushing telemetry:
+
+```ts
+await onlineEval(
+  { capability: 'demo', step: 'generate' },
+  { output: result, scorers: [formatScorer] },
+);
+await flushTelemetry();
+```
+
+In long-running servers, use `void onlineEval(...)` (fire-and-forget) instead — the telemetry pipeline flushes spans in the background.
+
+## Telemetry reference
+
+Each call to `onlineEval` creates a parent eval span with one child span per scorer.
+
+### Span naming
+
+| Span | Name pattern |
+|------|-------------|
+| Parent eval span | `eval {capability}` or `eval {capability}/{step}` |
+| Scorer child span | `eval {scorerName}` |
+
+### Scorer span attributes
+
+| Attribute | Description |
+|-----------|-------------|
+| `gen_ai.operation.name` | Always `eval.score` |
+| `eval.score.name` | The scorer name |
+| `eval.score.value` | The numeric score (`0`-`1`) |
+| `eval.score.metadata` | JSON string of scorer metadata |
+| `eval.score.is_boolean` | `true` when the scorer returned a boolean |
+| `eval.tags` | `["online"]` for online evaluations |
+
+## Complete example
+
+This example shows a production support agent that uses online evaluations to monitor message categorization quality:
+
+```ts expandable
+import { generateText } from 'ai';
+import { withSpan, wrapAISDKModel } from 'axiom/ai';
+import { Scorer } from 'axiom/ai/evals/scorers';
+import { onlineEval } from 'axiom/ai/evals/online';
+
+// Define valid categories
+const categories = ['support', 'complaint', 'wrong_company', 'spam', 'unknown'] as const;
+type Category = (typeof categories)[number];
+
+// Scorer: checks if the output is a known category
+const validCategoryScorer = Scorer(
+  'valid-category',
+  ({ output }: { output: Category }) => {
+    const isValid = categories.includes(output);
+    return {
+      score: isValid,
+      metadata: { category: output, validCategories: categories },
+    };
+  },
+);
+
+// Scorer: checks if output looks like a clean classification
+const formatConfidenceScorer = Scorer(
+  'format-confidence',
+  ({ output }: { output: Category }) => {
+    if (typeof output !== 'string') {
+      return { score: 0, metadata: { reason: 'not a string' } };
+    }
+    const trimmed = output.trim().toLowerCase();
+    const isSingleWord = !trimmed.includes(' ');
+    const isClean = /^[a-z_]+$/.test(trimmed);
+    return {
+      score: (isSingleWord ? 0.5 : 0) + (isClean ? 0.5 : 0),
+      metadata: { isSingleWord, isClean },
+    };
+  },
+);
+
+// Categorize a user message with online evaluation
+async function categorizeMessage(userMessage: string): Promise<Category> {
+  return await withSpan(
+    { capability: 'support-agent', step: 'categorize-message' },
+    async () => {
+      const response = await generateText({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: `Classify the message as: ${categories.join(', ')}. Reply with the category name only.`,
+          },
+          { role: 'user', content: userMessage },
+        ],
+      });
+
+      const result = (response.text.trim().toLowerCase() as Category) || 'unknown';
+
+      // Monitor classification quality on 10% of production traffic
+      void onlineEval(
+        { capability: 'support-agent', step: 'categorize-message' },
+        {
+          input: userMessage,
+          output: result,
+          scorers: [validCategoryScorer, formatConfidenceScorer],
+          sampling: { rate: 0.1 },
+        },
+      );
+
+      return result;
+    },
+  );
+}
+```
+
+## What's next?
+
+- Learn about the [GenAI attributes](/ai-engineering/observe/gen-ai-attributes) that your AI spans emit.
+- Set up [user feedback](/ai-engineering/observe/user-feedback) for human-in-the-loop signals.
+- Write [offline evaluations](/ai-engineering/evaluate/write-evaluations) to test against known-good answers before shipping.
+- Use production insights to [iterate](/ai-engineering/iterate) on your capabilities.
