@@ -1,0 +1,130 @@
+---
+title: "A/B test prompts with flags"
+description: "Define flag variants for prompts, models, and parameters, run experiments with the Axiom CLI, and compare results in the Console."
+sidebarTitle: A/B test prompts
+keywords: ["cookbook", "improve", "flags", "experiments", "a/b testing", "prompts"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+Flags let you test different prompts, models, and parameters without changing code. This recipe shows how to parameterize your capability, run multiple configurations, and compare results side-by-side.
+
+## Prerequisites
+
+<Prerequisites />
+
+- Axiom AI SDK [installed and configured](/ai-engineering/quickstart) with `axiom.config.ts`
+- Axiom CLI authenticated (`axiom auth login`)
+- An existing capability and evaluation
+
+## Step 1: Add flags to your capability
+
+Use the `flag` function to make parts of your capability configurable:
+
+```ts src/lib/capabilities/support-agent.ts
+import { generateText } from 'ai';
+import { withSpan, wrapAISDKModel } from 'axiom/ai';
+import { flag } from 'axiom/ai/config';
+import { createOpenAI } from '@ai-sdk/openai';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const systemPrompts = {
+  concise: 'You are a helpful customer support agent. Be concise and direct.',
+  detailed: 'You are a helpful customer support agent. Provide detailed, thorough answers with step-by-step instructions when applicable.',
+  friendly: 'You are a warm, friendly customer support agent. Use a conversational tone and empathize with the customer before providing solutions.',
+};
+
+export async function supportAgent(userMessage: string) {
+  const modelName = flag('model', 'gpt-4o-mini');
+  const promptStyle = flag('promptStyle', 'concise') as keyof typeof systemPrompts;
+  const temperature = parseFloat(flag('temperature', '0.7'));
+
+  return withSpan(
+    { capability: 'support-agent', step: 'respond' },
+    async () => {
+      const result = await generateText({
+        model: wrapAISDKModel(openai(modelName)),
+        messages: [
+          { role: 'system', content: systemPrompts[promptStyle] },
+          { role: 'user', content: userMessage },
+        ],
+        temperature,
+      });
+
+      return { answer: result.text };
+    }
+  );
+}
+```
+
+## Step 2: Run experiments
+
+Run the evaluation with different flag combinations:
+
+```bash
+# Baseline: default configuration
+npx axiom eval support-agent
+
+# Experiment 1: More capable model
+npx axiom eval support-agent --flag.model=gpt-4o
+
+# Experiment 2: Detailed prompt style
+npx axiom eval support-agent --flag.promptStyle=detailed
+
+# Experiment 3: Friendly style with lower temperature
+npx axiom eval support-agent --flag.promptStyle=friendly --flag.temperature=0.3
+
+# Experiment 4: Best model + detailed prompt
+npx axiom eval support-agent --flag.model=gpt-4o --flag.promptStyle=detailed
+```
+
+Each run is tagged with its flag configuration, making comparison straightforward.
+
+## Step 3: Compare results
+
+1. Click the **AI engineering** tab in the Axiom Console.
+2. Select the `support-agent` evaluation.
+3. Compare runs by their flag values. The Console shows score distributions, per-case results, and aggregate metrics for each configuration.
+
+Use baseline comparison to highlight differences:
+
+```bash
+# Run baseline first
+npx axiom eval support-agent
+# Note the run ID: run_baseline123
+
+# Run experiment with comparison
+npx axiom eval support-agent --flag.model=gpt-4o --baseline run_baseline123
+```
+
+## Step 4: Query experiment traces
+
+Build a comparison view across all experiments:
+
+```kusto
+['your-dataset']
+| where ['attributes.gen_ai.capability.name'] == 'support-agent'
+| extend cost = genai_cost(
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens'])
+  )
+| summarize
+    avg_latency = avg(duration),
+    avg_cost = avg(cost),
+    requests = count()
+  by ['attributes.gen_ai.response.model']
+```
+
+## Verify
+
+1. Confirm that each experiment run shows distinct flag values in the AI engineering tab.
+2. Verify that the winning configuration performs better on your scorers without unacceptable cost or latency tradeoffs.
+3. Deploy the winning configuration by updating default flag values in your capability.
+
+## What's next?
+
+- Evaluate across multiple models with [Compare models side-by-side](/cookbook/evaluate-model-comparison)
+- Monitor the deployed configuration with [Add online evaluations to production](/cookbook/monitor-online-evals)
+- Learn more about flags in [Flags and experiments](/ai-engineering/evaluate/flags-experiments)

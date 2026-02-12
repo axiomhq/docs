@@ -1,0 +1,208 @@
+---
+title: "Add online evaluations to production"
+description: "Score live AI traffic in production using online evaluations with sampling, heuristic checks, and LLM-based scorers."
+sidebarTitle: Online evaluations
+keywords: ["cookbook", "monitor", "online evals", "production", "scoring", "sampling"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+Online evaluations let you continuously score your AI capability's output in production without affecting response latency. This recipe shows how to attach heuristic and LLM-based scorers to live traffic using sampling.
+
+## Prerequisites
+
+<Prerequisites />
+
+- Axiom AI SDK [installed and configured](/ai-engineering/quickstart) with an instrumented capability
+- An OpenAI API key for LLM-based scoring
+
+## How online evaluations work
+
+Unlike offline evaluations that run against a fixed set of test cases, online evaluations score real production traffic:
+
+1. Your capability runs as normal inside `withSpan`.
+2. After the response is sent, `onlineEval` runs scorers asynchronously on a configurable sample of requests.
+3. Scorer results are attached to the trace as span attributes, visible in the Axiom Console alongside the original request data.
+
+Because scorers run after the response, they add zero latency to the user experience.
+
+## Step 1: Define heuristic scorers
+
+Heuristic scorers are fast, deterministic checks that run on every sampled request. They catch structural issues without calling an LLM:
+
+```ts src/lib/scorers/heuristic.ts
+import { Scorer } from 'axiom/ai/evals';
+
+export const NotEmpty = Scorer(
+  'not-empty',
+  ({ output }) => {
+    return output.text.trim().length > 0;
+  }
+);
+
+export const NoApology = Scorer(
+  'no-apology',
+  ({ output }) => {
+    const apologyPatterns = [
+      'i apologize',
+      "i'm sorry, but i",
+      'as an ai',
+      'i cannot help',
+    ];
+    const lower = output.text.toLowerCase();
+    return !apologyPatterns.some((p) => lower.includes(p));
+  }
+);
+
+export const ReasonableLength = Scorer(
+  'reasonable-length',
+  ({ output }) => {
+    const len = output.text.length;
+    return len >= 10 && len <= 10000;
+  }
+);
+```
+
+## Step 2: Define an LLM-based scorer
+
+LLM-based scorers use a model to judge response quality. They are more expensive but catch semantic issues that heuristics miss:
+
+```ts src/lib/scorers/llm-judge.ts
+import { Scorer } from 'axiom/ai/evals';
+import { generateObject } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const judge = openai('gpt-4o-mini');
+
+export const Relevance = Scorer(
+  'relevance',
+  async ({ input, output }) => {
+    const result = await generateObject({
+      model: judge,
+      messages: [
+        {
+          role: 'system',
+          content: `You are an evaluation judge. Given a user question and an AI response, score how relevant the response is to the question. Return a score between 0 and 1, where 1 means perfectly relevant and 0 means completely irrelevant.`,
+        },
+        {
+          role: 'user',
+          content: `Question: ${input.text}\n\nResponse: ${output.text}`,
+        },
+      ],
+      schema: z.object({
+        score: z.number().min(0).max(1),
+        reason: z.string(),
+      }),
+    });
+
+    return {
+      score: result.object.score,
+      metadata: { reason: result.object.reason },
+    };
+  }
+);
+```
+
+## Step 3: Attach online evaluations to your capability
+
+Use `onlineEval` inside your `withSpan` block to run scorers on production traffic:
+
+```ts src/lib/capabilities/support-agent.ts
+import { withSpan, onlineEval, wrapAISDKModel } from 'axiom/ai';
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { NotEmpty, NoApology, ReasonableLength } from '../scorers/heuristic';
+import { Relevance } from '../scorers/llm-judge';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = wrapAISDKModel(openai('gpt-4o'));
+
+export async function supportAgent(userMessage: string) {
+  return withSpan(
+    { capability: 'support-agent', step: 'respond' },
+    async () => {
+      const result = await generateText({
+        model,
+        system: 'You are a helpful customer support agent.',
+        messages: [{ role: 'user', content: userMessage }],
+      });
+
+      onlineEval({
+        input: { text: userMessage },
+        output: { text: result.text },
+        scorers: [NotEmpty, NoApology, ReasonableLength, Relevance],
+        sampleRate: 0.2,
+      });
+
+      return result.text;
+    }
+  );
+}
+```
+
+The `sampleRate` controls what fraction of requests are scored. A value of `0.2` scores 20% of traffic. Set it to `1` to score every request, or lower it to manage LLM judge costs.
+
+<Tip>
+Separate heuristic scorers (which are cheap) from LLM-based scorers (which cost money). You can use a higher sample rate for heuristics and a lower one for LLM judges by calling `onlineEval` twice with different configurations.
+</Tip>
+
+## Step 4: Split sample rates by scorer cost
+
+For fine-grained cost control, call `onlineEval` separately for cheap and expensive scorers:
+
+```ts
+onlineEval({
+  input: { text: userMessage },
+  output: { text: result.text },
+  scorers: [NotEmpty, NoApology, ReasonableLength],
+  sampleRate: 1.0,
+});
+
+onlineEval({
+  input: { text: userMessage },
+  output: { text: result.text },
+  scorers: [Relevance],
+  sampleRate: 0.1,
+});
+```
+
+This scores 100% of requests with heuristics but only 10% with the LLM judge.
+
+## Verify
+
+1. Deploy your app and send several requests to the capability.
+2. In the Axiom Console, click the **Query** tab and run:
+
+    ```kusto
+    ['your-dataset']
+    | where ['attributes.gen_ai.capability.name'] == 'support-agent'
+    | where isnotnull(['attributes.eval.not-empty.score'])
+    | project
+        _time,
+        ['attributes.eval.not-empty.score'],
+        ['attributes.eval.no-apology.score'],
+        ['attributes.eval.reasonable-length.score'],
+        ['attributes.eval.relevance.score'],
+        ['attributes.eval.relevance.metadata.reason']
+    | order by _time desc
+    ```
+
+3. Click the **AI engineering** tab to see online eval scores aggregated per capability over time.
+
+4. Set up a [threshold monitor](/monitor-data/threshold-monitors) on the average relevance score to alert when quality drops:
+
+    ```kusto
+    ['your-dataset']
+    | where ['attributes.gen_ai.capability.name'] == 'support-agent'
+    | where isnotnull(['attributes.eval.relevance.score'])
+    | summarize avg(todouble(['attributes.eval.relevance.score'])) by bin(_time, 5m)
+    ```
+
+## What's next?
+
+- Build a dashboard to visualize these scores over time with [Build an AI performance dashboard](/cookbook/monitor-ai-dashboard)
+- Set up alerts when scores drop with [Set up quality regression alerts](/cookbook/monitor-quality-alerts)
+- Feed low-scoring requests back into your eval suite with [Turn failures into test cases](/cookbook/improve-failures-to-tests)
+- Learn more about online evaluation concepts in [Observe](/ai-engineering/observe)

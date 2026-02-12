@@ -1,0 +1,207 @@
+---
+title: "Write your first offline evaluation"
+description: "Create a complete evaluation with test cases, custom scorers, and the Axiom CLI to systematically test your AI capability."
+sidebarTitle: First evaluation
+keywords: ["cookbook", "evaluate", "evals", "scorers", "testing", "axiom cli"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+This recipe walks through creating a complete offline evaluation for a sentiment classification capability. You define test cases, write custom scorers, run the eval with the Axiom CLI, and view results in the Console.
+
+## Prerequisites
+
+<Prerequisites />
+
+- Axiom AI SDK [installed and configured](/ai-engineering/quickstart) with `axiom.config.ts`
+- Axiom CLI authenticated (`axiom auth login`)
+- An OpenAI API key
+
+## Step 1: Create the capability
+
+Build a simple sentiment classifier using Vercel AI SDK:
+
+```ts src/lib/capabilities/classify-sentiment.ts
+import { generateObject } from 'ai';
+import { wrapAISDKModel } from 'axiom/ai';
+import { withSpan } from 'axiom/ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = wrapAISDKModel(openai('gpt-4o-mini'));
+
+const sentimentSchema = z.object({
+  sentiment: z.enum(['positive', 'negative', 'neutral']),
+  confidence: z.number().min(0).max(1),
+});
+
+export async function classifySentiment(text: string) {
+  return withSpan(
+    { capability: 'classify-sentiment', step: 'classify' },
+    async () => {
+      const result = await generateObject({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Classify the sentiment of the given text as positive, negative, or neutral. Return a confidence score between 0 and 1.',
+          },
+          { role: 'user', content: text },
+        ],
+        schema: sentimentSchema,
+      });
+
+      return result.object;
+    }
+  );
+}
+```
+
+## Step 2: Define test cases
+
+Create an evaluation file with inline test cases. Each test case has an `input` and an `expected` output:
+
+```ts src/lib/capabilities/classify-sentiment/sentiment.eval.ts
+import { Eval, Scorer } from 'axiom/ai/evals';
+import { classifySentiment } from '../classify-sentiment';
+
+// Scorer: does the predicted sentiment match the expected sentiment?
+const SentimentMatch = Scorer(
+  'sentiment-match',
+  ({ output, expected }) => {
+    return output.sentiment === expected.sentiment;
+  }
+);
+
+// Scorer: is the model confident in its prediction?
+const HighConfidence = Scorer(
+  'high-confidence',
+  ({ output }) => {
+    return output.confidence >= 0.8;
+  }
+);
+
+Eval('classify-sentiment', {
+  data: [
+    {
+      input: { text: 'This product is amazing, I love it!' },
+      expected: { sentiment: 'positive' },
+    },
+    {
+      input: { text: 'Terrible experience, waste of money.' },
+      expected: { sentiment: 'negative' },
+    },
+    {
+      input: { text: 'The package arrived on Tuesday.' },
+      expected: { sentiment: 'neutral' },
+    },
+    {
+      input: { text: 'I guess it works fine, nothing special.' },
+      expected: { sentiment: 'neutral' },
+    },
+    {
+      input: { text: 'Best purchase I have made this year!' },
+      expected: { sentiment: 'positive' },
+    },
+    {
+      input: { text: 'Completely broken on arrival. Very disappointed.' },
+      expected: { sentiment: 'negative' },
+    },
+  ],
+
+  task: async ({ input }) => {
+    return await classifySentiment(input.text);
+  },
+
+  scorers: [SentimentMatch, HighConfidence],
+
+  metadata: {
+    description: 'Evaluate sentiment classification accuracy and confidence',
+  },
+});
+```
+
+<Tip>
+Name evaluation files with the `.eval.ts` extension so the Axiom CLI automatically discovers them. The CLI finds all files matching `**/*.eval.{ts,js}` based on your `axiom.config.ts` configuration.
+</Tip>
+
+## Step 3: Run the evaluation
+
+Run the eval using the Axiom CLI:
+
+```bash
+npx axiom eval classify-sentiment
+```
+
+The CLI outputs a summary table showing each test case with its scores:
+
+```
+classify-sentiment
+┌─────────┬─────────────────┬─────────────────┐
+│ Case    │ sentiment-match │ high-confidence │
+├─────────┼─────────────────┼─────────────────┤
+│ 1       │ ✓               │ ✓               │
+│ 2       │ ✓               │ ✓               │
+│ 3       │ ✓               │ ✓               │
+│ 4       │ ✓               │ ✗               │
+│ 5       │ ✓               │ ✓               │
+│ 6       │ ✓               │ ✓               │
+├─────────┼─────────────────┼─────────────────┤
+│ Overall │ 100%            │ 83%             │
+└─────────┴─────────────────┴─────────────────┘
+```
+
+## Step 4: Experiment with flags
+
+Test a different model without changing code:
+
+```bash
+npx axiom eval classify-sentiment --flag.model=gpt-4o
+```
+
+Then update your capability to read the flag:
+
+```ts
+import { flag } from 'axiom/ai/config';
+
+const modelName = flag('model', 'gpt-4o-mini');
+const model = wrapAISDKModel(openai(modelName));
+```
+
+Compare results across models in the Axiom Console under the AI engineering tab.
+
+## Step 5: Use baseline comparison
+
+After establishing a baseline, compare future runs against it:
+
+```bash
+# Run baseline
+npx axiom eval classify-sentiment
+# Note the run ID from the output, e.g., run_abc123
+
+# After making changes, compare against baseline
+npx axiom eval classify-sentiment --baseline run_abc123
+```
+
+The Console highlights regressions and improvements per scorer.
+
+## Verify
+
+1. In the Axiom Console, click the **AI engineering** tab.
+2. Select your eval collection to see run history, score distributions, and per-case results.
+3. Confirm that traces for each eval run appear in the Query tab:
+
+    ```kusto
+    ['your-dataset']
+    | where ['attributes.gen_ai.capability.name'] == 'classify-sentiment'
+    | summarize count() by ['attributes.gen_ai.request.model']
+    ```
+
+## What's next?
+
+- Build more sophisticated scoring with [Build an LLM-as-judge scorer](/cookbook/evaluate-llm-judge)
+- Test different configurations with [A/B test prompts with flags](/cookbook/improve-ab-test-prompts)
+- Monitor your capability in production with [Add online evaluations to production](/cookbook/monitor-online-evals)
+- Learn more about the evaluation API in [Write evaluations](/ai-engineering/evaluate/write-evaluations)

@@ -1,0 +1,183 @@
+---
+title: "Instrument with OpenTelemetry (no Axiom SDK)"
+description: "Manually instrument AI calls with raw OpenTelemetry using gen_ai semantic conventions for non-TypeScript or custom setups."
+sidebarTitle: Manual OpenTelemetry
+keywords: ["cookbook", "observe", "opentelemetry", "manual", "python", "go", "gen_ai"]
+---
+
+This recipe shows how to instrument AI calls using raw OpenTelemetry without the Axiom AI SDK. This approach works for any language with an OpenTelemetry SDK and is the right choice when you aren't using Vercel AI SDK or TypeScript.
+
+## Prerequisites
+
+- An [Axiom account](https://app.axiom.co/register) with a dataset for AI telemetry
+- An OpenTelemetry SDK configured to export to Axiom (see your language's [OpenTelemetry guide](/guides/opentelemetry-nodejs))
+
+## Key attributes
+
+To get full AI observability in Axiom, set these attributes on your spans:
+
+| Attribute | Description | Required |
+|-----------|-------------|----------|
+| `gen_ai.operation.name` | Operation type: `chat`, `text_completion`, `embeddings` | Yes |
+| `gen_ai.capability.name` | Your capability name (for example, `support-agent`) | Yes |
+| `gen_ai.step.name` | Step within the capability (for example, `classify`) | Yes |
+| `gen_ai.request.model` | Model requested (for example, `gpt-4o`) | Yes |
+| `gen_ai.response.model` | Model that responded | Recommended |
+| `gen_ai.usage.input_tokens` | Tokens in the prompt | Recommended |
+| `gen_ai.usage.output_tokens` | Tokens in the response | Recommended |
+| `gen_ai.prompt` | Full prompt or message history (JSON) | Optional |
+| `gen_ai.completion` | Full model response (JSON) | Optional |
+
+For a complete reference, see [GenAI attributes](/ai-engineering/observe/gen-ai-attributes).
+
+## TypeScript (without Axiom AI SDK)
+
+```ts
+import { trace } from '@opentelemetry/api';
+import OpenAI from 'openai';
+
+const tracer = trace.getTracer('my-app');
+const openai = new OpenAI();
+
+async function classifySentiment(text: string) {
+  return tracer.startActiveSpan('classify-sentiment', async (span) => {
+    span.setAttribute('gen_ai.operation.name', 'chat');
+    span.setAttribute('gen_ai.capability.name', 'classify-sentiment');
+    span.setAttribute('gen_ai.step.name', 'classify');
+    span.setAttribute('gen_ai.request.model', 'gpt-4o-mini');
+
+    const messages = [
+      { role: 'system' as const, content: 'Classify sentiment as positive, negative, or neutral.' },
+      { role: 'user' as const, content: text },
+    ];
+
+    span.setAttribute('gen_ai.prompt', JSON.stringify(messages));
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages,
+    });
+
+    const choice = response.choices[0];
+    span.setAttribute('gen_ai.response.model', response.model);
+    span.setAttribute('gen_ai.usage.input_tokens', response.usage?.prompt_tokens ?? 0);
+    span.setAttribute('gen_ai.usage.output_tokens', response.usage?.completion_tokens ?? 0);
+    span.setAttribute('gen_ai.completion', JSON.stringify(choice.message));
+    span.setAttribute('gen_ai.response.finish_reasons', [choice.finish_reason]);
+
+    span.end();
+    return choice.message.content;
+  });
+}
+```
+
+## Python
+
+```python
+from opentelemetry import trace
+from openai import OpenAI
+import json
+
+tracer = trace.get_tracer("my-app")
+client = OpenAI()
+
+def classify_sentiment(text: str) -> str:
+    with tracer.start_as_current_span("classify-sentiment") as span:
+        span.set_attribute("gen_ai.operation.name", "chat")
+        span.set_attribute("gen_ai.capability.name", "classify-sentiment")
+        span.set_attribute("gen_ai.step.name", "classify")
+        span.set_attribute("gen_ai.request.model", "gpt-4o-mini")
+
+        messages = [
+            {"role": "system", "content": "Classify sentiment as positive, negative, or neutral."},
+            {"role": "user", "content": text},
+        ]
+        span.set_attribute("gen_ai.prompt", json.dumps(messages))
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+        )
+
+        choice = response.choices[0]
+        span.set_attribute("gen_ai.response.model", response.model)
+        span.set_attribute("gen_ai.usage.input_tokens", response.usage.prompt_tokens)
+        span.set_attribute("gen_ai.usage.output_tokens", response.usage.completion_tokens)
+        span.set_attribute("gen_ai.completion", json.dumps(choice.message.model_dump()))
+        span.set_attribute("gen_ai.response.finish_reasons", [choice.finish_reason])
+
+        return choice.message.content
+```
+
+## Go
+
+```go
+package main
+
+import (
+	"context"
+	"encoding/json"
+
+	"github.com/openai/openai-go"
+	"go.opentelemetry.io/otel"
+)
+
+var tracer = otel.Tracer("my-app")
+
+func classifySentiment(ctx context.Context, text string) (string, error) {
+	ctx, span := tracer.Start(ctx, "classify-sentiment")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("gen_ai.operation.name", "chat"),
+		attribute.String("gen_ai.capability.name", "classify-sentiment"),
+		attribute.String("gen_ai.step.name", "classify"),
+		attribute.String("gen_ai.request.model", "gpt-4o-mini"),
+	)
+
+	resp, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
+		Model: openai.ChatModelGPT4oMini,
+		Messages: openai.F([]openai.ChatCompletionMessageParamUnion{
+			openai.SystemMessage("Classify sentiment as positive, negative, or neutral."),
+			openai.UserMessage(text),
+		}),
+	})
+	if err != nil {
+		span.RecordError(err)
+		return "", err
+	}
+
+	span.SetAttributes(
+		attribute.String("gen_ai.response.model", resp.Model),
+		attribute.Int64("gen_ai.usage.input_tokens", resp.Usage.PromptTokens),
+		attribute.Int64("gen_ai.usage.output_tokens", resp.Usage.CompletionTokens),
+	)
+
+	return resp.Choices[0].Message.Content, nil
+}
+```
+
+## Verify
+
+Query your traces in the Axiom Console:
+
+```kusto
+['your-dataset']
+| where ['attributes.gen_ai.capability.name'] == 'classify-sentiment'
+| project
+    _time,
+    ['attributes.gen_ai.request.model'],
+    ['attributes.gen_ai.usage.input_tokens'],
+    ['attributes.gen_ai.usage.output_tokens'],
+    duration
+| order by _time desc
+```
+
+The traces appear in the AI traces waterfall view and the GenAI Overview dashboard, the same as traces produced by Axiom AI SDK.
+
+## What's next?
+
+- For TypeScript projects using Vercel AI SDK, see [Instrument a Vercel AI SDK chatbot](/cookbook/observe-vercel-ai-sdk) for a simpler approach
+- Track multi-turn conversations with [Conversation tracking](/cookbook/observe-conversation-tracking)
+- Learn about all available attributes in the [GenAI attributes reference](/ai-engineering/observe/gen-ai-attributes)
+- See language-specific OpenTelemetry setup guides in [Send data](/send-data/methods)
