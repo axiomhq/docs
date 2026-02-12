@@ -10,7 +10,7 @@ logoId: 'openTelemetry'
 import ReplaceToken from "/snippets/replace-token.mdx"
 import ReplaceDomain from "/snippets/replace-domain.mdx"
 
-Claude Code has [built-in OpenTelemetry support](https://docs.anthropic.com/en/docs/claude-code/monitoring) that exports metrics and logs. Axiom natively ingests OTLP data, making the two a natural fit. This guide covers the Axiom-specific configuration to connect Claude Code telemetry to Axiom.
+Claude Code has built-in [OpenTelemetry support](https://code.claude.com/docs/en/monitoring-usage) that exports metrics and logs. Axiom natively ingests OTLP data, making the two a natural fit. This guide covers the Axiom-specific configuration to connect Claude Code telemetry to Axiom.
 
 ## Prerequisites
 
@@ -27,13 +27,17 @@ Axiom routes data to datasets via headers, and the header differs by signal type
 
 This means signal-specific header configuration is required rather than a single shared `OTEL_EXPORTER_OTLP_HEADERS` value.
 
-<Note>
-The `/v1/metrics` endpoint only supports the `application/x-protobuf` content type. JSON format isn't supported for metrics ingestion.
-</Note>
+The `/v1/metrics` endpoint only supports the `application/x-protobuf` content type.
 
 ## Configure environment variables
 
-```bash
+Create a file named `setup-otel.sh` with the following content:
+
+<Warning>
+Don't execute the script directly. Source the script instead. The exported variables must exist in the current shell where Claude inherits them.
+</Warning>
+
+```bash setup-otel.sh
 #!/bin/bash
 
 # Claude Code OpenTelemetry configuration for Axiom
@@ -77,12 +81,9 @@ echo "Axiom OTel configured: metrics -> ${AXIOM_METRICS_DATASET}, logs -> ${AXIO
 <ReplaceToken />
 <ReplaceDomain />
 Replace `METRICS_DATASET_NAME` with the name of the Axiom dataset for metrics.
+
 Replace `LOGS_DATASET_NAME` with the name of the Axiom dataset for logs.
 </Info>
-
-<Warning>
-Don't execute the script directly. Source the script instead. The exported variables must exist in the current shell where Claude inherits them.
-</Warning>
 
 ## Verify the integration
 
@@ -115,32 +116,20 @@ If one signal arrives but the other doesn't, double-check the headers. The most 
 
 When moving from testing to production, consider these adjustments:
 
-<AccordionGroup>
-<Accordion title="Disable prompt logging">
-Remove `OTEL_LOG_USER_PROMPTS=1` unless prompt content is needed in your observability backend. This reduces the volume of sensitive data stored.
-</Accordion>
+- **Disable prompt logging**: Remove `OTEL_LOG_USER_PROMPTS=1` unless prompt content is needed in your observability backend. This reduces the volume of sensitive data stored.
+- **Use managed settings for teams**: For team deployments, administrators can set these variables in Claude Code's [managed settings file](https://code.claude.com/docs/en/monitoring-usage#administrator-configuration) instead of relying on each developer to source a script.
+- **Add resource attributes**: Use `OTEL_RESOURCE_ATTRIBUTES` to tag all telemetry with department, team, or cost center identifiers for filtering and alerting in Axiom.
 
-<Accordion title="Use managed settings for teams">
-For team deployments, administrators can set these variables in Claude Code's [managed settings file](https://docs.anthropic.com/en/docs/claude-code/monitoring#administrator-configuration) instead of relying on each developer to source a script.
-</Accordion>
+    ```bash
+    export OTEL_RESOURCE_ATTRIBUTES="team=platform,cost_center=engineering,environment=production"
+    ```
 
-<Accordion title="Add resource attributes">
-Use `OTEL_RESOURCE_ATTRIBUTES` to tag all telemetry with department, team, or cost center identifiers for filtering and alerting in Axiom.
+- **Adjust export intervals**: For production, consider using longer intervals to reduce overhead:
 
-```bash
-export OTEL_RESOURCE_ATTRIBUTES="team=platform,cost_center=engineering,environment=production"
-```
-</Accordion>
-
-<Accordion title="Adjust export intervals">
-For production, consider using longer intervals to reduce overhead:
-
-```bash
-export OTEL_METRIC_EXPORT_INTERVAL=60000  # 60 seconds
-export OTEL_LOGS_EXPORT_INTERVAL=30000    # 30 seconds
-```
-</Accordion>
-</AccordionGroup>
+    ```bash
+    export OTEL_METRIC_EXPORT_INTERVAL=60000  # 60 seconds
+    export OTEL_LOGS_EXPORT_INTERVAL=30000    # 30 seconds
+    ```
 
 ## Reference
 
