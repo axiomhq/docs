@@ -154,7 +154,16 @@ LLM judge scorers add latency and cost per evaluation. Use [sampling](#sampling)
 
 ## Sampling
 
-Use sampling to control the percentage of production traffic that gets evaluated. This is useful for expensive scorers like LLM judges.
+Use sampling to control the percentage of production traffic that gets evaluated. You can set different sampling for each scorer. This is useful for expensive scorers like LLM judges while letting cheap heuristic scorers run on every request.
+
+Wrap a scorer in `{ scorer, sampling }` to control the percentage of production traffic it evaluates. You can mix sampled and unsampled scorers in the same call. Scorers without a `sampling` wrapper run on every request.
+
+| `sampling` value | Behavior |
+|------|----------|
+| not set (default) | Evaluate every request |
+| `0.5` | Evaluate ~50% of requests |
+| `0.1` | Evaluate ~10% of requests |
+| `0.0` | Never evaluate. The scorer is skipped and its key is omitted from the result record |
 
 ```ts
 void onlineEval(
@@ -162,20 +171,16 @@ void onlineEval(
   {
     input: userMessage,
     output: result,
-    scorers: [validCategoryScorer, formatConfidenceScorer],
-    sampling: { rate: 0.1 }, // Evaluate 10% of traffic
+    scorers: [
+      // Wrap each scorer with its own sampling rate
+      { scorer: validCategoryScorer, sampling: 0.1 },   // Evaluate 10% of traffic
+      formatConfidenceScorer // Evaluate every request
+    ],
   },
 );
 ```
 
-| Rate | Behavior |
-|------|----------|
-| `1.0` (default) | Evaluate every request |
-| `0.5` | Evaluate ~50% of requests |
-| `0.1` | Evaluate ~10% of requests |
-| `0.0` | Never evaluate |
-
-When a request is not sampled, `onlineEval` returns immediately with an empty result array.
+Additionally, you can set the `sampling` value to a function that receives `{ input, output }` and returns a Boolean for conditional sampling logic.
 
 ## Connecting to traces
 
@@ -220,8 +225,9 @@ void onlineEval(
   {
     input: question,
     output: result,
-    scorers: [relevanceScorer],
-    sampling: { rate: 0.5 },
+    scorers: [
+      { scorer: relevanceScorer, sampling: 0.5 }
+    ],
   },
 );
 ```
@@ -329,8 +335,10 @@ async function categorizeMessage(userMessage: string): Promise<Category> {
         {
           input: userMessage,
           output: result,
-          scorers: [validCategoryScorer, formatConfidenceScorer],
-          sampling: { rate: 0.1 },
+          scorers: [
+            { scorer: validCategoryScorer, sampling: 0.1 },
+            formatConfidenceScorer
+          ],
         },
       );
 
