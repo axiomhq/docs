@@ -126,9 +126,15 @@
         return isDarkMode() ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)";  // blue-400 / blue-500
     }
     
+    function escapeHTML(str) {
+        var div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+    }
+    
     // Create highlight span with inline style for guaranteed color
     function createHighlightSpan(text) {
-        return '<span class="axiom-placeholder-highlight" style="color: ' + getHighlightColor() + ' !important;">' + text + '</span>';
+        return '<span class="axiom-placeholder-highlight" style="color: ' + getHighlightColor() + ' !important;">' + escapeHTML(text) + '</span>';
     }
     
     function updateCodeBlock(codeElement, values) {
