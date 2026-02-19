@@ -53,10 +53,12 @@ const result = await withSpan({ capability: 'demo', step: 'generate' }, async ()
   });
 
   // Fire-and-forget — doesn't block the response
-  void onlineEval(
-    { capability: 'demo', step: 'generate' },
-    { output: response.text, scorers: [formatScorer] },
-  );
+  void onlineEval('generate-format', {
+    capability: 'demo',
+    step: 'generate',
+    output: response.text,
+    scorers: [formatScorer],
+  });
 
   return response.text;
 });
@@ -166,18 +168,17 @@ Wrap a scorer in `{ scorer, sampling }` to control the percentage of production 
 | `0.0` | Never evaluate. The scorer is skipped and its key is omitted from the result record |
 
 ```ts
-void onlineEval(
-  { capability: 'support-agent', step: 'categorize-message' },
-  {
-    input: userMessage,
-    output: result,
-    scorers: [
-      // Wrap each scorer with its own sampling rate
-      { scorer: validCategoryScorer, sampling: 0.1 },   // Evaluate 10% of traffic
-      formatConfidenceScorer // Evaluate every request
-    ],
-  },
-);
+void onlineEval('categorize-message', {
+  capability: 'support-agent',
+  step: 'categorize-message',
+  input: userMessage,
+  output: result,
+  scorers: [
+    // Wrap each scorer with its own sampling rate
+    { scorer: validCategoryScorer, sampling: 0.1 },   // Evaluate 10% of traffic
+    formatConfidenceScorer // Evaluate every request
+  ],
+});
 ```
 
 Additionally, you can set the `sampling` value to a function that receives `{ input, output }` and returns a Boolean for conditional sampling logic.
@@ -194,10 +195,12 @@ When called inside `withSpan`, the active span is automatically detected and lin
 await withSpan({ capability: 'qa', step: 'answer' }, async () => {
   const response = await generateText({ model, messages });
 
-  void onlineEval(
-    { capability: 'qa', step: 'answer' },
-    { output: response.text, scorers: [formatScorer] },
-  );
+  void onlineEval('answer-format', {
+    capability: 'qa',
+    step: 'answer',
+    output: response.text,
+    scorers: [formatScorer],
+  });
 
   return response.text;
 });
@@ -205,7 +208,7 @@ await withSpan({ capability: 'qa', step: 'answer' }, async () => {
 
 ### Deferred evaluation
 
-For cases where you want to evaluate after `withSpan` returns, capture `span.spanContext()` and pass it as `link`:
+For cases where you want to evaluate after `withSpan` returns, capture `span.spanContext()` and pass it as `links`:
 
 ```ts
 import type { SpanContext } from '@opentelemetry/api';
@@ -220,16 +223,16 @@ const result = await withSpan(
 );
 
 // Called outside withSpan — explicit link connects eval to originating span
-void onlineEval(
-  { capability: 'demo', step: 'answer', link: originCtx },
-  {
-    input: question,
-    output: result,
-    scorers: [
-      { scorer: relevanceScorer, sampling: 0.5 }
-    ],
-  },
-);
+void onlineEval('answer-relevance', {
+  capability: 'demo',
+  step: 'answer',
+  links: originCtx,
+  input: question,
+  output: result,
+  scorers: [
+    { scorer: relevanceScorer, sampling: 0.5 }
+  ],
+});
 ```
 
 ### Awaitable (short-lived processes)
@@ -237,10 +240,12 @@ void onlineEval(
 In CLI tools or serverless functions, `await` the eval to ensure spans are created before flushing telemetry:
 
 ```ts
-await onlineEval(
-  { capability: 'demo', step: 'generate' },
-  { output: result, scorers: [formatScorer] },
-);
+await onlineEval('generate-format', {
+  capability: 'demo',
+  step: 'generate',
+  output: result,
+  scorers: [formatScorer],
+});
 await flushTelemetry();
 ```
 
@@ -254,14 +259,15 @@ Each call to `onlineEval` creates a parent eval span with one child span per sco
 
 | Span | Name pattern |
 |------|-------------|
-| Parent eval span | `eval {capability}` or `eval {capability}/{step}` |
-| Scorer child span | `eval {scorerName}` |
+| Parent eval span | `eval {name}` |
+| Scorer child span | `score {scorerName}` |
 
 ### Scorer span attributes
 
 | Attribute | Description |
 |-----------|-------------|
 | `gen_ai.operation.name` | Always `eval.score` |
+| `eval.name` | The eval name passed to `onlineEval` |
 | `eval.score.name` | The scorer name |
 | `eval.score.value` | The numeric score (`0`-`1`) |
 | `eval.score.metadata` | JSON string of scorer metadata |
@@ -330,17 +336,16 @@ async function categorizeMessage(userMessage: string): Promise<Category> {
       const result = (response.text.trim().toLowerCase() as Category) || 'unknown';
 
       // Monitor classification quality on 10% of production traffic
-      void onlineEval(
-        { capability: 'support-agent', step: 'categorize-message' },
-        {
-          input: userMessage,
-          output: result,
-          scorers: [
-            { scorer: validCategoryScorer, sampling: 0.1 },
-            formatConfidenceScorer
-          ],
-        },
-      );
+      void onlineEval('categorize-message', {
+        capability: 'support-agent',
+        step: 'categorize-message',
+        input: userMessage,
+        output: result,
+        scorers: [
+          { scorer: validCategoryScorer, sampling: 0.1 },
+          formatConfidenceScorer
+        ],
+      });
 
       return result;
     },
