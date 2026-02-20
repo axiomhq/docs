@@ -670,16 +670,24 @@
         // Watch for new code blocks (SPA navigation, theme switch, etc.)
         var debounceTimer = null;
         var observer = new MutationObserver(function(mutations) {
-            // Check if any code blocks were added or if main content changed
             var shouldReprocess = mutations.some(function(mutation) {
-                return Array.from(mutation.addedNodes).some(function(node) {
+                // Check if any code blocks were added or if main content changed
+                var hasRelevantAdded = Array.from(mutation.addedNodes).some(function(node) {
                     if (node.nodeType !== 1) return false;
-                    // Check for code blocks
                     if (node.classList && node.classList.contains("code-block")) return true;
                     if (node.querySelector && node.querySelector(".code-block")) return true;
-                    // Check for main content container changes (SPA navigation)
                     if (node.tagName === "MAIN" || node.querySelector && node.querySelector("main")) return true;
                     if (node.tagName === "ARTICLE" || node.querySelector && node.querySelector("article")) return true;
+                    return false;
+                });
+                if (hasRelevantAdded) return true;
+                
+                // Check if the AI assistant sheet was removed/closed,
+                // which can cause the underlying page content to re-render
+                return Array.from(mutation.removedNodes).some(function(node) {
+                    if (node.nodeType !== 1) return false;
+                    if (node.id === "chat-assistant-sheet") return true;
+                    if (node.querySelector && node.querySelector("#chat-assistant-sheet")) return true;
                     return false;
                 });
             });
