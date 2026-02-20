@@ -669,10 +669,18 @@
 
         // Watch for new code blocks (SPA navigation, theme switch, etc.)
         var debounceTimer = null;
+        
+        function scheduleReprocess(delay) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function() {
+                cleanupOrphanedBars();
+                processCodeBlocks();
+            }, delay || 100);
+        }
+        
         var observer = new MutationObserver(function(mutations) {
             var shouldReprocess = mutations.some(function(mutation) {
-                // Check if any code blocks were added or if main content changed
-                var hasRelevantAdded = Array.from(mutation.addedNodes).some(function(node) {
+                return Array.from(mutation.addedNodes).some(function(node) {
                     if (node.nodeType !== 1) return false;
                     if (node.classList && node.classList.contains("code-block")) return true;
                     if (node.querySelector && node.querySelector(".code-block")) return true;
@@ -680,28 +688,34 @@
                     if (node.tagName === "ARTICLE" || node.querySelector && node.querySelector("article")) return true;
                     return false;
                 });
-                if (hasRelevantAdded) return true;
-                
-                // Check if the AI assistant sheet was removed/closed,
-                // which can cause the underlying page content to re-render
-                return Array.from(mutation.removedNodes).some(function(node) {
-                    if (node.nodeType !== 1) return false;
-                    if (node.id === "chat-assistant-sheet") return true;
-                    if (node.querySelector && node.querySelector("#chat-assistant-sheet")) return true;
-                    return false;
-                });
             });
             
             if (shouldReprocess) {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(function() {
-                    cleanupOrphanedBars();
-                    processCodeBlocks();
-                }, 100);
+                scheduleReprocess(100);
             }
+            
+            // Try to attach the chat assistant watcher whenever DOM changes
+            watchChatAssistant();
         });
         
         observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Watch the AI chat assistant sheet for close events.
+        // The sheet stays in the DOM but toggles via attributes (e.g. data-state).
+        // Closing can cause the underlying page content to re-render, so we
+        // need to reprocess code blocks when it happens.
+        var chatAssistantObserver = null;
+        function watchChatAssistant() {
+            if (chatAssistantObserver) return;
+            var sheet = document.getElementById("chat-assistant-sheet");
+            if (!sheet) return;
+            
+            chatAssistantObserver = new MutationObserver(function() {
+                scheduleReprocess(200);
+            });
+            chatAssistantObserver.observe(sheet, { attributes: true });
+        }
+        watchChatAssistant();
         
         // Watch for theme changes (dark/light mode toggle)
         var themeObserver = new MutationObserver(function(mutations) {
