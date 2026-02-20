@@ -1,8 +1,7 @@
 ---
-title: "Online evaluations"
+title: "Write and run online evaluations"
 description: "Score AI outputs on live production traffic using lightweight scorers and sampling."
-sidebarTitle: "Online evaluations"
-tag: "NEW"
+sidebarTitle: "Write and run evaluations"
 keywords: ["ai engineering", "online evaluations", "production monitoring", "scorers", "sampling", "onlineEval"]
 ---
 
@@ -12,14 +11,11 @@ Online evaluations let you score your AI capability's outputs on live production
 
 Use online evaluations to monitor quality in production: catch format regressions, run heuristic checks, or sample traffic for LLM-as-judge scoring without affecting your capability's response.
 
-## Prerequisites
+<Info>
+Online evaluations never throw errors into your app's code. Scorer failures are recorded on the eval span as OTel events, so a broken scorer won't affect your capability's response.
+</Info>
 
-Online evaluations build on Axiom AI SDK's instrumentation. Before adding online evaluations:
-
-- Install Axiom AI SDK and configure a tracer. See [Quickstart](/ai-engineering/quickstart) for the full setup, including OpenTelemetry configuration and environment variables.
-- Wrap your AI model with `wrapAISDKModel` for automatic tracing. See [Instrumentation with Axiom AI SDK](/ai-engineering/observe/axiom-ai-sdk-instrumentation) for details.
-
-## Getting started
+## Get started
 
 Import `onlineEval` and `Scorer` from the Axiom AI SDK and add `onlineEval` to the `withSpan` callback:
 
@@ -53,15 +49,59 @@ const result = await withSpan({ capability: 'demo', step: 'generate' }, async ()
 });
 ```
 
-<Info>
-Online evaluations never throw errors into your application code. Scorer failures are recorded on the eval span as OTel events, so a broken scorer won't affect your capability's response.
-</Info>
+## Write scorers
 
-## Writing scorers
+Online evaluations use the same `Scorer` factory and return types (boolean, numeric, or `{ score, metadata }`) as [offline evaluations](/ai-engineering/evaluate/write-evaluations#creating-scorers). The key difference is that online scorers are reference-free. They receive `input` and `output` but no `expected` value.
 
-Online evaluations use the same `Scorer` factory and return types (boolean, numeric, or `{ score, metadata }`) as offline evaluations. The key difference is that online scorers are reference-free. They receive `input` and `output` but no `expected` value.
+### Boolean scorers
 
-For the full `Scorer` API, including boolean scorers, numeric scorers, and scorers with metadata, see [Write evaluations: Creating scorers](/ai-engineering/evaluate/write-evaluations#creating-scorers).
+Return `true` or `false` for simple pass/fail checks. The SDK automatically converts booleans to `1` (pass) or `0` (fail) and marks the score as boolean in telemetry.
+
+```ts
+const isKnownCategory = Scorer(
+  'is-known-category',
+  ({ output }: { output: string }) => {
+    return ['support', 'complaint', 'spam', 'unknown'].includes(output);
+  },
+);
+```
+
+### Numeric scorers
+
+Return a number between `0` and `1` for graded scoring:
+
+```ts
+const formatConfidence = Scorer(
+  'format-confidence',
+  ({ output }: { output: string }) => {
+    const trimmed = output.trim().toLowerCase();
+    const isSingleWord = !trimmed.includes(' ');
+    const isClean = /^[a-z_]+$/.test(trimmed);
+
+    return (isSingleWord ? 0.5 : 0) + (isClean ? 0.5 : 0);
+  },
+);
+```
+
+### Scorers with metadata
+
+Return an object with `score` and `metadata` to attach additional context to the eval span:
+
+```ts
+const validCategory = Scorer(
+  'valid-category',
+  ({ output }: { output: string }) => {
+    const validCategories = ['support', 'complaint', 'spam', 'unknown'];
+    return {
+      score: validCategories.includes(output),
+      metadata: {
+        category: output,
+        validCategories,
+      },
+    };
+  },
+);
+```
 
 ### LLM-as-judge scorers
 
@@ -120,11 +160,11 @@ void onlineEval('categorize-message', {
 
 Additionally, you can set the `sampling` value to a function that receives `{ input, output }` and returns a Boolean for conditional sampling logic.
 
-## Connecting to traces
+## Connect to traces
 
 Online evaluations create OTel spans that link back to the originating generation span. The linking mechanism depends on where you call `onlineEval`.
 
-### Inside withSpan (recommended)
+### Inside `withSpan` (recommended)
 
 When called inside `withSpan`, the active span is automatically detected and linked. The eval span becomes a child of the `withSpan` span.
 
@@ -172,7 +212,7 @@ void onlineEval('answer-relevance', {
 });
 ```
 
-### Awaitable (short-lived processes)
+### Awaitable for short-lived processes
 
 In CLI tools or serverless functions, `await` the eval to ensure spans are created before flushing telemetry:
 
