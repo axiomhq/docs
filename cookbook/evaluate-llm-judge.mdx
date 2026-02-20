@@ -1,0 +1,178 @@
+---
+title: "Build an LLM-as-judge scorer"
+description: "Use a language model to evaluate another model's output for relevance, correctness, and quality in your Axiom evaluations."
+sidebarTitle: LLM-as-judge
+keywords: ["cookbook", "evaluate", "llm judge", "scorer", "autoevals", "quality"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+Heuristic scorers check structural properties, but many quality dimensions (relevance, correctness, helpfulness) require semantic understanding. This recipe shows how to build a scorer that uses an LLM to judge another model's output.
+
+## Prerequisites
+
+<Prerequisites />
+
+- Axiom AI SDK [installed and configured](/ai-engineering/quickstart) with `axiom.config.ts`
+- Axiom CLI authenticated (`axiom auth login`)
+- An OpenAI API key
+
+## Step 1: Create a relevance scorer
+
+Build a scorer that asks a judge model to rate how relevant a response is to the user's question:
+
+```ts src/lib/scorers/relevance.ts
+import { Scorer } from 'axiom/ai/evals';
+import { generateObject } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const judge = openai('gpt-4o-mini');
+
+export const Relevance = Scorer(
+  'relevance',
+  async ({ input, output }) => {
+    const result = await generateObject({
+      model: judge,
+      messages: [
+        {
+          role: 'system',
+          content: `You are an evaluation judge. Given a user question and an AI response, assess relevance.
+
+Score 1.0 if the response directly answers the question.
+Score 0.5 if partially relevant but missing key information.
+Score 0.0 if completely irrelevant or off-topic.
+
+Provide a brief reason for your score.`,
+        },
+        {
+          role: 'user',
+          content: `Question: ${input.question}\n\nResponse: ${output.answer}`,
+        },
+      ],
+      schema: z.object({
+        score: z.number().min(0).max(1),
+        reason: z.string(),
+      }),
+    });
+
+    return {
+      score: result.object.score,
+      metadata: { reason: result.object.reason },
+    };
+  }
+);
+```
+
+## Step 2: Create a correctness scorer
+
+For tasks with a known correct answer, build a scorer that checks factual correctness:
+
+```ts src/lib/scorers/correctness.ts
+import { Scorer } from 'axiom/ai/evals';
+import { generateObject } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const judge = openai('gpt-4o-mini');
+
+export const Correctness = Scorer(
+  'correctness',
+  async ({ output, expected }) => {
+    const result = await generateObject({
+      model: judge,
+      messages: [
+        {
+          role: 'system',
+          content: `You are an evaluation judge. Compare the AI response against the reference answer.
+
+Score 1.0 if the response is factually consistent with the reference.
+Score 0.5 if partially correct with some inaccuracies.
+Score 0.0 if factually incorrect or contradicts the reference.
+
+Provide a brief reason.`,
+        },
+        {
+          role: 'user',
+          content: `Reference answer: ${expected.answer}\n\nAI response: ${output.answer}`,
+        },
+      ],
+      schema: z.object({
+        score: z.number().min(0).max(1),
+        reason: z.string(),
+      }),
+    });
+
+    return {
+      score: result.object.score,
+      metadata: { reason: result.object.reason },
+    };
+  }
+);
+```
+
+## Step 3: Use LLM judges in an evaluation
+
+Combine LLM-based scorers with heuristic scorers for a complete picture:
+
+```ts src/lib/capabilities/qa-bot/qa.eval.ts
+import { Eval, Scorer } from 'axiom/ai/evals';
+import { Relevance } from '../../scorers/relevance';
+import { Correctness } from '../../scorers/correctness';
+import { qaBot } from '../qa-bot';
+
+const NotEmpty = Scorer('not-empty', ({ output }) => {
+  return output.answer.trim().length > 0;
+});
+
+Eval('qa-bot', {
+  data: [
+    {
+      input: { question: 'What is the capital of France?' },
+      expected: { answer: 'Paris' },
+    },
+    {
+      input: { question: 'Who wrote Hamlet?' },
+      expected: { answer: 'William Shakespeare' },
+    },
+    {
+      input: { question: 'What is the speed of light?' },
+      expected: { answer: 'Approximately 299,792,458 meters per second' },
+    },
+  ],
+
+  task: async ({ input }) => {
+    const answer = await qaBot(input.question);
+    return { answer };
+  },
+
+  scorers: [NotEmpty, Relevance, Correctness],
+});
+```
+
+## Step 4: Run and review
+
+```bash
+npx axiom eval qa-bot
+```
+
+The output includes scores from all three scorers. In the Axiom Console, the AI engineering tab shows the LLM judge scores alongside their reasons, making it easy to understand why a particular test case scored low.
+
+## Verify
+
+In the Axiom Console, click the **AI engineering** tab and select the `qa-bot` evaluation. Each test case shows:
+
+- The `not-empty` heuristic score
+- The `relevance` score with the judge's reasoning
+- The `correctness` score with the judge's reasoning
+
+The metadata field `reason` appears in the score details, explaining the judge's rationale.
+
+## What's next?
+
+- Evaluate retrieval quality for RAG with [Evaluate RAG retrieval quality](/cookbook/evaluate-rag-quality)
+- Compare multiple models with [Compare models side-by-side](/cookbook/evaluate-model-comparison)
+- Use LLM judges in production with [Add online evaluations to production](/cookbook/monitor-online-evals)
+- Learn more about scorer types in [Write evaluations](/ai-engineering/evaluate/write-evaluations)
