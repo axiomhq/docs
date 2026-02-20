@@ -12,19 +12,6 @@ Online evaluations let you score your AI capability's outputs on live production
 
 Use online evaluations to monitor quality in production: catch format regressions, run heuristic checks, or sample traffic for LLM-as-judge scoring without affecting your capability's response.
 
-## When to use online evaluations
-
-| | Online evaluations | Offline evaluations |
-|---|---|---|
-| **When** | Production, on live traffic | Development, before deploy |
-| **Expected values** | No ground truth needed | Requires expected output per case |
-| **Scorers** | Reference-free | Can compare output to expected |
-| **Execution** | Fire-and-forget inside your app | CLI runner with vitest |
-| **Sampling** | Per-scorer sampling rate | Runs every case |
-| **Telemetry** | OTel spans linked to production traces | OTel spans in eval dataset |
-
-Use online evaluations when you want to continuously monitor production quality. Use offline evaluations when you need to test against known-good answers before shipping.
-
 ## Prerequisites
 
 Online evaluations build on Axiom AI SDK's instrumentation. Before adding online evaluations:
@@ -72,65 +59,13 @@ Online evaluations never throw errors into your application code. Scorer failure
 
 ## Writing scorers
 
-Create scorers with the `Scorer` factory from `axiom/ai/evals/scorers`. Scorers used in online evaluations are **reference-free** — they receive `input` and `output` but no `expected` value.
+Online evaluations use the same `Scorer` factory and return types (boolean, numeric, or `{ score, metadata }`) as offline evaluations. The key difference is that online scorers are reference-free. They receive `input` and `output` but no `expected` value.
 
-<Tip>
-Scorers work the same way as in offline evaluations. See [Write evaluations](/ai-engineering/evaluate/write-evaluations#creating-scorers) for more on the `Scorer` API.
-</Tip>
+For the full `Scorer` API, including boolean scorers, numeric scorers, and scorers with metadata, see [Write evaluations: Creating scorers](/ai-engineering/evaluate/write-evaluations#creating-scorers).
 
-### Boolean scorers
+### LLM-as-judge scorers
 
-Return `true` or `false` for simple pass/fail checks. The SDK automatically converts booleans to `1` (pass) or `0` (fail) and marks the score as boolean in telemetry.
-
-```ts
-const isKnownCategory = Scorer(
-  'is-known-category',
-  ({ output }: { output: string }) => {
-    return ['support', 'complaint', 'spam', 'unknown'].includes(output);
-  },
-);
-```
-
-### Numeric scorers
-
-Return a number between `0` and `1` for graded scoring:
-
-```ts
-const formatConfidence = Scorer(
-  'format-confidence',
-  ({ output }: { output: string }) => {
-    const trimmed = output.trim().toLowerCase();
-    const isSingleWord = !trimmed.includes(' ');
-    const isClean = /^[a-z_]+$/.test(trimmed);
-
-    return (isSingleWord ? 0.5 : 0) + (isClean ? 0.5 : 0);
-  },
-);
-```
-
-### Scorers with metadata
-
-Return an object with `score` and `metadata` to attach additional context to the eval span:
-
-```ts
-const validCategory = Scorer(
-  'valid-category',
-  ({ output }: { output: string }) => {
-    const validCategories = ['support', 'complaint', 'spam', 'unknown'];
-    return {
-      score: validCategories.includes(output),
-      metadata: {
-        category: output,
-        validCategories,
-      },
-    };
-  },
-);
-```
-
-### Async scorers (LLM judges)
-
-Scorers can be async. Use this for LLM-as-judge patterns where a second model evaluates the output:
+Async scorers are especially useful in online evaluations for LLM-as-judge patterns where a second model evaluates the output:
 
 ```ts
 import { generateObject } from 'ai';
