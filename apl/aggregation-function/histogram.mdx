@@ -3,12 +3,12 @@ title: histogram
 description: 'This page explains how to use the histogram aggregation function in APL.'
 ---
 
-The `histogram` aggregation in APL allows you to create a histogram that groups numeric values into intervals or “bins.” This is useful for visualizing the distribution of data, such as the frequency of response times, request durations, or other continuous numerical fields. You can use it to analyze patterns and trends in datasets like logs, traces, or metrics. It’s especially helpful when you need to summarize a large volume of data into a digestible form, providing insights on the distribution of values.
+The `histogram` aggregation in APL allows you to create a histogram that groups numeric values into intervals or "bins." This is useful for visualizing the distribution of data, such as the frequency of response times, request durations, or other continuous numerical fields. You can use it to analyze patterns and trends in datasets like logs, traces, or metrics. It's especially helpful when you need to summarize a large volume of data into a digestible form, providing insights on the distribution of values.
 
 The `histogram` aggregation is ideal for identifying peaks, valleys, and outliers in your data. For example, you can analyze the distribution of request durations in web server logs or span durations in OpenTelemetry traces to understand performance bottlenecks.
 
 <Note>
-The `histogram` aggregation in APL is a statistical aggregation that returns estimated results. The estimation comes with the benefit of speed at the expense of accuracy. This means that `histogram` is fast and light on resources even on a large or high-cardinality dataset, but it doesn’t provide precise results.
+The `histogram` aggregation in APL is a statistical aggregation that returns estimated results. The estimation comes with the benefit of speed at the expense of accuracy. This means that `histogram` is fast and light on resources even on a large or high-cardinality dataset, but it doesn't provide precise results.
 </Note>
 
 ## For users of other query languages
@@ -37,7 +37,7 @@ In Splunk SPL, a similar operation to APL's `histogram` is the `timechart` or `h
 
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, you can use the `GROUP BY` clause combined with range calculations to achieve a similar result to APL’s `histogram`. However, APL’s `histogram` function simplifies the process by automatically calculating bin intervals.
+In ANSI SQL, you can use the `GROUP BY` clause combined with range calculations to achieve a similar result to APL's `histogram`. However, APL's `histogram` function simplifies the process by automatically calculating bin intervals.
 
 <CodeGroup>
 
@@ -74,6 +74,33 @@ histogram(numeric_field, number_of_bins)
 
 The `histogram` aggregation returns a table where each row represents a bin, along with the number of occurrences (counts) that fall within each bin.
 
+## Understand histogram results
+
+### Bucket boundaries
+
+The `histogram` function divides the range of your data into equal-width bins. Axiom calculates the bin width as follows:
+
+`bin_width = (max_value - min_value) / number_of_bins`
+
+Each bin value in the results (the `_bin` column) represents the **start** of the bin range. For example, if `histogram(req_duration_ms, 10)` produces bins `0`, `100`, `200`, this means:
+- The first bin covers values from `0` (inclusive) to `100` (exclusive): `[0, 100)`
+- The second bin covers values from `100` (inclusive) to `200` (exclusive): `[100, 200)`
+- The last bin covers values from `200` (inclusive) to the maximum value (inclusive): `[200, max]`
+
+### The `number_of_bins` parameter
+
+The `number_of_bins` parameter specifies the number of bins, not the bin width. Axiom determines the bin width automatically based on the range of values in your data.
+
+For example, if your data ranges from `0` to `1000` and you specify `histogram(field, 10)`, each bin is approximately `100` wide. If you specify `histogram(field, 100)`, each bin is approximately `10` wide.
+
+<Note>
+Because `histogram` returns estimated results, the actual number of bins in the output might differ slightly from the specified `number_of_bins`.
+</Note>
+
+### Visualize with heatmaps
+
+When you combine `histogram` with `bin_auto(_time)`, the results can be visualized as a [heatmap](/dashboard-elements/heatmap). The histogram bins appear on the Y-axis, time intervals on the X-axis, and the color intensity represents the count of events in each cell.
+
 ## Use case examples
 
 <Tabs>
@@ -98,7 +125,7 @@ You can use the `histogram` aggregation to analyze the distribution of request d
 | 100                 | 200   |
 | 200                 | 120   |
 
-This query creates a histogram that groups request durations into bins of 100 milliseconds and shows the count of requests in each bin. It helps you visualize how frequently requests fall within certain duration ranges.
+This query creates a histogram that groups request durations into 100 bins across the data range and shows the count of requests in each bin. It helps you visualize how frequently requests fall within certain duration ranges.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
@@ -122,7 +149,7 @@ In OpenTelemetry traces, you can use the `histogram` aggregation to analyze the 
 | 0.2s         | 120   |
 | 0.3s         | 50    |
 
-This query groups the span durations into 100ms intervals, making it easier to spot latency issues in your traces.
+This query groups the span durations into 100 bins across the data range, making it easier to spot latency issues in your traces.
 
 </Tab>
 <Tab title="Security logs">
