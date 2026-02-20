@@ -25,21 +25,23 @@ Use online evaluations to monitor quality in production: catch format regression
 
 Use online evaluations when you want to continuously monitor production quality. Use offline evaluations when you need to test against known-good answers before shipping.
 
+## Prerequisites
+
+Online evaluations build on Axiom AI SDK's instrumentation. Before adding online evals, ensure you have:
+
+- Axiom AI SDK installed and configured with a tracer. See [Quickstart](/ai-engineering/quickstart) for the full setup, including OpenTelemetry configuration and environment variables.
+- An AI model wrapped with `wrapAISDKModel` for automatic tracing. See [Instrumentation with Axiom AI SDK](/ai-engineering/observe/axiom-ai-sdk-instrumentation) for details.
+
 ## Getting started
 
-Import `onlineEval` and `Scorer` from the Axiom AI SDK:
-
-```ts
-import { onlineEval } from 'axiom/ai/evals/online';
-import { Scorer } from 'axiom/ai/evals/scorers';
-```
-
-Define a scorer and call `onlineEval` inside `withSpan`:
+Import `onlineEval` and `Scorer` from the Axiom AI SDK, and use your wrapped model:
 
 ```ts
 import { withSpan } from 'axiom/ai';
 import { onlineEval } from 'axiom/ai/evals/online';
 import { Scorer } from 'axiom/ai/evals/scorers';
+import { generateText } from 'ai';
+import { gpt4oMini } from './lib/model'; // Your wrapped model (see prerequisites)
 
 const formatScorer = Scorer('format', ({ output }: { output: string }) => {
   const trimmed = output.trim();
@@ -48,7 +50,7 @@ const formatScorer = Scorer('format', ({ output }: { output: string }) => {
 
 const result = await withSpan({ capability: 'demo', step: 'generate' }, async () => {
   const response = await generateText({
-    model,
+    model: gpt4oMini,
     messages: [{ role: 'user', content: prompt }],
   });
 
