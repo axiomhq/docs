@@ -104,6 +104,34 @@ Axiom doesn’t currently support the following data types:
 - Exemplar, baggage, and context data
 - Nanosecond-precision timestamps
 
+### Temporality
+
+OpenTelemetry metrics use temporality to define how data points relate to each other over time. The two types of temporality are:
+
+- **Delta temporality**: Each data point represents the change since the last report. For example, a counter with delta temporality reports the number of requests in the last interval.
+- **Cumulative temporality**: Each data point represents the total accumulated value since a fixed start time. For example, a counter with cumulative temporality reports the total number of requests since the process started.
+
+Axiom accepts both delta and cumulative temporality for all supported metric types. When choosing between them, consider the following:
+
+- **Delta temporality** is generally recommended for most use cases. It's more efficient because each data point is smaller and independent, making it easier to aggregate across instances. The OpenTelemetry Collector defaults to delta temporality for OTLP exporters.
+- **Cumulative temporality** can be useful when you want to track absolute totals or when your existing instrumentation already uses it (for example, Prometheus-style metrics).
+
+<Note>
+For histograms specifically, some query features like quantile calculations using `interpolate_histogram` are only supported with delta temporality. If you plan to compute percentiles from histogram data, use delta temporality.
+</Note>
+
+To configure temporality in the OpenTelemetry Collector, set the `temporality_preference` option in your OTLP exporter configuration:
+
+```yaml
+exporters:
+  otlphttp:
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-metrics-dataset: DATASET_NAME
+    temporality_preference: delta
+```
+
 ### Data model optimizations
 
 MetricsDB applies the following transformations to improve query performance and reduce storage costs:
