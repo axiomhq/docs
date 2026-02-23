@@ -56,11 +56,9 @@ const result = await withSpan({ capability: 'demo', step: 'generate' }, async ()
 
 ## Write scorers
 
-Online evaluations use the same `Scorer` factory and return types (boolean, numeric, or `{ score, metadata }`) as [offline evaluations](/ai-engineering/evaluate/write-evaluations#create-scorers). The key difference is that online scorers are reference-free. They receive `input` and `output` but no `expected` value.
+Online evaluations use the same `Scorer` API as [offline evaluations](/ai-engineering/evaluate/write-evaluations). The key difference is that online scorers are reference-free: they receive `input` and `output` but no `expected` value. For the full `Scorer` API reference including return types, patterns, and LLM-as-judge examples, see [Scorers](/ai-engineering/evaluate/scorers).
 
-### Boolean scorers
-
-Return `true` or `false` for simple pass/fail checks. The SDK automatically converts booleans to `1` (pass) or `0` (fail) and marks the score as boolean in telemetry.
+Here's a quick example of an online scorer that validates output format:
 
 ```ts
 const isKnownCategory = Scorer(
@@ -70,71 +68,6 @@ const isKnownCategory = Scorer(
   },
 );
 ```
-
-### Numeric scorers
-
-Return a number between `0` and `1` for graded scoring:
-
-```ts
-const formatConfidence = Scorer(
-  'format-confidence',
-  ({ output }: { output: string }) => {
-    const trimmed = output.trim().toLowerCase();
-    const isSingleWord = !trimmed.includes(' ');
-    const isClean = /^[a-z_]+$/.test(trimmed);
-
-    return (isSingleWord ? 0.5 : 0) + (isClean ? 0.5 : 0);
-  },
-);
-```
-
-### Scorers with metadata
-
-Return an object with `score` and `metadata` to attach additional context to the eval span:
-
-```ts
-const validCategory = Scorer(
-  'valid-category',
-  ({ output }: { output: string }) => {
-    const validCategories = ['support', 'complaint', 'spam', 'unknown'];
-    return {
-      score: validCategories.includes(output),
-      metadata: {
-        category: output,
-        validCategories,
-      },
-    };
-  },
-);
-```
-
-### LLM-as-judge scorers
-
-Async scorers are especially useful in online evaluations for LLM-as-judge patterns where a second model evaluates the output:
-
-```ts
-import { generateObject } from 'ai';
-import { z } from 'zod';
-
-const relevanceScorer = Scorer(
-  'relevance',
-  async ({ input, output }: { input: string; output: string }) => {
-    const result = await generateObject({
-      model: judgeModel,
-      schema: z.object({
-        relevant: z.boolean().describe('Whether the response answers the question'),
-      }),
-      system: 'You evaluate if an AI response answers the user question.',
-      prompt: `Question: ${input}\n\nResponse: ${output}`,
-    });
-    return result.object.relevant;
-  },
-);
-```
-
-<Note>
-LLM judge scorers add latency and cost per evaluation. Use [sampling](#sampling) to control how often they run.
-</Note>
 
 ## Sampling
 
@@ -244,17 +177,7 @@ Each call to `onlineEval` creates a parent eval span with one child span per sco
 | Parent eval span | `eval {name}` |
 | Scorer child span | `score {scorerName}` |
 
-### Scorer span attributes
-
-| Attribute | Description |
-|-----------|-------------|
-| `gen_ai.operation.name` | Always `eval.score` |
-| `eval.name` | The eval name passed to `onlineEval` |
-| `eval.score.name` | The scorer name |
-| `eval.score.value` | The numeric score (`0`-`1`) |
-| `eval.score.metadata` | JSON string of scorer metadata |
-| `eval.score.is_boolean` | `true` when the scorer returned a boolean |
-| `eval.tags` | `["online"]` for online evaluations |
+For the full list of scorer span attributes, see [Scorers: Telemetry](/ai-engineering/evaluate/scorers#telemetry).
 
 ## Complete example
 

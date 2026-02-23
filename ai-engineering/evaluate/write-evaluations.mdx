@@ -156,11 +156,9 @@ The task function should generally be the same code you use in your actual capab
 
 ## Create scorers
 
-Scorers evaluate your capability's output. They receive the `input`, `output`, and `expected` values, and return a score (a number between 0-1, or boolean). The same `Scorer` API works in both offline and [online evaluations](/ai-engineering/evaluate/online-evaluations/write-run-evaluations). Online scorers are reference-free, so they only use `input` and `output`.
+Scorers evaluate your capability's output. In offline evaluations, scorers receive `input`, `output`, and `expected` (ground truth), and return a score. For the full `Scorer` API reference including return types, patterns, and third-party integrations, see [Scorers](/ai-engineering/evaluate/scorers).
 
-### Custom scorers
-
-Create custom scorers using the `Scorer` wrapper:
+Here's a quick example of an offline scorer that compares output to expected values:
 
 ```ts
 import { Scorer } from 'axiom/ai/evals';
@@ -172,60 +170,6 @@ const ExactMatchScorer = Scorer(
   }
 );
 ```
-
-Scorers can return just a score, or an object with a score and metadata:
-
-```ts
-const DetailedScorer = Scorer(
-  'detailed-match',
-  ({ output, expected }) => {
-    const match = output.sentiment === expected.sentiment;
-    return {
-      score: match ? true : false,
-      metadata: {
-        outputValue: output.sentiment,
-        expectedValue: expected.sentiment,
-        matched: match,
-      },
-    };
-  }
-);
-```
-
-### Use `autoevals`
-
-The [`autoevals`](https://github.com/braintrustdata/autoevals) library provides prebuilt scorers for common tasks:
-
-```bash
-npm install autoevals
-```
-
-```ts
-import { Scorer } from 'axiom/ai/evals';
-import { Levenshtein, FactualityScorer } from 'autoevals';
-
-// Wrap autoevals scorers with Axiom's Scorer
-const LevenshteinScorer = Scorer(
-  'levenshtein',
-  ({ output, expected }) => {
-    return Levenshtein({ output: output.text, expected: expected.text });
-  }
-);
-
-const FactualityCheck = Scorer(
-  'factuality',
-  async ({ output, expected }) => {
-    return await FactualityScorer({
-      output: output.text,
-      expected: expected.text,
-    });
-  }
-);
-```
-
-<Tip>
-Use multiple scorers to evaluate different aspects of your capability. For example, check both exact accuracy and semantic similarity to get a complete picture of performance.
-</Tip>
 
 ## Complete example
 
