@@ -23,7 +23,7 @@
         "AXIOM_DOMAIN": { 
             label: "Edge domain", 
             placeholder: "us-east-1.aws.edge.axiom.co",
-            help: 'The base domain of your edge deployment. For more information, see <a class="link" href="/docs/reference/edge-deployments">Edge deployments</a>.',
+            help: 'The base domain of your edge deployment. For more information, see <a class="link" href="https://axiom.co/docs/reference/edge-deployments">Edge deployments</a>.',
             type: "select",
             options: [
                 { value: "", label: "Select edge deployment" },
@@ -44,7 +44,7 @@
         "ORGANIZATION_ID": { 
             label: "Organization ID", 
             placeholder: "org-id",
-            help: 'The ID of your Axiom organization. For more information, see <a class="link" href="/docs/reference/tokens#determine-organization-id">Determine organization ID</a>.'
+            help: 'The ID of your Axiom organization. For more information, see <a class="link" href="https://axiom.co/docs/reference/tokens#determine-organization-id">Determine organization ID</a>.'
         }
     };
     var PLACEHOLDER_PATTERNS = Object.keys(PLACEHOLDERS);
