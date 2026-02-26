@@ -1,0 +1,2882 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Axiom Dashboards API",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/dashboards": {
+      "get": {
+        "tags": [
+          "Dashboards"
+        ],
+        "operationId": "listDashboards",
+        "summary": "List all dashboards",
+        "responses": {
+          "200": {
+            "description": "List of dashboards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DashboardOutput"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Dashboards"
+        ],
+        "operationId": "createDashboard",
+        "summary": "Create a dashboard",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Dashboard"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOutput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboards/{id}": {
+      "get": {
+        "tags": [
+          "Dashboards"
+        ],
+        "operationId": "getDashboard",
+        "summary": "Get a dashboard by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOutput"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Dashboards"
+        ],
+        "operationId": "updateDashboard",
+        "summary": "Update a dashboard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Dashboard"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOutput"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Dashboards"
+        ],
+        "operationId": "deleteDashboard",
+        "summary": "Delete a dashboard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Dashboard deleted"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Dashboard": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "owner": {
+            "$ref": "#/components/schemas/Owner"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "charts": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Chart"
+            }
+          },
+          "layout": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LayoutItem"
+            }
+          },
+          "refreshTime": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "schemaVersion": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "against": {
+            "type": "string",
+            "enum": [
+              "-1h",
+              "-3h",
+              "-6h",
+              "-12h",
+              "-1d",
+              "-3d",
+              "-7d",
+              "-1w",
+              "-2w",
+              "-3w",
+              "-30d",
+              "-60d",
+              "-90d",
+              ""
+            ]
+          },
+          "againstTimestamp": {
+            "$ref": "#/components/schemas/DatetimeString"
+          },
+          "timeWindowStart": {
+            "$ref": "#/components/schemas/TimeWindowStart"
+          },
+          "timeWindowEnd": {
+            "$ref": "#/components/schemas/TimeWindowEnd"
+          },
+          "overrides": {
+            "$ref": "#/components/schemas/Overrides"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "sharedByOrg": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "sharedByOrgName": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "uid": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "createdAt": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "createdBy": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "updatedAt": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "updatedBy": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "datasets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        },
+        "required": [
+          "name",
+          "owner",
+          "charts",
+          "layout",
+          "refreshTime",
+          "schemaVersion",
+          "timeWindowStart",
+          "timeWindowEnd"
+        ],
+        "additionalProperties": false
+      },
+      "DashboardOutput": {
+        "$ref": "#/components/schemas/Dashboard"
+      },
+      "Owner": {
+        "type": "string"
+      },
+      "Chart": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TimeSeriesChart"
+          },
+          {
+            "$ref": "#/components/schemas/HeatmapChart"
+          },
+          {
+            "$ref": "#/components/schemas/LogStreamChart"
+          },
+          {
+            "$ref": "#/components/schemas/PieChart"
+          },
+          {
+            "$ref": "#/components/schemas/ScatterChart"
+          },
+          {
+            "$ref": "#/components/schemas/TableChart"
+          },
+          {
+            "$ref": "#/components/schemas/TopKChart"
+          },
+          {
+            "$ref": "#/components/schemas/StatisticChart"
+          },
+          {
+            "$ref": "#/components/schemas/SectionHeaderChart"
+          },
+          {
+            "$ref": "#/components/schemas/NoteChart"
+          },
+          {
+            "$ref": "#/components/schemas/MonitorListChart"
+          },
+          {
+            "$ref": "#/components/schemas/SmartFilterChart"
+          },
+          {
+            "$ref": "#/components/schemas/SpacerChart"
+          },
+          {
+            "$ref": "#/components/schemas/PlaceholderChart"
+          }
+        ]
+      },
+      "TimeSeriesChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "overrideDashboardTimeRange": {
+            "$ref": "#/components/schemas/OverrideDashboardTimeRange"
+          },
+          "overrideDashboardCompareAgainst": {
+            "$ref": "#/components/schemas/OverrideDashboardCompareAgainst"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "TimeSeries"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/ChartQuery"
+          },
+          "queries": {
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChartQuery"
+            }
+          },
+          "tableSettings": {
+            "$ref": "#/components/schemas/TableSettings"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ChartMetadata"
+          },
+          "exploreQuery": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "colorScheme": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "customUnits": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "text": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "ChartId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "ChartDatasetId": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "ChartModified": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "ChartNumSeries": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "ChartHideHeader": {
+        "type": "boolean"
+      },
+      "OverrideDashboardTimeRange": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "string"
+          }
+        ]
+      },
+      "OverrideDashboardCompareAgainst": {
+        "type": "boolean"
+      },
+      "ChartQuery": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/QueryObject"
+          },
+          {
+            "$ref": "#/components/schemas/StructuredQuery"
+          }
+        ]
+      },
+      "AplQuery": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MetricsAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/NonMetricsAplQuery"
+          }
+        ]
+      },
+      "MetricsAplQuery": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "$ref": "#/components/schemas/AplString"
+          },
+          "startTime": {
+            "$ref": "#/components/schemas/DatetimeString"
+          },
+          "endTime": {
+            "$ref": "#/components/schemas/DatetimeString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/QueryOptions"
+          },
+          "variables": {
+            "$ref": "#/components/schemas/QueryVariables"
+          },
+          "libraries": {
+            "$ref": "#/components/schemas/QueryLibraries"
+          },
+          "defaultLimit": {
+            "$ref": "#/components/schemas/DefaultLimit"
+          },
+          "defaultOrder": {
+            "$ref": "#/components/schemas/DefaultOrder"
+          },
+          "maxBinAutoGroups": {
+            "$ref": "#/components/schemas/MaxBinAutoGroups"
+          },
+          "queryRegion": {
+            "$ref": "#/components/schemas/QueryRegion"
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/Resolution"
+          },
+          "includeCursorField": {
+            "$ref": "#/components/schemas/IncludeCursorField"
+          },
+          "metricsDataset": {
+            "$ref": "#/components/schemas/MetricsDataset"
+          },
+          "metricsMetric": {
+            "$ref": "#/components/schemas/MetricsMetric"
+          },
+          "metricsFilter": {
+            "$ref": "#/components/schemas/MetricsFilter"
+          },
+          "metricsTransformations": {
+            "$ref": "#/components/schemas/MetricsTransformations"
+          }
+        },
+        "required": [
+          "apl",
+          "metricsDataset"
+        ],
+        "additionalProperties": false
+      },
+      "AplString": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500000
+      },
+      "DatetimeString": {
+        "type": "string",
+        "maxLength": 100
+      },
+      "QueryOptions": {
+        "type": "object",
+        "properties": {
+          "against": {
+            "type": "string",
+            "enum": [
+              "-1h",
+              "-3h",
+              "-6h",
+              "-12h",
+              "-1d",
+              "-3d",
+              "-7d",
+              "-1w",
+              "-2w",
+              "-3w",
+              "-30d",
+              "-60d",
+              "-90d",
+              ""
+            ]
+          },
+          "againstStart": {
+            "$ref": "#/components/schemas/DatetimeString"
+          },
+          "againstTimestamp": {
+            "$ref": "#/components/schemas/DatetimeString"
+          },
+          "aggChartOpts": {
+            "$ref": "#/components/schemas/AggChartOptsString"
+          },
+          "caseSensitive": {
+            "$ref": "#/components/schemas/BooleanString"
+          },
+          "containsTimeFilter": {
+            "$ref": "#/components/schemas/BooleanString"
+          },
+          "datasets": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "displayNull": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "null",
+              "span",
+              "zero",
+              ""
+            ]
+          },
+          "editorContent": {
+            "type": "string",
+            "maxLength": 500000
+          },
+          "endColumn": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "endLineNumber": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "endTime": {
+            "$ref": "#/components/schemas/DatetimeString"
+          },
+          "integrationsFilter": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "nanosecondPrecision": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "openIntervals": {
+            "type": "string",
+            "enum": [
+              "shown",
+              "hidden",
+              ""
+            ]
+          },
+          "overlayCharts": {
+            "$ref": "#/components/schemas/BooleanString"
+          },
+          "queryObject": {
+            "type": "string",
+            "maxLength": 100000
+          },
+          "quickRange": {
+            "type": "string"
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/Resolution"
+          },
+          "resultsHistogram": {
+            "$ref": "#/components/schemas/BooleanString"
+          },
+          "selection": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "shownColumns": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "startColumn": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "startLineNumber": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "startTime": {
+            "$ref": "#/components/schemas/DatetimeString"
+          },
+          "timeSeriesVariant": {
+            "type": "string",
+            "enum": [
+              "area",
+              "bars",
+              "line",
+              "lines",
+              ""
+            ]
+          },
+          "timeSeriesView": {
+            "type": "string",
+            "enum": [
+              "charts",
+              "resultsTable",
+              "charts|resultsTable",
+              ""
+            ]
+          },
+          "metricsChartType": {
+            "type": "string",
+            "enum": [
+              "heatmap"
+            ]
+          },
+          "additionalQueryOptions": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AggChartOptsString": {
+        "type": "string",
+        "maxLength": 100000
+      },
+      "BooleanString": {
+        "type": "string",
+        "enum": [
+          "true",
+          "false",
+          ""
+        ]
+      },
+      "Resolution": {
+        "type": "string",
+        "maxLength": 50
+      },
+      "IgnoredLegacyField": {
+        "description": "Accepted for backward compatibility with legacy data. This field is ignored at runtime."
+      },
+      "QueryVariables": {
+        "type": "object",
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 10000
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                null
+              ]
+            }
+          ]
+        }
+      },
+      "QueryLibraries": {
+        "nullable": true,
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[a-zA-Z0-9._/@-]+$"
+        }
+      },
+      "DefaultLimit": {
+        "type": "integer",
+        "exclusiveMinimum": true,
+        "maximum": 1000000
+      },
+      "DefaultOrder": {
+        "nullable": true,
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/DefaultOrderItem"
+        }
+      },
+      "DefaultOrderItem": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "desc": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MaxBinAutoGroups": {
+        "type": "integer",
+        "exclusiveMinimum": true,
+        "maximum": 10000
+      },
+      "QueryRegion": {
+        "type": "string",
+        "maxLength": 100,
+        "pattern": "^cloud\\.[a-z0-9-]+\\.[a-z0-9-]+$"
+      },
+      "IncludeCursorField": {
+        "type": "boolean"
+      },
+      "MetricsDataset": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "MetricsMetric": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "MetricsFilter": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "enum": [
+                  "and"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MetricsFilter"
+                }
+              }
+            },
+            "required": [
+              "op",
+              "children"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "enum": [
+                  "==",
+                  "!=",
+                  ">",
+                  "<",
+                  ">=",
+                  "<="
+                ]
+              },
+              "field": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 10000
+              }
+            },
+            "required": [
+              "op",
+              "field",
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "MetricsTransformations": {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/MetricsTransformation"
+        }
+      },
+      "MetricsTransformation": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "align"
+                ]
+              },
+              "to": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "using": {
+                "type": "string",
+                "enum": [
+                  "min",
+                  "max",
+                  "avg",
+                  "sum",
+                  "count",
+                  "last",
+                  "prom::rate"
+                ]
+              },
+              "uuid": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "isRequired": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "to",
+              "uuid"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "group"
+                ]
+              },
+              "by": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                ]
+              },
+              "using": {
+                "type": "string",
+                "enum": [
+                  "min",
+                  "max",
+                  "avg",
+                  "sum",
+                  "count"
+                ]
+              },
+              "uuid": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "isRequired": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "using",
+              "uuid"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "map"
+                ]
+              },
+              "expression": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "uuid": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "argument": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "type",
+              "expression",
+              "uuid"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "bucket"
+                ]
+              },
+              "uuid": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "by": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "to": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "fn": {
+                "type": "string",
+                "enum": [
+                  "histogram",
+                  "interpolate_histogram",
+                  "interpolate_cumulative_histogram",
+                  "interpolate_delta_histogram"
+                ]
+              },
+              "histogramRateKind": {
+                "type": "string",
+                "enum": [
+                  "rate",
+                  "increase"
+                ]
+              },
+              "using": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "fn": {
+                      "type": "string",
+                      "enum": [
+                        "max",
+                        "min",
+                        "avg",
+                        "sum",
+                        "count",
+                        "percentile"
+                      ]
+                    },
+                    "argument": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  },
+                  "required": [
+                    "fn"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "isRequired": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "uuid",
+              "to",
+              "using"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "NonMetricsAplQuery": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "$ref": "#/components/schemas/AplString"
+          },
+          "startTime": {
+            "$ref": "#/components/schemas/DatetimeString"
+          },
+          "endTime": {
+            "$ref": "#/components/schemas/DatetimeString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/QueryOptions"
+          },
+          "variables": {
+            "$ref": "#/components/schemas/QueryVariables"
+          },
+          "libraries": {
+            "$ref": "#/components/schemas/QueryLibraries"
+          },
+          "defaultLimit": {
+            "$ref": "#/components/schemas/DefaultLimit"
+          },
+          "defaultOrder": {
+            "$ref": "#/components/schemas/DefaultOrder"
+          },
+          "maxBinAutoGroups": {
+            "$ref": "#/components/schemas/MaxBinAutoGroups"
+          },
+          "queryRegion": {
+            "$ref": "#/components/schemas/QueryRegion"
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/Resolution"
+          },
+          "includeCursorField": {
+            "$ref": "#/components/schemas/IncludeCursorField"
+          }
+        },
+        "required": [
+          "apl"
+        ],
+        "additionalProperties": false
+      },
+      "QueryObject": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "QueryRequestWithOptions"
+            ]
+          },
+          "query": {
+            "$ref": "#/components/schemas/QueryRequestWithOptions"
+          },
+          "dataset": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "type",
+          "query",
+          "dataset"
+        ],
+        "additionalProperties": false
+      },
+      "QueryRequestWithOptions": {
+        "type": "object",
+        "properties": {
+          "aggregations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Aggregation"
+            }
+          },
+          "continuationToken": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "filter": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Filter"
+              }
+            ]
+          },
+          "groupBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "includeCursor": {
+            "type": "boolean"
+          },
+          "includeCursorField": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "project": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Projection"
+            }
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/QueryOptions"
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/Resolution"
+          },
+          "startTime": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "endTime": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "virtualFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VirtualColumn"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "Aggregation": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string"
+          },
+          "argument": {},
+          "field": {
+            "type": "string"
+          },
+          "op": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "op"
+        ],
+        "additionalProperties": false
+      },
+      "Filter": {
+        "type": "object",
+        "properties": {
+          "caseSensitive": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "children": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Filter"
+            }
+          },
+          "field": {
+            "type": "string"
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "and",
+              "or",
+              "==",
+              "not",
+              "!=",
+              "exists",
+              "not-exists",
+              ">",
+              ">=",
+              "<",
+              "<=",
+              "starts-with",
+              "not-starts-with",
+              "ends-with",
+              "not-ends-with",
+              "contains",
+              "not-contains",
+              "has",
+              "not-has",
+              "regexp",
+              "not-regexp"
+            ]
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "field",
+          "op"
+        ],
+        "additionalProperties": false
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "desc": {
+            "type": "boolean"
+          },
+          "field": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "desc",
+          "field"
+        ],
+        "additionalProperties": false
+      },
+      "Projection": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "field"
+        ],
+        "additionalProperties": false
+      },
+      "VirtualColumn": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string"
+          },
+          "expr": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "alias",
+          "expr"
+        ],
+        "additionalProperties": false
+      },
+      "StructuredQuery": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MetricsStructuredQuery"
+          },
+          {
+            "$ref": "#/components/schemas/NonMetricsStructuredQuery"
+          }
+        ]
+      },
+      "MetricsStructuredQuery": {
+        "type": "object",
+        "properties": {
+          "aggregations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Aggregation"
+            }
+          },
+          "continuationToken": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "filter": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Filter"
+              }
+            ]
+          },
+          "groupBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "includeCursor": {
+            "type": "boolean"
+          },
+          "includeCursorField": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "project": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Projection"
+            }
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/QueryOptions"
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/Resolution"
+          },
+          "startTime": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "endTime": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "virtualFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VirtualColumn"
+            }
+          },
+          "~structured-format-version": {
+            "$ref": "#/components/schemas/StructuredFormatVersion"
+          },
+          "metricsDataset": {
+            "$ref": "#/components/schemas/MetricsDataset"
+          },
+          "metricsMetric": {
+            "$ref": "#/components/schemas/MetricsMetric"
+          },
+          "metricsFilter": {
+            "$ref": "#/components/schemas/MetricsFilter"
+          },
+          "metricsTransformations": {
+            "$ref": "#/components/schemas/MetricsTransformations"
+          }
+        },
+        "required": [
+          "metricsDataset"
+        ],
+        "additionalProperties": false
+      },
+      "StructuredFormatVersion": {
+        "type": "string",
+        "maxLength": 10
+      },
+      "NonMetricsStructuredQuery": {
+        "type": "object",
+        "properties": {
+          "aggregations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Aggregation"
+            }
+          },
+          "continuationToken": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "filter": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Filter"
+              }
+            ]
+          },
+          "groupBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "includeCursor": {
+            "type": "boolean"
+          },
+          "includeCursorField": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "project": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Projection"
+            }
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/QueryOptions"
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/Resolution"
+          },
+          "startTime": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "endTime": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "virtualFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VirtualColumn"
+            }
+          },
+          "~structured-format-version": {
+            "$ref": "#/components/schemas/StructuredFormatVersion"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TableSettings": {
+        "type": "object",
+        "properties": {
+          "columns": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColumnSetting"
+            }
+          },
+          "settings": {
+            "$ref": "#/components/schemas/DatasetStreamSettings"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ColumnSetting": {
+        "oneOf": [
+          {
+            "type": "string",
+            "maxLength": 500
+          },
+          {
+            "$ref": "#/components/schemas/AdvancedColumnSetting"
+          }
+        ]
+      },
+      "AdvancedColumnSetting": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "width": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "DatasetStreamSettings": {
+        "type": "object",
+        "properties": {
+          "fontSize": {
+            "type": "string",
+            "maxLength": 20,
+            "pattern": "^\\d+px$"
+          },
+          "isLive": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "OFF",
+                  "PAUSED",
+                  "ON",
+                  "RESUMED"
+                ]
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "highlightSeverity": {
+            "type": "boolean"
+          },
+          "showRaw": {
+            "type": "boolean"
+          },
+          "showEvent": {
+            "type": "boolean"
+          },
+          "showTimestamp": {
+            "type": "boolean"
+          },
+          "wrapLines": {
+            "type": "boolean"
+          },
+          "showFieldList": {
+            "type": "boolean"
+          },
+          "showHistory": {
+            "type": "boolean"
+          },
+          "showSavedQueries": {
+            "type": "boolean"
+          },
+          "hideNulls": {
+            "type": "boolean"
+          },
+          "fitColumns": {
+            "type": "boolean"
+          },
+          "showNullColumns": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ChartMetadata": {
+        "type": "object",
+        "properties": {
+          "requires": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dataset": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                }
+              },
+              "required": [
+                "dataset",
+                "fields"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "noData": {
+            "type": "object",
+            "properties": {
+              "coverName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "iconName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "iconColor": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "buttonLabel": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "buttonLink": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "additionalProperties": false
+          },
+          "zeroData": {
+            "type": "object",
+            "properties": {
+              "coverName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "iconName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "iconColor": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "buttonLabel": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "buttonLink": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "HeatmapChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "overrideDashboardTimeRange": {
+            "$ref": "#/components/schemas/OverrideDashboardTimeRange"
+          },
+          "overrideDashboardCompareAgainst": {
+            "$ref": "#/components/schemas/OverrideDashboardCompareAgainst"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Heatmap"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/ChartQuery"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "colorScheme": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "customUnits": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "text": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "LogStreamChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "overrideDashboardTimeRange": {
+            "$ref": "#/components/schemas/OverrideDashboardTimeRange"
+          },
+          "overrideDashboardCompareAgainst": {
+            "$ref": "#/components/schemas/OverrideDashboardCompareAgainst"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "LogStream"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/ChartQuery"
+          },
+          "tableSettings": {
+            "$ref": "#/components/schemas/TableSettings"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "colorScheme": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "customUnits": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "text": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "PieChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "overrideDashboardTimeRange": {
+            "$ref": "#/components/schemas/OverrideDashboardTimeRange"
+          },
+          "overrideDashboardCompareAgainst": {
+            "$ref": "#/components/schemas/OverrideDashboardCompareAgainst"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Pie"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/ChartQuery"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "colorScheme": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "customUnits": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "text": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "ScatterChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "overrideDashboardTimeRange": {
+            "$ref": "#/components/schemas/OverrideDashboardTimeRange"
+          },
+          "overrideDashboardCompareAgainst": {
+            "$ref": "#/components/schemas/OverrideDashboardCompareAgainst"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Scatter"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/ChartQuery"
+          },
+          "tableSettings": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "colorScheme": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "customUnits": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "text": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "TableChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "overrideDashboardTimeRange": {
+            "$ref": "#/components/schemas/OverrideDashboardTimeRange"
+          },
+          "overrideDashboardCompareAgainst": {
+            "$ref": "#/components/schemas/OverrideDashboardCompareAgainst"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Table"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/ChartQuery"
+          },
+          "tableSettings": {
+            "$ref": "#/components/schemas/TableSettings"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "colorScheme": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "customUnits": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "text": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "TopKChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "overrideDashboardTimeRange": {
+            "$ref": "#/components/schemas/OverrideDashboardTimeRange"
+          },
+          "overrideDashboardCompareAgainst": {
+            "$ref": "#/components/schemas/OverrideDashboardCompareAgainst"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "TopK"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/ChartQuery"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "colorScheme": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "customUnits": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "text": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "StatisticChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "overrideDashboardTimeRange": {
+            "$ref": "#/components/schemas/OverrideDashboardTimeRange"
+          },
+          "overrideDashboardCompareAgainst": {
+            "$ref": "#/components/schemas/OverrideDashboardCompareAgainst"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Statistic"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/ChartQuery"
+          },
+          "colorScheme": {
+            "type": "string",
+            "enum": [
+              "Blue",
+              "Orange",
+              "Red",
+              "Purple",
+              "Teal",
+              "Yellow",
+              "Green",
+              "Pink",
+              "Grey",
+              "Brown"
+            ]
+          },
+          "customUnits": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "showChart": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "hideValue": {
+            "type": "boolean"
+          },
+          "chartHeight": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "errorThreshold": {
+            "type": "string",
+            "enum": [
+              "Above",
+              "AboveOrEqual",
+              "Below",
+              "BelowOrEqual",
+              "AboveOrBelow"
+            ]
+          },
+          "errorThresholdValue": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "warningThreshold": {
+            "type": "string",
+            "enum": [
+              "Above",
+              "AboveOrEqual",
+              "Below",
+              "BelowOrEqual",
+              "AboveOrBelow"
+            ]
+          },
+          "warningThresholdValue": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "invertTheme": {
+            "type": "boolean"
+          },
+          "background": {
+            "$ref": "#/components/schemas/CssColor"
+          },
+          "textColor": {
+            "$ref": "#/components/schemas/CssColor"
+          },
+          "labelColor": {
+            "$ref": "#/components/schemas/CssColor"
+          },
+          "chartFillColor": {
+            "$ref": "#/components/schemas/CssColor"
+          },
+          "okColorProps": {
+            "$ref": "#/components/schemas/StatisticChartColorProps"
+          },
+          "warningColorProps": {
+            "$ref": "#/components/schemas/StatisticChartColorProps"
+          },
+          "errorColorProps": {
+            "$ref": "#/components/schemas/StatisticChartColorProps"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ChartMetadata"
+          },
+          "exploreQuery": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "tableSettings": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "unit": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "text": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "CssColor": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "StatisticChartColorProps": {
+        "type": "object",
+        "properties": {
+          "background": {
+            "$ref": "#/components/schemas/CssColor"
+          },
+          "chartFillColor": {
+            "$ref": "#/components/schemas/CssColor"
+          },
+          "labelColor": {
+            "$ref": "#/components/schemas/CssColor"
+          },
+          "textColor": {
+            "$ref": "#/components/schemas/CssColor"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SectionHeaderChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "overrideDashboardTimeRange": {
+            "$ref": "#/components/schemas/OverrideDashboardTimeRange"
+          },
+          "overrideDashboardCompareAgainst": {
+            "$ref": "#/components/schemas/OverrideDashboardCompareAgainst"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "SectionHeader"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/ChartQuery"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "colorScheme": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "customUnits": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "text": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "NoteChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Note"
+            ]
+          },
+          "name": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "variant": {
+            "type": "string",
+            "enum": [
+              "default"
+            ]
+          },
+          "query": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "MonitorListChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "MonitorList"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "selectedMonitors": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "columns": {
+            "$ref": "#/components/schemas/MonitorListColumns"
+          },
+          "query": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "selectedMonitors",
+          "columns"
+        ],
+        "additionalProperties": false
+      },
+      "MonitorListColumns": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "boolean"
+          },
+          "history": {
+            "type": "boolean"
+          },
+          "dataset": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "boolean"
+          },
+          "notifiers": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "history",
+          "dataset",
+          "type",
+          "notifiers"
+        ],
+        "additionalProperties": false
+      },
+      "SmartFilterChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "SmartFilter"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "filters": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SmartFilterConfig"
+            }
+          },
+          "logo": {
+            "$ref": "#/components/schemas/LogoUrl"
+          },
+          "logoDark": {
+            "$ref": "#/components/schemas/LogoUrl"
+          },
+          "query": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "filters"
+        ],
+        "additionalProperties": false
+      },
+      "SmartFilterConfig": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SmartFilterSearch"
+          },
+          {
+            "$ref": "#/components/schemas/SmartFilterSelect"
+          }
+        ]
+      },
+      "SmartFilterSearch": {
+        "type": "object",
+        "properties": {
+          "__isPlaceholderData": {
+            "$ref": "#/components/schemas/SmartFilterIsPlaceholderData"
+          },
+          "id": {
+            "$ref": "#/components/schemas/SmartFilterId"
+          },
+          "name": {
+            "$ref": "#/components/schemas/SmartFilterName"
+          },
+          "active": {
+            "$ref": "#/components/schemas/SmartFilterActive"
+          },
+          "options": {
+            "$ref": "#/components/schemas/SmartFilterOptions"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/SmartFilterDatasetId"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "search"
+            ]
+          },
+          "selectType": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "apl": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "SmartFilterIsPlaceholderData": {
+        "type": "boolean"
+      },
+      "SmartFilterId": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "SmartFilterName": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "SmartFilterActive": {
+        "type": "boolean"
+      },
+      "SmartFilterOptions": {
+        "anyOf": [
+          {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SmartFilterOption"
+            }
+          },
+          {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              null
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              ""
+            ]
+          }
+        ]
+      },
+      "SmartFilterOption": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "key": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "default": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "SmartFilterDatasetId": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "SmartFilterSelect": {
+        "type": "object",
+        "properties": {
+          "__isPlaceholderData": {
+            "$ref": "#/components/schemas/SmartFilterIsPlaceholderData"
+          },
+          "id": {
+            "$ref": "#/components/schemas/SmartFilterId"
+          },
+          "name": {
+            "$ref": "#/components/schemas/SmartFilterName"
+          },
+          "active": {
+            "$ref": "#/components/schemas/SmartFilterActive"
+          },
+          "options": {
+            "$ref": "#/components/schemas/SmartFilterOptions"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/SmartFilterDatasetId"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "select"
+            ]
+          },
+          "selectType": {
+            "$ref": "#/components/schemas/SmartFilterSelectType"
+          },
+          "apl": {
+            "$ref": "#/components/schemas/SmartFilterApl"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "SmartFilterSelectType": {
+        "nullable": true,
+        "type": "string",
+        "enum": [
+          "list",
+          "apl",
+          ""
+        ]
+      },
+      "SmartFilterApl": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/EmptyAplObject"
+          }
+        ]
+      },
+      "EmptyAplObject": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "type": "string",
+            "enum": [
+              ""
+            ]
+          }
+        },
+        "required": [
+          "apl"
+        ],
+        "additionalProperties": {}
+      },
+      "LogoUrl": {
+        "type": "string",
+        "maxLength": 2000
+      },
+      "SpacerChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Spacer"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "overrideDashboardTimeRange": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "overrideDashboardCompareAgainst": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "PlaceholderChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "datasetId": {
+            "$ref": "#/components/schemas/ChartDatasetId"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/ChartModified"
+          },
+          "numSeries": {
+            "$ref": "#/components/schemas/ChartNumSeries"
+          },
+          "hideHeader": {
+            "$ref": "#/components/schemas/ChartHideHeader"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Placeholder"
+            ]
+          },
+          "name": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "query": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          },
+          "showChart": {
+            "$ref": "#/components/schemas/IgnoredLegacyField"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "LayoutItem": {
+        "type": "object",
+        "properties": {
+          "i": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 11
+          },
+          "y": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "w": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "h": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "minW": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "minH": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 100
+          },
+          "maxW": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "maxH": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "static": {
+            "type": "boolean"
+          },
+          "moved": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "i",
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "additionalProperties": false
+      },
+      "SchemaVersion": {
+        "anyOf": [
+          {
+            "anyOf": [
+              {
+                "type": "number",
+                "enum": [
+                  0
+                ]
+              },
+              {
+                "type": "number",
+                "enum": [
+                  1
+                ]
+              }
+            ]
+          },
+          {
+            "type": "number",
+            "enum": [
+              2
+            ]
+          }
+        ]
+      },
+      "TimeWindowStart": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100
+      },
+      "TimeWindowEnd": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100
+      },
+      "Overrides": {
+        "type": "object",
+        "properties": {
+          "rowHeight": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.axiom.co/v2/"
+    }
+  ]
+}
