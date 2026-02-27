@@ -307,7 +307,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/NonMetricsAplQuery"
+            "$ref": "#/components/schemas/TimeSeriesChartQuery"
           }
         },
         "required": [
@@ -354,6 +354,60 @@
       "OverrideDashboardCompareAgainst": {
         "type": "boolean"
       },
+      "TimeSeriesChartQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/TimeSeriesAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/QueryObject"
+          },
+          {
+            "$ref": "#/components/schemas/StructuredQuery"
+          }
+        ],
+        "title": "ChartQuery"
+      },
+      "TimeSeriesAplQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/TimeSeriesMetricsAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/TimeSeriesNonMetricsAplQuery"
+          }
+        ],
+        "title": "AplQuery"
+      },
+      "TimeSeriesMetricsAplQuery": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "$ref": "#/components/schemas/AplString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/TimeSeriesQueryOptions"
+          },
+          "metricsDataset": {
+            "$ref": "#/components/schemas/MetricsDataset"
+          },
+          "metricsMetric": {
+            "$ref": "#/components/schemas/MetricsMetric"
+          },
+          "metricsFilter": {
+            "$ref": "#/components/schemas/MetricsFilter"
+          },
+          "metricsTransformations": {
+            "$ref": "#/components/schemas/MetricsTransformations"
+          }
+        },
+        "required": [
+          "apl",
+          "metricsDataset"
+        ],
+        "additionalProperties": false,
+        "title": "MetricsAplQuery"
+      },
       "AplString": {
         "type": "string",
         "minLength": 1,
@@ -364,7 +418,7 @@
         "maxLength": 100,
         "description": "A datetime value. Accepts ISO 8601 (e.g. `2024-01-02T00:00:00.000Z`), relative time using `now-{duration}` where duration is a number followed by `s` (seconds), `m` (minutes), `h` (hours), `d` (days), or `w` (weeks) (e.g. `now-1h`, `now-7d`), a Unix epoch millisecond timestamp as a string (e.g. `1704067200000`), or an empty string to clear the value."
       },
-      "QueryOptions": {
+      "TimeSeriesQueryOptions": {
         "type": "object",
         "properties": {
           "displayNull": {
@@ -408,10 +462,6 @@
         },
         "additionalProperties": false
       },
-      "AggChartOptsString": {
-        "type": "string",
-        "maxLength": 100000
-      },
       "BooleanString": {
         "type": "string",
         "enum": [
@@ -419,10 +469,6 @@
           "false",
           ""
         ]
-      },
-      "Resolution": {
-        "type": "string",
-        "maxLength": 50
       },
       "QueryVariables": {
         "type": "object",
@@ -495,17 +541,21 @@
         "maxLength": 100,
         "pattern": "^cloud\\.[a-z0-9-]+\\.[a-z0-9-]+$"
       },
+      "Resolution": {
+        "type": "string",
+        "maxLength": 50
+      },
       "IncludeCursorField": {
         "type": "boolean"
       },
-      "NonMetricsAplQuery": {
+      "TimeSeriesNonMetricsAplQuery": {
         "type": "object",
         "properties": {
           "apl": {
             "$ref": "#/components/schemas/AplString"
           },
           "queryOptions": {
-            "$ref": "#/components/schemas/QueryOptions"
+            "$ref": "#/components/schemas/TimeSeriesQueryOptions"
           }
         },
         "required": [
@@ -628,6 +678,54 @@
           "field"
         ],
         "additionalProperties": false
+      },
+      "QueryOptions": {
+        "type": "object",
+        "properties": {
+          "displayNull": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "null",
+              "span",
+              "zero",
+              ""
+            ],
+            "description": "Controls how empty intervals are rendered in time series charts. `auto` infers from the query, `null` leaves gaps, `span` connects adjacent points, `zero` fills with zero."
+          },
+          "overlayCharts": {
+            "$ref": "#/components/schemas/BooleanString",
+            "description": "When enabled, charts are overlaid on a single chart instead of stacked separately."
+          },
+          "shownColumns": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "timeSeriesVariant": {
+            "type": "string",
+            "enum": [
+              "area",
+              "bars",
+              "line",
+              "lines",
+              ""
+            ]
+          },
+          "timeSeriesView": {
+            "type": "string",
+            "enum": [
+              "charts",
+              "resultsTable",
+              "charts|resultsTable",
+              ""
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "AggChartOptsString": {
+        "type": "string",
+        "maxLength": 100000
       },
       "VirtualColumn": {
         "type": "object",
@@ -757,7 +855,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/NonMetricsAplQuery"
+            "$ref": "#/components/schemas/HeatmapChartQuery"
           }
         },
         "required": [
@@ -768,6 +866,91 @@
         ],
         "additionalProperties": false,
         "title": "Heatmap"
+      },
+      "HeatmapChartQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/HeatmapAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/QueryObject"
+          },
+          {
+            "$ref": "#/components/schemas/StructuredQuery"
+          }
+        ],
+        "title": "ChartQuery"
+      },
+      "HeatmapAplQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/HeatmapMetricsAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/HeatmapNonMetricsAplQuery"
+          }
+        ],
+        "title": "AplQuery"
+      },
+      "HeatmapMetricsAplQuery": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "$ref": "#/components/schemas/AplString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/HeatmapQueryOptions"
+          },
+          "metricsDataset": {
+            "$ref": "#/components/schemas/MetricsDataset"
+          },
+          "metricsMetric": {
+            "$ref": "#/components/schemas/MetricsMetric"
+          },
+          "metricsFilter": {
+            "$ref": "#/components/schemas/MetricsFilter"
+          },
+          "metricsTransformations": {
+            "$ref": "#/components/schemas/MetricsTransformations"
+          }
+        },
+        "required": [
+          "apl",
+          "metricsDataset"
+        ],
+        "additionalProperties": false,
+        "title": "MetricsAplQuery"
+      },
+      "HeatmapQueryOptions": {
+        "type": "object",
+        "properties": {
+          "timeSeriesView": {
+            "type": "string",
+            "enum": [
+              "charts",
+              "resultsTable",
+              "charts|resultsTable",
+              ""
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "HeatmapNonMetricsAplQuery": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "$ref": "#/components/schemas/AplString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/HeatmapQueryOptions"
+          }
+        },
+        "required": [
+          "apl"
+        ],
+        "additionalProperties": false,
+        "title": "APL"
       },
       "LogStreamChart": {
         "type": "object",
@@ -790,7 +973,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/NonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           },
           "tableSettings": {
             "$ref": "#/components/schemas/TableSettings"
@@ -804,6 +987,70 @@
         ],
         "additionalProperties": false,
         "title": "Log stream"
+      },
+      "SimpleChartQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/SimpleAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/QueryObject"
+          },
+          {
+            "$ref": "#/components/schemas/StructuredQuery"
+          }
+        ],
+        "title": "ChartQuery"
+      },
+      "SimpleAplQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/SimpleMetricsAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+          }
+        ],
+        "title": "AplQuery"
+      },
+      "SimpleMetricsAplQuery": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "$ref": "#/components/schemas/AplString"
+          },
+          "metricsDataset": {
+            "$ref": "#/components/schemas/MetricsDataset"
+          },
+          "metricsMetric": {
+            "$ref": "#/components/schemas/MetricsMetric"
+          },
+          "metricsFilter": {
+            "$ref": "#/components/schemas/MetricsFilter"
+          },
+          "metricsTransformations": {
+            "$ref": "#/components/schemas/MetricsTransformations"
+          }
+        },
+        "required": [
+          "apl",
+          "metricsDataset"
+        ],
+        "additionalProperties": false,
+        "title": "MetricsAplQuery"
+      },
+      "SimpleNonMetricsAplQuery": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "$ref": "#/components/schemas/AplString"
+          }
+        },
+        "required": [
+          "apl"
+        ],
+        "additionalProperties": false,
+        "title": "APL"
       },
       "TableSettings": {
         "type": "object",
@@ -903,7 +1150,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/NonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           }
         },
         "required": [
@@ -936,7 +1183,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/NonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           }
         },
         "required": [
@@ -969,7 +1216,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/NonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           },
           "tableSettings": {
             "$ref": "#/components/schemas/TableSettings"
@@ -1005,7 +1252,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/NonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           }
         },
         "required": [
@@ -1038,7 +1285,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/NonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           },
           "colorScheme": {
             "type": "string",
@@ -1483,6 +1730,22 @@
             ]
           }
         ]
+      },
+      "NonMetricsAplQuery": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "$ref": "#/components/schemas/AplString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/QueryOptions"
+          }
+        },
+        "required": [
+          "apl"
+        ],
+        "additionalProperties": false,
+        "title": "APL"
       },
       "EmptyAplObject": {
         "type": "object",
