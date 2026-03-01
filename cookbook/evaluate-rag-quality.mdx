@@ -1,0 +1,219 @@
+---
+title: "Evaluate RAG retrieval quality"
+description: "Score context relevance and answer faithfulness for RAG pipelines using custom scorers in Axiom evaluations."
+sidebarTitle: RAG quality
+keywords: ["cookbook", "evaluate", "rag", "retrieval", "context", "faithfulness"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+RAG (Retrieval-Augmented Generation) pipelines fail in two distinct ways: retrieving irrelevant context, or generating answers that don't faithfully use the retrieved context. This recipe creates scorers for both failure modes.
+
+## Prerequisites
+
+<Prerequisites />
+
+- Axiom AI SDK [installed and configured](/ai-engineering/quickstart) with `axiom.config.ts`
+- Axiom CLI authenticated (`axiom auth login`)
+- A RAG capability that returns both the retrieved context and the generated answer
+
+## Step 1: Structure your RAG output
+
+Ensure your RAG capability returns both the retrieved documents and the final answer:
+
+```ts src/lib/capabilities/rag-qa.ts
+import { generateText } from 'ai';
+import { withSpan, wrapAISDKModel } from 'axiom/ai';
+import { createOpenAI } from '@ai-sdk/openai';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = wrapAISDKModel(openai('gpt-4o'));
+
+export async function ragQA(question: string) {
+  return withSpan(
+    { capability: 'rag-qa', step: 'answer' },
+    async () => {
+      // Your retrieval logic here
+      const retrievedDocs = await retrieveDocuments(question);
+
+      const context = retrievedDocs.map((d) => d.content).join('\n\n');
+
+      const result = await generateText({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: `Answer the question using only the provided context. If the context doesn't contain the answer, say "I don't have enough information to answer that."
+
+Context:
+${context}`,
+          },
+          { role: 'user', content: question },
+        ],
+      });
+
+      return {
+        answer: result.text,
+        context: retrievedDocs,
+      };
+    }
+  );
+}
+```
+
+## Step 2: Create a context relevance scorer
+
+This scorer checks whether the retrieved documents are relevant to the question:
+
+```ts src/lib/scorers/context-relevance.ts
+import { Scorer } from 'axiom/ai/evals';
+import { generateObject } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const judge = openai('gpt-4o-mini');
+
+export const ContextRelevance = Scorer(
+  'context-relevance',
+  async ({ input, output }) => {
+    const contextText = output.context.map((d: any) => d.content).join('\n---\n');
+
+    const result = await generateObject({
+      model: judge,
+      messages: [
+        {
+          role: 'system',
+          content: `You are evaluating a RAG retrieval system. Given a question and the retrieved context documents, assess how relevant the retrieved context is to answering the question.
+
+Score 1.0 if the context contains all information needed to answer the question.
+Score 0.5 if the context is partially relevant but missing key information.
+Score 0.0 if the context is irrelevant to the question.`,
+        },
+        {
+          role: 'user',
+          content: `Question: ${input.question}\n\nRetrieved context:\n${contextText}`,
+        },
+      ],
+      schema: z.object({
+        score: z.number().min(0).max(1),
+        reason: z.string(),
+      }),
+    });
+
+    return {
+      score: result.object.score,
+      metadata: { reason: result.object.reason },
+    };
+  }
+);
+```
+
+## Step 3: Create a faithfulness scorer
+
+This scorer checks whether the generated answer is faithful to the retrieved context (no hallucinations):
+
+```ts src/lib/scorers/faithfulness.ts
+import { Scorer } from 'axiom/ai/evals';
+import { generateObject } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const judge = openai('gpt-4o-mini');
+
+export const Faithfulness = Scorer(
+  'faithfulness',
+  async ({ output }) => {
+    const contextText = output.context.map((d: any) => d.content).join('\n---\n');
+
+    const result = await generateObject({
+      model: judge,
+      messages: [
+        {
+          role: 'system',
+          content: `You are evaluating answer faithfulness in a RAG system. Given the retrieved context and the generated answer, assess whether the answer is faithful to the context.
+
+Score 1.0 if every claim in the answer is supported by the context.
+Score 0.5 if the answer is mostly supported but includes some unsupported claims.
+Score 0.0 if the answer contains significant information not found in the context (hallucination).`,
+        },
+        {
+          role: 'user',
+          content: `Context:\n${contextText}\n\nGenerated answer: ${output.answer}`,
+        },
+      ],
+      schema: z.object({
+        score: z.number().min(0).max(1),
+        reason: z.string(),
+      }),
+    });
+
+    return {
+      score: result.object.score,
+      metadata: { reason: result.object.reason },
+    };
+  }
+);
+```
+
+## Step 4: Write the evaluation
+
+Combine both scorers with test cases that include expected answers:
+
+```ts src/lib/capabilities/rag-qa/rag.eval.ts
+import { Eval, Scorer } from 'axiom/ai/evals';
+import { ContextRelevance } from '../../scorers/context-relevance';
+import { Faithfulness } from '../../scorers/faithfulness';
+import { ragQA } from '../rag-qa';
+
+const AnswerCompleteness = Scorer(
+  'answer-completeness',
+  async ({ output, expected }) => {
+    return output.answer.toLowerCase().includes(expected.keyFact.toLowerCase())
+      ? 1.0
+      : 0.0;
+  }
+);
+
+Eval('rag-qa', {
+  data: [
+    {
+      input: { question: 'What is the refund policy for digital products?' },
+      expected: { keyFact: '30-day' },
+    },
+    {
+      input: { question: 'How do I reset my API key?' },
+      expected: { keyFact: 'settings page' },
+    },
+    {
+      input: { question: 'What programming languages does the SDK support?' },
+      expected: { keyFact: 'TypeScript' },
+    },
+  ],
+
+  task: async ({ input }) => {
+    return await ragQA(input.question);
+  },
+
+  scorers: [ContextRelevance, Faithfulness, AnswerCompleteness],
+});
+```
+
+## Step 5: Run and interpret results
+
+```bash
+npx axiom eval rag-qa
+```
+
+The results reveal where your RAG pipeline fails:
+
+- **Low context relevance + low faithfulness**: The retrieval step is broken. Improve your embeddings, chunking, or search strategy.
+- **High context relevance + low faithfulness**: The model is hallucinating despite having good context. Improve your prompt or use a more instruction-following model.
+- **Low context relevance + high faithfulness**: The model correctly says "I don't know" when context is insufficient. Improve retrieval to fix this.
+
+## What's next?
+
+- Compare retrieval strategies across models with [Compare models side-by-side](/cookbook/evaluate-model-comparison)
+- Monitor RAG quality in production with [Add online evaluations to production](/cookbook/monitor-online-evals)
+- Learn more about the evaluation API in [Write evaluations](/ai-engineering/evaluate/write-evaluations)
