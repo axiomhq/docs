@@ -18,13 +18,18 @@
  * 
  * No GDPR consent banner required.
  * 
- * Configuration:
- * Set `axiom-domain`, `api-token`, and `dataset-name` in the config
- * object below, or in an HTML <meta> tag:
- * <meta name="axiom-do11y-domain" content="axiom-domain">
- * <meta name="axiom-do11y-token" content="api-token">
- * <meta name="axiom-do11y-dataset" content="dataset-name">
- * <meta name="axiom-do11y-framework" content="mintlify">
+ * Configuration (in order of precedence):
+ * 1. HTML <meta> tags:
+ *    <meta name="axiom-do11y-domain" content="axiom-domain">
+ *    <meta name="axiom-do11y-token" content="api-token">
+ *    <meta name="axiom-do11y-dataset" content="dataset-name">
+ *    <meta name="axiom-do11y-framework" content="mintlify">
+ * 2. window.Do11yConfig object (set in a separate script before this file):
+ *    window.Do11yConfig = { axiomToken: '...', framework: 'mintlify' };
+ * 3. The config object below (defaults).
+ *
+ * Using meta tags or window.Do11yConfig is recommended so you can
+ * update do11y.js without losing your settings.
  */
 
 (function() {
@@ -44,12 +49,12 @@
     //   US East 1 (AWS):    'us-east-1.aws.edge.axiom.co'
     //   EU Central 1 (AWS): 'eu-central-1.aws.edge.axiom.co'
     // For more information, see https://axiom.co/docs/reference/edge-deployments
-    'axiom-domain': 'us-east-1.aws.edge.axiom.co',
+    axiomHost: 'AXIOM_DOMAIN',
     // Dataset name - update this to your Axiom dataset
-    'dataset-name': 'docs-analytics',
+    axiomDataset: 'DATASET_NAME',
     // API token for ingest - use a token with ONLY ingest permissions
     // IMPORTANT: Create a restricted token that can only ingest to this dataset
-    'api-token': "xaat-31aceafd-2a71-4313-8a43-1494ea125085",
+    axiomToken: 'API_TOKEN',
     // Enable debug logging to console
     debug: false,
     // Batch events and send periodically (milliseconds)
@@ -66,7 +71,7 @@
     scrollThresholds: [25, 50, 75, 90],
     // Allowed domains - restrict where this script can send data from
     // Set to null to allow any domain, or ['docs.example.com'] to restrict
-    allowedDomains: ['axiom.co'],
+    allowedDomains: null,
     // Respect Do Not Track browser setting
     respectDNT: true,
     // Maximum retries for failed requests
@@ -594,7 +599,7 @@
    * Validate configuration before sending
    */
   function validateConfig() {
-    if (!config['api-token']) {
+    if (!config.axiomToken) {
       if (config.debug) {
         console.warn('[Axiom Do11y] No API token configured');
       }
@@ -602,7 +607,7 @@
     }
 
     // Validate token format (basic check)
-    if (typeof config['api-token'] !== 'string' || config['api-token'].length < 10) {
+    if (typeof config.axiomToken !== 'string' || config.axiomToken.length < 10) {
       if (config.debug) {
         console.warn('[Axiom Do11y] Invalid token format');
       }
@@ -610,15 +615,15 @@
     }
 
     // Validate domain (must be a valid hostname, no protocol or path)
-    if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(config['axiom-domain'])) {
+    if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(config.axiomHost)) {
       if (config.debug) {
-        console.warn('[Axiom Do11y] Invalid edge deployment domain:', config['axiom-domain']);
+        console.warn('[Axiom Do11y] Invalid edge deployment domain:', config.axiomHost);
       }
       return false;
     }
 
     // Validate dataset name (alphanumeric, hyphens, underscores)
-    if (!/^[a-zA-Z0-9_-]+$/.test(config['dataset-name'])) {
+    if (!/^[a-zA-Z0-9_-]+$/.test(config.axiomDataset)) {
       if (config.debug) {
         console.warn('[Axiom Do11y] Invalid dataset name');
       }
@@ -649,7 +654,7 @@
     const events = eventQueue.slice();
     eventQueue = [];
 
-    const url = 'https://' + config['axiom-domain'] + '/v1/ingest/' + encodeURIComponent(config['dataset-name']);
+    const url = 'https://' + config.axiomHost + '/v1/ingest/' + encodeURIComponent(config.axiomDataset);
 
     sendEvents(url, events, retriesLeft);
   }
@@ -662,7 +667,7 @@
     fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer ' + config['api-token'],
+        'Authorization': 'Bearer ' + config.axiomToken,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(events),
@@ -720,7 +725,7 @@
     const events = eventQueue;
     eventQueue = [];
 
-    const url = 'https://' + config['axiom-domain'] + '/v1/ingest/' + encodeURIComponent(config['dataset-name']);
+    const url = 'https://' + config.axiomHost + '/v1/ingest/' + encodeURIComponent(config.axiomDataset);
 
     // Try sendBeacon first (most reliable for page unload)
     // Note: sendBeacon can't send auth headers, so we encode token in URL if needed
@@ -729,7 +734,7 @@
       fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer ' + config['api-token'],
+          'Authorization': 'Bearer ' + config.axiomToken,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(events),
@@ -1424,16 +1429,31 @@
    * Initialize do11y
    */
   function init() {
+    // Apply external config (set window.Do11yConfig before loading do11y.js)
+    if (window.Do11yConfig && typeof window.Do11yConfig === 'object') {
+      for (var key in window.Do11yConfig) {
+        if (window.Do11yConfig.hasOwnProperty(key) && config.hasOwnProperty(key)) {
+          config[key] = window.Do11yConfig[key];
+        }
+      }
+    }
+
+    // Meta tags override both defaults and Do11yConfig
+    var metaDomain = document.querySelector('meta[name="axiom-do11y-domain"]');
+    if (metaDomain) {
+      config.axiomHost = metaDomain.getAttribute('content');
+    }
+
     // Check for token in a meta tag (secure server-side injection)
     var metaToken = document.querySelector('meta[name="axiom-do11y-token"]');
     if (metaToken) {
-      config['api-token'] = metaToken.getAttribute('content');
+      config.axiomToken = metaToken.getAttribute('content');
     }
 
     // Check for dataset override
     var metaDataset = document.querySelector('meta[name="axiom-do11y-dataset"]');
     if (metaDataset) {
-      config['dataset-name'] = metaDataset.getAttribute('content');
+      config.axiomDataset = metaDataset.getAttribute('content');
     }
 
     // Check for debug mode
@@ -1462,9 +1482,9 @@
 
     if (config.debug) {
       console.log('[Axiom Do11y] Initializing with config:', {
-        endpoint: config['axiom-domain'],
-        dataset: config['dataset-name'],
-        hasToken: !!config['api-token'],
+        endpoint: config.axiomHost,
+        dataset: config.axiomDataset,
+        hasToken: !!config.axiomToken,
         framework: config.framework,
         allowedDomains: config.allowedDomains,
         respectDNT: config.respectDNT,
@@ -1481,7 +1501,7 @@
     }
 
     // Warn if no token (but don't fail - allows development without token)
-    if (!config['api-token']) {
+    if (!config.axiomToken) {
       if (config.debug) {
         console.warn('[Axiom Do11y] No API token configured. Events will not be sent.');
         console.warn('[Axiom Do11y] Add <meta name="axiom-do11y-token" content="api-token"> to enable.');
@@ -1579,9 +1599,9 @@
     // Read-only config access (don't expose token)
     getConfig: function() {
       return {
-        endpoint: config['axiom-domain'],
-        dataset: config['dataset-name'],
-        hasToken: !!config['api-token'],
+        endpoint: config.axiomHost,
+        dataset: config.axiomDataset,
+        hasToken: !!config.axiomToken,
         debug: config.debug,
         isDisabled: isDisabled,
         allowedDomains: config.allowedDomains,
@@ -1598,7 +1618,7 @@
     cleanup: cleanup,
     // Check if do11y is enabled
     isEnabled: function() {
-      return !isDisabled && !!config['api-token'];
+      return !isDisabled && !!config.axiomToken;
     },
     // Get queue size (for debugging)
     getQueueSize: function() {
