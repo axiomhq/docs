@@ -1,0 +1,226 @@
+---
+title: Write evals skill
+description: "This page explains how to use the Write evals skill to give AI coding agents the ability to scaffold and run evaluation suites for AI capabilities using the Axiom AI SDK."
+sidebarTitle: Write evals
+keywords: ["skills", "ai agents", "evals", "evaluations", "amp", "claude code", "cursor", "codex", "scorers", "flag schemas", "axiom ai sdk", "llm testing"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import SkillsCredentials from "/snippets/skills-credentials.mdx"
+
+The Write evals skill turns AI agents into evaluation suite authors for AI capabilities:
+
+- **Eval generation**: Creates `.eval.ts` files with typed scorers, test data, and task functions
+- **Scorer patterns**: Exact match, set match, structured output, tool-use validation, LLM-as-judge, and more
+- **Flag schemas**: Generates typed configuration with `createAppScope()` for sweeping models, temperatures, and strategies without code changes
+- **Online evals**: Reference-free scoring on live production traffic with sampling and trace linking
+- **Data design**: Generates test cases covering happy path, adversarial, boundary, and negative categories
+- **Templates**: Pre-built eval file templates for common patterns
+
+<Prerequisites />
+
+## Prerequisites
+
+The Write evals skill requires the following in addition to the standard prerequisites:
+
+- Node.js 18+
+- The [Axiom AI SDK](https://www.npmjs.com/package/axiom) installed in your project (`npm install axiom`)
+
+## Install Write evals skill
+
+Choose one of the following ways to install the Write evals skill:
+
+<Tabs>
+<Tab title="Quick install">
+
+Install all Axiom skills at once for Claude Code, Cursor, and other Claude-compatible agents:
+
+```bash
+npx skills add axiomhq/skills
+```
+
+</Tab>
+<Tab title="Amp">
+
+Install the Write evals skill globally with [Amp](https://ampcode.com/manual#get-started):
+
+```bash
+amp skill add --global axiomhq/skills/skills/writing-evals --name writing-evals --overwrite
+```
+
+</Tab>
+<Tab title="Claude">
+
+<Info>
+Skills are available for users on Pro, Max, Team, and Enterprise plans.
+</Info>
+
+1. Clone the Axiom Skills repository:
+
+    ```bash
+    git clone https://github.com/axiomhq/skills.git
+    ```
+
+1. Compress the `skills/writing-evals` folder into a zip file.
+1. Enable code execution in **Settings > Capabilities**.
+1. Upload the zip file to your agent's capabilities in **Settings > Capabilities**.
+
+For more information, see the [Claude documentation](https://support.claude.com/en/articles/12512198-how-to-create-custom-skills).
+
+</Tab>
+<Tab title="Claude Code">
+
+Clone the Axiom Skills repository and symlink the Write evals skill to your Claude Code skills directory:
+
+```bash
+git clone https://github.com/axiomhq/skills.git ~/axiom-skills
+ln -s ~/axiom-skills/skills/writing-evals ~/.claude/skills/writing-evals
+```
+
+For more information, see the [Claude Code documentation](https://code.claude.com/docs/en/skills).
+
+</Tab>
+<Tab title="Cursor">
+
+Clone the Axiom Skills repository and symlink the Write evals skill to Cursor's skills directory:
+
+```bash
+git clone https://github.com/axiomhq/skills.git ~/axiom-skills
+ln -s ~/axiom-skills/skills/writing-evals ~/.cursor/skills/writing-evals
+```
+
+For more information, see the [Cursor documentation](https://cursor.com/docs/context/skills).
+
+</Tab>
+<Tab title="Codex">
+
+Clone the Axiom Skills repository and symlink the Write evals skill to your Codex skills directory:
+
+```bash
+git clone https://github.com/axiomhq/skills.git ~/axiom-skills
+ln -s ~/axiom-skills/skills/writing-evals ~/.codex/skills/writing-evals
+```
+
+For more information, see the [Codex documentation](https://developers.openai.com/codex/skills/).
+
+</Tab>
+<Tab title="Other agents">
+
+Clone the Axiom Skills repository and reference the Write evals skill in your agent configuration:
+
+```bash
+git clone https://github.com/axiomhq/skills.git
+```
+
+The Write evals skill is located at `skills/writing-evals/`.
+
+</Tab>
+</Tabs>
+
+## Authenticate
+
+Before running evals, authenticate with the Axiom CLI. Choose one of the following methods:
+
+<Tabs>
+<Tab title="OAuth login (recommended)">
+
+```bash
+npx axiom auth login
+```
+
+Verify authentication:
+
+```bash
+npx axiom auth status
+```
+
+</Tab>
+<Tab title="Environment variables">
+
+Set environment variables or store them in `.env` at the project root:
+
+```bash
+AXIOM_URL="https://api.axiom.co"
+AXIOM_TOKEN="API_TOKEN"
+AXIOM_DATASET="DATASET_NAME"
+AXIOM_ORG_ID="ORGANIZATION_ID"
+```
+
+</Tab>
+</Tabs>
+
+The CLI uses OAuth credentials first, then falls back to environment variables.
+
+<SkillsCredentials />
+
+## Use Write evals skill
+
+The Write evals skill activates automatically when you ask your AI agent to:
+
+- Write evaluations for an AI feature
+- Create scorers for testing AI output
+- Set up flag schemas for experiment configuration
+- Generate test data for AI capabilities
+
+Example prompts:
+
+- "Write evals for the support agent's message categorization function"
+- "Add adversarial test cases to the existing eval suite"
+- "Set up flag schemas to compare GPT-4o and GPT-5 across all evals"
+- "Create an online eval to monitor response quality in production"
+
+## How it works
+
+The Write evals skill follows a structured workflow:
+
+1. **Understand the feature**: The agent reads your AI function's code, traces inputs and outputs, identifies the model call, and checks for existing evals.
+1. **Determine eval type**: Based on the output type (classification, free-form text, structured object, tool calls, retrieval results), the agent selects the appropriate eval pattern and scorers.
+1. **Generate eval file**: The agent creates a `.eval.ts` file colocated with the source, imports the actual function, and wires up typed scorers.
+1. **Design test data**: The agent generates test cases covering happy path, adversarial, boundary, and negative categories.
+1. **Validate and run**: The agent validates the eval structure and runs it locally with `npx axiom eval --debug`.
+
+## Eval types
+
+The Write evals skill supports the following eval types:
+
+| Output type | Eval type | Scorer pattern |
+| --- | --- | --- |
+| String category or label | Classification | Exact match |
+| Free-form text | Text quality | Contains keywords or LLM-as-judge |
+| Array of items | Retrieval | Set match |
+| Structured object | Structured output | Field-by-field match |
+| Agent result with tool calls | Tool use | Tool name presence |
+
+## Offline vs. online evals
+
+| | Offline evals | Online evals |
+| --- | --- | --- |
+| **Data** | Curated collection with ground truth | Live production traffic |
+| **Scorers** | Reference-based and reference-free | Reference-free only |
+| **When** | Before deploy (CI, local) | After deploy (production) |
+| **Purpose** | Prevent regressions | Monitor quality |
+
+## Eval templates
+
+The Write evals skill includes pre-built templates:
+
+| Template | Use case |
+| --- | --- |
+| Minimal | Simplest eval with exact match scorer |
+| Classification | Category classification with adversarial cases |
+| Retrieval | RAG and document retrieval with set matching |
+| Structured output | Complex object validation with field-by-field scoring |
+| Tool use | Agent tool usage validation |
+
+## CLI reference
+
+| Command | Purpose |
+| --- | --- |
+| `npx axiom eval` | Run all evals in the current directory |
+| `npx axiom eval path/to/file.eval.ts` | Run a specific eval file |
+| `npx axiom eval "eval-name"` | Run an eval by name (regex match) |
+| `npx axiom eval -w` | Watch mode |
+| `npx axiom eval --debug` | Local mode, no network |
+| `npx axiom eval --list` | List cases without running |
+| `npx axiom eval -b BASELINE_ID` | Compare against baseline |
+| `npx axiom eval --flag.myCapability.model=gpt-4o-mini` | Override a flag value |
