@@ -4,4 +4,8 @@ window.Do11yConfig = {
   axiomDataset: 'docs-analytics',
   allowedDomains: ['axiom.co'],
   framework: 'mintlify',
+  // Settings for testing only
+  // debug: true,
+  // allowedDomains: null,
+  // respectDNT: false,
 };
