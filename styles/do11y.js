@@ -51,7 +51,7 @@
     // IMPORTANT: Create a restricted token that can only ingest to this dataset
     'api-token': "xaat-31aceafd-2a71-4313-8a43-1494ea125085",
     // Enable debug logging to console
-    debug: false,
+    debug: true,
     // Batch events and send periodically (milliseconds)
     flushInterval: 5000,
     // Maximum events to batch before forcing a flush
@@ -66,9 +66,9 @@
     scrollThresholds: [25, 50, 75, 90],
     // Allowed domains - restrict where this script can send data from
     // Set to null to allow any domain, or ['docs.example.com'] to restrict
-    allowedDomains: ['axiom.co'],
+    allowedDomains: null,
     // Respect Do Not Track browser setting
-    respectDNT: true,
+    respectDNT: false,
     // Maximum retries for failed requests
     maxRetries: 2,
     // Retry delay in milliseconds (doubles with each retry)
