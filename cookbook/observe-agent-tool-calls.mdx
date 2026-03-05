@@ -1,0 +1,115 @@
+---
+title: "Trace multi-step AI agent tool calls"
+description: "Instrument tool definitions with wrapTool to trace agent loops and see parent-child span hierarchies in Axiom."
+sidebarTitle: Agent tool calls
+keywords: ["cookbook", "observe", "agent", "tools", "tracing", "wrapTool"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+This recipe shows how to instrument multi-step AI agent tool calls using `wrapTool` so every tool execution appears as a child span in the trace waterfall.
+
+## Prerequisites
+
+<Prerequisites />
+
+- Axiom AI SDK [installed and configured](/ai-engineering/quickstart)
+- An OpenAI API key
+
+## Step 1: Define and wrap tools
+
+Use `wrapTool` to create instrumented versions of your tool definitions:
+
+```ts src/lib/tools.ts
+import { tool } from 'ai';
+import { wrapTool } from 'axiom/ai';
+import { z } from 'zod';
+
+export const lookupOrder = wrapTool(
+  'lookupOrder',
+  tool({
+    description: 'Look up an order by ID',
+    parameters: z.object({
+      orderId: z.string().describe('The order ID to look up'),
+    }),
+    execute: async ({ orderId }) => {
+      // Replace with your actual order lookup logic
+      return {
+        orderId,
+        status: 'shipped',
+        estimatedDelivery: '2026-02-15',
+      };
+    },
+  })
+);
+
+export const createTicket = wrapTool(
+  'createTicket',
+  tool({
+    description: 'Create a support ticket',
+    parameters: z.object({
+      subject: z.string(),
+      priority: z.enum(['low', 'medium', 'high']),
+    }),
+    execute: async ({ subject, priority }) => {
+      // Replace with your actual ticket creation logic
+      return { ticketId: `TICKET-${Date.now()}`, subject, priority };
+    },
+  })
+);
+```
+
+## Step 2: Build the agent capability
+
+Combine wrapped tools with `withSpan` and a model call:
+
+```ts src/lib/capabilities/support-agent.ts
+import { generateText } from 'ai';
+import { withSpan, wrapAISDKModel } from 'axiom/ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { lookupOrder, createTicket } from '../tools';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = wrapAISDKModel(openai('gpt-4o'));
+
+export async function supportAgent(userMessage: string) {
+  return withSpan(
+    { capability: 'support-agent', step: 'handle-request' },
+    async () => {
+      const result = await generateText({
+        model,
+        system: `You are a customer support agent. You can look up orders and create support tickets.`,
+        messages: [{ role: 'user', content: userMessage }],
+        tools: { lookupOrder, createTicket },
+        maxSteps: 5,
+      });
+
+      return result.text;
+    }
+  );
+}
+```
+
+## Step 3: Verify in Axiom
+
+Send a message like "What's the status of order ORD-123?" and open the trace in the Axiom Console. You should see:
+
+- A parent span for `support-agent / handle-request`
+- A child span for the `gpt-4o` model call
+- Nested child spans for each tool execution (`lookupOrder`, `createTicket`)
+
+Each tool span includes the arguments passed and the result returned.
+
+```kusto
+['your-dataset']
+| where ['attributes.gen_ai.capability.name'] == 'support-agent'
+| where isnotnull(['attributes.gen_ai.tool.name'])
+| project _time, ['attributes.gen_ai.tool.name'], ['attributes.gen_ai.tool.arguments'], duration
+| order by _time desc
+```
+
+## What's next?
+
+- Instrument without Axiom AI SDK using [Manual OpenTelemetry instrumentation](/cookbook/observe-manual-otel)
+- Evaluate your agent's accuracy with [Write your first evaluation](/cookbook/evaluate-first-eval)
+- Learn more in the [Axiom AI SDK instrumentation reference](/ai-engineering/observe/axiom-ai-sdk-instrumentation)
