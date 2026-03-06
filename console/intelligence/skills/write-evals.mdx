@@ -1,77 +1,44 @@
 ---
-title: Write evals skill
-description: "This page explains how to use the Write evals skill to give AI coding agents the ability to scaffold and run evaluation suites for AI capabilities using Axiom AI SDK."
-sidebarTitle: Write evals
+title: Write evaluations skill
+description: "This page explains how to use the Write evaluations skill to give AI coding agents the ability to scaffold and run evaluation suites for AI capabilities using Axiom AI SDK."
+sidebarTitle: Write evaluations
 keywords: ["skills", "ai agents", "evals", "evaluations", "amp", "claude code", "cursor", "codex", "scorers", "flag schemas", "axiom ai sdk", "llm testing"]
 ---
 
 import Prerequisites from "/snippets/standard-prerequisites.mdx"
 import SkillsCredentials from "/snippets/skills-credentials.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceOrgId from "/snippets/replace-org-id.mdx"
 
-The Write evals skill turns AI agents into evaluation suite authors for AI capabilities.
+The Write evaluations skill turns AI agents into evaluation suite authors for AI capabilities.
 
-Evaluations are the test suite for non-deterministic systems: they measure whether a capability still behaves correctly after every change. You can write offline evals to test your AI capability against a curated collection of inputs with expected outputs (ground truth). Or you can write online evals to score your AI capability's outputs on live production traffic.
+Evaluations are the test suite for non-deterministic systems: they measure whether a capability still behaves correctly after every change. You can write offline evaluations to test your AI capability against a curated collection of inputs with expected outputs (ground truth). Or you can write online evaluations to score your AI capability's outputs on live production traffic.
 
-For more information, see [Run offline evaluations](/ai-engineering/evaluate/run-evaluations) and [Run online evaluations](/ai-engineering/evaluate/online-evaluations/write-run-evaluations).
+For more information, see [Evaluations](/ai-engineering/evaluate/overview).
 
-- **Eval generation**: Creates `.eval.ts` files with typed scorers, test data, and task functions
-- **Scorer patterns**: Exact match, set match, structured output, tool-use validation, LLM-as-judge, and more
-- **Flag schemas**: Generates typed configuration with `createAppScope()` for sweeping models, temperatures, and strategies without code changes
-- **Online evals**: Reference-free scoring on live production traffic with sampling and trace linking
-- **Data design**: Generates test cases covering happy path, adversarial, boundary, and negative categories
-- **Templates**: Pre-built eval file templates for common patterns
+## What the Write evaluations skill does
+
+**Offline evaluations**
+
+- **Evaluation files**: Generates complete evaluation files with scorers, test data, and task definitions ready to run
+- **Scoring methods**: Supports a range of scoring strategies, from simple exact matching to structured output and tool-use validation
+- **Experiment configuration**: Sets up typed configuration so you can sweep models and parameters without changing code
+- **Project setup**: Scaffolds the config file that wires your evaluations into the Axiom AI SDK
+- **Test data**: Designs test cases that cover normal use, edge cases, and failure scenarios
+
+**Online evaluations**
+
+- **Live traffic scoring**: Scores real production responses without needing a reference answer to compare against
+- **Sampling controls**: Lets you score a fraction of traffic or apply conditional logic to decide what to evaluate
+- **Trace linking**: Connects evaluation results back to the traces that produced them
 
 <Prerequisites />
-- Install [Node.js version 18](https://nodejs.org/en/download/package-manager) or newer.
+- Follow the procedure in [Quickstart](/ai-engineering/quickstart) to set up Axiom AI SDK in your TypeScript project. Authenticate with [environment variables](/ai-engineering/quickstart#store-environment-variables).
 - Install [vitest](https://www.npmjs.com/package/vitest) as a dev dependency by running `npm install vitest --save-dev`.
-- Install [Axiom AI SDK](https://www.npmjs.com/package/axiom) by running `npm install axiom`.
 
 <SkillsCredentials />
 
-## Authenticate
-
-Before running evals, authenticate with the Axiom CLI. Choose one of the following methods:
-
-<Tabs>
-<Tab title="OAuth login (recommended)">
-
-```bash
-npx axiom auth login
-```
-
-Verify authentication:
-
-```bash
-npx axiom auth status
-```
-
-</Tab>
-<Tab title="Environment variables">
-
-Set environment variables or store them in `.env` at the project root:
-
-```bash
-AXIOM_URL="https://api.axiom.co"
-AXIOM_TOKEN="API_TOKEN"
-AXIOM_DATASET="DATASET_NAME"
-AXIOM_ORG_ID="ORGANIZATION_ID"
-```
-
-<Info>
-<ReplaceDatasetToken />
-<ReplaceOrgId />
-</Info>
-
-</Tab>
-</Tabs>
-
-The CLI uses OAuth credentials first, then falls back to environment variables.
-
 ## Use the skill
 
-The Write evals skill activates automatically when you ask your AI agent to:
+The Write evaluations skill activates automatically when you ask your AI agent to:
 
 - Write evaluations for an AI feature
 - Create scorers for testing AI output
@@ -80,41 +47,29 @@ The Write evals skill activates automatically when you ask your AI agent to:
 
 Example prompts:
 
-- "Write evals for the support agent's message categorization function"
+- "Write evaluations for the support agent's message categorization function"
 - "Add adversarial test cases to the existing eval suite"
 - "Set up flag schemas to compare GPT-4o and GPT-5 across all evals"
 - "Create an online eval to monitor response quality in production"
 
 ## How it works
 
-The Write evals skill follows a structured workflow:
+The Write evaluations skill follows a structured workflow:
 
-1. **Understand the feature**: The agent reads your AI function's code, traces inputs and outputs, identifies the model call, and checks for existing evals.
-1. **Determine eval type**: Based on the output type (classification, free-form text, structured object, tool calls, retrieval results), the agent selects the appropriate eval pattern and scorers.
-1. **Generate eval file**: The agent creates a `.eval.ts` file colocated with the source, imports the actual function, and wires up typed scorers.
+1. **Understand the feature**: The agent reads your AI function's code, traces inputs and outputs, identifies the model call, and checks for existing evaluations.
+1. **Determine evaluation type**: Based on the output type (classification, free-form text, structured object, tool calls, retrieval results), the agent selects the appropriate evaluation pattern and scorers.
+1. **Generate evaluation file**: The agent creates a `.eval.ts` file colocated with the source, imports the actual function, and wires up typed scorers.
 1. **Design test data**: The agent generates test cases covering happy path, adversarial, boundary, and negative categories.
-1. **Validate and run**: The agent validates the eval structure and runs it locally.
+1. **Validate and run**: The agent validates the evaluation structure and runs it locally.
 
-## Eval types
+## Supported evaluation types and templates
 
-The Write evals skill supports the following eval types:
+The Write evaluations skill includes a pre-built template for each supportedevaluation type:
 
-| Output type | Eval type | Scorer pattern |
-| --- | --- | --- |
-| String category or label | Classification | Exact match |
-| Free-form text | Text quality | Contains keywords or LLM-as-judge |
-| Array of items | Retrieval | Set match |
-| Structured object | Structured output | Field-by-field match |
-| Agent result with tool calls | Tool use | Tool name presence |
-
-## Eval templates
-
-The Write evals skill includes pre-built templates:
-
-| Template | Use case |
-| --- | --- |
-| Minimal | Simplest eval with exact match scorer |
-| Classification | Category classification with adversarial cases |
-| Retrieval | RAG and document retrieval with set matching |
-| Structured output | Complex object validation with field-by-field scoring |
-| Tool use | Agent tool usage validation |
+| Output type | Evaluation type | Scorer pattern | Use case |
+| --- | --- | --- | --- |
+| String category or label | Classification | Exact match | Category classification with adversarial cases |
+| Free-form text | Text quality | Contains keywords or LLM-as-judge | Open-ended response quality |
+| Array of items | Retrieval | Set match | RAG and document retrieval |
+| Structured object | Structured output | Field-by-field match | Complex object validation |
+| Agent result with tool calls | Tool use | Tool name presence | Agent tool usage validation |
