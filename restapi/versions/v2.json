@@ -2856,6 +2856,16 @@
         },
         "required": true
       },
+      "DashboardUpsertRequest": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DashboardUpsertRequest"
+            }
+          }
+        },
+        "required": true
+      },
       "StarredQuery": {
         "content": {
           "application/json": {
@@ -2889,6 +2899,7 @@
     },
     "securitySchemes": {
       "Auth": {
+        "description": "Authenticate using an API token or personal access token (PAT). Include the token as a Bearer token: `Authorization: Bearer <token>`. For more information, see [Tokens](https://axiom.co/docs/reference/tokens).",
         "type": "oauth2",
         "flows": {
           "authorizationCode": {
@@ -3348,7 +3359,7 @@
             "description": "Estimated memory usage in bytes",
             "type": "integer",
             "format": "int64",
-            "example": 1048576
+            "example": 100000
           },
           "recordCount": {
             "description": "Number of records in the block",
@@ -3650,6 +3661,35 @@
           }
         }
       },
+      "DashboardDocument": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "DashboardError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "currentVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "message": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "uid": {
+            "type": "string"
+          }
+        }
+      },
       "DashboardID": {
         "type": "string",
         "x-go-type": {
@@ -3657,6 +3697,134 @@
             "package": "github.com/axiomhq/axiom/pkg/core/ids"
           },
           "type": "DashboardID"
+        }
+      },
+      "DashboardResource": {
+        "type": "object",
+        "required": [
+          "uid",
+          "id",
+          "version",
+          "dashboard",
+          "createdAt",
+          "updatedAt",
+          "createdBy",
+          "updatedBy"
+        ],
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "dashboard": {
+            "$ref": "#/components/schemas/DashboardDocument"
+          },
+          "id": {
+            "type": "string"
+          },
+          "uid": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "DashboardUpsertRequest": {
+        "type": "object",
+        "required": [
+          "dashboard"
+        ],
+        "properties": {
+          "dashboard": {
+            "$ref": "#/components/schemas/DashboardDocument"
+          },
+          "message": {
+            "type": "string"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false
+          },
+          "uid": {
+            "description": "Stable external dashboard identifier (org-scoped unique).",
+            "type": "string"
+          },
+          "version": {
+            "description": "Required for updates when overwrite is false.",
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "DashboardVariable": {
+        "description": "A variable defines an APL variable that is available to a dashboard",
+        "type": "object",
+        "required": [
+          "name",
+          "kind"
+        ],
+        "properties": {
+          "default": {
+            "description": "If set, should be the default value for this variable in the dashboard",
+            "type": "object"
+          },
+          "kind": {
+            "description": "A kind allows for different kinds of variables to be treated differently depending on what they are used for. A refless kind indicates that it's just a plain variable and we can not derive possible values from it A datadog kind indicates that we will use the ref value as a lookup against a datadog tag\n",
+            "type": "string",
+            "enum": [
+              "refless",
+              "datadog"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "ref": {
+            "description": "The ref value indicates where this variable can derive its values from",
+            "type": "string"
+          },
+          "values": {
+            "description": "Values is an indication of possible values for this variable, it may not be all the possible values just known quantities",
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "x-omitempty": true
+          }
+        }
+      },
+      "DashboardWriteResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "dashboard"
+        ],
+        "properties": {
+          "dashboard": {
+            "$ref": "#/components/schemas/DashboardResource"
+          },
+          "overwritten": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated"
+            ]
+          }
         }
       },
       "Dataset": {
@@ -3708,6 +3876,11 @@
           "name": {
             "description": "Unique dataset name",
             "type": "string"
+          },
+          "region": {
+            "description": "Region of the dataset",
+            "type": "string",
+            "x-omitempty": true
           },
           "retentionDays": {
             "description": "Number of days to retain data in the dataset",
@@ -4058,6 +4231,44 @@
             }
           }
         ]
+      },
+      "IdentifyAPITokenRequest": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "description": "The raw token value to identify",
+            "type": "string"
+          }
+        }
+      },
+      "IdentifyAPITokenResponse": {
+        "type": "object",
+        "required": [
+          "name",
+          "createdAt"
+        ],
+        "properties": {
+          "createdAt": {
+            "description": "When the token was created (ISO 8601 format)",
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "description": "User ID or token ID of the creator",
+            "type": "string"
+          },
+          "description": {
+            "description": "Description of the token",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name of the token",
+            "type": "string"
+          }
+        }
       },
       "License": {
         "type": "object",
@@ -4814,11 +5025,69 @@
             "type": "string",
             "format": "date-time"
           },
+          "newToken": {
+            "$ref": "#/components/schemas/CreateAPIToken"
+          },
           "newTokenExpiresAt": {
             "description": "Expiration date of the new token (ISO 8601 format)",
             "type": "string",
             "format": "date-time",
             "nullable": true
+          }
+        }
+      },
+      "Region": {
+        "type": "object",
+        "required": [
+          "id",
+          "instanceName",
+          "regionType",
+          "regionCloud",
+          "domain",
+          "description"
+        ],
+        "properties": {
+          "description": {
+            "description": "Region description",
+            "type": "string"
+          },
+          "domain": {
+            "description": "Region domain",
+            "type": "string"
+          },
+          "environmentDefault": {
+            "description": "Whether the region is the default region for the environment",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Unique region identifier",
+            "type": "string"
+          },
+          "instanceName": {
+            "description": "Human-readable region name",
+            "type": "string"
+          },
+          "regionCloud": {
+            "description": "Region cloud",
+            "type": "string"
+          },
+          "regionType": {
+            "description": "Region type",
+            "type": "string"
+          }
+        }
+      },
+      "Regions": {
+        "type": "object",
+        "required": [
+          "axiom"
+        ],
+        "properties": {
+          "axiom": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Region"
+            }
           }
         }
       },
