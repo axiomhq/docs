@@ -3,7 +3,7 @@ title: 'Send data from Loki to Axiom'
 description: 'Integrate Axiom in your existing Loki stack with minimal effort and without breaking any of your existing Loki workflows.'
 overview: 'Horizontally scalable, multi-tenant log aggregation system'
 sidebarTitle: Loki
-keywords: ['axiom documentation', 'documentation', 'axiom', 'endpoints', 'http', 'syslog', 'splunk', 'datadog', 'loki', 'honeycomb', 'javascript', 'python']
+keywords: ['axiom documentation', 'documentation', 'axiom', 'endpoints', 'http', 'syslog', 'splunk', 'datadog', 'loki', 'honeycomb', 'javascript', 'python', 'promtail', 'grafana', 'alloy', 'migration', 'grafana loki']
 logoId: 'grafanaLoki'
 ---
 
@@ -22,6 +22,59 @@ In Loki, specify the following environment variables:
 
 - `host` or `url` is the target URL for the endpoint you have generated in Axiom by following the procedure above. For example, `https://opbizplsf8klnw.ingress.axiom.co`.
 - Optional: Use `labels` or `tags` to specify labels or tags for your app.
+
+The Axiom Loki endpoint accepts data through the [Loki HTTP push API](https://grafana.com/docs/loki/latest/reference/loki-http-api/#ingest-logs) (`/loki/api/v1/push`), so any client or agent that supports sending data to Loki can send data to Axiom with a configuration change.
+
+## Migrate from an existing Loki deployment
+
+If you already run Loki with agents like Promtail, Grafana Alloy, or Grafana Agent, you can redirect your log streams to Axiom by pointing these agents at the Axiom Loki endpoint URL instead of your Loki instance.
+
+### Send logs from Promtail
+
+In your Promtail configuration, replace the Loki URL in the `clients` section with the Axiom Loki endpoint URL:
+
+```yaml
+clients:
+  - url: $LOKI_ENDPOINT_URL/loki/api/v1/push
+```
+
+### Send logs from Grafana Alloy
+
+In your Grafana Alloy configuration, use the `loki.write` component with the Axiom Loki endpoint URL:
+
+```
+loki.write "axiom" {
+  endpoint {
+    url = "$LOKI_ENDPOINT_URL/loki/api/v1/push"
+  }
+}
+```
+
+### Send logs using Vector
+
+You can use [Vector](/send-data/vector) with the `loki` sink to forward logs to the Axiom Loki endpoint. This is useful if you want to use Vector as an intermediary to transform or route logs before sending them to Axiom.
+
+```toml
+[sinks.axiom_loki]
+type = "loki"
+inputs = ["your_source"]
+endpoint = "$LOKI_ENDPOINT_URL"
+labels = { app = "my-app" }
+
+[sinks.axiom_loki.encoding]
+codec = "json"
+```
+
+<Note>
+For sending data to Axiom, the native [Axiom sink for Vector](/send-data/vector) is the recommended approach. Use the Loki sink for Vector only if you specifically need Loki protocol compatibility, for example during a gradual migration from Loki to Axiom.
+</Note>
+
+### Loki endpoint vs. Loki Multiplexer
+
+The Axiom Loki endpoint (described on this page) and the [Loki Multiplexer](/send-data/loki-multiplexer) serve different purposes:
+
+- **Loki endpoint**: Receives data directly from Loki-compatible clients and agents. Use this when you want to send logs to Axiom only.
+- **Loki Multiplexer**: Acts as a proxy that accepts Loki HTTP API traffic and forwards it to both Axiom and other destinations. Use this when you want to send the same logs to Axiom and another Loki-compatible backend simultaneously, for example during a migration period.
 
 ## Examples
 
