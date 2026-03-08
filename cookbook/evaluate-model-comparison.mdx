@@ -1,0 +1,177 @@
+---
+title: "Compare models side-by-side"
+description: "Run the same evaluation across multiple models using flags and compare accuracy, cost, and latency in the Axiom Console."
+sidebarTitle: Model comparison
+keywords: ["cookbook", "evaluate", "model comparison", "flags", "gpt-4o", "claude", "gemini"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+Choosing the right model means understanding the tradeoffs between quality, speed, and cost. This recipe shows how to run the same evaluation across multiple models using flags and compare results in the Axiom Console.
+
+## Prerequisites
+
+<Prerequisites />
+
+- Axiom AI SDK [installed and configured](/ai-engineering/quickstart) with `axiom.config.ts`
+- Axiom CLI authenticated (`axiom auth login`)
+- API keys for each model provider you want to compare
+
+## Step 1: Parameterize your capability with flags
+
+Use the `flag` function to make the model configurable at evaluation time:
+
+```ts src/lib/capabilities/summarizer.ts
+import { generateText } from 'ai';
+import { withSpan, wrapAISDKModel } from 'axiom/ai';
+import { flag } from 'axiom/ai/config';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+
+function getModel(modelName: string) {
+  if (modelName.startsWith('gpt')) return wrapAISDKModel(openai(modelName));
+  if (modelName.startsWith('claude')) return wrapAISDKModel(anthropic(modelName));
+  if (modelName.startsWith('gemini')) return wrapAISDKModel(google(modelName));
+  throw new Error(`Unknown model: ${modelName}`);
+}
+
+export async function summarize(text: string) {
+  const modelName = flag('model', 'gpt-4o-mini');
+
+  return withSpan(
+    { capability: 'summarizer', step: 'summarize' },
+    async () => {
+      const result = await generateText({
+        model: getModel(modelName),
+        messages: [
+          {
+            role: 'system',
+            content: 'Summarize the following text in 2-3 sentences. Be concise and capture the key points.',
+          },
+          { role: 'user', content: text },
+        ],
+      });
+
+      return { summary: result.text };
+    }
+  );
+}
+```
+
+## Step 2: Write the evaluation
+
+Create an eval with test cases and quality scorers:
+
+```ts src/lib/capabilities/summarizer/summarize.eval.ts
+import { Eval, Scorer } from 'axiom/ai/evals';
+import { generateObject } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
+import { summarize } from '../summarizer';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const judge = openai('gpt-4o-mini');
+
+const SummaryQuality = Scorer(
+  'summary-quality',
+  async ({ input, output }) => {
+    const result = await generateObject({
+      model: judge,
+      messages: [
+        {
+          role: 'system',
+          content: `Rate the summary quality. Score 1.0 for concise and accurate, 0.5 for partially correct, 0.0 for poor.`,
+        },
+        {
+          role: 'user',
+          content: `Original: ${input.text}\n\nSummary: ${output.summary}`,
+        },
+      ],
+      schema: z.object({ score: z.number().min(0).max(1) }),
+    });
+    return result.object.score;
+  }
+);
+
+const ConciseLength = Scorer(
+  'concise-length',
+  ({ output }) => {
+    const words = output.summary.split(/\s+/).length;
+    return words <= 100;
+  }
+);
+
+Eval('summarizer', {
+  data: [
+    {
+      input: {
+        text: `The James Webb Space Telescope (JWST) has captured unprecedented images of distant galaxies, revealing structures that formed just 300 million years after the Big Bang. These observations challenge existing models of galaxy formation, suggesting that early galaxies were more massive and structured than previously thought. Scientists are now revising their understanding of how the first stars and galaxies emerged in the early universe.`,
+      },
+      expected: {},
+    },
+    {
+      input: {
+        text: `A new study published in Nature found that microplastics have been detected in human blood for the first time. Researchers analyzed blood samples from 22 healthy volunteers and found plastic particles in 17 of them. The most common plastics found were PET (used in drink bottles) and polystyrene (used in food packaging). The health effects of microplastics in blood remain unknown, but researchers are concerned about potential impacts on organ function.`,
+      },
+      expected: {},
+    },
+  ],
+
+  task: async ({ input }) => {
+    return await summarize(input.text);
+  },
+
+  scorers: [SummaryQuality, ConciseLength],
+});
+```
+
+## Step 3: Run across multiple models
+
+Run the evaluation once per model using the `--flag.model` override:
+
+```bash
+npx axiom eval summarizer --flag.model=gpt-4o-mini
+npx axiom eval summarizer --flag.model=gpt-4o
+npx axiom eval summarizer --flag.model=claude-3-5-haiku-20241022
+npx axiom eval summarizer --flag.model=gemini-2.0-flash-exp
+```
+
+Each run produces a separate evaluation result tagged with the model flag.
+
+## Step 4: Compare in the Axiom Console
+
+1. Click the **AI engineering** tab.
+2. Select the `summarizer` evaluation.
+3. Compare runs side-by-side. The Console shows:
+   - **Scores**: Quality and conciseness per model
+   - **Latency**: Response time for each model
+   - **Cost**: Token usage and estimated cost per model
+
+4. Query the traces to build a comparison table:
+
+    ```kusto
+    ['your-dataset']
+    | where ['attributes.gen_ai.capability.name'] == 'summarizer'
+    | extend cost = genai_cost(
+        ['attributes.gen_ai.response.model'],
+        toint(['attributes.gen_ai.usage.input_tokens']),
+        toint(['attributes.gen_ai.usage.output_tokens'])
+      )
+    | summarize
+        avg_latency = avg(duration),
+        avg_cost = avg(cost),
+        avg_input_tokens = avg(toint(['attributes.gen_ai.usage.input_tokens'])),
+        avg_output_tokens = avg(toint(['attributes.gen_ai.usage.output_tokens']))
+      by ['attributes.gen_ai.response.model']
+    ```
+
+## What's next?
+
+- Evaluate domain-specific quality with [Build an LLM-as-judge scorer](/cookbook/evaluate-llm-judge)
+- Monitor your chosen model in production with [Add online evaluations to production](/cookbook/monitor-online-evals)
+- Learn more about flags and experiments in [Flags and experiments](/ai-engineering/evaluate/flags-experiments)
