@@ -8,7 +8,7 @@ In Axiom, you can use two query languages:
 - Axiom Processing Language (APL) lets you query datasets with events, OTel logs, and OTel traces. For more information, see [Introduction to APL](/apl/introduction).
 - MPL (Metrics Processing Language) lets you query OTel metrics. This page explains how to use MPL.
 
-MPL is a metric-focused query language that combines the simplicity of APL with the expressive power of PromQL. It enables effective querying, transformation, and aggregation of metric data, supporting diverse observability use cases. It addresses the shortcomings of existing metric query languages, which are either overly complex or too rigidly tied to specific storage formats.
+MPL is a metric-focused query language that combines the simplicity of APL with the expressive power of PromQL. It enables effective querying, transformation, and aggregation of metric data, supporting diverse observability use cases. 
 
 If you use PromQL, your existing expressions can be translated to MPL for quick onboarding and greater flexibility. For more information, see [Migrate PromQL queries to Axiom](/query-data/metrics/migrate-metrics).
 
@@ -36,10 +36,10 @@ A typical MPL query contains the following:
 1. **Source**: Defines dataset, metric, and optional time range
 1. **Filter**: Applies conditions to series via tags
 1. **Transformation** can be the following:
-    - **Mapping:** Maps the data to a new value.
-    - **Aggregation:** Aggregates the data over a given time to a single value.
-    - **Grouping:** Groups the data by a set of tags, combining overlapping values.
-    - **Bucketing:** A two-dimensional transformation that combines the time and tag dimension.
+    - **Map:** Maps the data to a new value.
+    - **Align:** Aggregates the data over time to align to a given time interval.
+    - **Group:** Aggregates the data over tag values.
+    - **Bucket:** A two-dimensional transformation that aggregates along both the time and tag dimensions.
 
 **Example:**
 
@@ -103,9 +103,9 @@ The value must be one of the [supported data types](#data-types).
 | where environment == "production" and status_code >= 200 and status_code < 300
 ```
 
-### Mapping
+### Map
 
-Transform individual values or series.
+Use `map` to transform individual values.
 
 Available functions:
 
@@ -140,9 +140,9 @@ Available functions:
 | map < 0.5
 ```
 
-### Aggregation
+### Align
 
-Use `align` to aggregate over time windows.
+Use `align` to aggregate over time windows. You can specify the time window and the aggregation function to apply.
 
 **Syntax:**
 
@@ -155,11 +155,12 @@ Available aggregation functions:
 | Function | Description                           |
 |----------|---------------------------------------|
 | `avg`    | Averages values in each interval.     |
-| `sum`    | Sums values in each interval.         |
-| `min`    | Takes the minimum value per interval. |
-| `max`    | Takes the maximum value per interval. |
 | `count`  | Counts non-null values per interval.  |
-| `prom::rate` | Prometheus-style rate calculation. |
+| `max`    | Takes the maximum value per interval. |
+| `min`    | Takes the minimum value per interval. |
+| `prom::rate` | PromQL-style rate calculation. |
+| `sum`    | Sums values in each interval.         |
+| `last`   | Takes the last value in each interval.|
 
 **Examples:**
 
@@ -171,7 +172,7 @@ Available aggregation functions:
 | align to 1h using count
 ```
 
-### Grouping
+### Group
 
 Use `group by` to combine series by tags.
 
@@ -206,9 +207,9 @@ Available aggregation functions:
 | group by service, namespace using sum
 ```
 
-### Bucketing
+### Bucket
 
-Bucketing is a special case of grouping that combines the time and tag dimensions.
+Use `bucket` to aggregate over time and tag dimensions simultaneously.
 
 **Syntax:**
 
@@ -218,19 +219,26 @@ Bucketing is a special case of grouping that combines the time and tag dimension
 
 Available functions:
 
-| Function          | Description                                                             |
-|-------------------|-------------------------------------------------------------------------|
-| `histogram`             | Calculates a histogram over all values in the bucket. |
-| `interpolate_histogram` | Interpolates a histogram from a histogram-type set of series.    |
+| Function | Description                           |
+|----------|---------------------------------------|
+| `avg`    | Averages values in each group and time inverval.     |
+| `count`  | Counts non-null values per group and time inverval.  |
+| `max`    | Takes the maximum value per group and time inverval. |
+| `min`    | Takes the minimum value per group and time inverval. |
+| `sum`    | Sums values in each group and time inverval.         |
+| `quantile`    | Computes the specified quantile per group and time inverval. Specify the quantile as a value between 0 and 1. For example, specifying 0.99 corresponds to the 99th percentile.        |
 
 **Examples:**
 
 ```kusto
 // Bucket over the `service` and `endpoint` tags using the histogram aggregation
-| bucket by service, endpoint to 5m using histogram
+| bucket by service, endpoint to 5m using histogram(max)
 
-// Compute the 50th and 99th percentiles of request duration
-| bucket by service to 1m using interpolate_histogram(0.50, 0.99)
+// Compute the 50th and 99th percentiles of request duration for histogram data stored using cumulative temporality
+| bucket by service to 1m using interpolate_cumulative_histogram(0.50, 0.99)
+
+// Compute the 50th and 99th percentiles of request duration for histogram data stored using delta temporality
+| bucket by service to 1m using interpolate_delta_histogram(0.50, 0.99)
 ```
 
 ## Other operations
