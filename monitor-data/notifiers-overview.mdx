@@ -11,6 +11,33 @@ By adding a notifier to a monitor, you receive a notification with the following
 - When a match monitor matches an event, the message contains the full event if you created the monitor using the simple query builder, or the output of the APL query if you created the monitor using APL.
 - When a threshold monitor changes state, the message includes a relevant value from the query results. If you enable **Notify by group**, the notification message also contains the relevant group value.
 
+## Include custom fields in alert messages
+
+### Threshold monitors
+
+To include a specific attribute, such as the app name or service name, in a threshold monitor alert message, group your query by that field and enable **Notify by group**. Axiom includes the group value in the notification.
+
+For example, to receive an alert that identifies which app triggered it, write a query like the following:
+
+```kusto
+['your_dataset']
+| summarize count() by ['app_name'], bin(_time, 5m)
+```
+
+Then enable **Notify by group** in the monitor settings. Each notification identifies which `app_name` value crossed the threshold.
+
+### Match monitors
+
+To control exactly which fields appear in a match monitor notification, use the `project` operator in your APL query to select only the fields you want to include. For example:
+
+```kusto
+['your_dataset']
+| where level == "error"
+| project _time, app_name, message, user_id
+```
+
+The notification message contains only the fields you specified.
+
 Choose one of the following to learn more about a type of notifier:
 
 <CardGroup cols={2}>
