@@ -4140,6 +4140,11 @@
             "description": "Dataset description",
             "type": "string"
           },
+          "edgeDeployment": {
+            "description": "Edge deployment of the dataset",
+            "type": "string",
+            "x-omitempty": true
+          },
           "id": {
             "description": "Dataset ID",
             "type": "string"
@@ -4250,6 +4255,61 @@
             "description": "Discord webhook URL",
             "type": "string",
             "example": "https://discord.com/api/webhooks/123456789012345678/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          }
+        }
+      },
+      "EdgeDeployment": {
+        "type": "object",
+        "required": [
+          "id",
+          "instanceName",
+          "deploymentType",
+          "cloud",
+          "domain",
+          "description"
+        ],
+        "properties": {
+          "cloud": {
+            "description": "Edge deployment cloud",
+            "type": "string"
+          },
+          "deploymentType": {
+            "description": "Edge deployment type",
+            "type": "string"
+          },
+          "description": {
+            "description": "Edge deployment description",
+            "type": "string"
+          },
+          "domain": {
+            "description": "Edge deployment domain",
+            "type": "string"
+          },
+          "environmentDefault": {
+            "description": "Whether the edge deployment is the default for the environment",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Unique edge deployment identifier",
+            "type": "string"
+          },
+          "instanceName": {
+            "description": "Human-readable edge deployment name",
+            "type": "string"
+          }
+        }
+      },
+      "EdgeDeployments": {
+        "type": "object",
+        "required": [
+          "axiom"
+        ],
+        "properties": {
+          "axiom": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EdgeDeployment"
+            }
           }
         }
       },
@@ -4583,7 +4643,9 @@
           "billingPeriodStart",
           "billingPeriodEnd",
           "defaultRegion",
-          "regions"
+          "defaultEdgeDeployment",
+          "regions",
+          "edgeDeployments"
         ],
         "properties": {
           "apiRateLimitPerSecond": {
@@ -4598,8 +4660,19 @@
             "type": "string",
             "format": "date-time"
           },
+          "defaultEdgeDeployment": {
+            "type": "string",
+            "x-omitempty": true
+          },
           "defaultRegion": {
             "type": "string",
+            "x-omitempty": true
+          },
+          "edgeDeployments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
             "x-omitempty": true
           },
           "expiresAt": {
@@ -4792,8 +4865,7 @@
         "type": "object",
         "required": [
           "name",
-          "type",
-          "aplQuery"
+          "type"
         ],
         "properties": {
           "alertOnNoData": {
@@ -4802,7 +4874,7 @@
             "example": true
           },
           "aplQuery": {
-            "description": "APL (Axiom Processing Language) query string used for monitoring.\nThis query defines what data to analyze and how to process it.\n",
+            "description": "APL (Axiom Processing Language) query string used for monitoring.\nThis query defines what data to analyze and how to process it.\nAt least one of aplQuery or mplQuery must be provided.\n",
             "type": "string",
             "example": "| where severity = 'error' | count() > 100"
           },
@@ -4852,6 +4924,11 @@
             "format": "int64",
             "minimum": 1,
             "example": 5
+          },
+          "mplQuery": {
+            "description": "MPL (Metrics Processing Language) query string for metrics-based monitoring.\nUse this as an alternative to aplQuery for metrics datasets.\nAt least one of aplQuery or mplQuery must be provided.\n",
+            "type": "string",
+            "example": "test-metrics:http_request_duration_seconds"
           },
           "name": {
             "description": "Name of the monitor",
@@ -5153,6 +5230,9 @@
           "primaryEmail"
         ],
         "properties": {
+          "defaultEdgeDeployment": {
+            "type": "string"
+          },
           "defaultRegion": {
             "type": "string"
           },
