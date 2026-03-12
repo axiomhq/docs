@@ -123,41 +123,6 @@ sum(rate(http_request_duration_count{container=~"ingest|api|login", path=~".*(in
 ```
 </CodeGroup>
 
-### Calculate CPU saturation
-
-TODO: Remove this example if we're not yet releasing `replace` operator in MPL.
-
-Calculate CPU saturation (actual over requested) of each service.
-
-<CodeGroup>
-```kusto Prometheus example
-max(
-  label_replace(
-  (sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace=~"(axiom|cloud).*",pod=~"ingest-.*"}) by (pod)
-    /
-    sum(cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{namespace=~"(axiom|cloud).*", pod=~"ingest-.*", resource="cpu"}) by (pod)),
-  "service", "$1", "pod", "(.+)-.+-.+")
-) by (service)
-```
-
-```kusto MPL equivalent
-(
-    test:container_cpu_usage_seconds_total
-    | where namespace == /(axiom|cloud).*/
-    | where pod == /ingest-.*/
-    | group by pod using sum,
-    test:kube_pod_container_resource_requests
-    | where namespace == /(axiom|cloud).*/
-    | where pod == /ingest-.*/
-    | where resource == "cpu"
-    | group by pod using sum
-)
-| compute cpu_saturation using /
-| replace service = pod ~ s/(.+)-.+-.+/$1/
-| group by service using max
-```
-</CodeGroup>
-
 ### Calculate rate
 
 Calculate rate of HTTP requests by method, path, and HTTP response code.
