@@ -82,25 +82,35 @@ k8s:cpu_usage["2025-03-01T13:00:00Z"..+1h] as usage
 
 ### Filter
 
-Use `where` or `filter` to filter series based on tag values. `where` and `filter` are identical.
+Use `where` to filter series based on tag values.
 
 **Syntax:**
 
 ```kusto
-| where <tag> <operator> <value>
+| where <filter-expression>
 ```
 
-Available operators:
+A filter expression can be one of the following:
+
+- `<tag> <operator> <value>` — a single tag filter
+- `<filter-expression> and <filter-expression>` — logical AND of two expressions
+- `<filter-expression> or <filter-expression>` — logical OR of two expressions
+- `not <filter-expression>` — negation of an expression
+- `(<filter-expression>)` — parentheses to control order of evaluation
+
+Available operators for single tag filters:
 
 - Equality: `==`, `!=`
 - Comparisons: `<`, `<=`, `>`, `>=`
 
 The value must be one of the [supported data types](#data-types).
 
-**Example:**
+**Examples:**
 
 ```kusto
 | where environment == "production" and status_code >= 200 and status_code < 300
+
+| where (environment == "production" or environment == "staging") and not status_code == 500
 ```
 
 ### Map
@@ -109,17 +119,17 @@ Use `map` to transform individual values.
 
 Available functions:
 
-| Function              | Description                                                      |
-|-----------------------|------------------------------------------------------------------|
-| `rate`                | Computes the per-second rate of change for a metric.             |
-| `min(arg)`            | Returns the minimum between the argument and the value.               |
-| `max(arg)`            | Returns the maximum between the argument and the value.               |
-| `abs`                 | Returns the absolute value of each data point.                   |
-| `fill::prev`           | Fills missing values using the previous non-null value.          |
-| `fill::const(arg)`     | Fills missing values with a constant.                            |
-| `interpolate::linear` |  Linear interpolation of missing values. |
-| `+`, `-`, `*`, `/`    | Performs the respective mathematical calculation on each value.  |
-|  `>`, `<`, `>=`, `<=` | Sets the value to `1.0` if the condition is true, `0` otherwise. |
+| Function              | Description                                                          |
+|-----------------------|----------------------------------------------------------------------|
+| `rate`                | Computes the per-second rate of change for a metric.                 |
+| `increase`            | Calculates the increase between the data point and the previous one. |
+| `min(arg)`            | Returns the minimum between the argument and the value.              |
+| `max(arg)`            | Returns the maximum between the argument and the value.              |
+| `abs`                 | Returns the absolute value of each data point.                       |
+| `fill::prev`          | Fills missing values using the previous non-null value.              |
+| `fill::const(arg)`    | Fills missing values with a constant.                                |
+| `interpolate::linear` | Linear interpolation of missing values.                              |
+| `+`, `-`, `*`, `/`   | Performs the respective mathematical calculation on each value.      |
 
 **Examples:**
 
@@ -135,9 +145,48 @@ Available functions:
 
 // Fill empty values with zeros
 | map fill::const(0)
+```
 
-// Set values to 0 if latency is above threshold, 1 if within SLO
-| map < 0.5
+#### filter:: functions
+
+Use `filter::` functions to remove data points that don't match a condition. Data points that don't match are removed from the series entirely.
+
+| Function         | Description                                                 |
+|------------------|-------------------------------------------------------------|
+| `filter::eq(v)`  | Keeps only data points equal to `v`.                        |
+| `filter::neq(v)` | Keeps only data points not equal to `v`.                    |
+| `filter::gt(v)`  | Keeps only data points greater than `v`.                    |
+| `filter::gte(v)` | Keeps only data points greater than or equal to `v`.        |
+| `filter::lt(v)`  | Keeps only data points less than `v`.                       |
+| `filter::lte(v)` | Keeps only data points less than or equal to `v`.           |
+
+**Example:**
+
+```kusto
+// Remove data points where latency exceeds 400ms
+| map filter::lt(0.4)
+```
+
+#### is:: functions
+
+Use `is::` functions to test data points against a condition. Matching data points are set to `1.0` and non-matching data points are set to `0.0`. The series retains all its data points.
+
+Use `is::` instead of `filter::` when you need to preserve the shape of the time series, for example in SLO calculations where gaps in data would produce incorrect results.
+
+| Function      | Description                                                                   |
+|---------------|-------------------------------------------------------------------------------|
+| `is::eq(v)`   | Sets data points equal to `v` to `1.0`, all others to `0.0`.                 |
+| `is::neq(v)`  | Sets data points not equal to `v` to `1.0`, all others to `0.0`.             |
+| `is::gt(v)`   | Sets data points greater than `v` to `1.0`, all others to `0.0`.             |
+| `is::gte(v)`  | Sets data points greater than or equal to `v` to `1.0`, all others to `0.0`. |
+| `is::lt(v)`   | Sets data points less than `v` to `1.0`, all others to `0.0`.                |
+| `is::lte(v)`  | Sets data points less than or equal to `v` to `1.0`, all others to `0.0`.    |
+
+**Example:**
+
+```kusto
+// Set to 1.0 where latency is within SLO (below 400ms), 0.0 otherwise
+| map is::lt(0.4)
 ```
 
 ### Align
@@ -219,14 +268,11 @@ Use `bucket` to aggregate over time and tag dimensions simultaneously.
 
 Available functions:
 
-| Function | Description                           |
-|----------|---------------------------------------|
-| `avg`    | Averages values in each group and time inverval.     |
-| `count`  | Counts non-null values per group and time inverval.  |
-| `max`    | Takes the maximum value per group and time inverval. |
-| `min`    | Takes the minimum value per group and time inverval. |
-| `sum`    | Sums values in each group and time inverval.         |
-| `quantile`    | Computes the specified quantile per group and time inverval. Specify the quantile as a value between 0 and 1. For example, specifying 0.99 corresponds to the 99th percentile.        |
+| Function                                        | Description                                                                                                                                                                |
+|-------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `histogram(specs)`                              | Aggregates non-histogram series into buckets. `specs` is one or more quantile values between 0 and 1, or aggregation functions (`count`, `avg`, `sum`, `min`, `max`).      |
+| `interpolate_cumulative_histogram(mode, specs)` | Aggregates cumulative-temporality histogram series. `mode` is `rate` or `increase`. `specs` is one or more quantile values or aggregation functions.                       |
+| `interpolate_delta_histogram(specs)`            | Aggregates delta-temporality histogram series. `specs` is one or more quantile values or aggregation functions.                                                            |
 
 **Examples:**
 
@@ -235,7 +281,7 @@ Available functions:
 | bucket by service, endpoint to 5m using histogram(max)
 
 // Compute the 50th and 99th percentiles of request duration for histogram data stored using cumulative temporality
-| bucket by service to 1m using interpolate_cumulative_histogram(0.50, 0.99)
+| bucket by service to 1m using interpolate_cumulative_histogram(rate, 0.50, 0.99)
 
 // Compute the 50th and 99th percentiles of request duration for histogram data stored using delta temporality
 | bucket by service to 1m using interpolate_delta_histogram(0.50, 0.99)
@@ -250,10 +296,10 @@ Combine multiple metrics in one query block.
 **Syntax:**
 
 ```kusto
-{
-  <subquery1>;
-  <subquery2>;
-}
+(
+  <subquery1>,
+  <subquery2>
+)
 | compute <name> using <operator>
 ```
 
@@ -273,13 +319,13 @@ Available operators:
 
 ```kusto
 // Return the average error rate over the past 5 minutes
-{
+(
   k8s-metrics-dev:http_requests_total
   | where status_code >= 400
-  | group by method, path using sum;
+  | group by method, path using sum,
   k8s-metrics-dev:http_requests_total
-  | group by method, path using sum;
-}
+  | group by method, path using sum
+)
 | compute error_rate using /
 | align to 5m using avg
 ```
@@ -298,13 +344,10 @@ Available operators:
 
 Valid identifier names in MPL follow these rules:
 
-- Between 1 and 1024 characters long.
-- Allowed characters:
-    - Alphanumeric characters (letters and digits)
-    - Underscore (`_`)
-    - Dot (`.`)
+- Start with an ASCII letter.
+- Followed by zero or more ASCII letters, digits, or underscores (`_`).
 
-Identifier names are case-sensitive.
+Identifiers are case-sensitive.
 
 ### Quote identifiers
 
@@ -354,10 +397,10 @@ Time can be defined in one of the following ways:
 [1h..]
 
 // One hour after a Unix timestamp
-[1747077736092..+1h]
+[1747077736..+1h]
 
 // One hour before a Unix timestamp
-[-1h..1747077736092]
+[-1h..1747077736]
 
 // One hour before an RFC3339 date
 [-1h..2025-03-01T13:00:00Z]
