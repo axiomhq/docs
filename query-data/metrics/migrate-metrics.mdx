@@ -2,6 +2,7 @@
 title: Migrate PromQL queries to Axiom
 description: This page explains how to migrate your PromQL queries to Axiom.
 sidebarTitle: Migrate
+keywords: ["metrics", "opentelemetry", "otel", "mpl", "metricsdb", "promql", "migrate"]
 ---
 
 ## Differences between MPL and PromQL
@@ -30,9 +31,17 @@ MPL allows histogram operations that can output multiple series in a single quer
 
 ### Regular expression syntax
 
-In PromQL, regular expressions are written as string literals. This requires escaping special characters using double quotes and backslashes, which can be error-prone.
+In PromQL, regular expressions are written as string literals using the `=~` operator. This requires escaping special characters using double quotes and backslashes, which can be error-prone.
 
-MPL treats regular expressions as a first-class type. They're written directly without string escaping, making them easier to use and less ambiguous.
+MPL treats regular expressions as a first-class type. Use the `==` operator with a regex literal delimited by `/`. There is no `=~` operator in MPL.
+
+```kusto
+// PromQL
+container=~"ingest|api"
+
+// MPL equivalent
+| where container == /ingest|api/
+```
 
 <Tip>
 Regex is a native type in MPL. Denote regex using slash (`/`) instead of quotation marks (`'` or `"`).
@@ -61,11 +70,11 @@ avg_over_time(
 ```
 
 ```kusto MPL equivalent
-test-with-minus.com:axiomdb_transport_ingest_pressure
+`test-with-minus.com`:axiomdb_transport_ingest_pressure
 | where time_window == "1m"
 | where service == /axiomdb-[a-f]/
 | group using max
-| map < 0.4
+| map is::lt(0.4)
 | align to 7d using avg
 ```
 </CodeGroup>
@@ -95,53 +104,22 @@ sum(rate(http_request_duration_count{container=~"ingest|api|login", path=~".*(in
 ```
 
 ```kusto MPL equivalent
-{
+(
   test:http_request_duration_count
-  | filter container =~ /ingest|api|login/
-  | filter path =~ /.*(ingest|(?:v1\/(traces|logs))).*/
-  | filter code >= 500
+  | where container == /ingest|api|login/
+  | where path == /.*(ingest|(?:v1\/(traces|logs))).*/
+  | where code >= 500
   | map rate
   | align to 5m using avg
-  | group using sum;
+  | group using sum,
   test:http_request_duration_count
-  | filter container =~ /ingest|api|login/
-  | filter path =~ /.*(ingest|(?:v1\/(traces|logs))).*/
+  | where container == /ingest|api|login/
+  | where path == /.*(ingest|(?:v1\/(traces|logs))).*/
   | map rate
   | align to 5m using avg
   | group using sum
-} compute using / as error_rate
-```
-</CodeGroup>
-
-### Calculate CPU saturation
-
-Calculate CPU saturation (actual over requested) of each service.
-
-<CodeGroup>
-```kusto Prometheus example
-max(
-  label_replace(
-  (sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace=~"(axiom|cloud).*",pod=~"ingest-.*"}) by (pod)
-    /
-    sum(cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{namespace=~"(axiom|cloud).*", pod=~"ingest-.*", resource="cpu"}) by (pod)),
-  "service", "$1", "pod", "(.+)-.+-.+")
-) by (service)
-```
-
-```kusto MPL equivalent
-{
-    test:container_cpu_usage_seconds_total
-    | filter namespace =~ /(axiom|cloud).*/
-    | filter pod =~ /ingest-.*/
-    | group by pod using sum;
-    test:kube_pod_container_resource_requests
-    | filter namespace =~ /(axiom|cloud).*/
-    | filter pod =~ /ingest-.*/
-    | filter resource == "cpu"
-    | group by pod using sum;
-} compute by pod using / as cpu_saturation
-| replace service = pod ~ s/(.+)-.+-.+/$1/
-| group by service using max
+)
+| compute error_rate using /
 ```
 </CodeGroup>
 
@@ -163,8 +141,8 @@ sum by (method, path, code) (
 
 ```kusto MPL equivalent
 test:http_requests_total
-| filter path =~ /.*(ingest|(?:v1\/(traces|logs))).*/
-| filter code =~ /[123]../
+| where path == /.*(ingest|(?:v1\/(traces|logs))).*/
+| where code == /[123]../
 | map rate
 | align to 5m using avg
 | group by method, path, code using sum
