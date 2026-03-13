@@ -1,0 +1,93 @@
+---
+title: Sample MPL queries
+description: This page gives examples of how to query OTel metrics using MPL.
+sidebarTitle: Sample queries
+---
+
+## Sum rate
+
+Calculate the rate of successful HTTP requests by method, path, and status code.
+
+```kusto
+test:axiom_http_requests_total
+| where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
+| where code < 400
+| align to 5m using rate
+| group by method, path, code using sum
+```
+
+## Histogram
+
+Calculate the 90th and 99th percentile HTTP request durations by method and path.
+
+```kusto
+test:axiom_http_request_duration_seconds_bucket
+| where code == /[123]../
+| bucket by method, path to 5m using interpolate_cumulative_histogram(0.90, 0.99)
+```
+
+### Filtered histogram
+
+Calculate the 50th and 99th percentile request durations for the ingest handler, for requests under 500ms.
+
+```kusto
+axiom-dev.metrics:axiomdb_transport_request_duration_seconds_bucket
+| where status == /[123..]/
+| where handler == /^ingest$/
+| where le == /^0\.5/
+| map rate
+| bucket by handler to 30s using interpolate_cumulative_histogram(0.5, 0.99)
+```
+
+## Compute
+
+### Compute error rate
+
+Calculate the fraction of HTTP requests returning 5xx errors across ingest and API pods.
+
+```kusto
+{
+    test:axiom_http_request_duration_seconds_count
+    | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
+    | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
+    | where code >= 500
+    | map interpolate::linear
+    | map rate
+    | align to 5m using avg
+    | group using sum;
+    test:axiom_http_request_duration_seconds_count
+    | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
+    | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
+    | map interpolate::linear
+    | map rate
+    | align to 5m using avg
+    | group using sum
+}
+| compute error_rate using /
+```
+
+## Service Level Objectives (SLO)
+
+### SLO compliance over time
+
+Calculate the fraction of time that ingest pressure stays below the 0.4 threshold over a 7-day window.
+
+```kusto
+test-with-minus.com:axiomdb_transport_ingest_pressure
+| where time_window == "1m"
+| where service == /axiomdb-[a-f]/
+| group using max
+| map < 0.4
+| align to 7d using avg
+```
+
+### SLO histogram
+
+Calculate the fraction of requests completing within the 400ms latency SLO target, measured weekly.
+
+```kusto
+test:http_server_request_duration_seconds_bucket
+| bucket to 1m using interpolate_delta_histogram(0.99)
+| map < 0.4
+| align to 7d using avg
+```
