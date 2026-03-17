@@ -1,0 +1,86 @@
+name: Sync OpenAPI Specs
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-openapi-specs:
+    name: Sync OpenAPI specs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout docs repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.AXIOM_AUTOMATION_TOKEN }}
+          path: docs
+
+      - name: Checkout axiom repo
+        uses: actions/checkout@v4
+        with:
+          repository: axiomhq/axiom
+          token: ${{ secrets.AXIOM_AUTOMATION_TOKEN }}
+          path: axiom
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: axiom/go.mod
+          cache-dependency-path: axiom/go.sum
+
+      # go-swagger is needed by generate-openapi.ts (called inside v2-api-docs) via `swagger mixin`
+      - name: Install go-swagger
+        run: go install github.com/go-swagger/go-swagger/cmd/swagger@latest
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      # Install Zod and other dependencies used by generate-openapi.ts
+      - name: Install Bun dependencies
+        run: bun install --frozen-lockfile
+        working-directory: axiom/pkg/core/common/dashboards/zod/schemas
+
+      # swagger2openapi converts Swagger 2 specs to OpenAPI 3 JSON
+      - name: Install swagger2openapi
+        run: npm install -g swagger2openapi
+
+      - name: Generate v2 API docs
+        run: make v2-api-docs > ../docs/restapi/versions/v2.json
+        working-directory: axiom
+
+      - name: Generate edge-ingest API docs
+        run: make edge-ingest-docs > ../docs/restapi/versions/v1-edge-ingest.json
+        working-directory: axiom
+
+      - name: Generate edge-query API docs
+        run: make edge-query-docs > ../docs/restapi/versions/v1-edge-query.json
+        working-directory: axiom
+
+      # Creates a PR if any of the three JSON files differ from what is already in the docs repo.
+      # If a PR for this branch is already open, it updates the branch instead.
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.AXIOM_AUTOMATION_TOKEN }}
+          path: docs
+          commit-message: "chore: sync OpenAPI specs from axiom repo"
+          branch: chore/sync-openapi-specs
+          title: "chore: sync OpenAPI specs from axiom repo"
+          body: |
+            Automated daily sync of OpenAPI spec files generated from the [axiom repo](https://github.com/axiomhq/axiom).
+
+            **Updated files:**
+            - `restapi/versions/v2.json` — from `make v2-api-docs`
+            - `restapi/versions/v1-edge-ingest.json` — from `make edge-ingest-docs`
+            - `restapi/versions/v1-edge-query.json` — from `make edge-query-docs`
+
+            **Source directories:**
+            - `axiom/pkg/core/api/v2/spec.d`
+            - `axiom/pkg/edge/api/ingest/spec.d`
+            - `axiom/pkg/edge/api/query/spec.d`
+          add-paths: |
+            restapi/versions/v2.json
+            restapi/versions/v1-edge-ingest.json
+            restapi/versions/v1-edge-query.json
