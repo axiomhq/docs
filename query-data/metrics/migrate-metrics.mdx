@@ -33,18 +33,18 @@ MPL allows histogram operations that can output multiple series in a single quer
 
 In PromQL, regular expressions are written as string literals using the `=~` operator. This requires escaping special characters using double quotes and backslashes, which can be error-prone.
 
-MPL treats regular expressions as a first-class type. Use the `==` operator with a regex literal delimited by `/`. There is no `=~` operator in MPL.
+MPL treats regular expressions as a first-class type. Use the `==` operator with a regex literal prefixed by `#/`. There is no `=~` operator in MPL.
 
 ```kusto
 // PromQL
-container=~"ingest|api"
+container=~"checkout|payment"
 
 // MPL equivalent
-| where container == #/ingest|api/
+| where service == #/checkout|payment/
 ```
 
 <Tip>
-Regex is a native type in MPL. Denote regex using slash (`/`) instead of quotation marks (`'` or `"`).
+Regex is a native type in MPL. Denote regex using `#/` and `/` instead of quotation marks (`'` or `"`).
 
 In regex, escape slash (`/`), but don't escape quotation marks (`'` or `"`).
 </Tip>
@@ -53,68 +53,64 @@ In regex, escape slash (`/`), but don't escape quotation marks (`'` or `"`).
 
 ### Average over time
 
-Calculate the weekly average ingest pressure, expressed as the fraction of time pressure stays below 0.4.
+Calculate the fraction of time JVM CPU utilization across checkout and payment services stays below 80% over a 7-day window.
 
 <CodeGroup>
 ```kusto Prometheus example
 avg_over_time(
    (
-      max(
-          axiomdb_transport_ingest_pressure\{
-              time_window = "1m",
-              service =~ "axiomdb-[a-f]"
-          \}
-       ) <bool 0.4
+      max by (service) (
+          jvm_cpu_recent_utilization_ratio{
+              service=~"checkout|payment"
+          }
+       ) < bool 0.8
    )[7d:]
 )
 ```
 
 ```kusto MPL equivalent
-`test-with-minus.com`:axiomdb_transport_ingest_pressure
-| where time_window == "1m"
-| where service == #/axiomdb-[a-f]/
+`otel-demo-metrics`:`jvm.cpu.recent_utilization`[7d..]
+| where service == #/checkout|payment/
 | group using max
-| map is::lt(0.4)
+| map is::lt(0.8)
 | align to 7d using avg
 ```
 </CodeGroup>
 
 ### Multiply each value by 100
 
+Convert CPU utilization from a ratio (0–1) to a percentage (0–100).
+
 <CodeGroup>
 ```kusto Prometheus example
-http_request_duration_seconds_count{} * 100
+process_cpu_utilization_ratio{} * 100
 ```
 
 ```kusto MPL equivalent
-test:axiom_http_request_duration_seconds_count
+`otel-demo-metrics`:`process.cpu.utilization`
 | map * 100
 ```
 </CodeGroup>
 
 ### Calculate average error rate
 
-Calculate the average error rate per 5-minute windows on a set of HTTP endpoints.
+Calculate the average error rate per 5-minute windows for HTTP server requests.
 
 <CodeGroup>
 ```kusto Prometheus example
-sum(rate(http_request_duration_count{           container=~"ingest|api|login", path=~".*(ingest|(?:v1/(traces|logs))).*", code!~"[1234].."}[5m]))
+sum(rate(http_server_request_duration_seconds_count{status_code=~"5.."}[5m]))
 /
-sum(rate(http_request_duration_count{container=~"ingest|api|login", path=~".*(ingest|(?:v1/(traces|logs))).*"}[5m]))
+sum(rate(http_server_request_duration_seconds_count{}[5m]))
 ```
 
 ```kusto MPL equivalent
 (
-  test:http_request_duration_count
-  | where container == #/ingest|api|login/
-  | where path == #/.*(ingest|(?:v1\/(traces|logs))).*/
-  | where code >= 500
+  `otel-demo-metrics`:`http.server.request.duration`
+  | where status_code >= 500
   | map rate
   | align to 5m using avg
   | group using sum,
-  test:http_request_duration_count
-  | where container == #/ingest|api|login/
-  | where path == #/.*(ingest|(?:v1\/(traces|logs))).*/
+  `otel-demo-metrics`:`http.server.request.duration`
   | map rate
   | align to 5m using avg
   | group using sum
@@ -125,26 +121,24 @@ sum(rate(http_request_duration_count{container=~"ingest|api|login", path=~".*(in
 
 ### Calculate rate
 
-Calculate rate of HTTP requests by method, path, and HTTP response code.
+Calculate the rate of HTTP requests by method, route, and status code.
 
 <CodeGroup>
 ```kusto Prometheus example
-sum by (method, path, code) (
+sum by (method, route, status_code) (
       rate(
-          http_requests_total{
-              path=~".*(ingest|(?:v1/(traces|logs))).*",
-              code=~"[123].."
+          http_server_request_duration_seconds_count{
+              status_code=~"[123].."
           }[5m]
       )
   )
 ```
 
 ```kusto MPL equivalent
-test:http_requests_total
-| where path == #/.*(ingest|(?:v1\/(traces|logs))).*/
-| where code == #/[123]../
+`otel-demo-metrics`:`http.server.request.duration`
+| where status_code == #/[123]../
 | map rate
 | align to 5m using avg
-| group by method, path, code using sum
+| group by method, route, status_code using sum
 ```
 </CodeGroup>

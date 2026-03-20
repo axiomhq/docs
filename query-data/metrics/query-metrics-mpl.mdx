@@ -45,12 +45,12 @@ A typical MPL query contains the following:
 **Example:**
 
 ```kusto
-k8s:cpu_usage[1h..]
-| where namespace == "prod"
+`otel-demo-metrics`:`go.memory.used`[1h..]
+| where service == "frontend"
 | align to 5m using avg
 ```
 
-This example queries the `k8s` dataset's `cpu_usage` metric one hour before the current time. It filters results to events where `namespace` is `prod` and aggregates events over 5-minute time windows into their average value.
+This example queries the `otel-demo-metrics` dataset's `go.memory.used` metric one hour before the current time. It filters results to the `frontend` service and aggregates values over 5-minute time windows into their average.
 
 ## Elements of queries
 
@@ -76,9 +76,9 @@ Specify the dataset, the metric, and optional time bounds.
 **Examples:**
 
 ```kusto
-k8s:cpu_usage[1h..]
-k8s:cpu_usage[2h..5m]
-k8s:cpu_usage[2025-03-01T13:00:00Z..+1h] as usage
+`otel-demo-metrics`:`go.memory.used`[1h..]
+`otel-demo-metrics`:`go.memory.used`[2h..5m]
+`otel-demo-metrics`:`go.memory.used`[2025-03-01T13:00:00Z..+1h] as mem_usage
 ```
 
 ### Filter
@@ -325,14 +325,17 @@ Available operators:
 ```kusto
 // Return the average error rate over the past 5 minutes
 (
-  `k8s-metrics-dev`:http_requests_total
-  | where status_code >= 400
-  | group by method, path using sum,
-  `k8s-metrics-dev`:http_requests_total
-  | group by method, path using sum
+  `otel-demo-metrics`:`http.server.request.duration`
+  | where status_code >= 500
+  | map rate
+  | align to 5m using avg
+  | group by method, route using sum,
+  `otel-demo-metrics`:`http.server.request.duration`
+  | map rate
+  | align to 5m using avg
+  | group by method, route using sum
 )
 | compute error_rate using /
-| align to 5m using avg
 ```
 
 ## Language features

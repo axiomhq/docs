@@ -6,23 +6,23 @@ sidebarTitle: Sample queries
 
 ## Sum rate
 
-Calculate the rate of successful HTTP requests by method, path, and status code.
+Calculate the rate of successful HTTP requests by method and route.
 
 ```kusto
-test:axiom_http_requests_total
-| where path == #/.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
-| where code < 400
+`otel-demo-metrics`:`http.server.request.duration`
+| where status_code < 400
 | align to 5m using prom::rate
-| group by method, path, code using sum
+| group by method, route using sum
 ```
 
 ## Histogram
 
-Calculate the 90th and 99th percentile HTTP request durations by method and path.
+Calculate the 90th and 99th percentile HTTP request durations by service.
 
 ```kusto
-test:axiom_http_request_duration_seconds_bucket
-| bucket by method, path to 5m using interpolate_delta_histogram(0.90, 0.99)
+`otel-demo-metrics`:`http.server.request.duration`
+| where status_code < 400
+| bucket by service to 5m using interpolate_delta_histogram(0.90, 0.99)
 ```
 
 ### Cumulative histogram
@@ -32,42 +32,36 @@ test:axiom_http_request_duration_seconds_bucket
 </Info>
 
 ```kusto
-test:axiom_http_request_duration_seconds_bucket
-| where code == #/[123]../
-| bucket by method, path to 5m using interpolate_cumulative_histogram(rate, 0.90, 0.99)
+`otel-demo-metrics`:`http.server.request.duration`
+| where status_code == #/[123]../
+| bucket by method, route to 5m using interpolate_cumulative_histogram(rate, 0.90, 0.99)
 ```
 
 ### Filtered histogram
 
-Calculate the 50th and 99th percentile request durations for the ingest handler, for requests under 500ms.
+Calculate the 50th and 99th percentile cart latency for requests under 500ms.
 
 ```kusto
-`axiom-dev.metrics`:axiomdb_transport_request_duration_seconds_bucket
-| where code == #/[123]../
-| where handler == #/^ingest$/
+`otel-demo-metrics`:`app.cart.get_cart.latency`
 | where le == #/^0\.5/
-| bucket by handler to 30s using interpolate_cumulative_histogram(rate, 0.5, 0.99)
+| bucket to 30s using interpolate_cumulative_histogram(rate, 0.50, 0.99)
 ```
 
 ## Compute
 
 ### Compute error rate
 
-Calculate the fraction of HTTP requests returning 5xx errors across ingest and API pods.
+Calculate the fraction of HTTP requests returning 5xx errors.
 
 ```kusto
 (
-    test:axiom_http_request_duration_seconds_count
-    | where container == #/axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
-    | where path == #/.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
-    | where code >= 500
+    `otel-demo-metrics`:`http.server.request.duration`
+    | where status_code >= 500
     | map interpolate::linear
     | map rate
     | align to 5m using avg
     | group using sum,
-    test:axiom_http_request_duration_seconds_count
-    | where container == #/axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
-    | where path == #/.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
+    `otel-demo-metrics`:`http.server.request.duration`
     | map interpolate::linear
     | map rate
     | align to 5m using avg
@@ -80,14 +74,13 @@ Calculate the fraction of HTTP requests returning 5xx errors across ingest and A
 
 ### SLO compliance over time
 
-Calculate the fraction of time that ingest pressure stays below the 0.4 threshold over a 7-day window.
+Calculate the fraction of time JVM CPU utilization across checkout and payment services stays below 80% over a 7-day window.
 
 ```kusto
-`test-with-minus.com`:axiomdb_transport_ingest_pressure
-| where time_window == "1m"
-| where service == #/axiomdb-[a-f]/
+`otel-demo-metrics`:`jvm.cpu.recent_utilization`[7d..]
+| where service == #/checkout|payment/
 | group using max
-| map is::lt(0.4)
+| map is::lt(0.8)
 | align to 7d using avg
 ```
 
@@ -96,7 +89,7 @@ Calculate the fraction of time that ingest pressure stays below the 0.4 threshol
 Calculate the fraction of requests completing within the 400ms latency SLO target, measured weekly.
 
 ```kusto
-test:http_server_request_duration_seconds_bucket
+`otel-demo-metrics`:`http.server.request.duration`
 | bucket to 1m using interpolate_delta_histogram(0.99)
 | map is::lt(0.4)
 | align to 7d using avg
