@@ -10,7 +10,7 @@ Calculate the rate of successful HTTP requests by method, path, and status code.
 
 ```kusto
 test:axiom_http_requests_total
-| where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
+| where path == #/.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
 | where code < 400
 | align to 5m using prom::rate
 | group by method, path, code using sum
@@ -22,7 +22,7 @@ Calculate the 90th and 99th percentile HTTP request durations by method and path
 
 ```kusto
 test:axiom_http_request_duration_seconds_bucket
-| where code == /[123]../
+| where code == #/[123]../
 | bucket by method, path to 5m using interpolate_cumulative_histogram(rate, 0.90, 0.99)
 ```
 
@@ -32,9 +32,9 @@ Calculate the 50th and 99th percentile request durations for the ingest handler,
 
 ```kusto
 `axiom-dev.metrics`:axiomdb_transport_request_duration_seconds_bucket
-| where status == /[123..]/
-| where handler == /^ingest$/
-| where le == /^0\.5/
+| where status == #/[123..]/
+| where handler == #/^ingest$/
+| where le == #/^0\.5/
 | bucket by handler to 30s using interpolate_cumulative_histogram(rate, 0.5, 0.99)
 ```
 
@@ -47,16 +47,16 @@ Calculate the fraction of HTTP requests returning 5xx errors across ingest and A
 ```kusto
 (
     test:axiom_http_request_duration_seconds_count
-    | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
-    | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
+    | where container == #/axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
+    | where path == #/.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
     | where code >= 500
     | map interpolate::linear
     | map rate
     | align to 5m using avg
     | group using sum,
     test:axiom_http_request_duration_seconds_count
-    | where container == /axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
-    | where path == /.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
+    | where container == #/axiom-ingest-pod|axiom-api-pod|axiom-login-pod|axiom-integrations-pod/
+    | where path == #/.*(elastic\/_bulk|ingest|(?:v1\/(traces|logs|metrics))).*/
     | map interpolate::linear
     | map rate
     | align to 5m using avg
@@ -74,7 +74,7 @@ Calculate the fraction of time that ingest pressure stays below the 0.4 threshol
 ```kusto
 `test-with-minus.com`:axiomdb_transport_ingest_pressure
 | where time_window == "1m"
-| where service == /axiomdb-[a-f]/
+| where service == #/axiomdb-[a-f]/
 | group using max
 | map is::lt(0.4)
 | align to 7d using avg
