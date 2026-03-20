@@ -15,6 +15,8 @@ Calculate the rate of successful HTTP requests by method and route.
 | group by method, route using sum
 ```
 
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3C%20400%20%7C%20align%20to%205m%20using%20prom%3A%3Arate%20%7C%20group%20by%20method%2C%20route%20using%20sum%22%7D)
+
 ## Histogram
 
 Calculate the 90th and 99th percentile HTTP request durations by service.
@@ -24,6 +26,8 @@ Calculate the 90th and 99th percentile HTTP request durations by service.
 | where status_code < 400
 | bucket by service to 5m using interpolate_delta_histogram(0.90, 0.99)
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3C%20400%20%7C%20bucket%20by%20service%20to%205m%20using%20interpolate_delta_histogram%280.90%2C%200.99%29%22%7D)
 
 ### Cumulative histogram
 
@@ -37,6 +41,8 @@ Calculate the 90th and 99th percentile HTTP request durations by service.
 | bucket by method, route to 5m using interpolate_cumulative_histogram(rate, 0.90, 0.99)
 ```
 
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3D%3D%20%23%2F%5B123%5D..%2F%20%7C%20bucket%20by%20method%2C%20route%20to%205m%20using%20interpolate_cumulative_histogram%28rate%2C%200.90%2C%200.99%29%22%7D)
+
 ### Filtered histogram
 
 Calculate the 50th and 99th percentile cart latency for requests under 500ms.
@@ -46,6 +52,8 @@ Calculate the 50th and 99th percentile cart latency for requests under 500ms.
 | where le == #/^0\.5/
 | bucket to 30s using interpolate_cumulative_histogram(rate, 0.50, 0.99)
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60app.cart.get_cart.latency%60%20%7C%20where%20le%20%3D%3D%20%23%2F%5E0%5C%5C.5%2F%20%7C%20bucket%20to%2030s%20using%20interpolate_cumulative_histogram%28rate%2C%200.50%2C%200.99%29%22%7D)
 
 ## Compute
 
@@ -70,6 +78,8 @@ Calculate the fraction of HTTP requests returning 5xx errors.
 | compute error_rate using /
 ```
 
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%28%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3E%3D%20500%20%7C%20map%20interpolate%3A%3Alinear%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%2C%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20map%20interpolate%3A%3Alinear%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%20%29%20%7C%20compute%20error_rate%20using%20%2F%22%7D)
+
 ## Service Level Objectives (SLO)
 
 ### SLO compliance over time
@@ -84,6 +94,8 @@ Calculate the fraction of time JVM CPU utilization across checkout and payment s
 | align to 7d using avg
 ```
 
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60jvm.cpu.recent_utilization%60%5B7d..%5D%20%7C%20where%20service%20%3D%3D%20%23%2Fcheckout%7Cpayment%2F%20%7C%20group%20using%20max%20%7C%20map%20is%3A%3Alt%280.8%29%20%7C%20align%20to%207d%20using%20avg%22%7D)
+
 ### SLO histogram
 
 Calculate the fraction of requests completing within the 400ms latency SLO target, measured weekly.
@@ -94,3 +106,5 @@ Calculate the fraction of requests completing within the 400ms latency SLO targe
 | map is::lt(0.4)
 | align to 7d using avg
 ```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20bucket%20to%201m%20using%20interpolate_delta_histogram%280.99%29%20%7C%20map%20is%3A%3Alt%280.4%29%20%7C%20align%20to%207d%20using%20avg%22%7D)

@@ -77,6 +77,8 @@ avg_over_time(
 ```
 </CodeGroup>
 
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60jvm.cpu.recent_utilization%60%5B7d..%5D%20%7C%20where%20service%20%3D%3D%20%23%2Fcheckout%7Cpayment%2F%20%7C%20group%20using%20max%20%7C%20map%20is%3A%3Alt%280.8%29%20%7C%20align%20to%207d%20using%20avg%22%7D)
+
 ### Multiply each value by 100
 
 Convert CPU utilization from a ratio (0–1) to a percentage (0–100).
@@ -91,6 +93,8 @@ process_cpu_utilization_ratio{} * 100
 | map * 100
 ```
 </CodeGroup>
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60process.cpu.utilization%60%20%7C%20map%20%2A%20100%22%7D)
 
 ### Calculate average error rate
 
@@ -119,6 +123,8 @@ sum(rate(http_server_request_duration_seconds_count{}[5m]))
 ```
 </CodeGroup>
 
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%28%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3E%3D%20500%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%2C%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%20%29%20%7C%20compute%20error_rate%20using%20%2F%22%7D)
+
 ### Calculate rate
 
 Calculate the rate of HTTP requests by method, route, and status code.
@@ -142,3 +148,5 @@ sum by (method, route, status_code) (
 | group by method, route, status_code using sum
 ```
 </CodeGroup>
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3D%3D%20%23%2F%5B123%5D..%2F%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20by%20method%2C%20route%2C%20status_code%20using%20sum%22%7D)
