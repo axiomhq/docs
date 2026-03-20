@@ -22,6 +22,17 @@ Calculate the 90th and 99th percentile HTTP request durations by method and path
 
 ```kusto
 test:axiom_http_request_duration_seconds_bucket
+| bucket by method, path to 5m using interpolate_delta_histogram(0.90, 0.99)
+```
+
+### Cumulative histogram
+
+<Info>
+`interpolate_cumulative_histogram` works on histogram metrics using cumulative temporality. `interpolate_delta_histogram` works on histogram metrics using delta temporality.
+</Info>
+
+```kusto
+test:axiom_http_request_duration_seconds_bucket
 | where code == #/[123]../
 | bucket by method, path to 5m using interpolate_cumulative_histogram(rate, 0.90, 0.99)
 ```
@@ -32,7 +43,7 @@ Calculate the 50th and 99th percentile request durations for the ingest handler,
 
 ```kusto
 `axiom-dev.metrics`:axiomdb_transport_request_duration_seconds_bucket
-| where status == #/[123..]/
+| where code == #/[123]../
 | where handler == #/^ingest$/
 | where le == #/^0\.5/
 | bucket by handler to 30s using interpolate_cumulative_histogram(rate, 0.5, 0.99)
