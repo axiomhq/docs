@@ -1,25 +1,23 @@
 /**
- * Puppeteer screenshot script using Zen Browser.
+ * Playwright screenshot script.
  *
- * Playwright drives Firefox via a custom "juggler" protocol compiled only into
- * its own Firefox build — third-party forks like Zen don't include it.
- * Puppeteer uses Firefox's native CDP remote-debugging protocol instead,
- * which works with any standard Gecko build including Zen.
+ * Reads .heroshot/config.json and captures every defined screenshot using
+ * Playwright's bundled Chromium. Supports selectors, scroll positions, padding,
+ * color schemes, deviceScaleFactor, textOverrides, and multiple viewports —
+ * matching the heroshot config format.
  *
  * Usage:
- *   npm install puppeteer-core   (already done)
- *   node screenshot.mjs
- *
- * Config is read from .heroshot/config.json (same format heroshot uses).
+ *   node screenshot.mjs              # capture all
+ *   node screenshot.mjs dashboard    # capture screenshots whose name matches
  */
 
-import puppeteer from 'puppeteer-core';
+import { chromium } from 'playwright';
 import { readFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ZEN_EXECUTABLE = '/Applications/Zen.app/Contents/MacOS/zen';
+const [, , pattern] = process.argv;
 
 // ---------------------------------------------------------------------------
 // Load config
@@ -29,7 +27,7 @@ let config;
 try {
   config = JSON.parse(readFileSync(resolve(__dirname, '.heroshot/config.json'), 'utf8'));
 } catch {
-  console.error('No .heroshot/config.json found. Run `npx heroshot config` first to define screenshots.');
+  console.error('No .heroshot/config.json found. Run `npx heroshot config` first.');
   process.exit(1);
 }
 
@@ -44,77 +42,86 @@ const {
 const outDir = resolve(__dirname, outputDirectory);
 mkdirSync(outDir, { recursive: true });
 
-const viewport = browserConfig.viewport ?? { width: 1280, height: 800 };
+const defaultViewport = browserConfig.viewport ?? { width: 1280, height: 800 };
 const deviceScaleFactor = browserConfig.deviceScaleFactor ?? 1;
-const colorScheme = browserConfig.colorScheme; // undefined = both light + dark
+const configColorScheme = browserConfig.colorScheme; // undefined → both light + dark
 const userAgent = browserConfig.userAgent;
+
+const VIEWPORT_PRESETS = {
+  desktop: { width: 1280, height: 800 },
+  tablet: { width: 768, height: 1024 },
+  mobile: { width: 375, height: 667 },
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function slugify(name) {
-  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+function slugify(str) {
+  return str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
 
-function outputPath(name, variant) {
-  const base = slugify(name);
-  const suffix = variant ? `-${variant}` : '';
-  return resolve(outDir, `${base}${suffix}.${outputFormat}`);
+function parseViewport(v) {
+  if (typeof v === 'object') return v;
+  if (VIEWPORT_PRESETS[v]) return VIEWPORT_PRESETS[v];
+  const [w, h] = v.split('x').map(Number);
+  return { width: w, height: h };
 }
 
-async function capture(page, screenshot, variant) {
-  const { url, selector, scroll, padding } = screenshot;
+function outputPath(name, viewportKey, scheme) {
+  const parts = [slugify(name)];
+  if (viewportKey) parts.push(viewportKey);
+  if (scheme) parts.push(scheme);
+  return resolve(outDir, `${parts.join('-')}.${outputFormat}`);
+}
 
-  // 'load' is safer than 'networkidle2' for SPAs that do client-side redirects.
-  // If the frame detaches mid-navigation (JS redirect), wait for the new frame to settle.
-  try {
-    await page.goto(url, { waitUntil: 'load', timeout: 30000 });
-  } catch (err) {
-    if (err.message.includes('detached') || err.message.includes('Frame')) {
-      await new Promise((r) => setTimeout(r, 2000));
-      await page.waitForNavigation({ waitUntil: 'load', timeout: 15000 }).catch(() => {});
-    } else {
-      throw err;
-    }
+async function applyTextOverrides(page, overrides) {
+  if (!overrides) return;
+  for (const [sel, text] of Object.entries(overrides)) {
+    await page.evaluate(
+      ({ sel, text }) => {
+        document.querySelectorAll(sel).forEach((el) => { el.textContent = text; });
+      },
+      { sel, text }
+    );
   }
+}
 
-  // Extra settle time for SPAs that render asynchronously after load
-  await new Promise((r) => setTimeout(r, 1500));
-
-  if (scroll) {
-    await page.evaluate(({ x, y }) => window.scrollTo(x, y), scroll);
-  }
-
-  const path = outputPath(screenshot.name, variant);
+async function captureShot(page, screenshot, viewportKey, scheme) {
+  const { url, selector, scroll, padding, textOverrides } = screenshot;
+  const path = outputPath(screenshot.name, viewportKey, scheme);
   const type = outputFormat === 'jpeg' ? 'jpeg' : 'png';
   const quality = outputFormat === 'jpeg' ? jpegQuality : undefined;
+  const shotOpts = { path, type, ...(quality !== undefined ? { quality } : {}) };
+
+  await page.goto(url, { waitUntil: 'networkidle' });
+
+  if (scroll) await page.evaluate(({ x, y }) => window.scrollTo(x, y), scroll);
+  if (textOverrides) await applyTextOverrides(page, textOverrides);
 
   if (selector) {
-    const el = await page.$(selector);
-    if (!el) throw new Error(`Selector not found: ${selector}`);
+    const el = page.locator(selector).first();
+    await el.waitFor({ state: 'visible', timeout: 10000 });
 
     if (padding) {
       const box = await el.boundingBox();
       await page.screenshot({
-        path,
-        type,
-        ...(quality !== undefined ? { quality } : {}),
+        ...shotOpts,
         clip: {
-          x: box.x - (padding.left ?? 0),
-          y: box.y - (padding.top ?? 0),
+          x: Math.max(0, box.x - (padding.left ?? 0)),
+          y: Math.max(0, box.y - (padding.top ?? 0)),
           width: box.width + (padding.left ?? 0) + (padding.right ?? 0),
           height: box.height + (padding.top ?? 0) + (padding.bottom ?? 0),
         },
       });
     } else {
-      await el.screenshot({ path, type, ...(quality !== undefined ? { quality } : {}) });
+      await el.screenshot(shotOpts);
     }
   } else {
-    await page.screenshot({ path, type, ...(quality !== undefined ? { quality } : {}), fullPage: true });
+    await page.screenshot({ ...shotOpts, fullPage: true });
   }
 
-  console.log(`  ✓ ${path}`);
+  console.log(`  ✓  ${path}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -122,50 +129,56 @@ async function capture(page, screenshot, variant) {
 // ---------------------------------------------------------------------------
 
 async function run() {
-  const schemes = colorScheme ? [colorScheme] : ['light', 'dark'];
+  const toCapture = pattern
+    ? screenshots.filter((s) =>
+        s.name.toLowerCase().includes(pattern.toLowerCase()) ||
+        (s.id && s.id.includes(pattern))
+      )
+    : screenshots;
 
-  console.log('Launching Zen Browser...');
-  // Zen doesn't support headless mode — it exits immediately with any headless flag.
-  // Running headed opens a visible Zen window briefly while screenshots are taken.
-  // A temp userDataDir avoids Zen's onboarding/session-restore overwriting new tabs.
-  const browser = await puppeteer.launch({
-    executablePath: ZEN_EXECUTABLE,
-    browser: 'firefox',
-    headless: false,
-    userDataDir: '/tmp/zen-puppeteer-profile',
-    defaultViewport: null, // set per-page after navigation to avoid race with Zen startup
-    args: ['-no-remote'],
+  if (toCapture.length === 0) {
+    console.log(pattern ? `No screenshots matched "${pattern}".` : 'No screenshots defined.');
+    return;
+  }
+
+  const schemes = configColorScheme ? [configColorScheme] : ['light', 'dark'];
+  const multiScheme = schemes.length > 1;
+
+  const browser = await chromium.launch({
+    headless: true,
+    executablePath: '/Users/manototh/.playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell',
   });
 
   for (const scheme of schemes) {
-    console.log(`\nCapturing ${scheme} mode:`);
+    console.log(`\nColor scheme: ${scheme}`);
 
-    for (const screenshot of screenshots) {
-      console.log(`  → ${screenshot.name}`);
+    for (const shot of toCapture) {
+      const viewports = shot.viewports?.length
+        ? shot.viewports.map((v) => ({ key: v, size: parseViewport(v) }))
+        : [{ key: null, size: defaultViewport }];
+      const multiViewport = viewports.length > 1;
 
-      // Reuse the existing page on first iteration; open a new one after that.
-      const pages = await browser.pages();
-      const page = pages.length > 0 ? pages[0] : await browser.newPage();
+      for (const { key: vpKey, size: vpSize } of viewports) {
+        const label = [shot.name, vpKey, multiScheme ? scheme : null].filter(Boolean).join(' › ');
+        console.log(`  → ${label}`);
 
-      // Navigate first — Zen may replace a blank tab, so set viewport after load.
-      await page.goto(screenshot.url, { waitUntil: 'networkidle2' });
+        const context = await browser.newContext({
+          viewport: vpSize,
+          deviceScaleFactor,
+          colorScheme: scheme,
+          ...(userAgent ? { userAgent } : {}),
+        });
+        const page = await context.newPage();
 
-      await page.setViewport({
-        width: viewport.width,
-        height: viewport.height,
-        deviceScaleFactor,
-      });
+        await captureShot(
+          page,
+          shot,
+          multiViewport ? vpKey : null,
+          multiScheme ? scheme : null
+        );
 
-      if (userAgent) {
-        await page.setUserAgent(userAgent);
+        await context.close();
       }
-
-      // Emulate color scheme via CSS media feature override
-      await page.emulateMediaFeatures([
-        { name: 'prefers-color-scheme', value: scheme },
-      ]);
-
-      await capture(page, screenshot, schemes.length > 1 ? scheme : undefined);
     }
   }
 
@@ -174,6 +187,6 @@ async function run() {
 }
 
 run().catch((err) => {
-  console.error(err);
+  console.error(err.message);
   process.exit(1);
 });
