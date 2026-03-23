@@ -10,12 +10,13 @@ Calculate the rate of successful HTTP requests by method and route.
 
 ```kusto
 `otel-demo-metrics`:`http.server.request.duration`
-| where status_code < 400
+| where `axiom.histogram` == "count"
+| where `http.response.status_code` < 400
 | align to 5m using prom::rate
-| group by method, route using sum
+| group by `http.request.method`, `http.route` using sum
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3C%20400%20%7C%20align%20to%205m%20using%20prom%3A%3Arate%20%7C%20group%20by%20method%2C%20route%20using%20sum%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20%60axiom.histogram%60%20%3D%3D%20'count'%20%7C%20where%20%60http.response.status_code%60%20%3C%20400%20%7C%20align%20to%205m%20using%20prom%3A%3Arate%20%7C%20group%20by%20%60http.request.method%60%2C%20%60http.route%60%20using%20sum%22%7D)
 
 ## Histogram
 
@@ -23,8 +24,8 @@ Calculate the 90th and 99th percentile HTTP request durations by service.
 
 ```kusto
 `otel-demo-metrics`:`http.server.request.duration`
-| where status_code < 400
-| bucket by service to 5m using interpolate_delta_histogram(0.90, 0.99)
+| where `http.response.status_code` < 400
+| bucket by `service.name` to 5m using interpolate_delta_histogram(0.90, 0.99)
 ```
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3C%20400%20%7C%20bucket%20by%20service%20to%205m%20using%20interpolate_delta_histogram%280.90%2C%200.99%29%22%7D)
@@ -37,23 +38,11 @@ Calculate the 90th and 99th percentile HTTP request durations by service.
 
 ```kusto
 `otel-demo-metrics`:`http.server.request.duration`
-| where status_code == #/[123]../
-| bucket by method, route to 5m using interpolate_cumulative_histogram(rate, 0.90, 0.99)
+| where `http.response.status_code` < 400
+| bucket by `http.request.method`, `http.route` to 5m using interpolate_cumulative_histogram(rate, 0.90, 0.99)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3D%3D%20%23%2F%5B123%5D..%2F%20%7C%20bucket%20by%20method%2C%20route%20to%205m%20using%20interpolate_cumulative_histogram%28rate%2C%200.90%2C%200.99%29%22%7D)
-
-### Filtered histogram
-
-Calculate the 50th and 99th percentile cart latency for requests under 500ms.
-
-```kusto
-`otel-demo-metrics`:`app.cart.get_cart.latency`
-| where le == #/^0\.5/
-| bucket to 30s using interpolate_cumulative_histogram(rate, 0.50, 0.99)
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60app.cart.get_cart.latency%60%20%7C%20where%20le%20%3D%3D%20%23%2F%5E0%5C%5C.5%2F%20%7C%20bucket%20to%2030s%20using%20interpolate_cumulative_histogram%28rate%2C%200.50%2C%200.99%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20%60http.response.status_code%60%20%3C%20400%20%7C%20bucket%20by%20%60http.request.method%60%2C%20%60http.route%60%20to%205m%20using%20interpolate_cumulative_histogram(rate%2C%200.90%2C%200.99)%22%7D)
 
 ## Compute
 
@@ -88,7 +77,7 @@ Calculate the fraction of time JVM CPU utilization across checkout and payment s
 
 ```kusto
 `otel-demo-metrics`:`jvm.cpu.recent_utilization`[7d..]
-| where service == #/checkout|payment/
+| where `service.name` == #/checkout|payment/
 | group using max
 | map is::lt(0.8)
 | align to 7d using avg
