@@ -76,14 +76,14 @@ Calculate the fraction of HTTP requests returning 5xx errors.
 Calculate the fraction of time JVM CPU utilization across checkout and payment services stays below 80% over a 7-day window.
 
 ```kusto
-`otel-demo-metrics`:`jvm.cpu.recent_utilization`[7d..]
+`otel-demo-metrics`:`jvm.cpu.recent_utilization`
 | where `service.name` == #/checkout|payment/
 | group using max
 | map is::lt(0.8)
 | align to 7d using avg
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60jvm.cpu.recent_utilization%60%5B7d..%5D%20%7C%20where%20service%20%3D%3D%20%23%2Fcheckout%7Cpayment%2F%20%7C%20group%20using%20max%20%7C%20map%20is%3A%3Alt%280.8%29%20%7C%20align%20to%207d%20using%20avg%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60jvm.cpu.recent_utilization%60%20%7C%20where%20%60service.name%60%20%3D%3D%20%23%2Fcheckout%7Cpayment%2F%20%7C%20group%20using%20max%20%7C%20map%20is%3A%3Alt(0.8)%20%7C%20align%20to%207d%20using%20avg%22%7D)
 
 ### SLO histogram
 
@@ -91,9 +91,9 @@ Calculate the fraction of requests completing within the 400ms latency SLO targe
 
 ```kusto
 `otel-demo-metrics`:`http.server.request.duration`
-| bucket to 1m using interpolate_delta_histogram(0.99)
+| bucket to 5m using interpolate_delta_histogram(0.99)
 | map is::lt(0.4)
 | align to 7d using avg
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20bucket%20to%201m%20using%20interpolate_delta_histogram%280.99%29%20%7C%20map%20is%3A%3Alt%280.4%29%20%7C%20align%20to%207d%20using%20avg%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20bucket%20to%205m%20using%20interpolate_delta_histogram%280.99%29%20%7C%20map%20is%3A%3Alt%280.4%29%20%7C%20align%20to%207d%20using%20avg%22%7D)
