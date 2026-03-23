@@ -21,7 +21,13 @@ Optional: install the following VS Code extensions:
 
 ## Build locally
 
-Run the following in your terminal to build the documentation locally:
+If you have changed the OpenAPI source specs in `restapi/source/`, regenerate the sanitized specs first:
+
+```
+node scripts/sanitize-openapi.js
+```
+
+Then run the following in your terminal to build the documentation locally:
 
 ```
 mint dev

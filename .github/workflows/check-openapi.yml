@@ -1,0 +1,29 @@
+name: Check OpenAPI specs
+
+on:
+  pull_request:
+    paths:
+      - 'restapi/source/**'
+      - 'restapi/versions/**'
+      - 'scripts/sanitize-openapi.js'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Regenerate sanitized specs
+        run: node scripts/sanitize-openapi.js
+
+      - name: Check for drift
+        run: |
+          if [[ -n "$(git status --porcelain -- restapi/versions/)" ]]; then
+            git status --short -- restapi/versions/
+            echo "::error::Generated OpenAPI specs are out of date. Run 'node scripts/sanitize-openapi.js' and commit the results."
+            exit 1
+          fi
