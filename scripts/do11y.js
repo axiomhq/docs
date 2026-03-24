@@ -1146,18 +1146,30 @@
     document.addEventListener('click', function(e) {
       const copyButton = e.target.closest(config.copyButtonSelector);
       if (copyButton) {
-        const codeBlock = copyButton.closest(config.codeBlockSelector);
-        const language = codeBlock?.getAttribute('data-language') || 
-                         codeBlock?.className.match(/language-(\w+)/)?.[1] || 
+        const codeBlock = copyButton.closest(config.codeBlockSelector) ||
+                          copyButton.closest('div, section')?.querySelector('pre') ||
+                          copyButton.parentElement?.querySelector('pre');
+        const codeEl = codeBlock?.tagName === 'PRE'
+                         ? codeBlock.querySelector('code')
+                         : codeBlock?.querySelector('code[class*="language-"]') || codeBlock?.querySelector('code');
+
+        const language = codeBlock?.getAttribute('language') ||
+                         codeBlock?.getAttribute('data-language') ||
+                         codeBlock?.getAttribute('data-lang') ||
+                         codeBlock?.className.match(/language-(\w+)/)?.[1] ||
+                         codeEl?.getAttribute('language') ||
+                         codeEl?.getAttribute('data-language') ||
+                         codeEl?.getAttribute('data-lang') ||
+                         codeEl?.className.match(/language-(\w+)/)?.[1] ||
                          'unknown';
-        
+
         queueEvent('code_copied', {
           language: language,
           codeSection: sanitizeText(getNearestHeading(codeBlock || copyButton), 100),
           codeBlockIndex: getCodeBlockIndex(codeBlock),
         });
       }
-    });
+    }, true);
   }
 
   // ============================================================
@@ -1291,6 +1303,8 @@
   function setupTocClickTracking() {
     if (!config.trackTocClicks) return;
 
+    // Use capture phase so the event is seen even if the framework
+    // calls stopPropagation() during the bubble phase.
     document.addEventListener('click', function(e) {
       var link = e.target.closest('a');
       if (!link) return;
@@ -1329,7 +1343,7 @@
         headingLevel: headingLevel,
         tocPosition: tocPosition,
       });
-    });
+    }, true);
   }
 
   // ============================================================
