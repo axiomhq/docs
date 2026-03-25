@@ -57,24 +57,21 @@ In regex, escape slash (`/`), but don't escape quotation marks (`'` or `"`).
 
 ### Average over time
 
-Calculate the fraction of time JVM CPU utilization across checkout and payment services stays below 80% over a 7-day window.
+Calculate the fraction of time JVM CPU utilization stays below 80% over a 7-day window.
 
 <CodeGroup>
 ```kusto Prometheus example
 avg_over_time(
    (
       max by (service) (
-          jvm_cpu_recent_utilization_ratio{
-              service=~"checkout|payment"
-          }
+          jvm_cpu_recent_utilization_ratio
        ) < bool 0.8
-   )[7d:]
+   )
 )
 ```
 
 ```kusto MPL equivalent
-`otel-demo-metrics`:`jvm.cpu.recent_utilization`[7d..]
-| where service == #/checkout|payment/
+`otel-demo-metrics`:`jvm.cpu.recent_utilization`
 | group using max
 | map is::lt(0.8)
 | align to 7d using avg
@@ -114,7 +111,7 @@ sum(rate(http_server_request_duration_seconds_count{}[5m]))
 ```kusto MPL equivalent
 (
   `otel-demo-metrics`:`http.server.request.duration`
-  | where status_code >= 500
+  | where `http.response.status_code` >= 500
   | map rate
   | align to 5m using avg
   | group using sum,
@@ -127,7 +124,7 @@ sum(rate(http_server_request_duration_seconds_count{}[5m]))
 ```
 </CodeGroup>
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%28%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3E%3D%20500%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%2C%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%20%29%20%7C%20compute%20error_rate%20using%20%2F%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22(%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20%60http.response.status_code%60%20%3E%3D%20500%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%2C%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%20)%20%7C%20compute%20error_rate%20using%20%2F%22%7D)
 
 ### Calculate rate
 
@@ -146,9 +143,11 @@ sum by (method, route, status_code) (
 
 ```kusto MPL equivalent
 `otel-demo-metrics`:`http.server.request.duration`
-| where status_code == #/[123]../
+| where `http.response.status_code` == #/[123]../
 | map rate
 | align to 5m using avg
-| group by method, route, status_code using sum
+| group by `http.request.method`, `http.route`, `http.response.status_code` using sum
 ```
 </CodeGroup>
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20%60http.response.status_code%60%20%3D%3D%20%23%2F%5B123%5D..%2F%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20by%20%60http.request.method%60%2C%20%60http.route%60%2C%20%60http.response.status_code%60%20using%20sum%22%7D)
