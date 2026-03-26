@@ -50,7 +50,7 @@ A typical MPL query contains the following:
 | align to 5m using avg
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60go.memory.used%60%20%7C%20where%20%60k8s.deployment.name%60%20%3D%3D%20'checkout'%20%7C%20align%20to%205m%20using%20avg%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60go.memory.used%60%20%7C%20where%20%60k8s.deployment.name%60%20%3D%3D%20%5C%22checkout%5C%22%20%7C%20align%20to%205m%20using%20avg%22%2C%22metricsDataset%22%3A%22otel-demo-metrics%22%7D)
 
 This example queries the `otel-demo-metrics` dataset's `go.memory.used` metric one hour before the current time. It filters results to the `frontend` service and aggregates values over 5-minute time windows into their average.
 
@@ -328,19 +328,19 @@ Available operators:
 // Return the average error rate over the past 5 minutes
 (
   `otel-demo-metrics`:`http.server.request.duration`
-  | where status_code >= 500
+  | where `http.response.status_code` >= 500
   | map rate
   | align to 5m using avg
-  | group by method, route using sum,
+  | group using sum,
   `otel-demo-metrics`:`http.server.request.duration`
   | map rate
   | align to 5m using avg
-  | group by method, route using sum
+  | group using sum
 )
 | compute error_rate using /
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%28%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20status_code%20%3E%3D%20500%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20by%20method%2C%20route%20using%20sum%2C%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20by%20method%2C%20route%20using%20sum%20%29%20%7C%20compute%20error_rate%20using%20%2F%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22(%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20%60http.response.status_code%60%20%3E%3D%20500%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%2C%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%20)%20%7C%20compute%20error_rate%20using%20%2F%22%2C%22metricsDataset%22%3A%22otel-demo-metrics%22%7D)
 
 ## Language features
 
