@@ -117,20 +117,20 @@ To send data to Axiom, configure a tracer. For example, use a dedicated instrume
     // Wrap your logic in the AxiomEvalInstrumentationHook function
     export const setupAppInstrumentation: AxiomEvalInstrumentationHook = async ({
       dataset,
-      url,
+      edgeUrl,
       token,
     }) => {
       if (provider) {
         return { provider };
       }
 
-      if (!dataset || !url || !token) {
+      if (!dataset || !edgeUrl || !token) {
         throw new Error('Missing environment variables');
       }
 
-      // Replace the environment variables with the parameters passed to the function
+      // Use edgeUrl for trace ingestion to send data to the correct edge deployment
       const exporter = new OTLPTraceExporter({
-        url: `${url}/v1/traces`,
+        url: `${edgeUrl}/v1/traces`,
         headers: {
           Authorization: `Bearer ${token}`,
           'X-Axiom-Dataset': dataset,
@@ -174,23 +174,23 @@ import { setupAppInstrumentation } from './src/instrumentation';
 
 export default defineConfig({
   eval: {
-    url: process.env.AXIOM_URL,
+    edgeUrl: process.env.AXIOM_EDGE_URL,
     token: process.env.AXIOM_TOKEN,
     dataset: process.env.AXIOM_DATASET,
-    
+
     // Optional: customize which files to run
     include: ['**/*.eval.{ts,js}'],
-    
+
     // Optional: exclude patterns
     exclude: [],
-    
+
     // Optional: timeout for eval execution
     timeoutMs: 60_000,
-    
+
     // Optional: instrumentation hook for OpenTelemetry
     // (created this in the "Create instrumentation setup" step)
-    instrumentation: ({ url, token, dataset }) => 
-      setupAppInstrumentation({ url, token, dataset }),
+    instrumentation: ({ edgeUrl, token, dataset }) =>
+      setupAppInstrumentation({ edgeUrl, token, dataset }),
   },
 });
 ```
@@ -200,7 +200,7 @@ export default defineConfig({
 Store environment variables in an `.env` file in the root of your project:
 
 ```bash .env
-AXIOM_URL="AXIOM_DOMAIN"
+AXIOM_EDGE_URL="AXIOM_EDGE_DOMAIN"
 AXIOM_TOKEN="API_TOKEN"
 AXIOM_DATASET="DATASET_NAME"
 OPENAI_API_KEY=""
@@ -211,7 +211,8 @@ ANTHROPIC_API_KEY=""
 
 <Info>
 <ReplaceDatasetToken />
-<ReplaceDomain />
+
+Replace `AXIOM_EDGE_DOMAIN` with `https://` followed by the base domain of your edge deployment. For example, `https://us-east-1.aws.edge.axiom.co` for US East 1 or `https://eu-central-1.aws.edge.axiom.co` for EU Central 1. For more information, see [Edge deployments](/reference/edge-deployments).
 
 Enter the API keys for the LLMs you want to work with.
 </Info>
