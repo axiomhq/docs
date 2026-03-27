@@ -1,0 +1,96 @@
+name: Update Axiom Do11y
+
+# Periodically checks for new do11y releases and opens a PR when one is found.
+# Copy this file to .github/workflows/ in your docs repo.
+#
+# Required setup (Settings > Secrets and variables > Actions):
+#
+#   Variables:
+#     DO11Y_JS_PATH   - Path to do11y.js in your docs repo (e.g. scripts/do11y.min.js).
+#     DO11Y_VER_PATH  - Path to the version tracking file in your docs repo (e.g. scripts/do11y.version).
+#                       Create this file with the current version tag (e.g. v1.0.0) to
+#                       avoid triggering a PR on the first run.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout docs
+        uses: actions/checkout@v4
+
+      - name: Get latest do11y release
+        id: latest
+        run: |
+          VERSION=$(curl -sf https://api.github.com/repos/axiomhq/do11y/releases/latest | jq -r '.tag_name')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Get current do11y version
+        id: current
+        run: |
+          VERSION=$(cat "${{ vars.DO11Y_VER_PATH }}" 2>/dev/null | tr -d '[:space:]' || echo "none")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Check for update
+        id: check
+        run: |
+          LATEST="${{ steps.latest.outputs.version }}"
+          CURRENT="${{ steps.current.outputs.version }}"
+          if [ "$LATEST" = "$CURRENT" ]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "Already on ${LATEST}, nothing to do."
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "Update available: ${CURRENT} → ${LATEST}"
+          fi
+
+      - name: Checkout do11y at release tag
+        if: steps.check.outputs.needed == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: axiomhq/do11y
+          ref: ${{ steps.latest.outputs.version }}
+          path: _do11y
+
+      - name: Set up Node.js
+        if: steps.check.outputs.needed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build do11y
+        if: steps.check.outputs.needed == 'true'
+        working-directory: _do11y
+        run: npm ci && npm run build
+
+      - name: Update files
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          cp _do11y/dist/do11y.js "${{ vars.DO11Y_JS_PATH }}"
+          echo "${{ steps.latest.outputs.version }}" > "${{ vars.DO11Y_VER_PATH }}"
+
+      - name: Create PR
+        if: steps.check.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.latest.outputs.version }}"
+          BRANCH="do11y/${VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add "${{ vars.DO11Y_JS_PATH }}" "${{ vars.DO11Y_VER_PATH }}"
+          git commit -m "Update do11y.js to ${VERSION}"
+          git push -u origin "$BRANCH"
+
+          gh pr create \
+            --title "Update do11y.js to ${VERSION}" \
+            --body "Automated update from [do11y ${VERSION}](https://github.com/axiomhq/do11y/releases/tag/${VERSION})."
