@@ -1,0 +1,161 @@
+---
+title: "Instrument a Vercel AI SDK chatbot"
+description: "Wire up tracing for a Next.js chatbot using Axiom AI SDK and Vercel AI SDK to capture every LLM call, tool execution, and user interaction."
+sidebarTitle: Vercel AI SDK chatbot
+keywords: ["cookbook", "observe", "vercel ai sdk", "next.js", "tracing", "opentelemetry", "chatbot"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+
+This recipe walks through instrumenting a Next.js chatbot that uses Vercel AI SDK. By the end, every LLM call produces a trace in Axiom with model, token usage, latency, and prompt/completion data visible in the AI traces waterfall view.
+
+## Prerequisites
+
+<Prerequisites />
+
+- A Next.js project (v14+ with App Router)
+- An OpenAI API key (or another [supported provider](/ai-engineering/observe/axiom-ai-sdk-instrumentation))
+
+## Step 1: Install dependencies
+
+<CodeGroup>
+
+```bash pnpm
+pnpm i axiom ai @ai-sdk/openai @opentelemetry/api @opentelemetry/sdk-trace-node @opentelemetry/exporter-trace-otlp-http @opentelemetry/resources @opentelemetry/semantic-conventions dotenv zod
+```
+
+```bash npm
+npm i axiom ai @ai-sdk/openai @opentelemetry/api @opentelemetry/sdk-trace-node @opentelemetry/exporter-trace-otlp-http @opentelemetry/resources @opentelemetry/semantic-conventions dotenv zod
+```
+
+</CodeGroup>
+
+## Step 2: Configure OpenTelemetry
+
+Create an instrumentation file that configures the OpenTelemetry tracer to export spans to Axiom:
+
+```ts src/instrumentation.ts
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { BatchSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+import { trace } from '@opentelemetry/api';
+import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
+
+const tracer = trace.getTracer('chatbot-tracer');
+
+let provider: NodeTracerProvider | undefined;
+
+export async function register() {
+  if (provider) return;
+
+  const exporter = new OTLPTraceExporter({
+    url: `${process.env.AXIOM_URL}/v1/traces`,
+    headers: {
+      Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+      'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
+    },
+  });
+
+  provider = new NodeTracerProvider({
+    resource: resourceFromAttributes(
+      { [ATTR_SERVICE_NAME]: 'my-chatbot' },
+      { schemaUrl: 'https://opentelemetry.io/schemas/1.37.0' }
+    ),
+    spanProcessor: new BatchSpanProcessor(exporter),
+  });
+
+  provider.register();
+  initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
+}
+```
+
+<Info>
+Next.js automatically calls the `register` function from `src/instrumentation.ts` at server startup. For other frameworks, call it explicitly before your app starts.
+</Info>
+
+## Step 3: Create a wrapped model
+
+Wrap your AI model with `wrapAISDKModel` so every call is automatically traced:
+
+```ts src/lib/models.ts
+import { createOpenAI } from '@ai-sdk/openai';
+import { wrapAISDKModel } from 'axiom/ai';
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export const gpt4o = wrapAISDKModel(openai('gpt-4o'));
+export const gpt4oMini = wrapAISDKModel(openai('gpt-4o-mini'));
+```
+
+## Step 4: Build the chat API route
+
+Create a streaming chat endpoint that uses `withSpan` to add business context to every trace:
+
+```ts app/api/chat/route.ts
+import { streamText } from 'ai';
+import { withSpan } from 'axiom/ai';
+import { gpt4o } from '@/lib/models';
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+
+  return withSpan(
+    { capability: 'chatbot', step: 'respond' },
+    async (span) => {
+      const result = streamText({
+        model: gpt4o,
+        system: 'You are a helpful assistant.',
+        messages,
+      });
+
+      return result.toDataStreamResponse();
+    }
+  );
+}
+```
+
+## Step 5: Store environment variables
+
+Add the following to your `.env.local` file:
+
+```bash .env.local
+AXIOM_URL="AXIOM_DOMAIN"
+AXIOM_TOKEN="API_TOKEN"
+AXIOM_DATASET="DATASET_NAME"
+OPENAI_API_KEY="your-openai-key"
+```
+
+<Info>
+<ReplaceDatasetToken />
+<ReplaceDomain />
+</Info>
+
+## Verify
+
+1. Start your app and send a chat message.
+2. In the Axiom Console, click the **Query** tab and run:
+
+    ```kusto
+    ['your-dataset']
+    | where ['attributes.gen_ai.capability.name'] == 'chatbot'
+    | project _time, ['attributes.gen_ai.request.model'], ['attributes.gen_ai.usage.input_tokens'], ['attributes.gen_ai.usage.output_tokens'], duration
+    | order by _time desc
+    ```
+
+3. Click a trace ID to open the AI traces waterfall view. You should see:
+    - A parent span for the `chatbot` capability
+    - A child span for the `gpt-4o` model call with token counts and latency
+
+4. Click the **Dashboards** tab and open the **Generative AI Overview** dashboard for your dataset. It automatically shows request counts, token usage, and cost breakdowns.
+
+## What's next?
+
+- Add tool calls to your chatbot with [Trace agent tool calls](/cookbook/observe-agent-tool-calls)
+- Evaluate your chatbot's response quality with [Write your first evaluation](/cookbook/evaluate-first-eval)
+- Monitor production performance with [Build an AI performance dashboard](/cookbook/monitor-ai-dashboard)
+- Learn more about instrumentation in the [Axiom AI SDK instrumentation reference](/ai-engineering/observe/axiom-ai-sdk-instrumentation)

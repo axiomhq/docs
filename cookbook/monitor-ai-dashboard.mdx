@@ -1,0 +1,224 @@
+---
+title: "Build an AI performance dashboard"
+description: "Create a custom dashboard with APL queries to monitor latency, token usage, costs, error rates, and model performance for your AI capabilities."
+sidebarTitle: AI dashboard
+keywords: ["cookbook", "monitor", "dashboard", "apl", "latency", "tokens", "cost", "metrics"]
+---
+
+This recipe walks through building a custom AI performance dashboard using APL queries. While Axiom automatically creates a GenAI Overview dashboard for any dataset with AI telemetry, a custom dashboard lets you focus on the metrics that matter most for your specific capabilities.
+
+## Prerequisites
+
+- An [Axiom account](https://app.axiom.co/register) with AI telemetry data flowing in
+- A dataset containing `gen_ai.*` attributes from an instrumented app (see [Quickstart](/ai-engineering/quickstart))
+
+## Step 1: Create the dashboard
+
+1. Click the **Dashboards** tab in the Axiom Console.
+2. Click **New dashboard**.
+3. Name it **AI Performance - [Your App Name]**.
+
+## Step 2: Add request volume and latency
+
+### Request count by capability
+
+Track how many AI requests each capability handles over time:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.capability.name'])
+| summarize count() by ['attributes.gen_ai.capability.name'], bin(_time, 1h)
+```
+
+Add this as a **Time series** element. This gives you a baseline traffic pattern to compare against.
+
+### Latency percentiles
+
+Track p50, p95, and p99 latency to catch tail-end slowdowns:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.capability.name'])
+| summarize
+    p50 = percentile(duration, 50),
+    p95 = percentile(duration, 95),
+    p99 = percentile(duration, 99)
+  by bin(_time, 5m)
+```
+
+Add this as a **Time series** element. The gap between p50 and p99 reveals how consistent your response times are.
+
+### Latency by model
+
+Compare latency across different models to inform model selection:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.request.model'])
+| summarize
+    avg_latency = avg(duration),
+    p95_latency = percentile(duration, 95),
+    count = count()
+  by ['attributes.gen_ai.request.model']
+| order by count desc
+```
+
+Add this as a **Table** element.
+
+## Step 3: Add token usage and cost tracking
+
+### Token usage over time
+
+Monitor input and output token consumption trends:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.usage.input_tokens'])
+| summarize
+    total_input = sum(toint(['attributes.gen_ai.usage.input_tokens'])),
+    total_output = sum(toint(['attributes.gen_ai.usage.output_tokens']))
+  by bin(_time, 1h)
+```
+
+Add this as a **Time series** element. Sudden spikes in input tokens may indicate prompt injection or unexpectedly large inputs.
+
+### Average tokens per request by capability
+
+Identify which capabilities consume the most tokens:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.capability.name'])
+| summarize
+    avg_input = avg(toint(['attributes.gen_ai.usage.input_tokens'])),
+    avg_output = avg(toint(['attributes.gen_ai.usage.output_tokens'])),
+    total_requests = count()
+  by ['attributes.gen_ai.capability.name']
+| order by total_requests desc
+```
+
+Add this as a **Table** element.
+
+### Estimated cost per hour
+
+Calculate costs using the `genai_cost` function:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.usage.input_tokens'])
+| extend cost = genai_cost(
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens'])
+  )
+| summarize total_cost = sum(cost) by bin(_time, 1h)
+```
+
+Add this as a **Time series** element. For more information on cost functions, see [GenAI functions](/apl/scalar-functions/genai-functions).
+
+### Cost breakdown by model
+
+See which models drive the most spend:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.usage.input_tokens'])
+| extend cost = genai_cost(
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens'])
+  )
+| summarize total_cost = sum(cost), request_count = count() by ['attributes.gen_ai.response.model']
+| extend cost_per_request = total_cost / request_count
+| order by total_cost desc
+```
+
+Add this as a **Table** element.
+
+## Step 4: Add error tracking
+
+### Error rate over time
+
+Track the percentage of AI calls that fail:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.capability.name'])
+| extend is_error = iff(['status.code'] == 'ERROR', 1, 0)
+| summarize error_rate = avg(is_error) * 100 by bin(_time, 5m)
+```
+
+Add this as a **Time series** element. Set a visual threshold line at your acceptable error rate.
+
+### Errors by finish reason
+
+Understand why model calls end unexpectedly:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.response.finish_reasons'])
+| summarize count() by tostring(['attributes.gen_ai.response.finish_reasons'])
+```
+
+Add this as a **Pie chart** element. A healthy distribution shows mostly `stop` or `end_turn` reasons. An increase in `length` (truncated) or `content_filter` reasons requires attention.
+
+### Recent errors
+
+Surface the most recent errors for quick investigation:
+
+```kusto
+['your-dataset']
+| where ['status.code'] == 'ERROR'
+| where isnotnull(['attributes.gen_ai.capability.name'])
+| project
+    _time,
+    ['attributes.gen_ai.capability.name'],
+    ['attributes.gen_ai.request.model'],
+    ['status.message']
+| order by _time desc
+| take 20
+```
+
+Add this as a **Log stream** element.
+
+## Step 5: Add model comparison
+
+### Model performance summary
+
+Compare all models across key metrics in one view:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.request.model'])
+| extend cost = genai_cost(
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens'])
+  )
+| summarize
+    requests = count(),
+    avg_latency_ms = avg(duration),
+    p95_latency_ms = percentile(duration, 95),
+    avg_input_tokens = avg(toint(['attributes.gen_ai.usage.input_tokens'])),
+    avg_output_tokens = avg(toint(['attributes.gen_ai.usage.output_tokens'])),
+    total_cost = sum(cost),
+    error_rate = avg(iff(['status.code'] == 'ERROR', 1.0, 0.0)) * 100
+  by ['attributes.gen_ai.response.model']
+| order by requests desc
+```
+
+Add this as a **Table** element.
+
+## Verify
+
+1. Open your dashboard and set the time range to the last 24 hours.
+2. Confirm that all elements render data. If any element is empty, verify that your instrumented app is sending traces with the expected `gen_ai.*` attributes.
+3. Set the dashboard as a **Favorite** for quick access.
+
+## What's next?
+
+- Set up alerts on these metrics with [Set up quality regression alerts](/cookbook/monitor-quality-alerts)
+- Add cost-specific tracking with [Track AI costs with APL](/cookbook/monitor-ai-costs)
+- Score production traffic to monitor quality with [Add online evaluations to production](/cookbook/monitor-online-evals)
+- Learn more about GenAI attributes in the [GenAI attributes reference](/ai-engineering/observe/gen-ai-attributes)
+- Explore all GenAI APL functions in the [GenAI functions reference](/apl/scalar-functions/genai-functions)

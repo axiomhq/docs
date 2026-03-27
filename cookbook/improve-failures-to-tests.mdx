@@ -1,0 +1,142 @@
+---
+title: "Turn production failures into test cases"
+description: "Query Axiom for low-scoring online evaluations or negative feedback, extract the inputs and outputs, and add them to your offline evaluation suite."
+sidebarTitle: Failures to tests
+keywords: ["cookbook", "improve", "failures", "test cases", "evaluation flywheel", "iterate"]
+---
+
+The evaluation flywheel turns production failures into test coverage. This recipe shows how to query Axiom for the worst-performing production requests, extract them as test cases, and add them to your offline evaluations to prevent regressions.
+
+## Prerequisites
+
+- An [Axiom account](https://app.axiom.co/register) with AI telemetry data
+- Online evaluations or user feedback data (see [Add online evaluations](/cookbook/monitor-online-evals) or [Collect user feedback](/cookbook/improve-user-feedback))
+- An existing offline evaluation (see [Write your first evaluation](/cookbook/evaluate-first-eval))
+
+## Step 1: Find low-scoring production requests
+
+### From online evaluations
+
+Query for requests where a scorer gave a low score:
+
+```kusto
+['your-dataset']
+| where ['attributes.gen_ai.capability.name'] == 'support-agent'
+| where todouble(['attributes.eval.relevance.score']) < 0.5
+| project
+    _time,
+    input = ['attributes.gen_ai.prompt'],
+    output = ['attributes.gen_ai.completion'],
+    relevance_score = ['attributes.eval.relevance.score'],
+    relevance_reason = ['attributes.eval.relevance.metadata.reason']
+| order by _time desc
+| take 20
+```
+
+### From user feedback
+
+Query for requests that received negative feedback:
+
+```kusto
+['feedback-dataset']
+| where event == 'feedback' and kind == 'thumb' and value == -1
+| project _time, traceId = ['links.traceId'], capability = ['links.capability']
+| order by _time desc
+| take 20
+```
+
+Then look up the trace data for each feedback event:
+
+```kusto
+['your-dataset']
+| where trace_id in ('trace-id-1', 'trace-id-2')
+| project
+    trace_id,
+    ['attributes.gen_ai.prompt'],
+    ['attributes.gen_ai.completion'],
+    ['attributes.gen_ai.capability.name']
+```
+
+## Step 2: Extract test cases
+
+Review the failed requests and create test cases. The input from the production request becomes the test case input, and you define the expected output based on what the correct behavior should have been:
+
+```ts src/lib/capabilities/support-agent/production-failures.eval.ts
+import { Eval, Scorer } from 'axiom/ai/evals';
+import { supportAgent } from '../support-agent';
+import { Relevance } from '../../scorers/relevance';
+
+const NotEmpty = Scorer('not-empty', ({ output }) => {
+  return output.answer.trim().length > 0;
+});
+
+Eval('support-agent-regression', {
+  data: [
+    {
+      input: {
+        question: 'Can I get a refund if my subscription was auto-renewed?',
+      },
+      expected: {
+        answer: 'Yes, you can request a refund within 48 hours of auto-renewal.',
+      },
+    },
+    {
+      input: {
+        question: 'My account was charged twice for the same order',
+      },
+      expected: {
+        answer: 'I can help investigate the duplicate charge. Let me look up your order.',
+      },
+    },
+    {
+      input: {
+        question: 'How do I export my data before deleting my account?',
+      },
+      expected: {
+        answer: 'Go to Settings > Data Export to download your data before account deletion.',
+      },
+    },
+  ],
+
+  task: async ({ input }) => {
+    const answer = await supportAgent(input.question);
+    return { answer };
+  },
+
+  scorers: [NotEmpty, Relevance],
+
+  metadata: {
+    description: 'Regression tests from production failures discovered week of 2026-02-10',
+  },
+});
+```
+
+## Step 3: Run the regression suite
+
+```bash
+npx axiom eval support-agent-regression
+```
+
+This becomes your regression test suite. Before deploying any change to the support agent, run this evaluation to verify that previously-fixed issues haven't resurfaced.
+
+## Step 4: Automate the pattern
+
+Make this a recurring process:
+
+1. **Weekly**: Query Axiom for the lowest-scoring requests from the past week.
+2. **Triage**: Review the failures and identify which ones represent genuine quality issues.
+3. **Add test cases**: Add the most impactful failures to your evaluation suite.
+4. **Run evaluations**: Verify your current capability handles the new test cases.
+5. **Iterate**: If test cases fail, improve the capability (prompt, model, tools) and re-run.
+
+## Verify
+
+1. Run the regression evaluation and confirm all test cases pass.
+2. Check the Axiom Console under the **AI engineering** tab to see the run results.
+3. Over time, your evaluation suite should grow, and the rate of new production failures should decrease.
+
+## What's next?
+
+- Experiment with different approaches using [A/B test prompts with flags](/cookbook/improve-ab-test-prompts)
+- Monitor for new failures with [Add online evaluations to production](/cookbook/monitor-online-evals)
+- Learn more about the improvement loop in [Iterate](/ai-engineering/iterate)
