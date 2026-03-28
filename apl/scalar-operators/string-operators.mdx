@@ -154,6 +154,25 @@ Operators:
 - `hassuffix_cs`
 - `!hassuffix_cs`
 
+### What is a term?
+
+The `has` family of operators matches whole terms, not arbitrary substrings. A term is a sequence of alphanumeric characters delimited by non-alphanumeric characters such as spaces, dots, underscores, slashes, or hyphens. This means that `has` only matches if the search value appears as a complete, standalone token in the string.
+
+For example:
+
+```kusto
+"North America" has "North"    // True — "North" is bounded by the start and a space
+"admin.service" has "admin"    // True — "admin" is bounded by the start and a dot
+"parentSpanId" has "parent"   // False — no non-alphanumeric boundary; "parentSpanId" is a single term
+"parentSpanId" has "parentSpanId" // True — the entire string is the term
+```
+
+This is the key difference between `has` and `contains` or `startswith`:
+
+- Use `has` when you expect the value to appear as a standalone word or token, such as in log messages or space-delimited fields. `has` is optimized and faster than `contains` for this use case.
+- Use `contains` when you need to match any substring, regardless of word boundaries. For example, `"parentSpanId" contains "parent"` is True.
+- Use `startswith` when you need to match a prefix of the entire field value. For example, `"parentSpanId" startswith "parent"` is True.
+
 Query examples:
 
 ```kusto
