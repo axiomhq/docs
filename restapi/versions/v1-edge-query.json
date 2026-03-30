@@ -124,6 +124,784 @@
         "x-axiom-not-suspended": true
       }
     },
+    "/query/_mpl": {
+      "post": {
+        "security": [
+          {
+            "Auth": [
+              "query|read"
+            ]
+          }
+        ],
+        "tags": [
+          "query"
+        ],
+        "operationId": "queryMetrics",
+        "parameters": [
+          {
+            "description": "Response format. If omitted, the Accept header is used for content negotiation. Defaults to metrics-v2 when neither is specified.",
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "metrics-v1",
+                "metrics-v2"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetricsRequestWithOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "MetricsResult",
+            "headers": {
+              "X-Axiom-History-Query-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "User or system error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      },
+      "options": {
+        "security": [],
+        "tags": [
+          "query"
+        ],
+        "operationId": "getMetricsSpec",
+        "responses": {
+          "200": {
+            "description": "Metrics query specification"
+          },
+          "default": {
+            "description": "User or system error",
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-nocompress": true
+      }
+    },
+    "/query/metrics/info/datasets/{dataset}/metrics": {
+      "get": {
+        "security": [
+          {
+            "Auth": [
+              "query|read"
+            ]
+          }
+        ],
+        "tags": [
+          "query"
+        ],
+        "operationId": "getDatasetMetrics",
+        "parameters": [
+          {
+            "description": "The dataset to retrieve metrics from",
+            "name": "dataset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start time for timeframe to return (RFC3339 format)",
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "End time for timeframe to return (RFC3339 format)",
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of metrics in the dataset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "required": [
+                      "type",
+                      "temporality",
+                      "unit"
+                    ],
+                    "properties": {
+                      "temporality": {
+                        "description": "The aggregation temporality",
+                        "type": "string",
+                        "example": "Mixed"
+                      },
+                      "type": {
+                        "description": "The metric type",
+                        "type": "string",
+                        "example": "Mixed"
+                      },
+                      "unit": {
+                        "description": "The unit of measurement. Null if not defined.",
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "required": [
+                      "type",
+                      "temporality",
+                      "unit"
+                    ],
+                    "properties": {
+                      "temporality": {
+                        "description": "The aggregation temporality",
+                        "type": "string",
+                        "example": "Mixed"
+                      },
+                      "type": {
+                        "description": "The metric type",
+                        "type": "string",
+                        "example": "Mixed"
+                      },
+                      "unit": {
+                        "description": "The unit of measurement. Null if not defined.",
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "User or system error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      },
+      "post": {
+        "security": [
+          {
+            "Auth": [
+              "query|read"
+            ]
+          }
+        ],
+        "tags": [
+          "query"
+        ],
+        "operationId": "findMetrics",
+        "parameters": [
+          {
+            "description": "The dataset to search for metrics in",
+            "name": "dataset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start time for timeframe to search (RFC3339 format)",
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "End time for timeframe to search (RFC3339 format)",
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FindMetricsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "List of metrics matching the tag value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "User or system error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/query/metrics/info/datasets/{dataset}/metrics/{metric}/tags": {
+      "get": {
+        "security": [
+          {
+            "Auth": [
+              "query|read"
+            ]
+          }
+        ],
+        "tags": [
+          "query"
+        ],
+        "operationId": "getDatasetMetricTags",
+        "parameters": [
+          {
+            "description": "The dataset to retrieve metric tags from",
+            "name": "dataset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The metric name to retrieve tags for",
+            "name": "metric",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start time for timeframe to return (RFC3339 format)",
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "End time for timeframe to return (RFC3339 format)",
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tag names for the specified metric",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset or metric not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "User or system error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/query/metrics/info/datasets/{dataset}/metrics/{metric}/tags/{tag}/values": {
+      "get": {
+        "security": [
+          {
+            "Auth": [
+              "query|read"
+            ]
+          }
+        ],
+        "tags": [
+          "query"
+        ],
+        "operationId": "getDatasetMetricTagValues",
+        "parameters": [
+          {
+            "description": "The dataset to retrieve metric tag values from",
+            "name": "dataset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The metric name to retrieve tag values for",
+            "name": "metric",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The tag name to retrieve values for",
+            "name": "tag",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start time for timeframe to return (RFC3339 format)",
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "End time for timeframe to return (RFC3339 format)",
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tag values for the specified metric and tag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset, metric, or tag not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "User or system error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/query/metrics/info/datasets/{dataset}/tags": {
+      "get": {
+        "security": [
+          {
+            "Auth": [
+              "query|read"
+            ]
+          }
+        ],
+        "tags": [
+          "query"
+        ],
+        "operationId": "getDatasetTags",
+        "parameters": [
+          {
+            "description": "The dataset to retrieve tags from",
+            "name": "dataset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start time for timeframe to return (RFC3339 format)",
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "End time for timeframe to return (RFC3339 format)",
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset Tags",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "User or system error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/query/metrics/info/datasets/{dataset}/tags/{tag}/values": {
+      "get": {
+        "security": [
+          {
+            "Auth": [
+              "query|read"
+            ]
+          }
+        ],
+        "tags": [
+          "query"
+        ],
+        "operationId": "getDatasetTagValues",
+        "parameters": [
+          {
+            "description": "The dataset to retrieve tag values from",
+            "name": "dataset",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The tag name to retrieve values for",
+            "name": "tag",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start time for timeframe to return (RFC3339 format)",
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "End time for timeframe to return (RFC3339 format)",
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tag values for the specified dataset and tag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset or tag not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "User or system error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              },
+              "application/vnd.metrics-info.v2+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsError"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
     "/query/_apl?format=tabular": {
       "post": {
         "security": [
@@ -268,6 +1046,7 @@
   "components": {
     "securitySchemes": {
       "Auth": {
+        "description": "Authenticate using an API token or personal access token (PAT). Include the token as a Bearer token: `Authorization: Bearer <token>`. For more information, see [Tokens](/reference/tokens).",
         "type": "oauth2",
         "flows": {
           "authorizationCode": {
@@ -341,6 +1120,10 @@
             "description": "Maximum number of groups to automatically bin into",
             "type": "integer"
           },
+          "queryEdgeDeployment": {
+            "description": "The edge deployment the query should be run in. If not specified, the query will be run in the default edge deployment of the org. Takes precedence over queryRegion.",
+            "type": "string"
+          },
           "queryOptions": {
             "$ref": "#/components/schemas/QueryOptions"
           },
@@ -380,59 +1163,12 @@
       "MetricsError": {
         "type": "object",
         "properties": {
-          "code": {
-            "description": "Status is the http status code associated with this error",
-            "type": "integer"
-          },
-          "detail": {
-            "$ref": "#/components/schemas/MetricsErrorDetail"
-          },
-          "message": {
-            "description": "a formatted user-facing error message",
+          "error": {
+            "description": "The error",
             "type": "string"
-          }
-        }
-      },
-      "MetricsErrorDetail": {
-        "type": "object",
-        "properties": {
-          "column": {
-            "description": "Column is the column associated with this compile type error",
-            "type": "integer",
-            "format": "int64"
-          },
-          "compileErrorCode": {
-            "description": "CompileErrorCode is a special error code that is only available for Compile Errors\nIt is an integer value that can be used to identify the error",
-            "type": "integer",
-            "format": "int64",
-            "enum": [
-              1,
-              2,
-              16,
-              17,
-              32,
-              33,
-              34
-            ]
-          },
-          "errorType": {
-            "description": "Error Type is an integer value indicating the kind of error",
-            "type": "integer",
-            "format": "int64",
-            "enum": [
-              1,
-              2,
-              3,
-              4
-            ]
-          },
-          "line": {
-            "description": "Line is the line associated with this compile type error",
-            "type": "integer",
-            "format": "int64"
           },
           "message": {
-            "description": "Message is the raw error message without any formatting",
+            "description": "A formatted user-facing error message",
             "type": "string"
           }
         }
@@ -449,34 +1185,16 @@
       "MetricsRequestWithOptions": {
         "type": "object",
         "required": [
-          "apl",
           "startTime",
           "endTime"
         ],
         "properties": {
-          "apl": {
-            "description": "APL query string (AxQL)",
-            "type": "string"
-          },
           "endTime": {
             "description": "End time for the query range",
             "type": "string"
           },
-          "metricsQuery": {
-            "description": "Structured metrics query object",
-            "type": "object",
-            "x-go-type": {
-              "hints": {
-                "noValidation": true
-              },
-              "type": "map[string]any"
-            }
-          },
-          "queryOptions": {
-            "$ref": "#/components/schemas/MetricsQueryOptions"
-          },
-          "queryRegion": {
-            "description": "The region the query should be run in. If not specified, the query will be run in the default region of the org.",
+          "mpl": {
+            "description": "The MPL query.",
             "type": "string"
           },
           "startTime": {
