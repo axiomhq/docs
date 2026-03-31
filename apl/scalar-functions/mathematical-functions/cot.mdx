@@ -1,0 +1,160 @@
+---
+title: cot
+description: 'This page explains how to use the cot function in APL.'
+---
+
+Use the `cot` function in APL to compute the cotangent of an angle expressed in radians. The cotangent is the reciprocal of the tangent: `cot(x) = cos(x) / sin(x)`. The function is undefined at multiples of π, where the sine is zero.
+
+`cot` is useful when you work with angular or cyclic calculations and need the cotangent as part of a larger formula. In observability, you might use it to transform normalized metric ratios into angular coordinates for signal analysis.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL does not include a built-in `cot()` function. You compute it as the reciprocal of `tan()`.
+
+<CodeGroup>
+```sql Splunk example
+| eval cot_val = 1 / tan(angle_rad)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend cot_val = cot(angle_rad)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not define a standard `COT()` function, though SQL Server provides one. In PostgreSQL and other databases, you compute it as `1 / TAN(x)`.
+
+<CodeGroup>
+```sql SQL example
+SELECT 1.0 / TAN(angle_rad) AS cot_val FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend cot_val = cot(angle_rad)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+cot(x)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `x` | real | Yes | The angle in radians. Must not be a multiple of π. |
+
+### Returns
+
+The cotangent of `x`. Returns infinity or `null` when `sin(x)` equals zero (that is, when `x` is a multiple of π).
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `cot` to transform request durations expressed in radians into cotangent values, which can serve as features in signal-processing pipelines.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend angle_rad = req_duration_ms / 1000.0
+| where angle_rad != 0
+| extend cot_angle = cot(angle_rad)
+| project _time, id, req_duration_ms, angle_rad, cot_angle
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20angle_rad%20%3D%20req_duration_ms%20%2F%201000.0%20%7C%20where%20angle_rad%20%21%3D%200%20%7C%20extend%20cot_angle%20%3D%20cot%28angle_rad%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20angle_rad%2C%20cot_angle%22%7D)
+
+**Output**
+
+| _time | id | req_duration_ms | angle_rad | cot_angle |
+|---|---|---|---|---|
+| 2024-11-14 10:00:00 | user-1 | 500.0 | 0.5000 | 1.8305 |
+| 2024-11-14 10:01:00 | user-2 | 1200.0 | 1.2000 | 0.3888 |
+| 2024-11-14 10:02:00 | user-3 | 200.0 | 0.2000 | 4.9332 |
+
+The query converts request duration in milliseconds to a radian value by dividing by 1000, then computes the cotangent. Filtering out zero prevents undefined values.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `cot` when you scale span durations to angular values and need the cotangent as part of a trigonometric feature pipeline.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend duration_ms = duration / 1ms
+| extend angle_rad = duration_ms / 1000.0
+| where angle_rad != 0
+| extend cot_val = cot(angle_rad)
+| project _time, span_id, ['service.name'], duration_ms, cot_val
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20angle_rad%20%3D%20duration_ms%20%2F%201000.0%20%7C%20where%20angle_rad%20%21%3D%200%20%7C%20extend%20cot_val%20%3D%20cot%28angle_rad%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration_ms%2C%20cot_val%22%7D)
+
+**Output**
+
+| _time | span_id | service.name | duration_ms | cot_val |
+|---|---|---|---|---|
+| 2024-11-14 10:00:00 | span-abc | checkout | 350.0 | 2.7475 |
+| 2024-11-14 10:01:00 | span-def | cart | 800.0 | 1.0737 |
+| 2024-11-14 10:02:00 | span-ghi | frontend | 100.0 | 9.9667 |
+
+Short-duration spans produce large cotangent values; long-duration spans produce values closer to zero. This can help distinguish fast paths from slow paths in a service.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `cot` when analyzing periodic patterns in error responses to apply cotangent-based features to security event scoring.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '500'
+| extend angle_rad = req_duration_ms / 500.0
+| where angle_rad != 0
+| extend cot_val = cot(angle_rad)
+| project _time, id, status, req_duration_ms, cot_val
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20extend%20angle_rad%20%3D%20req_duration_ms%20%2F%20500.0%20%7C%20where%20angle_rad%20%21%3D%200%20%7C%20extend%20cot_val%20%3D%20cot%28angle_rad%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20req_duration_ms%2C%20cot_val%22%7D)
+
+**Output**
+
+| _time | id | status | req_duration_ms | cot_val |
+|---|---|---|---|---|
+| 2024-11-14 10:00:00 | user-9 | 500 | 100.0 | 4.9332 |
+| 2024-11-14 10:01:00 | user-5 | 500 | 1500.0 | -0.4816 |
+
+Very fast error responses (high cotangent) can indicate fast-fail attacks; slow ones (low cotangent) may indicate resource exhaustion.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [tan](/apl/scalar-functions/mathematical-functions/tan): Returns the tangent, the reciprocal of `cot`. Use it as the primary trigonometric ratio when cotangent is not needed.
+- [sin](/apl/scalar-functions/mathematical-functions/sin): Returns the sine. Use it along with `cos` to compute cotangent manually as `cos(x)/sin(x)`.
+- [cos](/apl/scalar-functions/mathematical-functions/cos): Returns the cosine. Use it in combination with `sin` for manual cotangent calculation.
+- [atan](/apl/scalar-functions/mathematical-functions/atan): Returns the arc tangent. Use it as the inverse of `tan` when you need to recover an angle.
+- [radians](/apl/scalar-functions/mathematical-functions/radians): Converts degrees to radians. Use it to prepare degree-based angle inputs before calling `cot`.

@@ -1,0 +1,158 @@
+---
+title: exp
+description: 'This page explains how to use the exp function in APL.'
+---
+
+Use the `exp` function in APL to compute the base-e exponential of a value: e^x. It is the inverse of the natural logarithm function `log`.
+
+`exp` is useful when you work with log-transformed data and need to recover the original scale. For example, if you have computed the average of log-transformed latencies and want the geometric mean on the original scale, apply `exp` to the result. You can also use `exp` to model exponential growth or decay in metric data.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, `exp()` works the same way: it computes e^x for a numeric argument.
+
+<CodeGroup>
+```sql Splunk example
+| eval result = exp(log_value)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend result = exp(log_value)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, `EXP()` is a standard function with identical semantics.
+
+<CodeGroup>
+```sql SQL example
+SELECT EXP(log_value) AS result FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend result = exp(log_value)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+exp(x)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `x` | real | Yes | The exponent value. |
+
+### Returns
+
+The base-e exponential of `x`: e^x.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `exp` to recover the geometric mean of request durations from log-transformed values. This is more robust to outliers than the arithmetic mean.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where req_duration_ms > 0
+| summarize geometric_mean = exp(avg(log(req_duration_ms))) by bin(_time, 1h)
+| project _time, geometric_mean
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20req_duration_ms%20%3E%200%20%7C%20summarize%20geometric_mean%20%3D%20exp%28avg%28log%28req_duration_ms%29%29%29%20by%20bin%28_time%2C%201h%29%20%7C%20project%20_time%2C%20geometric_mean%22%7D)
+
+**Output**
+
+| _time | geometric_mean |
+|---|---|
+| 2024-11-14 10:00:00 | 85.3 |
+| 2024-11-14 11:00:00 | 92.7 |
+| 2024-11-14 12:00:00 | 78.1 |
+
+The query computes `log` on each duration, averages the log values, then applies `exp` to recover the geometric mean. Unlike the arithmetic mean, the geometric mean is less sensitive to extremely large latency spikes.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `exp` to reverse a log transformation on span durations and compute the geometric mean per service.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend duration_ms = duration / 1ms
+| where duration_ms > 0
+| summarize geometric_mean = exp(avg(log(duration_ms))) by ['service.name'], bin(_time, 1h)
+| project _time, ['service.name'], geometric_mean
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20where%20duration_ms%20%3E%200%20%7C%20summarize%20geometric_mean%20%3D%20exp%28avg%28log%28duration_ms%29%29%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20geometric_mean%22%7D)
+
+**Output**
+
+| _time | service.name | geometric_mean |
+|---|---|---|
+| 2024-11-14 10:00:00 | checkout | 280.5 |
+| 2024-11-14 10:00:00 | cart | 140.2 |
+| 2024-11-14 10:00:00 | frontend | 55.8 |
+
+The geometric mean is a reliable central-tendency measure for latency data, which tends to be log-normally distributed. `exp(avg(log(x)))` is the standard way to compute it.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `exp` to reconstruct the original error-response durations from log-scale summaries, making it easier to report on absolute latency thresholds for alerting.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '500' and req_duration_ms > 0
+| summarize avg_log_duration = avg(log(req_duration_ms)) by ['geo.country']
+| extend avg_duration = exp(avg_log_duration)
+| project ['geo.country'], avg_log_duration, avg_duration
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20and%20req_duration_ms%20%3E%200%20%7C%20summarize%20avg_log_duration%20%3D%20avg%28log%28req_duration_ms%29%29%20by%20%5B%27geo.country%27%5D%20%7C%20extend%20avg_duration%20%3D%20exp%28avg_log_duration%29%20%7C%20project%20%5B%27geo.country%27%5D%2C%20avg_log_duration%2C%20avg_duration%22%7D)
+
+**Output**
+
+| geo.country | avg_log_duration | avg_duration |
+|---|---|---|
+| US | 4.85 | 128.0 |
+| DE | 5.30 | 200.3 |
+| BR | 6.20 | 492.7 |
+
+Regions with a high `avg_duration` after the `exp` reversal are experiencing slower error responses, which may indicate targeted slowdown attacks or infrastructure issues.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [log](/apl/scalar-functions/mathematical-functions/log): Returns the natural logarithm. Use it as the inverse of `exp` or to apply log transformations before aggregating.
+- [exp2](/apl/scalar-functions/mathematical-functions/exp2): Returns 2^x. Use it instead of `exp` when working with binary (base-2) scales.
+- [exp10](/apl/scalar-functions/mathematical-functions/exp10): Returns 10^x. Use it instead of `exp` when working with base-10 (decibel or order-of-magnitude) scales.
+- [pow](/apl/scalar-functions/mathematical-functions/pow): Raises any base to a power. Use it when the base is not e, 2, or 10.
+- [sqrt](/apl/scalar-functions/mathematical-functions/sqrt): Returns the square root. Use it for simpler power-of-0.5 calculations rather than `exp(0.5 * log(x))`.
