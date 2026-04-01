@@ -29,7 +29,17 @@
                 { value: "", label: "Select edge deployment" },
                 { value: "us-east-1.aws.edge.axiom.co", label: "US East 1 (AWS)" },
                 { value: "eu-central-1.aws.edge.axiom.co", label: "EU Central 1 (AWS)" }
-            ]
+            ],
+            linkedValues: {
+                "us-east-1.aws.edge.axiom.co": {
+                    "PRIVATELINK_SERVICE_NAME": "com.amazonaws.vpce.us-east-1.vpce-svc-05a64735cdf68866b",
+                    "PRIVATELINK_SERVICE_REGION": "us-east-1"
+                },
+                "eu-central-1.aws.edge.axiom.co": {
+                    "PRIVATELINK_SERVICE_NAME": "com.amazonaws.vpce.eu-central-1.vpce-svc-00e8d47e8c60784f7",
+                    "PRIVATELINK_SERVICE_REGION": "eu-central-1"
+                }
+            }
         },
         "API_TOKEN": { 
             label: "API token", 
@@ -47,7 +57,22 @@
             help: 'The ID of your Axiom organization. For more information, see <a class="link" href="https://axiom.co/docs/reference/tokens#determine-organization-id">Determine organization ID</a>.'
         }
     };
-    var PLACEHOLDER_PATTERNS = Object.keys(PLACEHOLDERS);
+    // Collect all linked value keys (e.g. SERVICE_NAME, SERVICE_REGION) so they
+    // are detected in code blocks and replaced when their parent placeholder is set.
+    var LINKED_VALUE_KEYS = [];
+    Object.keys(PLACEHOLDERS).forEach(function(key) {
+        var config = PLACEHOLDERS[key];
+        if (config.linkedValues) {
+            Object.keys(config.linkedValues).forEach(function(domainVal) {
+                Object.keys(config.linkedValues[domainVal]).forEach(function(linkedKey) {
+                    if (LINKED_VALUE_KEYS.indexOf(linkedKey) === -1) {
+                        LINKED_VALUE_KEYS.push(linkedKey);
+                    }
+                });
+            });
+        }
+    });
+    var PLACEHOLDER_PATTERNS = Object.keys(PLACEHOLDERS).concat(LINKED_VALUE_KEYS);
     
     var originalCodeContent = new WeakMap();
     var originalCodeHTML = new WeakMap();
@@ -311,6 +336,22 @@
         }
     }
     
+    // Toggle visibility of elements with data-show-if="KEY=value" attributes
+    // based on the current placeholder values. When KEY has no stored value,
+    // only the empty-condition section (data-show-if="KEY=") is shown.
+    function updateConditionalSections(values) {
+        var sections = document.querySelectorAll("[data-show-if]");
+        sections.forEach(function(section) {
+            var condition = section.getAttribute("data-show-if");
+            var eqIndex = condition.indexOf("=");
+            if (eqIndex === -1) return;
+            var key = condition.substring(0, eqIndex);
+            var expected = condition.substring(eqIndex + 1);
+            var current = values[key] || "";
+            section.style.display = current === expected ? "" : "none";
+        });
+    }
+    
     function createConfigBar(preElement, codeElement, placeholdersInCode) {
         var values = loadStoredValues();
         
@@ -320,6 +361,9 @@
         
         placeholdersInCode.forEach(function(key) {
             var config = PLACEHOLDERS[key];
+            // Skip linked-only placeholders (e.g. SERVICE_NAME) — they have no
+            // config of their own and are driven by a parent placeholder's dropdown.
+            if (!config) return;
             var inputId = generateUniqueId(key);
             
             // Outer wrapper for the entire field including help text
@@ -374,10 +418,27 @@
                     } else {
                         delete vals[key];
                     }
+                    // Write linked values when a parent placeholder changes
+                    if (config.linkedValues) {
+                        // Clear all linked keys first
+                        Object.keys(config.linkedValues).forEach(function(domainVal) {
+                            Object.keys(config.linkedValues[domainVal]).forEach(function(linkedKey) {
+                                delete vals[linkedKey];
+                            });
+                        });
+                        // Set linked values for the selected option
+                        if (inputElement.value && config.linkedValues[inputElement.value]) {
+                            var linked = config.linkedValues[inputElement.value];
+                            Object.keys(linked).forEach(function(linkedKey) {
+                                vals[linkedKey] = linked[linkedKey];
+                            });
+                        }
+                    }
                     saveValues(vals);
                     updateSelectColor(inputElement, inputElement.value);
                     updateAllCodeBlocks();
                     updateAllBars();
+                    updateConditionalSections(vals);
                 });
             } else {
                 // Create text input for regular fields
@@ -552,6 +613,9 @@
         });
         
         updateAllBars();
+        
+        // Apply conditional section visibility from stored values
+        updateConditionalSections(values);
         
         // Return status for retry logic
         return { processed: processedCount, hasStoredValues: hasStoredValues };
