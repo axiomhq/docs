@@ -1,0 +1,161 @@
+---
+title: sqrt
+description: 'This page explains how to use the sqrt function in APL.'
+---
+
+Use the `sqrt` function in APL to compute the square root of a non-negative numeric value. The function returns `null` for negative inputs.
+
+`sqrt` is frequently used in observability to compute standard deviations from variance values. After using `summarize variance(x)` to compute the population variance across a window, apply `sqrt` to get the standard deviation in the original units. You can also use `sqrt` to apply a square-root transformation to compress a wide value range.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, `sqrt()` works identically: it returns the square root of a non-negative value.
+
+<CodeGroup>
+```sql Splunk example
+| eval std_dev = sqrt(variance)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend std_dev = sqrt(variance)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, `SQRT()` is a standard function with the same behavior.
+
+<CodeGroup>
+```sql SQL example
+SELECT SQRT(variance) AS std_dev FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend std_dev = sqrt(variance)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+sqrt(x)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `x` | real | Yes | A non-negative real number (x >= 0). |
+
+### Returns
+
+- A positive number `y` such that `y * y == x`.
+- `null` if `x` is negative or cannot be converted to a real value.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `sqrt` to compute the standard deviation of request durations per hour. The standard deviation measures how much individual durations spread around the average.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize variance = variance(req_duration_ms) by bin(_time, 1h)
+| extend std_dev = sqrt(variance)
+| project _time, variance, std_dev
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20variance%20%3D%20variance%28req_duration_ms%29%20by%20bin%28_time%2C%201h%29%20%7C%20extend%20std_dev%20%3D%20sqrt%28variance%29%20%7C%20project%20_time%2C%20variance%2C%20std_dev%22%7D)
+
+**Output**
+
+| _time | variance | std_dev |
+|---|---|---|
+| 2024-11-14 10:00:00 | 12250.0 | 110.7 |
+| 2024-11-14 11:00:00 | 4900.0 | 70.0 |
+| 2024-11-14 12:00:00 | 1600.0 | 40.0 |
+
+A high `std_dev` means request durations vary widely during that hour; a low value means they are consistent. Use this metric to detect periods of unstable performance.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `sqrt` to compute per-service standard deviation of span durations, which helps you identify services with inconsistent latency.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend duration_ms = duration / 1ms
+| summarize variance = variance(duration_ms) by ['service.name'], bin(_time, 1h)
+| extend std_dev = sqrt(variance)
+| project _time, ['service.name'], variance, std_dev
+| order by std_dev desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20summarize%20variance%20%3D%20variance%28duration_ms%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20std_dev%20%3D%20sqrt%28variance%29%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20variance%2C%20std_dev%20%7C%20order%20by%20std_dev%20desc%22%7D)
+
+**Output**
+
+| _time | service.name | variance | std_dev |
+|---|---|---|---|
+| 2024-11-14 10:00:00 | checkout | 98000.0 | 313.1 |
+| 2024-11-14 10:00:00 | cart | 12000.0 | 109.5 |
+| 2024-11-14 10:00:00 | frontend | 625.0 | 25.0 |
+
+Services with a high `std_dev` have highly variable latency. This is more actionable than variance alone because `std_dev` is expressed in the same units as the original duration.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `sqrt` to compute the standard deviation of error-response durations per country, helping you identify regions where error behavior is highly unpredictable.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '500'
+| summarize variance = variance(req_duration_ms) by ['geo.country']
+| extend std_dev = sqrt(variance)
+| project ['geo.country'], variance, std_dev
+| order by std_dev desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20summarize%20variance%20%3D%20variance%28req_duration_ms%29%20by%20%5B%27geo.country%27%5D%20%7C%20extend%20std_dev%20%3D%20sqrt%28variance%29%20%7C%20project%20%5B%27geo.country%27%5D%2C%20variance%2C%20std_dev%20%7C%20order%20by%20std_dev%20desc%22%7D)
+
+**Output**
+
+| geo.country | variance | std_dev |
+|---|---|---|
+| BR | 490000.0 | 700.0 |
+| DE | 40000.0 | 200.0 |
+| US | 2500.0 | 50.0 |
+
+A high `std_dev` for a region means error response times are inconsistent, which may point to intermittent attacks, flapping backends, or network instability.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [pow](/apl/scalar-functions/mathematical-functions/pow): Raises a value to a power. Use `pow(x, 0.5)` as an alternative to `sqrt(x)`, or `pow(x, 2)` to square deviations before computing variance.
+- [abs](/apl/scalar-functions/mathematical-functions/abs): Returns the absolute value. Use it to compute the magnitude of deviations before passing them to `sqrt`.
+- [log](/apl/scalar-functions/mathematical-functions/log): Returns the natural logarithm. Use it as a lighter alternative to `sqrt` for compressing wider value ranges.
+- [round](/apl/scalar-functions/mathematical-functions/round): Rounds a value. Use it after `sqrt` to present the standard deviation at a readable precision.
+- [exp](/apl/scalar-functions/mathematical-functions/exp): Returns e^x. Use it to reverse a log transformation applied before or after `sqrt`.

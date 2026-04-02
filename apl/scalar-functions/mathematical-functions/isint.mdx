@@ -1,0 +1,154 @@
+---
+title: isint
+description: 'This page explains how to use the isint function in APL.'
+---
+
+Use the `isint` function in APL to check whether a numeric value is an integer, meaning it has no fractional component. The function returns `true` for both positive and negative integer values and `false` for floating-point values, NaN, or infinity.
+
+`isint` is useful for data validation and type-checking in observability queries. For example, you can use it to verify that computed fields or imported values are whole numbers before performing integer-specific operations such as array indexing or factorial-based calculations.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn't have a direct `isint()` function, but you can approximate the check by comparing a value to its floored counterpart.
+
+<CodeGroup>
+```sql Splunk example
+| eval is_int = if(floor(value) == value, 1, 0)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_int = isint(value)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Standard SQL does not define an `ISINT()` function. You typically compare a value to its floored equivalent to determine whether it is a whole number.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE WHEN FLOOR(value) = value THEN 1 ELSE 0 END AS is_int FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_int = isint(value)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+isint(expression)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `expression` | real | Yes | The numeric value to check. |
+
+### Returns
+
+`true` if the value is a positive or negative integer (no fractional part). `false` for non-integer real numbers, NaN, and infinity.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `isint` to check whether request durations are whole-number millisecond values. This can reveal whether a data source rounds or truncates durations.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend is_int = isint(req_duration_ms)
+| project _time, id, req_duration_ms, is_int
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20is_int%20%3D%20isint%28req_duration_ms%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20is_int%22%7D)
+
+**Output**
+
+| _time | id | req_duration_ms | is_int |
+|---|---|---|---|
+| 2024-11-14 10:00:00 | user-1 | 120.0 | true |
+| 2024-11-14 10:01:00 | user-2 | 45.6 | false |
+| 2024-11-14 10:02:00 | user-3 | 200.0 | true |
+
+If most durations are integers but a few are not, the non-integer rows may come from a different instrumentation library with higher timing resolution.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `isint` to validate that span durations converted to milliseconds are whole numbers, which is expected when the instrumentation truncates to millisecond precision.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend duration_ms = duration / 1ms
+| extend is_int = isint(duration_ms)
+| project _time, span_id, ['service.name'], duration_ms, is_int
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20is_int%20%3D%20isint%28duration_ms%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration_ms%2C%20is_int%22%7D)
+
+**Output**
+
+| _time | span_id | service.name | duration_ms | is_int |
+|---|---|---|---|---|
+| 2024-11-14 10:00:00 | span-abc | checkout | 350.0 | true |
+| 2024-11-14 10:01:00 | span-def | cart | 120.5 | false |
+| 2024-11-14 10:02:00 | span-ghi | frontend | 80.0 | true |
+
+Spans where `is_int` is `false` have sub-millisecond precision, which may indicate a different SDK or clock source.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `isint` to validate that duration values in error responses are whole numbers as a basic data-integrity check in your security pipeline.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '500'
+| extend is_int = isint(req_duration_ms)
+| project _time, id, status, req_duration_ms, is_int
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20extend%20is_int%20%3D%20isint%28req_duration_ms%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20req_duration_ms%2C%20is_int%22%7D)
+
+**Output**
+
+| _time | id | status | req_duration_ms | is_int |
+|---|---|---|---|---|
+| 2024-11-14 10:00:00 | user-9 | 500 | 1200.0 | true |
+| 2024-11-14 10:01:00 | user-5 | 500 | 80.3 | false |
+
+Use this check to flag error events with unexpected data formats, which could indicate instrumentation misconfigurations or data corruption.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [isfinite](/apl/scalar-functions/mathematical-functions/isfinite): Returns `true` for values that are neither infinite nor NaN. Use it for a broader check covering all valid float states.
+- [isinf](/apl/scalar-functions/mathematical-functions/isinf): Returns `true` only for infinite values. Use it to detect overflow results specifically.
+- [isnan](/apl/scalar-functions/mathematical-functions/isnan): Returns `true` only for NaN values. Use it to detect undefined computation results.
+- [round](/apl/scalar-functions/mathematical-functions/round): Rounds a value to a given precision. Use it to produce integer-valued results before applying `isint`.
+- [sign](/apl/scalar-functions/mathematical-functions/sign): Returns the sign of a value. Use it alongside `isint` when you need both the sign and the integer-status of a value.

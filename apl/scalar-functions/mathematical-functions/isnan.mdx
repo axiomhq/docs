@@ -1,0 +1,157 @@
+---
+title: isnan
+description: 'This page explains how to use the isnan function in APL.'
+---
+
+Use the `isnan` function in APL to check whether a numeric value is NaN (Not a Number). The function returns `true` when the value is NaN and `false` for all finite values and infinities.
+
+`isnan` is essential for data quality work. Operations such as `log` of a negative number, `sqrt` of a negative number, or `0 / 0` produce NaN in APL. Use `isnan` to detect and filter these invalid values before aggregating, charting, or alerting on your data.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL includes the `isnan()` function, which works the same way as in APL: it returns `true` (1) when the value is NaN.
+
+<CodeGroup>
+```sql Splunk example
+| eval is_nan = isnan(value)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_nan = isnan(value)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Standard SQL does not define an `ISNAN()` function. In most dialects, `NaN` is not a concept; division by zero raises an error instead. However, some databases (such as PostgreSQL) do support `NaN` as a float value, and you check for it with `value = 'NaN'`.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE WHEN value = 'NaN' THEN 1 ELSE 0 END AS is_nan FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_nan = isnan(value)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+isnan(x)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `x` | real | Yes | The numeric value to check. |
+
+### Returns
+
+`true` if `x` is NaN. `false` for finite values and infinity.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `isnan` to detect rows where the logarithm of a potentially negative or zero expression produces NaN.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend log_val = log(req_duration_ms - 1000.0)
+| extend is_nan_val = isnan(log_val)
+| project _time, id, req_duration_ms, log_val, is_nan_val
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20log_val%20%3D%20log%28req_duration_ms%20-%201000.0%29%20%7C%20extend%20is_nan_val%20%3D%20isnan%28log_val%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20log_val%2C%20is_nan_val%22%7D)
+
+**Output**
+
+| _time | id | req_duration_ms | log_val | is_nan_val |
+|---|---|---|---|---|
+| 2024-11-14 10:00:00 | user-1 | 1200.0 | 5.2983 | false |
+| 2024-11-14 10:01:00 | user-2 | 800.0 | nan | true |
+| 2024-11-14 10:02:00 | user-3 | 2000.0 | 6.9078 | true |
+
+When `req_duration_ms` is less than 1000, `log(negative)` returns NaN. The `is_nan_val` column identifies these rows so you can filter or handle them appropriately.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `isnan` to validate derived duration metrics on traces before computing aggregates across services.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend duration_ms = duration / 1ms
+| extend log_val = log(duration_ms - 500.0)
+| extend is_nan_val = isnan(log_val)
+| project _time, span_id, ['service.name'], duration_ms, is_nan_val
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20log_val%20%3D%20log%28duration_ms%20-%20500.0%29%20%7C%20extend%20is_nan_val%20%3D%20isnan%28log_val%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration_ms%2C%20is_nan_val%22%7D)
+
+**Output**
+
+| _time | span_id | service.name | duration_ms | is_nan_val |
+|---|---|---|---|---|
+| 2024-11-14 10:00:00 | span-abc | checkout | 800.0 | false |
+| 2024-11-14 10:01:00 | span-def | cart | 200.0 | true |
+| 2024-11-14 10:02:00 | span-ghi | frontend | 1200.0 | false |
+
+Spans shorter than 500 ms produce NaN from the log computation. Filter them out with `| where not(is_nan_val)` before aggregating.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `isnan` to detect data anomalies in error-event computations and exclude invalid results from security metrics.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '500'
+| extend log_val = log(req_duration_ms - 500.0)
+| extend is_nan_val = isnan(log_val)
+| project _time, id, status, req_duration_ms, is_nan_val
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20extend%20log_val%20%3D%20log%28req_duration_ms%20-%20500.0%29%20%7C%20extend%20is_nan_val%20%3D%20isnan%28log_val%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20req_duration_ms%2C%20is_nan_val%22%7D)
+
+**Output**
+
+| _time | id | status | req_duration_ms | is_nan_val |
+|---|---|---|---|---|
+| 2024-11-14 10:00:00 | user-9 | 500 | 1200.0 | false |
+| 2024-11-14 10:01:00 | user-5 | 500 | 80.0 | true |
+
+Error responses faster than 500 ms produce NaN from the log expression. Use `| where not(is_nan_val)` to analyze only the responses with valid log values.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [isfinite](/apl/scalar-functions/mathematical-functions/isfinite): Returns `true` for values that are neither infinite nor NaN. Use it for a combined check covering all invalid float states.
+- [isinf](/apl/scalar-functions/mathematical-functions/isinf): Returns `true` only for infinite values. Use it alongside `isnan` to cover all edge cases.
+- [isint](/apl/scalar-functions/mathematical-functions/isint): Returns `true` for integer values. Use it for whole-number validation rather than float validity.
+- [log](/apl/scalar-functions/mathematical-functions/log): Returns the natural logarithm. Use `isnan` to catch NaN results when `log` is applied to non-positive values.
+- [sqrt](/apl/scalar-functions/mathematical-functions/sqrt): Returns the square root. Use `isnan` to detect NaN results from `sqrt` on negative inputs.

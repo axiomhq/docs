@@ -1,0 +1,160 @@
+---
+title: pow
+description: 'This page explains how to use the pow function in APL.'
+---
+
+Use the `pow` function in APL to raise a base value to a given exponent: base^exponent. The function accepts any real base and exponent.
+
+`pow` is useful whenever you need to apply a power function to a metric, such as squaring deviations for variance calculations, computing exponential growth factors, scaling values by a fractional power, or inverting a power transformation. It's more flexible than `exp`, `exp2`, or `exp10` because you can specify any base.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, `pow(base, exponent)` works identically to APL's `pow`. You can also use the `^` operator for the same purpose.
+
+<CodeGroup>
+```sql Splunk example
+| eval squared = pow(req_duration_ms, 2)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend squared = pow(req_duration_ms, 2)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, `POWER(base, exponent)` provides the same functionality as APL's `pow`.
+
+<CodeGroup>
+```sql SQL example
+SELECT POWER(req_duration_ms, 2) AS squared FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend squared = pow(req_duration_ms, 2)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+pow(base, exponent)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `base` | real | Yes | The base value. |
+| `exponent` | real | Yes | The exponent to raise the base to. |
+
+### Returns
+
+`base` raised to the power `exponent`: base^exponent.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `pow` to square request duration deviations, which is a step in computing variance manually or in weighting outlier events.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| extend deviation = req_duration_ms - 200.0
+| extend squared_deviation = pow(deviation, 2)
+| project _time, id, req_duration_ms, deviation, squared_deviation
+| order by squared_deviation desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20deviation%20%3D%20req_duration_ms%20-%20200.0%20%7C%20extend%20squared_deviation%20%3D%20pow%28deviation%2C%202%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20deviation%2C%20squared_deviation%20%7C%20order%20by%20squared_deviation%20desc%22%7D)
+
+**Output**
+
+| _time | id | req_duration_ms | deviation | squared_deviation |
+|---|---|---|---|---|
+| 2024-11-14 10:00:00 | user-1 | 1200.0 | 1000.0 | 1000000.0 |
+| 2024-11-14 10:01:00 | user-2 | 80.0 | -120.0 | 14400.0 |
+| 2024-11-14 10:02:00 | user-3 | 205.0 | 5.0 | 25.0 |
+
+Squaring deviations amplifies large errors more than small ones, making it easy to identify the most extreme outliers.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `pow` to compute a power-scaled score for span durations, giving disproportionately high scores to the longest spans.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend duration_ms = duration / 1ms
+| extend duration_score = pow(duration_ms, 1.5)
+| project _time, span_id, ['service.name'], duration_ms, duration_score
+| order by duration_score desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20duration_score%20%3D%20pow%28duration_ms%2C%201.5%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration_ms%2C%20duration_score%20%7C%20order%20by%20duration_score%20desc%22%7D)
+
+**Output**
+
+| _time | span_id | service.name | duration_ms | duration_score |
+|---|---|---|---|---|
+| 2024-11-14 10:00:00 | span-abc | checkout | 1200.0 | 41569.2 |
+| 2024-11-14 10:01:00 | span-def | cart | 300.0 | 5196.2 |
+| 2024-11-14 10:02:00 | span-ghi | frontend | 50.0 | 353.6 |
+
+Raising duration to the power 1.5 (the 3/2 power) gives longer spans a much higher score than a simple linear ranking.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `pow` to compute the squared error count per country, amplifying regions with high attack traffic in a weighted risk score.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize error_count = countif(status == '500') by ['geo.country']
+| extend error_score = pow(todouble(error_count), 2)
+| project ['geo.country'], error_count, error_score
+| order by error_score desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20error_count%20%3D%20countif%28status%20%3D%3D%20%27500%27%29%20by%20%5B%27geo.country%27%5D%20%7C%20extend%20error_score%20%3D%20pow%28todouble%28error_count%29%2C%202%29%20%7C%20project%20%5B%27geo.country%27%5D%2C%20error_count%2C%20error_score%20%7C%20order%20by%20error_score%20desc%22%7D)
+
+**Output**
+
+| geo.country | error_count | error_score |
+|---|---|---|
+| BR | 500 | 250000.0 |
+| DE | 200 | 40000.0 |
+| US | 50 | 2500.0 |
+
+Squaring the error count makes the difference between countries with 500 errors and those with 50 errors much larger in the score, focusing attention on the most impactful regions.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [sqrt](/apl/scalar-functions/mathematical-functions/sqrt): Returns the square root of a value. This is equivalent to `pow(x, 0.5)` and is more readable for the square-root case.
+- [exp](/apl/scalar-functions/mathematical-functions/exp): Returns e^x. Use it when the base is e rather than an arbitrary number.
+- [exp2](/apl/scalar-functions/mathematical-functions/exp2): Returns 2^x. Use it when the base is always 2.
+- [exp10](/apl/scalar-functions/mathematical-functions/exp10): Returns 10^x. Use it when the base is always 10.
+- [log](/apl/scalar-functions/mathematical-functions/log): Returns the natural logarithm. Use it to undo a `pow` transformation in log space.

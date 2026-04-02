@@ -1,0 +1,160 @@
+---
+title: acos
+description: 'This page explains how to use the acos function in APL.'
+---
+
+Use the `acos` function in APL to compute the arc cosine (inverse cosine) of a numeric expression. The function returns the angle, in radians, whose cosine equals the input value. The input must be in the range [-1, 1]; values outside this range return `null`.
+
+`acos` is useful when you work with normalized ratios or rates that fall in the [-1, 1] range and you need to encode them as angular values. For example, you can use `acos` to convert a normalized success rate into a phase angle for cyclic analysis or signal processing.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, `acos()` is available in the `eval` command and works identically: it returns the arc cosine in radians for inputs in [-1, 1].
+
+<CodeGroup>
+```sql Splunk example
+| eval angle = acos(normalized_rate)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend angle = acos(normalized_rate)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, `ACOS()` is a standard mathematical function with the same semantics. Pass a value in [-1, 1] to receive the arc cosine in radians.
+
+<CodeGroup>
+```sql SQL example
+SELECT ACOS(normalized_rate) AS angle FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend angle = acos(normalized_rate)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+acos(x)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `x` | real | Yes | A real number in the range [-1, 1]. |
+
+### Returns
+
+- The arc cosine of `x` in radians, in the range [0, π].
+- `null` if `x` < -1 or `x` > 1.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `acos` to convert per-hour HTTP success rates into angular values. This lets you use angular distance as a measure of divergence from perfect reliability.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize success = countif(status == '200'), total = count() by bin(_time, 1h)
+| extend success_rate = todouble(success) / todouble(total)
+| extend phase = acos(2 * success_rate - 1)
+| project _time, success_rate, phase
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20success%20%3D%20countif%28status%20%3D%3D%20%27200%27%29%2C%20total%20%3D%20count%28%29%20by%20bin%28_time%2C%201h%29%20%7C%20extend%20success_rate%20%3D%20todouble%28success%29%20%2F%20todouble%28total%29%20%7C%20extend%20phase%20%3D%20acos%282%20%2A%20success_rate%20-%201%29%20%7C%20project%20_time%2C%20success_rate%2C%20phase%22%7D)
+
+**Output**
+
+| _time | success_rate | phase |
+|---|---|---|
+| 2024-11-14 10:00:00 | 0.98 | 0.2014 |
+| 2024-11-14 11:00:00 | 0.75 | 1.0472 |
+| 2024-11-14 12:00:00 | 0.50 | 1.5708 |
+
+The query maps success_rate from [0, 1] to [-1, 1] using `2 * success_rate - 1`, then computes `acos` to get a phase angle in [0, π]. A phase near 0 indicates high success; a phase near π indicates high failure.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `acos` to encode per-service OK rates as angular values, providing a continuous measure of service health.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| summarize ok = countif(status_code == '200'), total = count() by ['service.name'], bin(_time, 1h)
+| extend ok_rate = todouble(ok) / todouble(total)
+| extend phase = acos(2 * ok_rate - 1)
+| project _time, ['service.name'], ok_rate, phase
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20summarize%20ok%20%3D%20countif%28status_code%20%3D%3D%20%27200%27%29%2C%20total%20%3D%20count%28%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20ok_rate%20%3D%20todouble%28ok%29%20%2F%20todouble%28total%29%20%7C%20extend%20phase%20%3D%20acos%282%20%2A%20ok_rate%20-%201%29%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20ok_rate%2C%20phase%22%7D)
+
+**Output**
+
+| _time | service.name | ok_rate | phase |
+|---|---|---|---|
+| 2024-11-14 10:00:00 | checkout | 0.95 | 0.3176 |
+| 2024-11-14 10:00:00 | cart | 0.60 | 1.2310 |
+| 2024-11-14 10:00:00 | frontend | 1.00 | 0.0000 |
+
+A phase of 0 corresponds to a 100% OK rate; a phase of π corresponds to 0%. This lets you compare service health using a single angular metric.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `acos` to encode per-country error rates as phase angles, which can help detect regions with anomalously high error rates.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize errors = countif(status == '500'), total = count() by ['geo.country'], bin(_time, 1h)
+| extend error_rate = todouble(errors) / todouble(total)
+| extend phase = acos(1 - 2 * error_rate)
+| project _time, ['geo.country'], error_rate, phase
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20errors%20%3D%20countif%28status%20%3D%3D%20%27500%27%29%2C%20total%20%3D%20count%28%29%20by%20%5B%27geo.country%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20error_rate%20%3D%20todouble%28errors%29%20%2F%20todouble%28total%29%20%7C%20extend%20phase%20%3D%20acos%281%20-%202%20%2A%20error_rate%29%20%7C%20project%20_time%2C%20%5B%27geo.country%27%5D%2C%20error_rate%2C%20phase%22%7D)
+
+**Output**
+
+| _time | geo.country | error_rate | phase |
+|---|---|---|---|
+| 2024-11-14 10:00:00 | US | 0.02 | 0.2838 |
+| 2024-11-14 10:00:00 | DE | 0.30 | 1.8755 |
+| 2024-11-14 10:00:00 | BR | 0.50 | 1.5708 |
+
+The phase angle increases as the error rate grows. Regions with a phase near π have the highest error rates and warrant investigation.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [asin](/apl/scalar-functions/mathematical-functions/asin): Returns the arc sine. Use it when the input value maps to a sine rather than a cosine.
+- [atan](/apl/scalar-functions/mathematical-functions/atan): Returns the arc tangent. Use it when the input is not constrained to [-1, 1].
+- [cos](/apl/scalar-functions/mathematical-functions/cos): Returns the cosine. Use it to apply the forward transformation before using `acos` as the inverse.
+- [radians](/apl/scalar-functions/mathematical-functions/radians): Converts degrees to radians. Use it to convert angle output from `acos` into degrees.
+- [degrees](/apl/scalar-functions/mathematical-functions/degrees): Converts radians to degrees. Use it if you need the `acos` result expressed in degrees.

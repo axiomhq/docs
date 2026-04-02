@@ -1,0 +1,161 @@
+---
+title: exp10
+description: 'This page explains how to use the exp10 function in APL.'
+---
+
+Use the `exp10` function in APL to compute the base-10 exponential of a value: 10^x. It's the inverse of the common (base-10) logarithm function `log10`.
+
+`exp10` is useful when you work with data on a logarithmic scale expressed in powers of ten, such as decibel values, orders of magnitude, or `log10`-transformed metrics. Apply `exp10` to reverse a `log10` transformation and return to the original scale.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn't include a built-in `exp10()` function. You compute it using `pow(10, x)`.
+
+<CodeGroup>
+```sql Splunk example
+| eval result = pow(10, x)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend result = exp10(x)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Standard SQL does not define `EXP10()`. You compute it using `POWER(10, x)`.
+
+<CodeGroup>
+```sql SQL example
+SELECT POWER(10, x) AS result FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend result = exp10(x)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+exp10(x)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `x` | real | Yes | The exponent value. |
+
+### Returns
+
+The base-10 exponential of `x`: 10^x.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Use `exp10` to recover the geometric mean of request durations from a `log10`-transformed average, expressing the result in the original millisecond scale.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where req_duration_ms > 0
+| summarize avg_log10 = avg(log10(req_duration_ms)) by bin(_time, 1h)
+| extend geometric_mean = exp10(avg_log10)
+| project _time, avg_log10, geometric_mean
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20req_duration_ms%20%3E%200%20%7C%20summarize%20avg_log10%20%3D%20avg%28log10%28req_duration_ms%29%29%20by%20bin%28_time%2C%201h%29%20%7C%20extend%20geometric_mean%20%3D%20exp10%28avg_log10%29%20%7C%20project%20_time%2C%20avg_log10%2C%20geometric_mean%22%7D)
+
+**Output**
+
+| _time | avg_log10 | geometric_mean |
+|---|---|---|
+| 2024-11-14 10:00:00 | 1.931 | 85.3 |
+| 2024-11-14 11:00:00 | 1.967 | 92.7 |
+| 2024-11-14 12:00:00 | 1.893 | 78.1 |
+
+The pattern `exp10(avg(log10(x)))` computes the geometric mean in base-10 space, which is useful when values span multiple orders of magnitude.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Use `exp10` to convert log10-scale summaries of span durations back into absolute millisecond values per service.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| extend duration_ms = duration / 1ms
+| where duration_ms > 0
+| summarize avg_log10_duration = avg(log10(duration_ms)) by ['service.name'], bin(_time, 1h)
+| extend geometric_mean = exp10(avg_log10_duration)
+| project _time, ['service.name'], avg_log10_duration, geometric_mean
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20where%20duration_ms%20%3E%200%20%7C%20summarize%20avg_log10_duration%20%3D%20avg%28log10%28duration_ms%29%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20geometric_mean%20%3D%20exp10%28avg_log10_duration%29%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20avg_log10_duration%2C%20geometric_mean%22%7D)
+
+**Output**
+
+| _time | service.name | avg_log10_duration | geometric_mean |
+|---|---|---|---|
+| 2024-11-14 10:00:00 | checkout | 2.448 | 280.5 |
+| 2024-11-14 10:00:00 | cart | 2.147 | 140.2 |
+| 2024-11-14 10:00:00 | frontend | 1.747 | 55.8 |
+
+Comparing services by their `geometric_mean` gives a scale-invariant view of typical latency.
+
+</Tab>
+<Tab title="Security logs">
+
+Use `exp10` to recover absolute error-response durations from log10 summaries per region and identify the regions with the highest average error latency.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where status == '500' and req_duration_ms > 0
+| summarize avg_log10 = avg(log10(req_duration_ms)) by ['geo.country']
+| extend avg_duration = exp10(avg_log10)
+| project ['geo.country'], avg_log10, avg_duration
+| order by avg_duration desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20and%20req_duration_ms%20%3E%200%20%7C%20summarize%20avg_log10%20%3D%20avg%28log10%28req_duration_ms%29%29%20by%20%5B%27geo.country%27%5D%20%7C%20extend%20avg_duration%20%3D%20exp10%28avg_log10%29%20%7C%20project%20%5B%27geo.country%27%5D%2C%20avg_log10%2C%20avg_duration%20%7C%20order%20by%20avg_duration%20desc%22%7D)
+
+**Output**
+
+| geo.country | avg_log10 | avg_duration |
+|---|---|---|
+| BR | 2.692 | 492.7 |
+| DE | 2.302 | 200.3 |
+| US | 2.107 | 128.0 |
+
+Regions with the highest recovered `avg_duration` are experiencing the slowest error responses, which may warrant further investigation.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [log10](/apl/scalar-functions/mathematical-functions/log10): Returns the base-10 logarithm. Use it as the inverse of `exp10`.
+- [exp](/apl/scalar-functions/mathematical-functions/exp): Returns e^x. Use it for natural-log-scale transformations.
+- [exp2](/apl/scalar-functions/mathematical-functions/exp2): Returns 2^x. Use it for binary-scale transformations.
+- [pow](/apl/scalar-functions/mathematical-functions/pow): Raises any base to a power. Use it when the base is not 10.
+- [log](/apl/scalar-functions/mathematical-functions/log): Returns the natural logarithm. Use it together with `exp` for natural-log-scale analysis.
