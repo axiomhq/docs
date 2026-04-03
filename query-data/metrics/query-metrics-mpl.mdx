@@ -202,6 +202,8 @@ Use `align` to aggregate over time windows. You can specify the time window and 
 | align to <time_window> using <aggregation_function>
 ```
 
+The time window must be an explicit duration such as `5m` or `1h`. MPL does not support an automatic window size. If you omit `align`, Axiom returns raw data points without time-based aggregation.
+
 Available aggregation functions:
 
 | Function | Description                           |
@@ -298,7 +300,11 @@ Available functions:
 
 ### Compute
 
-Combine multiple metrics in one query block.
+Combine multiple subqueries into a single result. Each subquery can target the same metric or different metrics within the same dataset. This is how you express ratio calculations, deltas, and other cross-series comparisons in MPL.
+
+<Info>
+`compute` produces one named output series. If you need several independent series in one view, run separate queries.
+</Info>
 
 **Syntax:**
 
@@ -323,6 +329,8 @@ Available operators:
 | `avg`    | Average across result series.     |
 
 **Example:**
+
+The following example queries the same metric (`http.server.request.duration`) twice with different filters to compute an error rate. Both subqueries target the same timeseries; the first applies a status code filter to isolate errors.
 
 ```kusto
 // Return the average error rate over the past 5 minutes
