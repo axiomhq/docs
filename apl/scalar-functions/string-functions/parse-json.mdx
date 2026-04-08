@@ -65,6 +65,25 @@ parse_json(json_string)
 
 Returns a dynamic object representing the parsed JSON. If the JSON is invalid, returns the original string.
 
+### Error behavior
+
+When `parse_json` receives invalid JSON, it doesn't raise an error or return null. Instead, it returns the original input string unchanged. This means a failed parse can go unnoticed if you don't check for it explicitly.
+
+To detect whether `parse_json` succeeded, check the type of the result using `gettype`. A successful parse returns a `dynamic` type, while a failed parse returns a `string` type.
+
+```kusto
+['sample-http-logs']
+| extend raw = '{"key": value}'
+| extend parsed = parse_json(raw)
+| extend parse_succeeded = gettype(parsed) == "dictionary"
+```
+
+Common reasons `parse_json` may fail include:
+
+- **Malformed JSON**: Missing quotes around keys or values, trailing commas, or unescaped special characters.
+- **Empty or null input**: An empty string or null value doesn't produce a valid JSON object.
+- **Double-encoded JSON**: If the value is a JSON string that itself contains escaped JSON (for example, `"{\"key\": \"value\"}"`), you may need to call `parse_json` twice to fully extract the data.
+
 ## Use case examples
 
 <Tabs>
