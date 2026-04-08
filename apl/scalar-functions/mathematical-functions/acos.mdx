@@ -65,91 +65,23 @@ acos(x)
 - The arc cosine of `x` in radians, in the range [0, π].
 - `null` if `x` < -1 or `x` > 1.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `acos` to convert per-hour HTTP success rates into angular values. This lets you use angular distance as a measure of divergence from perfect reliability.
+Use `acos` to compute the arccosine of a value and return the angle in radians.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| summarize success = countif(status == '200'), total = count() by bin(_time, 1h)
-| extend success_rate = todouble(success) / todouble(total)
-| extend phase = acos(2 * success_rate - 1)
-| project _time, success_rate, phase
+print result = acos(0.5)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20success%20%3D%20countif%28status%20%3D%3D%20%27200%27%29%2C%20total%20%3D%20count%28%29%20by%20bin%28_time%2C%201h%29%20%7C%20extend%20success_rate%20%3D%20todouble%28success%29%20%2F%20todouble%28total%29%20%7C%20extend%20phase%20%3D%20acos%282%20%2A%20success_rate%20-%201%29%20%7C%20project%20_time%2C%20success_rate%2C%20phase%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22print%20result%20%3D%20acos%280.5%29%22%7D)
 
 **Output**
 
-| _time | success_rate | phase |
-|---|---|---|
-| 2024-11-14 10:00:00 | 0.98 | 0.2014 |
-| 2024-11-14 11:00:00 | 0.75 | 1.0472 |
-| 2024-11-14 12:00:00 | 0.50 | 1.5708 |
-
-The query maps success_rate from [0, 1] to [-1, 1] using `2 * success_rate - 1`, then computes `acos` to get a phase angle in [0, π]. A phase near 0 indicates high success; a phase near π indicates high failure.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `acos` to encode per-service OK rates as angular values, providing a continuous measure of service health.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| summarize ok = countif(status_code == '200'), total = count() by ['service.name'], bin(_time, 1h)
-| extend ok_rate = todouble(ok) / todouble(total)
-| extend phase = acos(2 * ok_rate - 1)
-| project _time, ['service.name'], ok_rate, phase
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20summarize%20ok%20%3D%20countif%28status_code%20%3D%3D%20%27200%27%29%2C%20total%20%3D%20count%28%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20ok_rate%20%3D%20todouble%28ok%29%20%2F%20todouble%28total%29%20%7C%20extend%20phase%20%3D%20acos%282%20%2A%20ok_rate%20-%201%29%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20ok_rate%2C%20phase%22%7D)
-
-**Output**
-
-| _time | service.name | ok_rate | phase |
-|---|---|---|---|
-| 2024-11-14 10:00:00 | checkout | 0.95 | 0.3176 |
-| 2024-11-14 10:00:00 | cart | 0.60 | 1.2310 |
-| 2024-11-14 10:00:00 | frontend | 1.00 | 0.0000 |
-
-A phase of 0 corresponds to a 100% OK rate; a phase of π corresponds to 0%. This lets you compare service health using a single angular metric.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `acos` to encode per-country error rates as phase angles, which can help detect regions with anomalously high error rates.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize errors = countif(status == '500'), total = count() by ['geo.country'], bin(_time, 1h)
-| extend error_rate = todouble(errors) / todouble(total)
-| extend phase = acos(1 - 2 * error_rate)
-| project _time, ['geo.country'], error_rate, phase
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20errors%20%3D%20countif%28status%20%3D%3D%20%27500%27%29%2C%20total%20%3D%20count%28%29%20by%20%5B%27geo.country%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20error_rate%20%3D%20todouble%28errors%29%20%2F%20todouble%28total%29%20%7C%20extend%20phase%20%3D%20acos%281%20-%202%20%2A%20error_rate%29%20%7C%20project%20_time%2C%20%5B%27geo.country%27%5D%2C%20error_rate%2C%20phase%22%7D)
-
-**Output**
-
-| _time | geo.country | error_rate | phase |
-|---|---|---|---|
-| 2024-11-14 10:00:00 | US | 0.02 | 0.2838 |
-| 2024-11-14 10:00:00 | DE | 0.30 | 1.8755 |
-| 2024-11-14 10:00:00 | BR | 0.50 | 1.5708 |
-
-The phase angle increases as the error rate grows. Regions with a phase near π have the highest error rates and warrant investigation.
-
-</Tab>
-</Tabs>
+| result |
+|---|
+| 1.0472 |
 
 ## List of related functions
 

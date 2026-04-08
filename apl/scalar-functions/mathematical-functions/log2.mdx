@@ -65,12 +65,9 @@ log2(x)
 - The base-2 logarithm of `x`.
 - `null` if `x` is negative, zero, or cannot be converted to a real value.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `log2` to express request durations on a binary log scale, where each unit corresponds to a doubling of the duration. This is useful for bucketizing data by powers of two.
+Use `log2` to express request durations on a binary log scale where each unit represents a doubling.
 
 **Query**
 
@@ -81,7 +78,7 @@ Use `log2` to express request durations on a binary log scale, where each unit c
 | project _time, id, req_duration_ms, log2_duration
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20req_duration_ms%20%3E%200%20%7C%20extend%20log2_duration%20%3D%20log2%28req_duration_ms%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20log2_duration%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%20%7C%20where%20req_duration_ms%20%3E%200%20%7C%20extend%20log2_duration%20%3D%20log2%28req_duration_ms%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20log2_duration%22%7D)
 
 **Output**
 
@@ -90,66 +87,6 @@ Use `log2` to express request durations on a binary log scale, where each unit c
 | 2024-11-14 10:00:00 | user-1 | 1.0 | 0.000 |
 | 2024-11-14 10:01:00 | user-2 | 64.0 | 6.000 |
 | 2024-11-14 10:02:00 | user-3 | 1024.0 | 10.000 |
-
-A request of 64 ms gives `log2 = 6`; one of 1024 ms gives `log2 = 10`. Integer values correspond exactly to powers of two, making it easy to bucket durations by binary magnitudes.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `log2` to compute a binary-scale summary of span durations per service. Combine with `exp2` to recover the geometric mean on the original scale.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| where duration_ms > 0
-| summarize avg_log2 = avg(log2(duration_ms)) by ['service.name'], bin(_time, 1h)
-| extend geometric_mean = exp2(avg_log2)
-| project _time, ['service.name'], avg_log2, geometric_mean
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20where%20duration_ms%20%3E%200%20%7C%20summarize%20avg_log2%20%3D%20avg%28log2%28duration_ms%29%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20geometric_mean%20%3D%20exp2%28avg_log2%29%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20avg_log2%2C%20geometric_mean%22%7D)
-
-**Output**
-
-| _time | service.name | avg_log2 | geometric_mean |
-|---|---|---|---|
-| 2024-11-14 10:00:00 | checkout | 8.13 | 280.5 |
-| 2024-11-14 10:00:00 | cart | 7.13 | 140.2 |
-| 2024-11-14 10:00:00 | frontend | 5.80 | 55.8 |
-
-A one-unit difference in `avg_log2` between services means one service is roughly twice as slow as the other.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `log2` to summarize error-response durations in binary log space per country. A higher `avg_log2` indicates that errors are exponentially slower in that region.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '500' and req_duration_ms > 0
-| summarize avg_log2 = avg(log2(req_duration_ms)) by ['geo.country']
-| project ['geo.country'], avg_log2
-| order by avg_log2 desc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20and%20req_duration_ms%20%3E%200%20%7C%20summarize%20avg_log2%20%3D%20avg%28log2%28req_duration_ms%29%29%20by%20%5B%27geo.country%27%5D%20%7C%20project%20%5B%27geo.country%27%5D%2C%20avg_log2%20%7C%20order%20by%20avg_log2%20desc%22%7D)
-
-**Output**
-
-| geo.country | avg_log2 |
-|---|---|
-| BR | 8.95 |
-| DE | 7.64 |
-| US | 6.99 |
-
-Each unit increase in `avg_log2` means error responses are twice as slow on average. Brazil's errors are roughly 2^(8.95-6.99) ≈ 4× slower than those in the US.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

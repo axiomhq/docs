@@ -64,12 +64,9 @@ isint(expression)
 
 `true` if the value is a positive or negative integer (no fractional part). `false` for non-integer real numbers, NaN, and infinity.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `isint` to check whether request durations are whole-number millisecond values. This can reveal whether a data source rounds or truncates durations.
+Use `isint` to check whether request durations are whole-number values.
 
 **Query**
 
@@ -79,7 +76,7 @@ Use `isint` to check whether request durations are whole-number millisecond valu
 | project _time, id, req_duration_ms, is_int
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20is_int%20%3D%20isint%28req_duration_ms%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20is_int%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20is_int%20%3D%20isint%28req_duration_ms%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20is_int%22%7D)
 
 **Output**
 
@@ -88,62 +85,6 @@ Use `isint` to check whether request durations are whole-number millisecond valu
 | 2024-11-14 10:00:00 | user-1 | 120.0 | true |
 | 2024-11-14 10:01:00 | user-2 | 45.6 | false |
 | 2024-11-14 10:02:00 | user-3 | 200.0 | true |
-
-If most durations are integers but a few are not, the non-integer rows may come from a different instrumentation library with higher timing resolution.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `isint` to validate that span durations converted to milliseconds are whole numbers, which is expected when the instrumentation truncates to millisecond precision.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| extend is_int = isint(duration_ms)
-| project _time, span_id, ['service.name'], duration_ms, is_int
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20is_int%20%3D%20isint%28duration_ms%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration_ms%2C%20is_int%22%7D)
-
-**Output**
-
-| _time | span_id | service.name | duration_ms | is_int |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | span-abc | checkout | 350.0 | true |
-| 2024-11-14 10:01:00 | span-def | cart | 120.5 | false |
-| 2024-11-14 10:02:00 | span-ghi | frontend | 80.0 | true |
-
-Spans where `is_int` is `false` have sub-millisecond precision, which may indicate a different SDK or clock source.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `isint` to validate that duration values in error responses are whole numbers as a basic data-integrity check in your security pipeline.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '500'
-| extend is_int = isint(req_duration_ms)
-| project _time, id, status, req_duration_ms, is_int
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20extend%20is_int%20%3D%20isint%28req_duration_ms%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20req_duration_ms%2C%20is_int%22%7D)
-
-**Output**
-
-| _time | id | status | req_duration_ms | is_int |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | user-9 | 500 | 1200.0 | true |
-| 2024-11-14 10:01:00 | user-5 | 500 | 80.3 | false |
-
-Use this check to flag error events with unexpected data formats, which could indicate instrumentation misconfigurations or data corruption.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

@@ -64,12 +64,9 @@ degrees(a)
 
 The angle in degrees corresponding to the input radian value.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `degrees` to convert radian-scaled request durations into a degree representation for use in reporting or threshold rules expressed in angular terms.
+Use `degrees` to convert an angle in radians to degrees.
 
 **Query**
 
@@ -77,76 +74,18 @@ Use `degrees` to convert radian-scaled request durations into a degree represent
 ['sample-http-logs']
 | extend angle_rad = req_duration_ms / 1000.0
 | extend angle_deg = degrees(angle_rad)
-| project _time, id, req_duration_ms, angle_rad, angle_deg
+| project _time, id, req_duration_ms, angle_deg
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20angle_rad%20%3D%20req_duration_ms%20%2F%201000.0%20%7C%20extend%20angle_deg%20%3D%20degrees%28angle_rad%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20angle_rad%2C%20angle_deg%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20angle_rad%20%3D%20req_duration_ms%20/%201000.0%20%7C%20extend%20angle_deg%20%3D%20degrees%28angle_rad%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20angle_deg%22%7D)
 
 **Output**
 
-| _time | id | req_duration_ms | angle_rad | angle_deg |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | user-1 | 500.0 | 0.5000 | 28.648 |
-| 2024-11-14 10:01:00 | user-2 | 1200.0 | 1.2000 | 68.755 |
-| 2024-11-14 10:02:00 | user-3 | 3142.0 | 3.1420 | 179.999 |
-
-The query scales request durations to radians and then converts to degrees. A request at π radians (≈ 3142 ms) corresponds to exactly 180°.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `degrees` to express span duration angles in degrees after computing them from trigonometric functions, making them easier to present in dashboards.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| extend angle_rad = duration_ms / 1000.0
-| extend angle_deg = degrees(angle_rad)
-| project _time, span_id, ['service.name'], duration_ms, angle_rad, angle_deg
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20angle_rad%20%3D%20duration_ms%20%2F%201000.0%20%7C%20extend%20angle_deg%20%3D%20degrees%28angle_rad%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration_ms%2C%20angle_rad%2C%20angle_deg%22%7D)
-
-**Output**
-
-| _time | span_id | service.name | duration_ms | angle_rad | angle_deg |
-|---|---|---|---|---|---|
-| 2024-11-14 10:00:00 | span-abc | checkout | 350.0 | 0.3500 | 20.054 |
-| 2024-11-14 10:01:00 | span-def | cart | 800.0 | 0.8000 | 45.837 |
-| 2024-11-14 10:02:00 | span-ghi | frontend | 1571.0 | 1.5710 | 90.001 |
-
-A span at exactly π/2 radians corresponds to 90°. This helps you read angular scores intuitively without memorizing radian benchmarks.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `degrees` to convert arc tangent–based anomaly scores to degrees for clearer thresholding in security alert rules.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '500'
-| extend angle_rad = req_duration_ms / 500.0
-| extend angle_deg = degrees(angle_rad)
-| project _time, id, status, req_duration_ms, angle_deg
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20extend%20angle_rad%20%3D%20req_duration_ms%20%2F%20500.0%20%7C%20extend%20angle_deg%20%3D%20degrees%28angle_rad%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20req_duration_ms%2C%20angle_deg%22%7D)
-
-**Output**
-
-| _time | id | status | req_duration_ms | angle_deg |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | user-9 | 500 | 100.0 | 11.459 |
-| 2024-11-14 10:01:00 | user-5 | 500 | 1500.0 | 171.887 |
-
-You can define alert thresholds in degrees (for example, "fire when angle_deg > 90") rather than converting radian thresholds manually.
-
-</Tab>
-</Tabs>
+| _time | id | req_duration_ms | angle_deg |
+|---|---|---|---|
+| 2024-11-14 10:00:00 | user-1 | 500.0 | 28.648 |
+| 2024-11-14 10:01:00 | user-2 | 1800.0 | 103.132 |
+| 2024-11-14 10:02:00 | user-3 | 3142.0 | 179.999 |
 
 ## List of related functions
 

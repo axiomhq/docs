@@ -65,91 +65,23 @@ asin(x)
 - The arc sine of `x` in radians, in the range [-π/2, π/2].
 - `null` if `x` < -1 or `x` > 1.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `asin` to encode per-hour HTTP success rates as angular values. The resulting phase angle grows as the success rate increases from 0 to 1.
+Use `asin` to compute the arcsine of a value and return the angle in radians.
 
 **Query**
 
 ```kusto
-['sample-http-logs']
-| summarize success = countif(status == '200'), total = count() by bin(_time, 1h)
-| extend success_rate = todouble(success) / todouble(total)
-| extend phase = asin(2 * success_rate - 1)
-| project _time, success_rate, phase
+print result = asin(0.5)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20success%20%3D%20countif%28status%20%3D%3D%20%27200%27%29%2C%20total%20%3D%20count%28%29%20by%20bin%28_time%2C%201h%29%20%7C%20extend%20success_rate%20%3D%20todouble%28success%29%20%2F%20todouble%28total%29%20%7C%20extend%20phase%20%3D%20asin%282%20%2A%20success_rate%20-%201%29%20%7C%20project%20_time%2C%20success_rate%2C%20phase%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22print%20result%20%3D%20asin%280.5%29%22%7D)
 
 **Output**
 
-| _time | success_rate | phase |
-|---|---|---|
-| 2024-11-14 10:00:00 | 0.98 | 1.3694 |
-| 2024-11-14 11:00:00 | 0.75 | 0.5236 |
-| 2024-11-14 12:00:00 | 0.50 | 0.0000 |
-
-The query maps `success_rate` from [0, 1] to [-1, 1] using `2 * success_rate - 1`, then computes `asin` to get a phase in [-π/2, π/2]. A phase near π/2 indicates near-100% success; a phase near -π/2 indicates near-0% success.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `asin` to encode per-service OK rates as angular values for anomaly detection across services.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| summarize ok = countif(status_code == '200'), total = count() by ['service.name'], bin(_time, 1h)
-| extend ok_rate = todouble(ok) / todouble(total)
-| extend phase = asin(2 * ok_rate - 1)
-| project _time, ['service.name'], ok_rate, phase
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20summarize%20ok%20%3D%20countif%28status_code%20%3D%3D%20%27200%27%29%2C%20total%20%3D%20count%28%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20ok_rate%20%3D%20todouble%28ok%29%20%2F%20todouble%28total%29%20%7C%20extend%20phase%20%3D%20asin%282%20%2A%20ok_rate%20-%201%29%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20ok_rate%2C%20phase%22%7D)
-
-**Output**
-
-| _time | service.name | ok_rate | phase |
-|---|---|---|---|
-| 2024-11-14 10:00:00 | checkout | 0.95 | 1.2490 |
-| 2024-11-14 10:00:00 | cart | 0.60 | 0.2014 |
-| 2024-11-14 10:00:00 | frontend | 1.00 | 1.5708 |
-
-A phase near π/2 (≈ 1.5708) reflects a 100% OK rate. Services with low phase values have higher error rates and may need attention.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `asin` to encode per-country HTTP error rates as phase angles, helping you compare the relative threat level across regions.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize errors = countif(status == '500'), total = count() by ['geo.country'], bin(_time, 1h)
-| extend error_rate = todouble(errors) / todouble(total)
-| extend phase = asin(2 * error_rate - 1)
-| project _time, ['geo.country'], error_rate, phase
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20errors%20%3D%20countif%28status%20%3D%3D%20%27500%27%29%2C%20total%20%3D%20count%28%29%20by%20%5B%27geo.country%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20error_rate%20%3D%20todouble%28errors%29%20%2F%20todouble%28total%29%20%7C%20extend%20phase%20%3D%20asin%282%20%2A%20error_rate%20-%201%29%20%7C%20project%20_time%2C%20%5B%27geo.country%27%5D%2C%20error_rate%2C%20phase%22%7D)
-
-**Output**
-
-| _time | geo.country | error_rate | phase |
-|---|---|---|---|
-| 2024-11-14 10:00:00 | US | 0.02 | -1.5310 |
-| 2024-11-14 10:00:00 | DE | 0.30 | -0.4115 |
-| 2024-11-14 10:00:00 | BR | 0.80 | 1.1071 |
-
-High phase values correspond to high error rates. Regions with a phase near π/2 have the most errors and may indicate targeted attacks or regional outages.
-
-</Tab>
-</Tabs>
+| result |
+|---|
+| 0.5236 |
 
 ## List of related functions
 

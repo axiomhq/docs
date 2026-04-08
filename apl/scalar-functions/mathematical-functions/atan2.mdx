@@ -65,88 +65,27 @@ atan2(y, x)
 
 The angle in radians between the positive x-axis and the point (y, x), in the range (-π, π].
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `atan2` to express the relationship between error count and success count as a directional angle. An angle near π/2 means errors dominate; an angle near 0 means successes dominate.
+Use `atan2` to express the ratio of server errors to successful requests as a directional angle.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| summarize y = countif(status == '500'), x = countif(status == '200') by bin(_time, 1h)
-| extend angle = atan2(todouble(y), todouble(x))
-| project _time, y, x, angle
+| summarize errors = countif(status == '500'), successes = countif(status == '200') by bin(_time, 1h)
+| extend angle = atan2(todouble(errors), todouble(successes))
+| project _time, errors, successes, angle
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20y%20%3D%20countif%28status%20%3D%3D%20%27500%27%29%2C%20x%20%3D%20countif%28status%20%3D%3D%20%27200%27%29%20by%20bin%28_time%2C%201h%29%20%7C%20extend%20angle%20%3D%20atan2%28todouble%28y%29%2C%20todouble%28x%29%29%20%7C%20project%20_time%2C%20y%2C%20x%2C%20angle%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20errors%20%3D%20countif%28status%20%3D%3D%20%27500%27%29%2C%20successes%20%3D%20countif%28status%20%3D%3D%20%27200%27%29%20by%20bin%28_time%2C%201h%29%20%7C%20extend%20angle%20%3D%20atan2%28todouble%28errors%29%2C%20todouble%28successes%29%29%20%7C%20project%20_time%2C%20errors%2C%20successes%2C%20angle%22%7D)
 
 **Output**
 
-| _time | y | x | angle |
+| _time | errors | successes | angle |
 |---|---|---|---|
 | 2024-11-14 10:00:00 | 5 | 950 | 0.0053 |
 | 2024-11-14 11:00:00 | 120 | 400 | 0.2898 |
-| 2024-11-14 12:00:00 | 300 | 200 | 0.9828 |
-
-A small angle indicates mostly successful traffic. A large angle approaching π/2 indicates a high proportion of errors. The advantage over a plain ratio is that `atan2` handles zero denominators gracefully.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `atan2` to compute the error-to-success angle for each service. Services with a high angle have a concerning balance of error traces versus successful traces.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| summarize errors = countif(status_code == '500'), success = countif(status_code == '200') by ['service.name'], bin(_time, 1h)
-| extend angle = atan2(todouble(errors), todouble(success))
-| project _time, ['service.name'], errors, success, angle
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20summarize%20errors%20%3D%20countif%28status_code%20%3D%3D%20%27500%27%29%2C%20success%20%3D%20countif%28status_code%20%3D%3D%20%27200%27%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20angle%20%3D%20atan2%28todouble%28errors%29%2C%20todouble%28success%29%29%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20errors%2C%20success%2C%20angle%22%7D)
-
-**Output**
-
-| _time | service.name | errors | success | angle |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | checkout | 10 | 980 | 0.0102 |
-| 2024-11-14 10:00:00 | cart | 50 | 200 | 0.2450 |
-| 2024-11-14 10:00:00 | load-generator | 200 | 100 | 1.1071 |
-
-A service with more errors than successes has an angle greater than π/4. This lets you sort or threshold services by their health direction rather than by raw counts.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `atan2` to compute the ratio of POST to GET requests per country as an angle. Regions where POST requests significantly outnumber GET requests may indicate automated attacks.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| summarize y = countif(method == 'POST'), x = countif(method == 'GET') by ['geo.country'], bin(_time, 1h)
-| extend angle = atan2(todouble(y), todouble(x))
-| project _time, ['geo.country'], y, x, angle
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20y%20%3D%20countif%28method%20%3D%3D%20%27POST%27%29%2C%20x%20%3D%20countif%28method%20%3D%3D%20%27GET%27%29%20by%20%5B%27geo.country%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20angle%20%3D%20atan2%28todouble%28y%29%2C%20todouble%28x%29%29%20%7C%20project%20_time%2C%20%5B%27geo.country%27%5D%2C%20y%2C%20x%2C%20angle%22%7D)
-
-**Output**
-
-| _time | geo.country | y | x | angle |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | US | 50 | 900 | 0.0554 |
-| 2024-11-14 10:00:00 | RU | 400 | 100 | 1.3258 |
-| 2024-11-14 10:00:00 | CN | 300 | 300 | 0.7854 |
-
-A region with an angle near π/2 has far more POST than GET requests, which can be a sign of scripted form submissions, injection attempts, or data exfiltration.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

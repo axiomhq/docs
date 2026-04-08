@@ -65,88 +65,28 @@ isinf(x)
 
 `true` if `x` is positive or negative infinity. `false` for finite values and NaN.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `isinf` to detect rows where a computed ratio produces infinity, which happens when dividing a non-zero value by zero.
+Use `isinf` to detect rows where a computed value is infinite.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
 | extend ratio = req_duration_ms / 0.0
-| extend is_inf = isinf(ratio)
-| project _time, id, req_duration_ms, ratio, is_inf
+| extend is_inf_val = isinf(ratio)
+| project _time, id, req_duration_ms, ratio, is_inf_val
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20ratio%20%3D%20req_duration_ms%20%2F%200.0%20%7C%20extend%20is_inf%20%3D%20isinf%28ratio%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20ratio%2C%20is_inf%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20ratio%20%3D%20req_duration_ms%20/%200.0%20%7C%20extend%20is_inf_val%20%3D%20isinf%28ratio%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20ratio%2C%20is_inf_val%22%7D)
 
 **Output**
 
-| _time | id | req_duration_ms | ratio | is_inf |
+| _time | id | req_duration_ms | ratio | is_inf_val |
 |---|---|---|---|---|
 | 2024-11-14 10:00:00 | user-1 | 120.0 | inf | true |
 | 2024-11-14 10:01:00 | user-2 | 0.0 | nan | false |
 | 2024-11-14 10:02:00 | user-3 | 80.0 | inf | true |
-
-Non-zero durations divided by zero produce `inf`, which `isinf` flags as `true`. A zero duration divided by zero produces `nan`, which `isinf` returns `false` for. Use `isnan` to handle that case separately.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `isinf` to identify spans where a derived metric calculation overflows before aggregating across services.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| extend ratio = duration_ms / 0.0
-| extend is_inf = isinf(ratio)
-| project _time, span_id, ['service.name'], duration_ms, is_inf
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20ratio%20%3D%20duration_ms%20%2F%200.0%20%7C%20extend%20is_inf%20%3D%20isinf%28ratio%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration_ms%2C%20is_inf%22%7D)
-
-**Output**
-
-| _time | span_id | service.name | duration_ms | is_inf |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | span-abc | checkout | 350.0 | true |
-| 2024-11-14 10:01:00 | span-def | cart | 0.0 | false |
-
-Spans with `is_inf = true` have a non-zero duration that produced infinity from the calculation. Filter these out before computing any averages or percentiles.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `isinf` to clean computed fields in error-event analysis, ensuring that infinity values from faulty calculations do not distort security metrics.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '500'
-| extend ratio = req_duration_ms / 0.0
-| extend is_inf = isinf(ratio)
-| project _time, id, status, req_duration_ms, is_inf
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20extend%20ratio%20%3D%20req_duration_ms%20%2F%200.0%20%7C%20extend%20is_inf%20%3D%20isinf%28ratio%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20req_duration_ms%2C%20is_inf%22%7D)
-
-**Output**
-
-| _time | id | status | req_duration_ms | is_inf |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | user-9 | 500 | 120.0 | true |
-| 2024-11-14 10:01:00 | user-5 | 500 | 0.0 | false |
-
-Before aggregating error metrics, add `| where not(is_inf)` to exclude rows with overflow results and keep your aggregations reliable.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

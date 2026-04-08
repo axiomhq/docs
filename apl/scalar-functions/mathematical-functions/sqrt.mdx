@@ -65,12 +65,9 @@ sqrt(x)
 - A positive number `y` such that `y * y == x`.
 - `null` if `x` is negative or cannot be converted to a real value.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `sqrt` to compute the standard deviation of request durations per hour. The standard deviation measures how much individual durations spread around the average.
+Use `sqrt` to compute the standard deviation of request durations from the variance.
 
 **Query**
 
@@ -81,7 +78,7 @@ Use `sqrt` to compute the standard deviation of request durations per hour. The 
 | project _time, variance, std_dev
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20variance%20%3D%20variance%28req_duration_ms%29%20by%20bin%28_time%2C%201h%29%20%7C%20extend%20std_dev%20%3D%20sqrt%28variance%29%20%7C%20project%20_time%2C%20variance%2C%20std_dev%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%20%7C%20summarize%20variance%20%3D%20variance%28req_duration_ms%29%20by%20bin%28_time%2C%201h%29%20%7C%20extend%20std_dev%20%3D%20sqrt%28variance%29%20%7C%20project%20_time%2C%20variance%2C%20std_dev%22%7D)
 
 **Output**
 
@@ -90,67 +87,6 @@ Use `sqrt` to compute the standard deviation of request durations per hour. The 
 | 2024-11-14 10:00:00 | 12250.0 | 110.7 |
 | 2024-11-14 11:00:00 | 4900.0 | 70.0 |
 | 2024-11-14 12:00:00 | 1600.0 | 40.0 |
-
-A high `std_dev` means request durations vary widely during that hour; a low value means they are consistent. Use this metric to detect periods of unstable performance.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `sqrt` to compute per-service standard deviation of span durations, which helps you identify services with inconsistent latency.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| summarize variance = variance(duration_ms) by ['service.name'], bin(_time, 1h)
-| extend std_dev = sqrt(variance)
-| project _time, ['service.name'], variance, std_dev
-| order by std_dev desc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20summarize%20variance%20%3D%20variance%28duration_ms%29%20by%20%5B%27service.name%27%5D%2C%20bin%28_time%2C%201h%29%20%7C%20extend%20std_dev%20%3D%20sqrt%28variance%29%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20variance%2C%20std_dev%20%7C%20order%20by%20std_dev%20desc%22%7D)
-
-**Output**
-
-| _time | service.name | variance | std_dev |
-|---|---|---|---|
-| 2024-11-14 10:00:00 | checkout | 98000.0 | 313.1 |
-| 2024-11-14 10:00:00 | cart | 12000.0 | 109.5 |
-| 2024-11-14 10:00:00 | frontend | 625.0 | 25.0 |
-
-Services with a high `std_dev` have highly variable latency. This is more actionable than variance alone because `std_dev` is expressed in the same units as the original duration.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `sqrt` to compute the standard deviation of error-response durations per country, helping you identify regions where error behavior is highly unpredictable.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '500'
-| summarize variance = variance(req_duration_ms) by ['geo.country']
-| extend std_dev = sqrt(variance)
-| project ['geo.country'], variance, std_dev
-| order by std_dev desc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20summarize%20variance%20%3D%20variance%28req_duration_ms%29%20by%20%5B%27geo.country%27%5D%20%7C%20extend%20std_dev%20%3D%20sqrt%28variance%29%20%7C%20project%20%5B%27geo.country%27%5D%2C%20variance%2C%20std_dev%20%7C%20order%20by%20std_dev%20desc%22%7D)
-
-**Output**
-
-| geo.country | variance | std_dev |
-|---|---|---|
-| BR | 490000.0 | 700.0 |
-| DE | 40000.0 | 200.0 |
-| US | 2500.0 | 50.0 |
-
-A high `std_dev` for a region means error response times are inconsistent, which may point to intermittent attacks, flapping backends, or network instability.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

@@ -64,12 +64,9 @@ tan(x)
 
 The tangent of `x`. The result is unbounded, approaching ±∞ near odd multiples of π/2.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `tan` to compute a cyclic-time feature from the hour of day that shows a stronger gradient near the transition hours of the day.
+Use `tan` to compute the tangent of an angle in radians.
 
 **Query**
 
@@ -77,76 +74,19 @@ Use `tan` to compute a cyclic-time feature from the hour of day that shows a str
 ['sample-http-logs']
 | extend hour_angle = (hourofday(_time) * 2 * pi()) / 24
 | extend tan_hour = tan(hour_angle)
+| where isfinite(tan_hour)
 | project _time, id, req_duration_ms, tan_hour
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20hour_angle%20%3D%20%28hourofday%28_time%29%20%2A%202%20%2A%20pi%28%29%29%20%2F%2024%20%7C%20extend%20tan_hour%20%3D%20tan%28hour_angle%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20tan_hour%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20hour_angle%20%3D%20%28hourofday%28_time%29%20%2A%202%20%2A%20pi%28%29%29%20/%2024%20%7C%20extend%20tan_hour%20%3D%20tan%28hour_angle%29%20%7C%20where%20isfinite%28tan_hour%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20tan_hour%22%7D)
 
 **Output**
 
 | _time | id | req_duration_ms | tan_hour |
 |---|---|---|---|
 | 2024-11-14 00:00:00 | user-1 | 120.0 | 0.0000 |
-| 2024-11-14 04:00:00 | user-2 | 80.0 | 0.5774 |
-| 2024-11-14 06:00:00 | user-3 | 200.0 | 1.0000e+15 |
-
-`tan_hour` is 0 at midnight, grows rapidly through the early morning, and approaches ±∞ near 6 AM (where hour_angle = π/2). For most time-of-day analyses, `sin` and `cos` together are more stable because they remain bounded.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `tan` as part of a cyclic-time encoding pipeline for traces, noting that it should be used carefully because it is unbounded near π/2.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend hour_angle = (hourofday(_time) * 2 * pi()) / 24
-| extend tan_hour = tan(hour_angle)
-| project _time, span_id, ['service.name'], duration, tan_hour
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20hour_angle%20%3D%20%28hourofday%28_time%29%20%2A%202%20%2A%20pi%28%29%29%20%2F%2024%20%7C%20extend%20tan_hour%20%3D%20tan%28hour_angle%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration%2C%20tan_hour%22%7D)
-
-**Output**
-
-| _time | span_id | service.name | duration | tan_hour |
-|---|---|---|---|---|
-| 2024-11-14 00:00:00 | span-abc | checkout | 00:00:00.3500000 | 0.0000 |
-| 2024-11-14 03:00:00 | span-def | cart | 00:00:00.1200000 | 0.2679 |
-| 2024-11-14 09:00:00 | span-ghi | frontend | 00:00:00.0800000 | -0.5774 |
-
-`tan_hour` provides a monotone time signal between the two poles at 6 AM and 6 PM. Use `isfinite(tan_hour)` to exclude rows with overflow values before further processing.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `tan` to compute an unbounded time-of-day feature for error events, which can serve as input to custom scoring functions that amplify events near transition periods.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '500'
-| extend hour_angle = (hourofday(_time) * 2 * pi()) / 24
-| extend tan_hour = tan(hour_angle)
-| where isfinite(tan_hour)
-| project _time, id, status, uri, tan_hour
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20extend%20hour_angle%20%3D%20%28hourofday%28_time%29%20%2A%202%20%2A%20pi%28%29%29%20%2F%2024%20%7C%20extend%20tan_hour%20%3D%20tan%28hour_angle%29%20%7C%20where%20isfinite%28tan_hour%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20uri%2C%20tan_hour%22%7D)
-
-**Output**
-
-| _time | id | status | uri | tan_hour |
-|---|---|---|---|---|
-| 2024-11-14 02:00:00 | user-9 | 500 | /api/checkout | 0.2679 |
-| 2024-11-14 14:00:00 | user-5 | 500 | /api/cart | -0.5774 |
-
-Filtering with `isfinite(tan_hour)` removes events near the discontinuities at 6 AM and 6 PM, keeping only well-defined values for downstream analysis.
-
-</Tab>
-</Tabs>
+| 2024-11-14 03:00:00 | user-2 | 80.0 | 0.2679 |
+| 2024-11-14 09:00:00 | user-3 | 200.0 | -0.5774 |
 
 ## List of related functions
 

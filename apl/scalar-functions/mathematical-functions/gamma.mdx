@@ -67,25 +67,23 @@ gamma(x)
 - Returns `null` when `x` is zero or a negative integer.
 - For large inputs, the result may overflow to infinity.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `gamma` to compute factorial-like weights for small discrete count values. This is useful when building custom probability scoring over request counts.
+Use `gamma` to compute the gamma function value for a request duration in seconds.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| where req_duration_ms > 0 and req_duration_ms < 10000
+| where req_duration_ms > 0
 | extend duration_s = req_duration_ms / 1000.0
+| where duration_s < 5
 | extend gamma_val = gamma(duration_s)
 | where isfinite(gamma_val)
 | project _time, id, req_duration_ms, gamma_val
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20req_duration_ms%20%3E%200%20and%20req_duration_ms%20%3C%2010000%20%7C%20extend%20duration_s%20%3D%20req_duration_ms%20%2F%201000.0%20%7C%20extend%20gamma_val%20%3D%20gamma%28duration_s%29%20%7C%20where%20isfinite%28gamma_val%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20gamma_val%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%20%7C%20where%20req_duration_ms%20%3E%200%20%7C%20extend%20duration_s%20%3D%20req_duration_ms%20/%201000.0%20%7C%20where%20duration_s%20%3C%205%20%7C%20extend%20gamma_val%20%3D%20gamma%28duration_s%29%20%7C%20where%20isfinite%28gamma_val%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20gamma_val%22%7D)
 
 **Output**
 
@@ -94,70 +92,6 @@ Use `gamma` to compute factorial-like weights for small discrete count values. T
 | 2024-11-14 10:00:00 | user-1 | 1000.0 | 1.0000 |
 | 2024-11-14 10:01:00 | user-2 | 2000.0 | 1.0000 |
 | 2024-11-14 10:02:00 | user-3 | 3000.0 | 2.0000 |
-
-The query scales duration to seconds, computes `gamma` on the result, and filters out non-finite values. `gamma(1) = 1`, `gamma(2) = 1`, `gamma(3) = 2`, and so on, mirroring the factorial sequence for integer inputs.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `gamma` to apply statistical weighting to span durations expressed in small time units, as part of a custom scoring pipeline.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| extend duration_s = duration_ms / 1000.0
-| where duration_s > 0 and duration_s < 10
-| extend gamma_val = gamma(duration_s)
-| where isfinite(gamma_val)
-| project _time, span_id, ['service.name'], duration_ms, gamma_val
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20duration_s%20%3D%20duration_ms%20%2F%201000.0%20%7C%20where%20duration_s%20%3E%200%20and%20duration_s%20%3C%2010%20%7C%20extend%20gamma_val%20%3D%20gamma%28duration_s%29%20%7C%20where%20isfinite%28gamma_val%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration_ms%2C%20gamma_val%22%7D)
-
-**Output**
-
-| _time | span_id | service.name | duration_ms | gamma_val |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | span-abc | checkout | 2500.0 | 1.3293 |
-| 2024-11-14 10:01:00 | span-def | cart | 1200.0 | 1.0000 |
-| 2024-11-14 10:02:00 | span-ghi | frontend | 500.0 | 1.7725 |
-
-The `gamma_val` grows faster than linearly for values above 2, making it a useful amplifying weight for longer-running spans.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `gamma` to compute statistical weights based on error-response duration, amplifying longer-duration errors in custom risk scoring.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '500'
-| extend duration_s = req_duration_ms / 1000.0
-| where duration_s > 0 and duration_s < 10
-| extend gamma_val = gamma(duration_s)
-| where isfinite(gamma_val)
-| project _time, id, status, req_duration_ms, gamma_val
-| order by gamma_val desc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20extend%20duration_s%20%3D%20req_duration_ms%20%2F%201000.0%20%7C%20where%20duration_s%20%3E%200%20and%20duration_s%20%3C%2010%20%7C%20extend%20gamma_val%20%3D%20gamma%28duration_s%29%20%7C%20where%20isfinite%28gamma_val%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20req_duration_ms%2C%20gamma_val%20%7C%20order%20by%20gamma_val%20desc%22%7D)
-
-**Output**
-
-| _time | id | status | req_duration_ms | gamma_val |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | user-9 | 500 | 9000.0 | 40320.0 |
-| 2024-11-14 10:01:00 | user-5 | 500 | 3000.0 | 2.0000 |
-| 2024-11-14 10:02:00 | user-3 | 500 | 1000.0 | 1.0000 |
-
-Sorting by `gamma_val` descending highlights the events with the largest gamma weights. Errors at 9 s (gamma(9) = 40320) receive a much higher weight than those at 1 s (gamma(1) = 1), focusing attention on the most severe cases.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 

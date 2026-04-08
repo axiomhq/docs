@@ -64,89 +64,28 @@ abs(x)
 
 The absolute value of `x`. The return type matches the input type.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `abs` to quantify how far each request duration deviates from a baseline, regardless of whether the request was faster or slower than expected.
+Use `abs` to find how far each request's duration deviates from a 200 ms baseline.
 
 **Query**
 
 ```kusto
 ['sample-http-logs']
-| extend deviation = abs(req_duration_ms - 100.0)
+| extend deviation = abs(req_duration_ms - 200)
 | project _time, id, req_duration_ms, deviation
 | order by deviation desc
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20deviation%20%3D%20abs%28req_duration_ms%20-%20100.0%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20deviation%20%7C%20order%20by%20deviation%20desc%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20deviation%20%3D%20abs%28req_duration_ms%20-%20200%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20deviation%20%7C%20order%20by%20deviation%20desc%22%7D)
 
 **Output**
 
 | _time | id | req_duration_ms | deviation |
 |---|---|---|---|
-| 2024-11-14 10:00:00 | user-1 | 450.0 | 350.0 |
-| 2024-11-14 10:01:00 | user-2 | 12.0 | 88.0 |
-| 2024-11-14 10:02:00 | user-3 | 95.0 | 5.0 |
-
-The query adds a `deviation` column showing how far each request duration is from 100 ms, regardless of direction. Sorting by `deviation desc` surfaces the most anomalous requests first.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `abs` to identify spans with the largest deviation from an expected service latency, regardless of whether they ran faster or slower than expected.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| extend deviation = abs(duration_ms - 200.0)
-| project _time, span_id, ['service.name'], duration_ms, deviation
-| order by deviation desc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20deviation%20%3D%20abs%28duration_ms%20-%20200.0%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration_ms%2C%20deviation%20%7C%20order%20by%20deviation%20desc%22%7D)
-
-**Output**
-
-| _time | span_id | service.name | duration_ms | deviation |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | span-abc | checkout | 850.0 | 650.0 |
-| 2024-11-14 10:01:00 | span-def | cart | 180.0 | 20.0 |
-| 2024-11-14 10:02:00 | span-ghi | frontend | 205.0 | 5.0 |
-
-The query converts `duration` to milliseconds and computes the absolute deviation from a 200 ms baseline. Spans with the largest deviation appear first, making it easy to spot performance outliers.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `abs` to detect requests with anomalous durations in HTTP 500 responses, which can indicate slow-response attacks or backend degradation.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '500'
-| extend duration_deviation = abs(req_duration_ms - 250.0)
-| project _time, id, status, uri, req_duration_ms, duration_deviation
-| order by duration_deviation desc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20extend%20duration_deviation%20%3D%20abs%28req_duration_ms%20-%20250.0%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20uri%2C%20req_duration_ms%2C%20duration_deviation%20%7C%20order%20by%20duration_deviation%20desc%22%7D)
-
-**Output**
-
-| _time | id | status | uri | req_duration_ms | duration_deviation |
-|---|---|---|---|---|---|
-| 2024-11-14 10:00:00 | user-9 | 500 | /api/checkout | 1200.0 | 950.0 |
-| 2024-11-14 10:01:00 | user-5 | 500 | /api/cart | 80.0 | 170.0 |
-
-The query filters for HTTP 500 errors and computes how far each failing request's duration strays from a 250 ms baseline. High deviation values point to severely degraded endpoints.
-
-</Tab>
-</Tabs>
+| 2024-11-14 10:00:00 | user-1 | 450.0 | 250.0 |
+| 2024-11-14 10:01:00 | user-2 | 80.0 | 120.0 |
+| 2024-11-14 10:02:00 | user-3 | 205.0 | 5.0 |
 
 ## List of related functions
 

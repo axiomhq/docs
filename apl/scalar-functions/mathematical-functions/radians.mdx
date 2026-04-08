@@ -64,12 +64,9 @@ radians(a)
 
 The angle in radians corresponding to the input degree value.
 
-## Use case examples
+## Example
 
-<Tabs>
-<Tab title="Log analysis">
-
-Use `radians` to convert a degree-based angle derived from request duration into radians before applying a trigonometric function.
+Use `radians` to convert an angle in degrees to radians.
 
 **Query**
 
@@ -77,76 +74,18 @@ Use `radians` to convert a degree-based angle derived from request duration into
 ['sample-http-logs']
 | extend duration_degrees = req_duration_ms / 10.0
 | extend duration_rad = radians(duration_degrees)
-| project _time, id, req_duration_ms, duration_degrees, duration_rad
+| project _time, id, req_duration_ms, duration_rad
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20duration_degrees%20%3D%20req_duration_ms%20%2F%2010.0%20%7C%20extend%20duration_rad%20%3D%20radians%28duration_degrees%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20duration_degrees%2C%20duration_rad%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%20%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20duration_degrees%20%3D%20req_duration_ms%20/%2010.0%20%7C%20extend%20duration_rad%20%3D%20radians%28duration_degrees%29%20%7C%20project%20_time%2C%20id%2C%20req_duration_ms%2C%20duration_rad%22%7D)
 
 **Output**
 
-| _time | id | req_duration_ms | duration_degrees | duration_rad |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | user-1 | 900.0 | 90.0 | 1.5708 |
-| 2024-11-14 10:01:00 | user-2 | 1800.0 | 180.0 | 3.1416 |
-| 2024-11-14 10:02:00 | user-3 | 3600.0 | 360.0 | 6.2832 |
-
-A request of 900 ms maps to 90°, which in radians is π/2 ≈ 1.5708. A request of 1800 ms maps to 180° (π radians), a full half-turn.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `radians` to convert span durations expressed as degree angles into radians before applying cyclic transformations.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend duration_ms = duration / 1ms
-| extend duration_degrees = duration_ms / 10.0
-| extend duration_rad = radians(duration_degrees)
-| project _time, span_id, ['service.name'], duration_ms, duration_degrees, duration_rad
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20duration_ms%20%3D%20duration%20%2F%201ms%20%7C%20extend%20duration_degrees%20%3D%20duration_ms%20%2F%2010.0%20%7C%20extend%20duration_rad%20%3D%20radians%28duration_degrees%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20duration_ms%2C%20duration_degrees%2C%20duration_rad%22%7D)
-
-**Output**
-
-| _time | span_id | service.name | duration_ms | duration_degrees | duration_rad |
-|---|---|---|---|---|---|
-| 2024-11-14 10:00:00 | span-abc | checkout | 350.0 | 35.0 | 0.6109 |
-| 2024-11-14 10:01:00 | span-def | cart | 800.0 | 80.0 | 1.3963 |
-| 2024-11-14 10:02:00 | span-ghi | frontend | 100.0 | 10.0 | 0.1745 |
-
-After this conversion, you can pipe `duration_rad` directly into `sin`, `cos`, or `tan` without any additional scaling.
-
-</Tab>
-<Tab title="Security logs">
-
-Use `radians` to convert anomaly angles expressed in degrees into radians, ready for downstream trigonometric processing in a security scoring pipeline.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| where status == '500'
-| extend duration_degrees = req_duration_ms / 10.0
-| extend duration_rad = radians(duration_degrees)
-| project _time, id, status, req_duration_ms, duration_rad
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20where%20status%20%3D%3D%20%27500%27%20%7C%20extend%20duration_degrees%20%3D%20req_duration_ms%20%2F%2010.0%20%7C%20extend%20duration_rad%20%3D%20radians%28duration_degrees%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20req_duration_ms%2C%20duration_rad%22%7D)
-
-**Output**
-
-| _time | id | status | req_duration_ms | duration_rad |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | user-9 | 500 | 1800.0 | 3.1416 |
-| 2024-11-14 10:01:00 | user-5 | 500 | 450.0 | 0.7854 |
-
-A 1800 ms error maps to π radians (180°), and a 450 ms error maps to π/4 radians (45°). You can then apply `sin` or `cos` to these values to produce bounded, cyclic scores.
-
-</Tab>
-</Tabs>
+| _time | id | req_duration_ms | duration_rad |
+|---|---|---|---|
+| 2024-11-14 10:00:00 | user-1 | 900.0 | 1.5708 |
+| 2024-11-14 10:01:00 | user-2 | 1800.0 | 3.1416 |
+| 2024-11-14 10:02:00 | user-3 | 3600.0 | 6.2832 |
 
 ## List of related functions
 
