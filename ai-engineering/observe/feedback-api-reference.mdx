@@ -1,0 +1,253 @@
+---
+title: "Feedback API reference"
+description: "Reference for the raw feedback event format sent to Axiom through the standard ingest API."
+sidebarTitle: Feedback API reference
+keywords: ["ai engineering", "feedback", "api reference", "ingest", "events"]
+---
+
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+
+Use this reference to send feedback as raw events without the Axiom AI SDK.
+
+Feedback uses the standard [ingest API](/restapi/ingest). Send feedback events to the same endpoint you use for other Axiom events.
+
+## Endpoint
+
+Send feedback to:
+
+```text
+POST https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME
+```
+
+Set the following headers:
+
+```text
+Authorization: Bearer API_TOKEN
+Content-Type: application/json
+```
+
+The request body must contain an array of JSON events. For more information on the ingest API, see [Send data to Axiom via API](/restapi/ingest).
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+## Event format
+
+Each feedback event has the following top-level fields:
+
+| Field | Type | Required | Description |
+|------|------|----------|-------------|
+| `event` | string | Yes | Fixed value: `feedback` |
+| `schemaUrl` | string | Yes | Schema version URL. Current value: `https://axiom.co/ai/schemas/0.0.2` |
+| `id` | string | Yes | Unique ID for the feedback event, for example a UUID |
+| `name` | string | Yes | Feedback signal name, such as `response-quality` or `user-comment` |
+| `kind` | string | Yes | Feedback type: `thumb`, `number`, `boolean`, `text`, or `signal` |
+| `value` | number, boolean, string, or `null` | Yes | Feedback value. The type depends on `kind` |
+| `links` | object | Yes | Links that associate the feedback with a trace and related context |
+| `message` | string | No | Optional human-readable message |
+| `metadata` | object | No | Optional custom metadata |
+
+The `links` object supports the following fields:
+
+| Field | Type | Required | Description |
+|------|------|----------|-------------|
+| `trace_id` | string | Yes | Trace ID of the AI capability run |
+| `capability` | string | Yes | Capability name |
+| `step` | string | No | Step within the capability |
+| `span_id` | string | No | Span ID for more granular linking |
+| `conversation_id` | string | No | Conversation ID for conversational contexts |
+| `userId` | string | No | User ID of the person providing feedback |
+
+## Feedback kinds
+
+### `thumb`
+
+Use `thumb` for thumbs up and thumbs down signals.
+
+| Field | Value |
+|------|-------|
+| `kind` | `thumb` |
+| `value` | `1` for thumbs up, `-1` for thumbs down |
+
+Example:
+
+```json
+{
+  "event": "feedback",
+  "schemaUrl": "https://axiom.co/ai/schemas/0.0.2",
+  "id": "7b5487c1-5f6d-4069-9343-5a5cb2084be5",
+  "name": "response-quality",
+  "kind": "thumb",
+  "value": 1,
+  "links": {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "capability": "support-agent"
+  }
+}
+```
+
+### `number`
+
+Use `number` for ratings and numeric scores.
+
+| Field | Value |
+|------|-------|
+| `kind` | `number` |
+| `value` | Any number |
+
+Example:
+
+```json
+{
+  "event": "feedback",
+  "schemaUrl": "https://axiom.co/ai/schemas/0.0.2",
+  "id": "baf6a69f-0cac-4f1b-8a1f-f1fcbd1544cd",
+  "name": "star-rating",
+  "kind": "number",
+  "value": 4,
+  "links": {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "capability": "support-agent"
+  }
+}
+```
+
+### `boolean`
+
+Use `boolean` for true or false feedback.
+
+| Field | Value |
+|------|-------|
+| `kind` | `boolean` |
+| `value` | `true` or `false` |
+
+Example:
+
+```json
+{
+  "event": "feedback",
+  "schemaUrl": "https://axiom.co/ai/schemas/0.0.2",
+  "id": "76382f13-3a33-4564-a071-bd53a5643b3f",
+  "name": "was-helpful",
+  "kind": "boolean",
+  "value": true,
+  "links": {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "capability": "support-agent"
+  }
+}
+```
+
+### `text`
+
+Use `text` for free-form feedback text.
+
+| Field | Value |
+|------|-------|
+| `kind` | `text` |
+| `value` | Any string |
+
+Example:
+
+```json
+{
+  "event": "feedback",
+  "schemaUrl": "https://axiom.co/ai/schemas/0.0.2",
+  "id": "f1beabdc-271d-4336-926d-9dc9074a59eb",
+  "name": "user-comment",
+  "kind": "text",
+  "value": "The answer was incorrect.",
+  "links": {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "capability": "support-agent"
+  }
+}
+```
+
+### `signal`
+
+Use `signal` when an event occurred and no value is needed.
+
+| Field | Value |
+|------|-------|
+| `kind` | `signal` |
+| `value` | `null` |
+
+Example:
+
+```json
+{
+  "event": "feedback",
+  "schemaUrl": "https://axiom.co/ai/schemas/0.0.2",
+  "id": "1595a6b7-8af6-453c-b84b-07d75965f2ec",
+  "name": "response-copied",
+  "kind": "signal",
+  "value": null,
+  "links": {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "capability": "support-agent"
+  }
+}
+```
+
+## Full example
+
+The following example shows a feedback event with all supported fields:
+
+```json
+{
+  "event": "feedback",
+  "schemaUrl": "https://axiom.co/ai/schemas/0.0.2",
+  "id": "db99f5dc-8208-4b42-9eb1-2f5ea38f2f4f",
+  "name": "response-quality",
+  "kind": "thumb",
+  "value": -1,
+  "message": "The answer was incorrect.",
+  "metadata": {
+    "sessionId": "session-456",
+    "responseLength": 250,
+    "source": "chat-ui"
+  },
+  "links": {
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "capability": "support-agent",
+    "step": "generate",
+    "span_id": "00f067aa0ba902b7",
+    "conversation_id": "conv-123",
+    "userId": "user-123"
+  }
+}
+```
+
+## cURL example
+
+The following example sends one feedback event using the ingest API:
+
+```bash
+curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
+  -H 'Authorization: Bearer API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '[
+    {
+      "event": "feedback",
+      "schemaUrl": "https://axiom.co/ai/schemas/0.0.2",
+      "id": "db99f5dc-8208-4b42-9eb1-2f5ea38f2f4f",
+      "name": "response-quality",
+      "kind": "thumb",
+      "value": 1,
+      "links": {
+        "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+        "capability": "support-agent"
+      }
+    }
+  ]'
+```
+
+## Stored events
+
+When you query feedback events in Axiom, stored events also include the `_time` field.
+
+For guidance on setting up feedback collection in an application, see [User feedback](/ai-engineering/observe/user-feedback).
