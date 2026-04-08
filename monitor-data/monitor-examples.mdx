@@ -46,6 +46,24 @@ Other options:
 
 By default, the monitor enters the alert state when any of the counts returned by the query cross the threshold, and remains in the alert state until no counts cross the threshold. To alert separately for each message value instead, enable **Notify by group**.
 
+## Notify when metric is sustained above threshold
+
+A standard threshold monitor triggers as soon as a single data point crosses the threshold. To alert only when a metric stays above a threshold for an entire time window (for example, 30 minutes), use `min()` as the aggregation in your query. Because `min()` returns the lowest value in the window, the result only exceeds the threshold if every data point in the window was above the threshold.
+
+For example, your dataset `['my_metrics']` has a `cpu_percent` field. The following query returns the minimum CPU usage observed in each one-minute bucket:
+
+``` apl
+['my_metrics']
+| summarize min(cpu_percent) by bin(_time, 1m)
+```
+
+Configure the monitor as follows:
+- Set the threshold to your desired value, for example 80 (percent), and set the comparison operator to **above**.
+- Set the frequency to how often the monitor runs, for example 5 (minutes).
+- Set the range to the sustained duration, for example 30 (minutes). The monitor checks whether the minimum value across all one-minute buckets in the past 30 minutes is above the threshold. This means the alert fires only if CPU usage was above 80% for the entire 30-minute period.
+
+This technique works for any metric where you want to avoid alerts triggered by brief spikes.
+
 ## Notify when response times spike
 
 To receive a notification whenever your response times spike without having to rely on a single threshold, [create an anomaly monitor](/monitor-data/anomaly-monitors) with an APL query that tracks your median response time.
