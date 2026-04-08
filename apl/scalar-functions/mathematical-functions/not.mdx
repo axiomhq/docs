@@ -64,61 +64,7 @@ not(expr)
 
 `true` if `expr` is `false`. `false` if `expr` is `true`.
 
-## Use case examples
-
-<Tabs>
-<Tab title="Log analysis">
-
-Use `not` to add a column that flags each request as a non-success, making it easy to count or filter error events.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend is_success = (status == '200')
-| extend is_error = not(is_success)
-| project _time, id, status, is_success, is_error
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20is_success%20%3D%20%28status%20%3D%3D%20%27200%27%29%20%7C%20extend%20is_error%20%3D%20not%28is_success%29%20%7C%20project%20_time%2C%20id%2C%20status%2C%20is_success%2C%20is_error%22%7D)
-
-**Output**
-
-| _time | id | status | is_success | is_error |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | user-1 | 200 | true | false |
-| 2024-11-14 10:01:00 | user-2 | 500 | false | true |
-| 2024-11-14 10:02:00 | user-3 | 404 | false | true |
-
-The `is_error` column is the logical complement of `is_success`. You can then use `summarize countif(is_error)` to count errors across a time window.
-
-</Tab>
-<Tab title="OpenTelemetry traces">
-
-Use `not` to filter for non-server spans, which lets you analyze client and internal spans separately.
-
-**Query**
-
-```kusto
-['otel-demo-traces']
-| extend is_server = (kind == 'server')
-| where not(is_server)
-| project _time, span_id, ['service.name'], kind, duration
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20is_server%20%3D%20%28kind%20%3D%3D%20%27server%27%29%20%7C%20where%20not%28is_server%29%20%7C%20project%20_time%2C%20span_id%2C%20%5B%27service.name%27%5D%2C%20kind%2C%20duration%22%7D)
-
-**Output**
-
-| _time | span_id | service.name | kind | duration |
-|---|---|---|---|---|
-| 2024-11-14 10:00:00 | span-abc | checkout | client | 00:00:00.1200000 |
-| 2024-11-14 10:01:00 | span-def | cart | internal | 00:00:00.0500000 |
-
-`not(is_server)` is equivalent to `kind != 'server'`, but the function form is more readable in complex logical expressions.
-
-</Tab>
-<Tab title="Security logs">
+## Example
 
 Use `not` to identify requests using non-standard HTTP methods, which can be a sign of reconnaissance or abuse.
 
@@ -141,9 +87,6 @@ Use `not` to identify requests using non-standard HTTP methods, which can be a s
 | 2024-11-14 10:01:00 | user-5 | 403 | DELETE | /admin/users |
 
 POST, PUT, DELETE, and other non-GET/HEAD methods appear here. Unexpected DELETE or PUT requests to sensitive endpoints may warrant investigation.
-
-</Tab>
-</Tabs>
 
 ## List of related functions
 
