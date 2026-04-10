@@ -1,11 +1,66 @@
 ---
 title: Introduction to Axiom query languages
-description: This page explains how to use Axiom query languages to query your data.
-sidebarTitle: Overview
+description: This page introduces the Axiom query languages and explains when to use each one.
+sidebarTitle: Axiom query languages
 keywords: ["query", "logs", "traces", "metrics", "datasets", "stream", "builder", "editor", "APL", "MPL"]
 ---
 
-In Axiom, you can use two query languages:
-- Axiom Processing Language (APL) lets you query datasets with events, OTel logs, and OTel traces.
-- Metrics Processing Language (MPL) lets you query OTel metrics.
+Axiom provides two purpose-built query languages, each designed for a different type of data:
 
+| | APL | MPL |
+|:---|:---|:---|
+| **Full name** | Axiom Processing Language | Metrics Processing Language |
+| **Signal type** | Logs and traces | Metrics |
+| **Data store** | [EventDB](/platform-overview/architecture) | [MetricsDB](/platform-overview/architecture) |
+| **Reference** | [APL reference](/apl/introduction) | [MPL reference](/mpl/introduction) |
+
+## APL (Axiom Processing Language)
+
+APL is a text-based query language for querying logs and traces stored in EventDB. It provides the flexibility to filter, manipulate, extend, and summarize your event data exactly the way you need it.
+
+An APL query starts with a dataset name followed by a series of operators separated by the pipe character (`|`). Operators flow from left to right, top to bottom, transforming the data at each step.
+
+```kusto
+['sample-http-logs']
+| where method == "GET" and status == "200"
+| summarize count() by bin_auto(_time), ['geo.country']
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20where%20method%20%3D%3D%20%5C%22GET%5C%22%20and%20status%20%3D%3D%20%5C%22200%5C%22%5Cn%7C%20summarize%20count()%20by%20bin_auto(_time)%2C%20%5B'geo.country'%5D%22%7D)
+
+APL supports a rich set of [tabular operators](/apl/tabular-operators/overview), [scalar functions](/apl/scalar-functions/), and [aggregation functions](/apl/aggregation-function/statistical-functions) that cover a wide range of use cases from simple filtering to complex joins, time-series analysis, and GenAI-specific computations.
+
+For more information, see [Introduction to APL](/apl/introduction).
+
+## MPL (Metrics Processing Language)
+
+
+MPL is a query language for querying metrics stored in MetricsDB. It combines a pipeline syntax similar to APL with expressive power suited to metrics workloads like rate calculations, time-window alignment, and tag-based grouping.
+
+<Info>
+Support for MPL is currently in public preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
+</Info>
+
+An MPL query starts with a dataset and metric name, then pipes the data through filters and transformations.
+
+```kusto
+`otel-demo-metrics`:`go.memory.used`
+| where `k8s.deployment.name` == "checkout"
+| align to 5m using avg
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60go.memory.used%60%20%7C%20where%20%60k8s.deployment.name%60%20%3D%3D%20%5C%22checkout%5C%22%20%7C%20align%20to%205m%20using%20avg%22%2C%22metricsDataset%22%3A%22otel-demo-metrics%22%7D)
+
+MPL supports filtering by tags, mapping values with functions like `rate` and `fill::prev`, aligning data to time windows, grouping by tag dimensions, and computing across multiple metrics.
+
+If you use PromQL, you can easyily [translate your existing expressions to MPL](/mpl/migrate-metrics).
+
+For more information, see [Introduction to MPL](/mpl/introduction).
+
+## Write queries
+
+Write APL and MPL queries in the following ways:
+
+- **Console**: Use the Query tab in the Axiom Console to write and run queries interactively. For more information, see [Query data](/query-data/overview).
+- **API**: Run queries programmatically using Axiom API. For more information, see [API reference](/restapi/query).
+- **AI**: Use natural language to generate APL queries in Console, or use [MCP Server](/console/intelligence/mcp-server) and [Skills](/console/intelligence/skills) to let AI agents query your data.
