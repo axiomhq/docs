@@ -40,9 +40,29 @@ To install the Axiom CloudWatch Forwarder, choose one of the following:
 
 ### Install with Cloudformation stacks
 
-1. [Launch the Forwarder stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-forwarder&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-forwarder-v1.1.1-cloudformation-stack.yaml). Copy the Forwarder Lambda ARN because it’s referenced in the Subscriber stack.
-1. [Launch the Subscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-subscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-subscriber-v1.1.1-cloudformation-stack.yaml).
-1. [Launch the Listener stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-listener&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-listener-v1.1.1-cloudformation-stack.yaml).
+1. [Launch the Forwarder stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-forwarder&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-forwarder-v1.3.0-cloudformation-stack.yaml). Copy the Forwarder Lambda ARN because it’s referenced in the Subscriber stack.
+1. [Launch the Subscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-subscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-subscriber-v1.3.0-cloudformation-stack.yaml).
+1. [Launch the Listener stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-listener&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-listener-v1.3.0-cloudformation-stack.yaml).
+
+### Configure for EU or edge regions
+
+If your Axiom organization is hosted in the EU region, set the `AxiomEdge` parameter when deploying the Forwarder stack. This directs log ingestion to the regional edge endpoint instead of the default US endpoint.
+
+When deploying the Forwarder CloudFormation stack, set the following parameter:
+
+- **AxiomEdge**: Set to `eu-central-1.aws.edge.axiom.co` for EU ingestion.
+
+Alternatively, use **AxiomEdgeURL** to specify a full custom edge URL for ingestion.
+
+The forwarder resolves the ingest endpoint with the following priority:
+
+1. `AxiomEdgeURL` (explicit full URL, takes precedence)
+2. `AxiomEdge` (regional edge domain)
+3. `AxiomURL` (legacy, defaults to `https://api.axiom.co`)
+
+<Note>
+    If you use the Terraform module, set the `axiom_edge` or `axiom_edge_url` variable instead. See the [Terraform module section](#install-with-terraform-module) below.
+</Note>
 
 ### Install with Terraform module
 
@@ -57,6 +77,18 @@ module "forwarder" {
   axiom_dataset    = "DATASET_NAME"
   axiom_token      = "API_TOKEN"
   prefix           = "axiom-cloudwatch-forwarder"
+}
+```
+
+For EU deployments, add the `axiom_edge` variable:
+
+```hcl
+module "forwarder" {
+  source           = "axiomhq/axiom-cloudwatch-forwarder/aws//modules/forwarder"
+  axiom_dataset    = "DATASET_NAME"
+  axiom_token      = "API_TOKEN"
+  prefix           = "axiom-cloudwatch-forwarder"
+  axiom_edge       = "eu-central-1.aws.edge.axiom.co"
 }
 ```
 
@@ -136,7 +168,7 @@ The optional Listener stack does the following:
 
 ## Remove subscription filters
 
-To remove subscription filters for one or more log groups, [launch the Unsubscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-subscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-unsubscriber-v1.1.1-cloudformation-stack.yaml).
+To remove subscription filters for one or more log groups, [launch the Unsubscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-subscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-unsubscriber-v1.3.0-cloudformation-stack.yaml).
 
 The log group filtering works the same way as the Subscriber stack. You can filter the log groups by a combination of names, prefix, and regular expression filters.
 
