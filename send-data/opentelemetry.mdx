@@ -121,6 +121,63 @@ When using the OTLP/HTTP endpoint, the following endpoint URLs should be used in
 The `/v1/metrics` endpoint only supports the `application/x-protobuf` content type. JSON format isn’t supported for metrics ingestion.
 </Note>
 
+## Sampling with the OpenTelemetry Collector
+
+Axiom doesn't apply sampling to incoming data. If you want to reduce the volume of traces or logs before they reach Axiom, configure sampling in your OpenTelemetry Collector using processors from the [opentelemetry-collector-contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib) distribution.
+
+### Probabilistic sampling
+
+The `probabilistic_sampler` processor randomly drops a configurable percentage of spans or log records. Use it when you want to uniformly reduce volume across all services.
+
+```yaml
+processors:
+  probabilistic_sampler:
+    sampling_percentage: 20  # Keep 20% of spans
+
+service:
+  pipelines:
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - probabilistic_sampler
+        - batch
+      exporters:
+        - otlphttp
+```
+
+### Tail-based sampling
+
+The `tail_sampling` processor makes sampling decisions after collecting all spans in a trace. This lets you apply policy-based rules, such as always keeping error traces while dropping a percentage of successful ones.
+
+```yaml
+processors:
+  tail_sampling:
+    decision_wait: 10s
+    policies:
+      - name: keep-errors
+        type: status_code
+        status_code: {status_codes: [ERROR]}
+      - name: probabilistic-ok
+        type: probabilistic
+        probabilistic: {sampling_percentage: 10}
+
+service:
+  pipelines:
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - tail_sampling
+        - batch
+      exporters:
+        - otlphttp
+```
+
+Tail sampling requires all spans from the same trace to reach the same Collector instance. If you run multiple Collector instances, add a load-balancing exporter in front of the tail-sampling layer.
+
 ## OpenTelemetry for Go
 
 The example below configures a Go app using the [OpenTelemetry SDK for Go](https://github.com/open-telemetry/opentelemetry-go) to send OpenTelemetry data to Axiom.
