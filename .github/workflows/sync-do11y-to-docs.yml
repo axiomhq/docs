@@ -73,7 +73,7 @@ jobs:
       - name: Update files
         if: steps.check.outputs.needed == 'true'
         run: |
-          cp _do11y/dist/do11y.js "${{ vars.DO11Y_JS_PATH }}"
+          cp _do11y/dist/do11y.min.js "${{ vars.DO11Y_JS_PATH }}"
           echo "${{ steps.latest.outputs.version }}" > "${{ vars.DO11Y_VER_PATH }}"
 
       - name: Create PR
@@ -89,8 +89,12 @@ jobs:
           git checkout -b "$BRANCH"
           git add "${{ vars.DO11Y_JS_PATH }}" "${{ vars.DO11Y_VER_PATH }}"
           git commit -m "Update do11y.js to ${VERSION}"
-          git push -u origin "$BRANCH"
+          git push -fu origin "$BRANCH"
 
-          gh pr create \
-            --title "Update do11y.js to ${VERSION}" \
-            --body "Automated update from [do11y ${VERSION}](https://github.com/axiomhq/do11y/releases/tag/${VERSION})."
+          if gh pr view "$BRANCH" --json state -q '.state' 2>/dev/null | grep -q .; then
+            echo "PR already exists for ${BRANCH}, skipping creation."
+          else
+            gh pr create \
+              --title "Update do11y to ${VERSION}" \
+              --body "Automated update from [do11y ${VERSION}](https://github.com/axiomhq/do11y/releases/tag/${VERSION})."
+          fi
