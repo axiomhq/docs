@@ -1,0 +1,153 @@
+---
+title: format_sql
+description: 'This page explains how to use the format_sql function in APL.'
+---
+
+## Introduction
+
+The `format_sql` function converts the structured dictionary produced by [`parse_sql`](/apl/scalar-functions/sql-functions/parse-sql) back into a SQL string. Use it to normalize SQL formatting, validate that a parsed query round-trips correctly, or reconstruct a SQL statement after modifying its parsed representation.
+
+`format_sql` is most useful as the second step in a parse-then-reconstruct pipeline: first parse a SQL string into a structured dictionary with `parse_sql`, optionally inspect or transform the result, and then call `format_sql` to produce a clean, normalized SQL string.
+
+## For users of other query languages
+
+If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
+
+<AccordionGroup>
+<Accordion title="Splunk SPL users">
+
+Splunk has no equivalent to `format_sql`. There is no native way in SPL to reconstruct a SQL string from a parsed representation. In APL, `format_sql` takes the output of `parse_sql` and reconstructs the original SQL statement.
+
+<CodeGroup>
+```sql Splunk example
+-- No direct Splunk equivalent
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| take 1
+| extend parsed = parse_sql('SELECT id, status FROM logs WHERE status = 500')
+| project formatted = format_sql(parsed)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL has no built-in function to reconstruct a SQL string from a parsed representation. `format_sql` is unique to APL and works as the inverse of `parse_sql`.
+
+<CodeGroup>
+```sql SQL example
+-- No direct SQL equivalent
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| take 1
+| extend parsed = parse_sql('SELECT id, status FROM logs WHERE status = 500')
+| project formatted = format_sql(parsed)
+```
+</CodeGroup>
+
+</Accordion>
+</AccordionGroup>
+
+## Usage
+
+### Syntax
+
+```kusto
+format_sql(parsed_sql_model)
+```
+
+### Parameters
+
+| Name | Type | Required | Description |
+| ---------------- | ---------- | -------- | ----------- |
+| parsed_sql_model | dictionary | Yes | The structured data model returned by `parse_sql`. |
+
+### Returns
+
+A string containing the SQL statement reconstructed from the provided data model.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Parse a SQL query representing a slow-query log entry and reconstruct it to verify the round-trip.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| take 1
+| extend parsed = parse_sql('SELECT id, status, uri FROM requests WHERE req_duration_ms > 1000 ORDER BY req_duration_ms DESC')
+| project formatted = format_sql(parsed)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20take%201%20%7C%20extend%20parsed%20%3D%20parse_sql%28%27SELECT%20id%2C%20status%2C%20uri%20FROM%20requests%20WHERE%20req_duration_ms%20%3E%201000%20ORDER%20BY%20req_duration_ms%20DESC%27%29%20%7C%20project%20formatted%20%3D%20format_sql%28parsed%29%22%7D)
+
+**Output**
+
+| formatted |
+| --------- |
+| `SELECT id, status, uri FROM requests WHERE req_duration_ms > 1000 ORDER BY req_duration_ms DESC` |
+
+The query parses the SQL string and then reconstructs it with `format_sql`, confirming that the parse-and-reconstruct pipeline preserves the original statement's structure.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Parse and reformat a SQL query from a database span to normalize its formatting.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| take 1
+| extend parsed = parse_sql('SELECT trace_id, span_id, duration FROM traces ORDER BY duration DESC')
+| project formatted = format_sql(parsed)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20take%201%20%7C%20extend%20parsed%20%3D%20parse_sql%28%27SELECT%20trace_id%2C%20span_id%2C%20duration%20FROM%20traces%20ORDER%20BY%20duration%20DESC%27%29%20%7C%20project%20formatted%20%3D%20format_sql%28parsed%29%22%7D)
+
+**Output**
+
+| formatted |
+| --------- |
+| `SELECT trace_id, span_id, duration FROM traces ORDER BY duration DESC` |
+
+The query normalizes the SQL string's formatting. This is useful when SQL queries in your trace data have inconsistent whitespace or casing that you want to standardize before comparing them.
+
+</Tab>
+<Tab title="Security logs">
+
+Parse a SQL query containing an authorization filter and reconstruct it to confirm the WHERE clause is preserved.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| take 1
+| extend parsed = parse_sql('SELECT id, status FROM logs WHERE status = 401 OR status = 403')
+| project formatted = format_sql(parsed)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20take%201%20%7C%20extend%20parsed%20%3D%20parse_sql%28%27SELECT%20id%2C%20status%20FROM%20logs%20WHERE%20status%20%3D%20401%20OR%20status%20%3D%20403%27%29%20%7C%20project%20formatted%20%3D%20format_sql%28parsed%29%22%7D)
+
+**Output**
+
+| formatted |
+| --------- |
+| `SELECT id, status FROM logs WHERE status = 401 OR status = 403` |
+
+The query reconstructs the SQL statement from its parsed form, letting you verify that the authorization filter was retained through the parse-and-reconstruct cycle.
+
+</Tab>
+</Tabs>
+
+## List of related functions
+
+- [parse_sql](/apl/scalar-functions/sql-functions/parse-sql): Parses a SQL statement string into a structured dictionary. `format_sql` is the inverse of `parse_sql`.
+- [parse_json](/apl/scalar-functions/string-functions/parse-json): Parses a JSON string into a dynamic dictionary. Use `parse_json` when your data contains JSON rather than SQL.
