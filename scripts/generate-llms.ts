@@ -211,12 +211,14 @@ function buildSections(): Section[] {
 interface OpenApiSpec {
   filename: string;
   title: string;
+  /** First line of info.description, max 300 chars */
+  description: string;
   url: string;
 }
 
 /**
- * Reads all JSON files from restapi/versions/, extracts their title from the
- * OpenAPI `info.title` field, and returns them ready for the llms.txt index.
+ * Reads all JSON files from restapi/versions/ and extracts title and
+ * description from the OpenAPI `info` object.
  */
 function collectOpenApiSpecs(): OpenApiSpec[] {
   const versionsDir = join(DOCS_ROOT, 'restapi', 'versions');
@@ -226,19 +228,21 @@ function collectOpenApiSpecs(): OpenApiSpec[] {
     .filter((f) => f.endsWith('.json'))
     .sort()
     .map((filename) => {
-      const raw = readFileSync(join(versionsDir, filename), 'utf-8');
+      const content = readFileSync(join(versionsDir, filename), 'utf-8');
       let title = filename.replace(/\.json$/, '');
+      let description = '';
       try {
-        const parsed = JSON.parse(raw) as { info?: { title?: string } };
+        const parsed = JSON.parse(content) as {
+          info?: { title?: string; description?: string };
+        };
         if (parsed.info?.title) title = parsed.info.title;
+        if (parsed.info?.description) {
+          description = parsed.info.description.split('\n')[0].trim().substring(0, 300);
+        }
       } catch {
-        // keep filename as title if JSON is malformed
+        // keep filename stem as title if JSON is malformed
       }
-      return {
-        filename,
-        title,
-        url: `${BASE_URL}/restapi/versions/${filename}`,
-      };
+      return { filename, title, description, url: `${BASE_URL}/restapi/versions/${filename}` };
     });
 }
 
@@ -287,7 +291,8 @@ function generateLlmsTxt(
     lines.push('## OpenAPI Specs');
     lines.push('');
     for (const spec of specs) {
-      lines.push(`- [${spec.title}](${spec.url})`);
+      const desc = spec.description ? `: ${spec.description}` : '';
+      lines.push(`- [${spec.title}](${spec.url})${desc}`);
     }
     lines.push('');
   }
@@ -296,8 +301,11 @@ function generateLlmsTxt(
 }
 
 /**
- * llms-full.txt — full prose content of every page, in sidebar order.
- * Stub pages (OpenAPI-generated) are skipped since they carry no prose.
+ * llms-full.txt — full prose content of every page, in sidebar order,
+ * followed by a reference block for each OpenAPI spec.
+ *
+ * Stub pages (OpenAPI-generated MDX) are skipped since they carry no prose —
+ * the spec JSON files themselves are listed in the trailing section instead.
  *
  * Each page block:
  *   # Page Title
@@ -308,8 +316,16 @@ function generateLlmsTxt(
  *   {raw MDX body}
  *
  *   ---
+ *
+ * Each spec block:
+ *   # Spec Label
+ *   Source: https://axiom.co/docs/restapi/versions/{filename}
+ *
+ *   {info.description — first line, max 300 chars}
+ *
+ *   ---
  */
-function generateLlmsFullTxt(sections: Section[]): string {
+function generateLlmsFullTxt(sections: Section[], specs: OpenApiSpec[]): string {
   const parts: string[] = [];
 
   for (const section of sections) {
@@ -329,6 +345,18 @@ function generateLlmsFullTxt(sections: Section[]): string {
       parts.push('---');
       parts.push('');
     }
+  }
+
+  for (const spec of specs) {
+    parts.push(`# ${spec.title}`);
+    parts.push(`Source: ${spec.url}`);
+    parts.push('');
+    if (spec.description) {
+      parts.push(spec.description);
+      parts.push('');
+    }
+    parts.push('---');
+    parts.push('');
   }
 
   return parts.join('\n');
@@ -387,7 +415,7 @@ const llmsTxt = generateLlmsTxt(sections, specs, siteName, siteDescription);
 writeFileSync(join(DOCS_ROOT, 'llms.txt'), llmsTxt, 'utf-8');
 console.log(`✓ llms.txt written`);
 
-const llmsFullTxt = generateLlmsFullTxt(sections);
+const llmsFullTxt = generateLlmsFullTxt(sections, specs);
 writeFileSync(join(DOCS_ROOT, 'llms-full.txt'), llmsFullTxt, 'utf-8');
 console.log(`✓ llms-full.txt written`);
 
