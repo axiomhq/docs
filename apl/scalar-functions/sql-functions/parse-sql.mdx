@@ -28,9 +28,7 @@ Splunk doesn't have a native SQL parser function. You would typically use `rex` 
 ```
 
 ```kusto APL equivalent
-['sample-http-logs']
-| take 1
-| project parsed = parse_sql('SELECT id, status FROM logs WHERE status = 500')
+... | project parsed = parse_sql('SELECT id, status FROM logs WHERE status = 500')
 ```
 </CodeGroup>
 
@@ -45,9 +43,7 @@ ANSI SQL has no built-in SQL parsing functions. `parse_sql` is unique to APL: it
 ```
 
 ```kusto APL equivalent
-['sample-http-logs']
-| take 1
-| project parsed = parse_sql('SELECT id, status FROM logs WHERE status = 500')
+... | project parsed = parse_sql('SELECT id, status FROM logs WHERE status = 500')
 ```
 </CodeGroup>
 
@@ -81,19 +77,57 @@ Parse a SQL query that represents a slow-query log entry to inspect its structur
 
 **Query**
 
-```kusto
-['sample-http-logs']
-| take 1
-| project parsed_query = parse_sql('SELECT id, status, uri FROM requests WHERE req_duration_ms > 1000 ORDER BY req_duration_ms DESC')
+```kusto wrap
+print parsed_query = parse_sql('SELECT id, status, uri FROM requests WHERE req_duration_ms > 1000 ORDER BY req_duration_ms DESC')
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20take%201%20%7C%20project%20parsed_query%20%3D%20parse_sql%28%27SELECT%20id%2C%20status%2C%20uri%20FROM%20requests%20WHERE%20req_duration_ms%20%3E%201000%20ORDER%20BY%20req_duration_ms%20DESC%27%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22print%20parsed_query%20%3D%20parse_sql%28%27SELECT%20id%2C%20status%2C%20uri%20FROM%20requests%20WHERE%20req_duration_ms%20%3E%201000%20ORDER%20BY%20req_duration_ms%20DESC%27%29%22%7D)
 
 **Output**
 
-| parsed_query |
-| ------------ |
-| `{"type":"select","columns":[{"name":"id"},{"name":"status"},{"name":"uri"}],"from":"requests","where":{...},"orderby":[{"column":"req_duration_ms","direction":"DESC"}]}` |
+```json
+{
+    "parsed_query": {
+        "columns": [
+            {
+                "colname": "id"
+            },
+            {
+                "colname": "status"
+            },
+            {
+                "colname": "uri"
+            }
+        ],
+        "from": [
+            {
+                "table": "requests"
+            }
+        ],
+        "order": [
+            {
+                "direction": "desc",
+                "expr": {
+                    "colname": "req_duration_ms"
+                }
+            }
+        ],
+        "statement": "select",
+        "where": {
+            "operator": ">",
+            "params": [
+                {
+                    "colname": "req_duration_ms"
+                },
+                {
+                    "value": "1000",
+                    "valtype": "integer"
+                }
+            ]
+        }
+    }
+}
+```
 
 The query parses a slow-query SQL string and returns its structured representation, letting you extract specific clauses with `parsed_query.from` or `parsed_query.columns`.
 
@@ -104,19 +138,45 @@ Parse a SQL query that represents a database span to inspect which tables and co
 
 **Query**
 
-```kusto
-['otel-demo-traces']
-| take 1
-| project parsed_query = parse_sql('SELECT trace_id, span_id, duration FROM traces ORDER BY duration DESC')
+```kusto wrap
+print parsed_query = parse_sql('SELECT trace_id, span_id, duration FROM traces ORDER BY duration DESC')
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20take%201%20%7C%20project%20parsed_query%20%3D%20parse_sql%28%27SELECT%20trace_id%2C%20span_id%2C%20duration%20FROM%20traces%20ORDER%20BY%20duration%20DESC%27%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22print%20parsed_query%20%3D%20parse_sql%28%27SELECT%20trace_id%2C%20span_id%2C%20duration%20FROM%20traces%20ORDER%20BY%20duration%20DESC%27%29%22%7D)
 
 **Output**
 
-| parsed_query |
-| ------------ |
-| `{"type":"select","columns":[{"name":"trace_id"},{"name":"span_id"},{"name":"duration"}],"from":"traces","orderby":[{"column":"duration","direction":"DESC"}]}` |
+```json
+{
+    "parsed_query": {
+        "columns": [
+            {
+                "colname": "trace_id"
+            },
+            {
+                "colname": "span_id"
+            },
+            {
+                "colname": "duration"
+            }
+        ],
+        "from": [
+            {
+                "table": "traces"
+            }
+        ],
+        "order": [
+            {
+                "direction": "desc",
+                "expr": {
+                    "colname": "duration"
+                }
+            }
+        ],
+        "statement": "select"
+    }
+}
+```
 
 The query parses a database span's SQL string and returns its structured representation so you can programmatically inspect which tables and columns the trace's database operations access.
 
@@ -127,19 +187,63 @@ Parse a SQL statement that contains an authorization filter to verify that the e
 
 **Query**
 
-```kusto
-['sample-http-logs']
-| take 1
-| project parsed_query = parse_sql('SELECT id, status FROM logs WHERE status = 401 OR status = 403')
+```kusto wrap
+print parsed_query = parse_sql('SELECT id, status FROM logs WHERE status = 401 OR status = 403')
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20take%201%20%7C%20project%20parsed_query%20%3D%20parse_sql%28%27SELECT%20id%2C%20status%20FROM%20logs%20WHERE%20status%20%3D%20401%20OR%20status%20%3D%20403%27%29%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22print%20parsed_query%20%3D%20parse_sql%28%27SELECT%20id%2C%20status%20FROM%20logs%20WHERE%20status%20%3D%20401%20OR%20status%20%3D%20403%27%29%22%7D)
 
 **Output**
 
-| parsed_query |
-| ------------ |
-| `{"type":"select","columns":[{"name":"id"},{"name":"status"}],"from":"logs","where":{"type":"binary_expr","operator":"OR","left":{...},"right":{...}}}` |
+```json
+{
+    "parsed_query": {
+        "columns": [
+            {
+                "colname": "id"
+            },
+            {
+                "colname": "status"
+            }
+        ],
+        "from": [
+            {
+                "table": "logs"
+            }
+        ],
+        "statement": "select",
+        "where": {
+            "operator": "or",
+            "params": [
+                {
+                    "params": [
+                        {
+                            "colname": "status"
+                        },
+                        {
+                            "value": "401",
+                            "valtype": "integer"
+                        }
+                    ],
+                    "operator": "="
+                },
+                {
+                    "operator": "=",
+                    "params": [
+                        {
+                            "colname": "status"
+                        },
+                        {
+                            "valtype": "integer",
+                            "value": "403"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}
+```
 
 The query parses a SQL string with an OR condition in its WHERE clause. You can then inspect the `where` field to confirm that the expected authorization filters are present.
 

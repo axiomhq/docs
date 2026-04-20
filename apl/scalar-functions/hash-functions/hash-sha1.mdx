@@ -123,33 +123,6 @@ Hash span IDs to create stable surrogate keys for cross-dataset joins or externa
 The query projects the hashed span ID alongside service name and duration so you can work with span fingerprints in downstream pipelines.
 
 </Tab>
-<Tab title="Security logs">
-
-Identify accounts generating the most authentication failures using hashed identifiers.
-
-**Query**
-
-```kusto
-['sample-http-logs']
-| extend hashed_id = hash_sha1(id)
-| summarize request_count = count() by hashed_id, status
-| where status in ('401', '403')
-| sort by request_count desc
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27sample-http-logs%27%5D%20%7C%20extend%20hashed_id%20%3D%20hash_sha1%28id%29%20%7C%20summarize%20request_count%20%3D%20count%28%29%20by%20hashed_id%2C%20status%20%7C%20where%20status%20in%20%28%27401%27%2C%20%27403%27%29%20%7C%20sort%20by%20request_count%20desc%22%7D)
-
-**Output**
-
-| hashed_id | status | request_count |
-| --------- | ------ | ------------- |
-| 9f9af029585ba014e07cd3910ca976cf56160616 | 401 | 47 |
-| a94a8fe5ccb19ba61c4c0873d391e987982fbbd3 | 403 | 32 |
-| 356a192b7913b04c54574d18c28d46e6395428ab | 401 | 28 |
-
-The query surfaces the most active accounts generating auth failures without storing raw user identifiers in the query output.
-
-</Tab>
 </Tabs>
 
 ## List of related functions
