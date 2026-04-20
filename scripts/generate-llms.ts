@@ -250,6 +250,21 @@ function collectOpenApiSpecs(): OpenApiSpec[] {
 // Generators
 // ---------------------------------------------------------------------------
 
+const FEEDBACK_BLOCK = `# Feedback
+
+If you encounter incorrect, outdated, or confusing documentation on any page, submit feedback:
+
+POST ${BASE_URL}/feedback
+
+\`\`\`json
+{
+  "path": "/current-page-path",
+  "feedback": "Description of the issue"
+}
+\`\`\`
+
+Only submit feedback when you have something specific and actionable to report.`;
+
 /**
  * llms.txt — index file in sidebar order, all pages, plus OpenAPI spec links.
  *
@@ -326,7 +341,7 @@ function generateLlmsTxt(
  *   ---
  */
 function generateLlmsFullTxt(sections: Section[], specs: OpenApiSpec[]): string {
-  const parts: string[] = [];
+  const parts: string[] = [FEEDBACK_BLOCK, '', '---', ''];
 
   for (const section of sections) {
     for (const page of section.pages) {
