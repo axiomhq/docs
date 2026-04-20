@@ -1,21 +1,28 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { join, resolve, relative } from 'node:path';
 import matter from 'gray-matter';
 
 const DOCS_ROOT = resolve(process.cwd());
 const BASE_URL = 'https://axiom.co/docs';
 
-// Page paths that start with any of these prefixes are excluded from all outputs.
-// - snippets/   internal reusable partials, not standalone docs
-// - llms/       the overview pages that describe these very files (avoid circularity)
-// - restapi/endpoints/  individual OpenAPI-driven endpoint pages (dense schema content)
-const SKIP_PREFIXES = ['snippets/', 'llms/', 'restapi/endpoints/'];
+// Files/directories entirely excluded from all outputs.
+const SKIP_PREFIXES = [
+  'snippets/',    // internal reusable partials
+  'llms/',        // overview pages that describe these very files
+  'node_modules/',
+  '.github/',     // repo meta files (CONTRIBUTING.md, etc.)
+];
+
+// Root-level files to skip by exact path (no extension)
+const SKIP_EXACT = new Set(['llms-apl', 'llms-full', 'llms', 'README']);
 
 interface PageData {
   path: string;
   title: string;
   description: string;
   body: string;
+  /** True for auto-generated OpenAPI stub pages that have no prose body */
+  isStub: boolean;
 }
 
 interface Section {
@@ -28,16 +35,16 @@ interface Section {
 // ---------------------------------------------------------------------------
 
 function shouldSkip(path: string): boolean {
+  if (SKIP_EXACT.has(path)) return true;
   return SKIP_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
 /**
- * Read and parse an MDX/MD file, returning its frontmatter + body.
- * Returns null for files that don't exist, should be skipped, or are
- * OpenAPI-generated stub pages (they have an `openapi:` frontmatter field
- * and contain no useful prose).
+ * Parse an MDX/MD file and return its metadata and body.
+ * Returns null only if the file does not exist or must be skipped.
+ * OpenAPI stub pages are returned with an empty body and `isStub: true`.
  */
-function readPage(pagePath: string): PageData | null {
+function parsePage(pagePath: string): PageData | null {
   if (shouldSkip(pagePath)) return null;
 
   const mdxPath = join(DOCS_ROOT, `${pagePath}.mdx`);
@@ -48,11 +55,11 @@ function readPage(pagePath: string): PageData | null {
   const raw = readFileSync(filePath, 'utf-8');
   const { data, content } = matter(raw);
 
-  // Skip thin OpenAPI stub pages – they don't contain prose content
-  if (data.openapi || data.api) return null;
+  const isStub = Boolean(data.openapi || data.api);
 
-  const title =
-    String(data.title || data.sidebarTitle || pagePath.split('/').pop() || pagePath);
+  const title = String(
+    data.title || data.sidebarTitle || pagePath.split('/').pop() || pagePath
+  );
 
   // Trim description to first line, max 300 chars (matches Mintlify behaviour)
   const description = String(data.description ?? '')
@@ -60,29 +67,66 @@ function readPage(pagePath: string): PageData | null {
     .trim()
     .substring(0, 300);
 
-  return { path: pagePath, title, description, body: content.trim() };
+  return {
+    path: pagePath,
+    title,
+    description,
+    body: isStub ? '' : content.trim(),
+    isStub,
+  };
 }
 
 /**
  * Recursively walk a Mintlify navigation entry, which is either a plain page
  * path string or a nested group object (`{ group, pages }`).
  */
-function collectPaths(pages: (string | Record<string, unknown>)[]): string[] {
+function collectNavPaths(pages: (string | Record<string, unknown>)[]): string[] {
   const result: string[] = [];
   for (const entry of pages) {
     if (typeof entry === 'string') {
       result.push(entry);
     } else if (Array.isArray((entry as Record<string, unknown>).pages)) {
       result.push(
-        ...collectPaths((entry as Record<string, unknown>).pages as (string | Record<string, unknown>)[])
+        ...collectNavPaths(
+          (entry as Record<string, unknown>).pages as (string | Record<string, unknown>)[]
+        )
       );
     }
   }
   return result;
 }
 
+/**
+ * Recursively find all .mdx and .md files under a directory,
+ * returning paths relative to DOCS_ROOT without extension.
+ */
+function globMdxFiles(dir: string = DOCS_ROOT): string[] {
+  const results: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    const stat = statSync(full);
+    if (stat.isDirectory()) {
+      results.push(...globMdxFiles(full));
+    } else if (entry.endsWith('.mdx') || entry.endsWith('.md')) {
+      const rel = relative(DOCS_ROOT, full).replace(/\.(mdx|md)$/, '');
+      results.push(rel);
+    }
+  }
+  return results;
+}
+
+/**
+ * Convert a directory path segment into a human-readable section heading.
+ * e.g. "send-data" → "Send data", "ai-engineering" → "AI engineering"
+ */
+function dirToHeading(dir: string): string {
+  return dir
+    .replace(/-/g, ' ')
+    .replace(/^(.)/, (c) => c.toUpperCase());
+}
+
 // ---------------------------------------------------------------------------
-// Build the section list from docs.json navigation
+// Build the section list
 // ---------------------------------------------------------------------------
 
 // The primary tab whose groups are used verbatim as section headings.
@@ -91,19 +135,33 @@ const PRIMARY_TAB = 'Documentation';
 
 function buildSections(): Section[] {
   const docsJson = JSON.parse(readFileSync(join(DOCS_ROOT, 'docs.json'), 'utf-8'));
-  const tabs: { tab: string; groups: { group: string; pages: (string | Record<string, unknown>)[] }[] }[] =
-    docsJson.navigation?.tabs ?? [];
+  const tabs: {
+    tab: string;
+    groups: { group: string; pages: (string | Record<string, unknown>)[] }[];
+  }[] = docsJson.navigation?.tabs ?? [];
 
   const sections: Section[] = [];
 
+  // --- Pass 1: build sections from docs.json navigation (defines order) ---
+  const navPathSet = new Set<string>();
+  // Map top-level directory → index of the first section that contains it.
+  const dirToSectionIdx = new Map<string, number>();
+
   for (const tab of tabs) {
     for (const group of tab.groups ?? []) {
-      const paths = collectPaths(group.pages ?? []);
+      const paths = collectNavPaths(group.pages ?? []);
       const pages: PageData[] = [];
 
       for (const path of paths) {
-        const page = readPage(path);
-        if (page) pages.push(page);
+        const page = parsePage(path);
+        if (page) {
+          pages.push(page);
+          navPathSet.add(path);
+          const topDir = path.split('/')[0];
+          if (!dirToSectionIdx.has(topDir)) {
+            dirToSectionIdx.set(topDir, sections.length);
+          }
+        }
       }
 
       if (pages.length > 0) {
@@ -114,6 +172,35 @@ function buildSections(): Section[] {
     }
   }
 
+  // --- Pass 2: scan all .mdx files on disk and add anything not in nav ---
+  // We create a "bucket" per top-level directory for unlisted pages.
+  const unlistedByDir = new Map<string, PageData[]>();
+
+  for (const diskPath of globMdxFiles()) {
+    if (navPathSet.has(diskPath)) continue;
+    if (shouldSkip(diskPath)) continue;
+
+    const page = parsePage(diskPath);
+    if (!page) continue;
+
+    const topDir = diskPath.split('/')[0];
+
+    if (dirToSectionIdx.has(topDir)) {
+      // Append to the existing nav section that already owns this directory.
+      sections[dirToSectionIdx.get(topDir)!].pages.push(page);
+    } else {
+      // Collect into a new section keyed by top-level directory.
+      if (!unlistedByDir.has(topDir)) unlistedByDir.set(topDir, []);
+      unlistedByDir.get(topDir)!.push(page);
+    }
+  }
+
+  // Sort unlisted pages alphabetically within each new section, then append.
+  for (const [dir, pages] of [...unlistedByDir.entries()].sort()) {
+    pages.sort((a, b) => a.path.localeCompare(b.path));
+    sections.push({ heading: dirToHeading(dir), pages });
+  }
+
   return sections;
 }
 
@@ -122,7 +209,7 @@ function buildSections(): Section[] {
 // ---------------------------------------------------------------------------
 
 /**
- * llms.txt — index file in sidebar order.
+ * llms.txt — index file in sidebar order, all pages.
  *
  * Format follows the llms.txt spec (https://llmstxt.org/):
  *   # Site title
@@ -159,6 +246,7 @@ function generateLlmsTxt(
 
 /**
  * llms-full.txt — full prose content of every page, in sidebar order.
+ * Stub pages (OpenAPI-generated) are skipped since they carry no prose.
  *
  * Each page block:
  *   # Page Title
@@ -175,6 +263,8 @@ function generateLlmsFullTxt(sections: Section[]): string {
 
   for (const section of sections) {
     for (const page of section.pages) {
+      if (page.isStub || !page.body) continue;
+
       const url = `${BASE_URL}/${page.path}`;
       parts.push(`# ${page.title}`);
       parts.push(`Source: ${url}`);
@@ -208,8 +298,8 @@ function generateLlmsApl(sections: Section[], siteName: string): string {
   ];
 
   for (const section of sections) {
-    const aplPages = section.pages.filter((p) => p.path.startsWith('apl/'));
-    for (const page of aplPages) {
+    for (const page of section.pages) {
+      if (!page.path.startsWith('apl/')) continue;
       const url = `${BASE_URL}/${page.path}.md`;
       const desc = page.description ? `: ${page.description}` : '';
       lines.push(`- [${page.title}](${url})${desc}`);
@@ -228,10 +318,16 @@ const docsJsonRaw = JSON.parse(readFileSync(join(DOCS_ROOT, 'docs.json'), 'utf-8
 const siteName: string = docsJsonRaw.name ?? 'Docs';
 const siteDescription: string = docsJsonRaw.description ?? '';
 
-console.log('Building navigation index from docs.json…');
+console.log('Building navigation index from docs.json + disk scan…');
 const sections = buildSections();
 const totalPages = sections.reduce((n, s) => n + s.pages.length, 0);
-console.log(`  ${sections.length} sections, ${totalPages} pages`);
+const stubCount = sections.reduce(
+  (n, s) => n + s.pages.filter((p) => p.isStub).length,
+  0
+);
+console.log(
+  `  ${sections.length} sections, ${totalPages} pages (${stubCount} API stubs, ${totalPages - stubCount} prose)`
+);
 
 const llmsTxt = generateLlmsTxt(sections, siteName, siteDescription);
 writeFileSync(join(DOCS_ROOT, 'llms.txt'), llmsTxt, 'utf-8');
