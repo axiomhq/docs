@@ -205,11 +205,49 @@ function buildSections(): Section[] {
 }
 
 // ---------------------------------------------------------------------------
+// OpenAPI spec collector
+// ---------------------------------------------------------------------------
+
+interface OpenApiSpec {
+  filename: string;
+  title: string;
+  url: string;
+}
+
+/**
+ * Reads all JSON files from restapi/versions/, extracts their title from the
+ * OpenAPI `info.title` field, and returns them ready for the llms.txt index.
+ */
+function collectOpenApiSpecs(): OpenApiSpec[] {
+  const versionsDir = join(DOCS_ROOT, 'restapi', 'versions');
+  if (!existsSync(versionsDir)) return [];
+
+  return readdirSync(versionsDir)
+    .filter((f) => f.endsWith('.json'))
+    .sort()
+    .map((filename) => {
+      const raw = readFileSync(join(versionsDir, filename), 'utf-8');
+      let title = filename.replace(/\.json$/, '');
+      try {
+        const parsed = JSON.parse(raw) as { info?: { title?: string } };
+        if (parsed.info?.title) title = parsed.info.title;
+      } catch {
+        // keep filename as title if JSON is malformed
+      }
+      return {
+        filename,
+        title,
+        url: `${BASE_URL}/restapi/versions/${filename}`,
+      };
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Generators
 // ---------------------------------------------------------------------------
 
 /**
- * llms.txt — index file in sidebar order, all pages.
+ * llms.txt — index file in sidebar order, all pages, plus OpenAPI spec links.
  *
  * Format follows the llms.txt spec (https://llmstxt.org/):
  *   # Site title
@@ -217,9 +255,13 @@ function buildSections(): Section[] {
  *
  *   ## Section heading
  *   - [Page title](url.md): description
+ *
+ *   ## OpenAPI Specs
+ *   - [spec title](url.json)
  */
 function generateLlmsTxt(
   sections: Section[],
+  specs: OpenApiSpec[],
   siteName: string,
   siteDescription: string
 ): string {
@@ -237,6 +279,15 @@ function generateLlmsTxt(
       const url = `${BASE_URL}/${page.path}.md`;
       const desc = page.description ? `: ${page.description}` : '';
       lines.push(`- [${page.title}](${url})${desc}`);
+    }
+    lines.push('');
+  }
+
+  if (specs.length > 0) {
+    lines.push('## OpenAPI Specs');
+    lines.push('');
+    for (const spec of specs) {
+      lines.push(`- [${spec.title}](${spec.url})`);
     }
     lines.push('');
   }
@@ -329,7 +380,10 @@ console.log(
   `  ${sections.length} sections, ${totalPages} pages (${stubCount} API stubs, ${totalPages - stubCount} prose)`
 );
 
-const llmsTxt = generateLlmsTxt(sections, siteName, siteDescription);
+const specs = collectOpenApiSpecs();
+console.log(`  ${specs.length} OpenAPI specs: ${specs.map((s) => s.filename).join(', ')}`);
+
+const llmsTxt = generateLlmsTxt(sections, specs, siteName, siteDescription);
 writeFileSync(join(DOCS_ROOT, 'llms.txt'), llmsTxt, 'utf-8');
 console.log(`✓ llms.txt written`);
 
