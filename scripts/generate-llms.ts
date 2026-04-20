@@ -21,8 +21,10 @@ interface PageData {
   title: string;
   description: string;
   body: string;
-  /** True for auto-generated OpenAPI stub pages that have no prose body */
+  /** True for OpenAPI-driven endpoint pages */
   isStub: boolean;
+  /** Raw value of the `openapi:` frontmatter field, e.g. "v2 post /annotations" */
+  openapiRef: string;
 }
 
 interface Section {
@@ -42,7 +44,6 @@ function shouldSkip(path: string): boolean {
 /**
  * Parse an MDX/MD file and return its metadata and body.
  * Returns null only if the file does not exist or must be skipped.
- * OpenAPI stub pages are returned with an empty body and `isStub: true`.
  */
 function parsePage(pagePath: string): PageData | null {
   if (shouldSkip(pagePath)) return null;
@@ -55,7 +56,8 @@ function parsePage(pagePath: string): PageData | null {
   const raw = readFileSync(filePath, 'utf-8');
   const { data, content } = matter(raw);
 
-  const isStub = Boolean(data.openapi || data.api);
+  const openapiRef = String(data.openapi || data.api || '');
+  const isStub = Boolean(openapiRef);
 
   const title = String(
     data.title || data.sidebarTitle || pagePath.split('/').pop() || pagePath
@@ -71,8 +73,9 @@ function parsePage(pagePath: string): PageData | null {
     path: pagePath,
     title,
     description,
-    body: isStub ? '' : content.trim(),
+    body: content.trim(),
     isStub,
+    openapiRef,
   };
 }
 
@@ -246,6 +249,37 @@ function collectOpenApiSpecs(): OpenApiSpec[] {
     });
 }
 
+/**
+ * Builds a lookup map from OpenAPI spec files.
+ * Key: "{specName} {method} {path}" (path without query string)
+ * Value: operation summary string
+ */
+function buildSpecSummaryMap(): Map<string, string> {
+  const map = new Map<string, string>();
+  const versionsDir = join(DOCS_ROOT, 'restapi', 'versions');
+  if (!existsSync(versionsDir)) return map;
+
+  for (const filename of readdirSync(versionsDir).filter((f) => f.endsWith('.json'))) {
+    const specName = filename.replace(/\.json$/, '');
+    try {
+      const spec = JSON.parse(readFileSync(join(versionsDir, filename), 'utf-8')) as {
+        paths?: Record<string, Record<string, { summary?: string }>>;
+      };
+      for (const [path, methods] of Object.entries(spec.paths ?? {})) {
+        for (const [method, operation] of Object.entries(methods)) {
+          if (operation?.summary) {
+            map.set(`${specName} ${method} ${path}`, operation.summary);
+          }
+        }
+      }
+    } catch {
+      // skip malformed specs
+    }
+  }
+
+  return map;
+}
+
 // ---------------------------------------------------------------------------
 // Generators
 // ---------------------------------------------------------------------------
@@ -316,13 +350,10 @@ function generateLlmsTxt(
 }
 
 /**
- * llms-full.txt — full prose content of every page, in sidebar order,
- * followed by a reference block for each OpenAPI spec.
+ * llms-full.txt — full prose content of every page in sidebar order, including
+ * endpoint stubs expanded with their OpenAPI operation info.
  *
- * Stub pages (OpenAPI-generated MDX) are skipped since they carry no prose —
- * the spec JSON files themselves are listed in the trailing section instead.
- *
- * Each page block:
+ * Prose page block:
  *   # Page Title
  *   Source: https://axiom.co/docs/{path}
  *
@@ -332,46 +363,55 @@ function generateLlmsTxt(
  *
  *   ---
  *
- * Each spec block:
- *   # Spec Label
- *   Source: https://axiom.co/docs/restapi/versions/{filename}
+ * Endpoint stub block:
+ *   # Endpoint Title
+ *   Source: https://axiom.co/docs/restapi/endpoints/{name}
  *
- *   {info.description — first line, max 300 chars}
+ *   {openapi ref}   ← e.g. "v2 post /annotations"
+ *   {summary from spec JSON}
+ *
+ *   {MDX body if any (Warning / Note blocks)}
  *
  *   ---
  */
-function generateLlmsFullTxt(sections: Section[], specs: OpenApiSpec[]): string {
+function generateLlmsFullTxt(
+  sections: Section[],
+  specSummaryMap: Map<string, string>
+): string {
   const parts: string[] = [FEEDBACK_BLOCK, '', '---', ''];
 
   for (const section of sections) {
     for (const page of section.pages) {
-      if (page.isStub || !page.body) continue;
-
       const url = `${BASE_URL}/${page.path}`;
       parts.push(`# ${page.title}`);
       parts.push(`Source: ${url}`);
       parts.push('');
-      if (page.description) {
-        parts.push(page.description);
-        parts.push('');
+
+      if (page.isStub) {
+        // Expand with operation info from the spec
+        parts.push(page.openapiRef);
+        const [specName, method, ...pathParts] = page.openapiRef.split(' ');
+        const rawPath = pathParts.join(' ');
+        // Strip query string for spec lookup (OpenAPI paths have no query params)
+        const specPath = rawPath.split('?')[0];
+        const summary = specSummaryMap.get(`${specName} ${method} ${specPath}`);
+        if (summary) parts.push(summary);
+        if (page.body) {
+          parts.push('');
+          parts.push(page.body);
+        }
+      } else {
+        if (page.description) {
+          parts.push(page.description);
+          parts.push('');
+        }
+        if (page.body) parts.push(page.body);
       }
-      parts.push(page.body);
+
       parts.push('');
       parts.push('---');
       parts.push('');
     }
-  }
-
-  for (const spec of specs) {
-    parts.push(`# ${spec.title}`);
-    parts.push(`Source: ${spec.url}`);
-    parts.push('');
-    if (spec.description) {
-      parts.push(spec.description);
-      parts.push('');
-    }
-    parts.push('---');
-    parts.push('');
   }
 
   return parts.join('\n');
@@ -426,11 +466,14 @@ console.log(
 const specs = collectOpenApiSpecs();
 console.log(`  ${specs.length} OpenAPI specs: ${specs.map((s) => s.filename).join(', ')}`);
 
+const specSummaryMap = buildSpecSummaryMap();
+console.log(`  ${specSummaryMap.size} spec operations indexed`);
+
 const llmsTxt = generateLlmsTxt(sections, specs, siteName, siteDescription);
 writeFileSync(join(DOCS_ROOT, 'llms.txt'), llmsTxt, 'utf-8');
 console.log(`✓ llms.txt written`);
 
-const llmsFullTxt = generateLlmsFullTxt(sections, specs);
+const llmsFullTxt = generateLlmsFullTxt(sections, specSummaryMap);
 writeFileSync(join(DOCS_ROOT, 'llms-full.txt'), llmsFullTxt, 'utf-8');
 console.log(`✓ llms-full.txt written`);
 
