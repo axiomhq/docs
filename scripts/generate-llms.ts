@@ -42,6 +42,97 @@ function shouldSkip(path: string): boolean {
 }
 
 /**
+ * Convert a PascalCase component name to its kebab-case snippet filename stem.
+ * Matches Mintlify's auto-import convention:
+ *   ReplaceDomain  → replace-domain
+ *   BaseDomains    → base-domains
+ */
+function pascalToKebab(name: string): string {
+  return name
+    .replace(/([A-Z])/g, (_, c, offset) =>
+      offset === 0 ? c.toLowerCase() : `-${c.toLowerCase()}`
+    );
+}
+
+/**
+ * Resolve `/snippets/` imports inside MDX content:
+ *   1. Find every `import X from "/snippets/foo.mdx"` line.
+ *   2. Remove those import lines from the text.
+ *   3. Inline-replace every `<X />` occurrence with the snippet's own content
+ *      (recursively, so snippets that import other snippets are also resolved).
+ *   4. Fallback: any remaining `<CapitalizedName />` or `<CapitalizedName></…>`
+ *      that resolves to a real snippet file via PascalCase → kebab-case is also
+ *      inlined. This matches Mintlify's implicit auto-import behaviour.
+ *
+ * Only `/snippets/` content is touched; all other `import` lines (npm
+ * packages, `@/components/…`, code-fence content) are left unchanged.
+ */
+function resolveSnippets(content: string, depth = 0): string {
+  if (depth > 8) return content; // guard against accidental cycles
+
+  const SNIPPETS_DIR = join(DOCS_ROOT, 'snippets');
+
+  // ── Pass 1: explicit imports ────────────────────────────────────────────
+  const importRegex = /^import\s+(\w+)\s+from\s+"\/snippets\/([^"]+)"\s*$/gm;
+  const componentMap = new Map<string, string>(); // componentName → resolved content
+  let match: RegExpExecArray | null;
+
+  while ((match = importRegex.exec(content)) !== null) {
+    const [, componentName, snippetFile] = match;
+    const snippetPath = join(SNIPPETS_DIR, snippetFile);
+    if (!existsSync(snippetPath)) continue;
+
+    const raw = readFileSync(snippetPath, 'utf-8');
+    const { content: snippetBody } = matter(raw);
+    componentMap.set(componentName, resolveSnippets(snippetBody.trim(), depth + 1));
+  }
+
+  // Remove all matched snippet import lines
+  content = content.replace(importRegex, '');
+
+  // ── Pass 2: inline resolved components ──────────────────────────────────
+  for (const [name, replacement] of componentMap) {
+    content = content.replace(new RegExp(`<${name}\\s*/>`, 'g'), replacement);
+    content = content.replace(
+      new RegExp(`<${name}\\s*>[\\s\\S]*?<\\/${name}>`, 'g'),
+      replacement
+    );
+  }
+
+  // ── Pass 3: fallback auto-resolve (Mintlify implicit import convention) ──
+  // Any <CapitalizedName /> that wasn't covered by an explicit import is
+  // resolved via PascalCase → kebab-case → snippets/<name>.mdx.
+  const unresolved = new Set<string>();
+  const componentUsage = /(?<![\w-])<([A-Z][A-Za-z0-9]+)\s*\/?>/g;
+  let um: RegExpExecArray | null;
+  while ((um = componentUsage.exec(content)) !== null) {
+    const name = um[1];
+    if (!componentMap.has(name)) unresolved.add(name);
+  }
+
+  for (const name of unresolved) {
+    const stem = pascalToKebab(name);
+    const snippetPath = join(SNIPPETS_DIR, `${stem}.mdx`);
+    if (!existsSync(snippetPath)) continue;
+
+    const raw = readFileSync(snippetPath, 'utf-8');
+    const { content: snippetBody } = matter(raw);
+    const replacement = resolveSnippets(snippetBody.trim(), depth + 1);
+
+    content = content.replace(new RegExp(`<${name}\\s*/>`, 'g'), replacement);
+    content = content.replace(
+      new RegExp(`<${name}\\s*>[\\s\\S]*?<\\/${name}>`, 'g'),
+      replacement
+    );
+  }
+
+  // Collapse runs of blank lines left by removed import statements
+  content = content.replace(/\n{3,}/g, '\n\n');
+
+  return content.trim();
+}
+
+/**
  * Parse an MDX/MD file and return its metadata and body.
  * Returns null only if the file does not exist or must be skipped.
  */
@@ -73,7 +164,7 @@ function parsePage(pagePath: string): PageData | null {
     path: pagePath,
     title,
     description,
-    body: content.trim(),
+    body: resolveSnippets(content),
     isStub,
     openapiRef,
   };

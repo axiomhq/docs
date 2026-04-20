@@ -242,8 +242,6 @@ Source: https://axiom.co/docs/reference/datasets
 
 Learn how to manage datasets in Axiom.
 
-import AccessToDatasets from "/snippets/access-to-datasets.mdx"
-
 This reference article explains how to manage datasets in Axiom, including creating new datasets, importing data, and deleting datasets.
 
 ## What datasets are
@@ -297,7 +295,12 @@ While it might seem convenient to send all events to a single dataset, this “k
 
 Don’t create multiple Axiom organizations to separate your data. For example, don’t use a different Axiom organization for each deployment. If you’re on the Axiom Cloud (Personal) plan, this might go against [Axiom’s fair use policy](https://axiom.co/terms). Instead, separate data by creating a different dataset for each deployment within the same Axiom organization.
 
-<AccessToDatasets />
+### Access to datasets
+
+The datasets that individual users have access to determine the following:
+
+- The data they see in dashboards. If a user has access to a dashboard but only to some of the datasets referenced in the dashboard’s elements, the user only sees data from the datasets they have access to.
+- The monitors they see. A user only sees the monitors that reference the datasets that the user has access to. If a user has access to the monitors of an organization but only to some of the datasets referenced in the monitors, the user only sees the monitors that reference the datasets they have access to. If a monitor joins several datasets, a user can only see the monitor if the user has access to all of the datasets.
 
 ## Limits on ingested data
 
@@ -496,8 +499,6 @@ Source: https://axiom.co/docs/reference/edge-deployments
 
 This page explains Axiom’s edge deployment architecture and how to control where your event data is stored.
 
-import BaseDomains from "/snippets/base-domains.mdx"
-
 Axiom is a unified data platform built on edge deployments.
 
 When you create an organization, you choose a primary edge deployment like `US East 1 (AWS)`, and your event data is stored at rest in that infrastructure. You manage everything through Axiom’s Console at `app.axiom.co` regardless of which edge deployment you select.
@@ -508,7 +509,10 @@ This edge deployment model provides flexibility that isn’t possible with separ
 
 Axiom currently supports the following edge deployments:
 
-<BaseDomains />
+| Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
 
 <Note>
 The base domain of all other API endpoints is `api.axiom.co`.
@@ -2118,8 +2122,6 @@ Source: https://axiom.co/docs/platform-overview/security
 
 This page summarizes what Axiom does to ensure the highest standards of information security and data protection.
 
-import AiSetting from "/snippets/ai-setting.mdx"
-
 ## Compliance
 
 Axiom complies with key standards and regulations.
@@ -2159,7 +2161,16 @@ After signing a BAA, user sessions in your organization time out after 24 hours 
 
 ## Compliance and Axiom AI
 
-<AiSetting />
+Features powered by Axiom AI allow you to get insights from your data faster. These features are powered by leading foundation models through trusted enterprise providers including Amazon Bedrock and Google Vertex. Your inputs and outputs are never used to train generative models.
+
+AI features are available for all organizations. They comply with the Health Insurance Portability and Accountability Act (HIPAA) regulations. This means that you can use them even if your organization has a Business Associate Agreements (BAAs) with Axiom.
+
+AI features are turned on by default for most customers. If your organization is on the Enterprise plan, AI features are turned off by default. You can turn AI features on or off anytime for the whole organization,for example, for regulatory and compliance reasons.
+
+To turn Axiom AI on or off:
+
+1. Click <Icon icon="gear" iconType="solid"/> **Settings > General**.
+1. Click **Turn on Axiom AI** or **Turn off Axiom AI**.
 
 ## Comprehensive security measures
 
@@ -2376,9 +2387,6 @@ Source: https://axiom.co/docs/send-data/reference-architectures
 
 Recommended patterns for reliably sending high-volume telemetry to Axiom using industry-standard collectors like OpenTelemetry and Vector.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 Successfully adopting a new platform at scale requires a robust and reliable data collection strategy. In complex distributed systems, how you collect and forward telemetry is as important as the platform that analyzes it.
 
 While Axiom is flexible and supports dozens of [methods](/send-data/methods), there is a confident, battle-tested recommendation for large-scale environments. This guide outlines Axiom’s recommended architectural patterns using two popular tools: the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) and [Vector](https://vector.dev/).
@@ -2521,8 +2529,10 @@ service:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 When configuring metrics, use the `x-axiom-metrics-dataset` header instead of `x-axiom-dataset`.
 </Info>
 
@@ -2555,7 +2565,9 @@ dataset = "DATASET_NAME"
 Replace `VECTOR_SOURCE_ID` with the Vector source ID.
 Replace `PATH_TO_LOGS` with the path to the log files. For example, `/var/log/**/*.log`.
 Replace `SINK_ID` with the sink ID.
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ---
@@ -2583,9 +2595,6 @@ Source: https://axiom.co/docs/send-data/methods
 
 Explore the various methods for sending data to Axiom, from direct API calls and OpenTelemetry to platform integrations and logging libraries.
 
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-
 The easiest way to send your first event data to Axiom is with a direct HTTP request using a tool like `cURL`.
 
 ```shell
@@ -2596,8 +2605,10 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 To send events continuously, Axiom supports a wide range of standard tools, libraries, and platform integrations.
@@ -2697,16 +2708,15 @@ Source: https://axiom.co/docs/send-data/aws-firehose
 
 This page explains how to send data from Amazon Data Firehose to Axiom.
 
-import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDataset from "/snippets/replace-dataset.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 Amazon Data Firehose is a service for delivering real-time streaming data to different destinations. Send event data from Amazon Data Firehose to Axiom to analyse and monitor your data efficiently.
 
-<AwsDisclaimer />
+To determine the best method to send data from different AWS services, see [Send data from AWS to Axiom](/send-data/aws-overview).
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create an account on AWS Cloud](https://signin.aws.amazon.com/signup?request_type=register).
 
 ## Setup
@@ -2715,8 +2725,8 @@ Amazon Data Firehose is a service for delivering real-time streaming data to dif
 1. In Amazon Data Firehose, create an HTTP endpoint destination. For more information, see the [Amazon Data Firehose documentation](https://docs.aws.amazon.com/firehose/latest/dev/create-destination.html#create-destination-http).
 1. Set HTTP endpoint URL to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME/firehose`.
     <Info>
-    <ReplaceDomain />
-    <ReplaceDataset />
+    Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+    Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
     </Info>
 1. Set the access key to the Axiom API token.
 
@@ -2729,18 +2739,17 @@ Source: https://axiom.co/docs/send-data/aws-firelens
 
 Leverage AWS FireLens to forward logs from Amazon ECS tasks to Axiom for efficient, real-time analysis and insights.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
-
 AWS FireLens is a log routing feature for Amazon ECS. It lets you use popular open-source logging projects [Fluent Bit](https://fluentbit.io/) or [Fluentd](https://www.fluentd.org/) with Amazon ECS to route your logs to various AWS and partner monitoring solutions like Axiom without installing third-party agents on your tasks.
 
 FireLens integrates with your Amazon ECS tasks and services seamlessly, so you can send logs from your containers to Axiom seamlessly.
 
-<AwsDisclaimer />
+To determine the best method to send data from different AWS services, see [Send data from AWS to Axiom](/send-data/aws-overview).
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Use AWS FireLens with Fluent Bit and Axiom
 
@@ -2774,8 +2783,10 @@ You’ll typically define this in a file called `fluent-bit.conf`:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Read more about [Fluent Bit configuration here](/send-data/fluent-bit)
@@ -2832,8 +2843,10 @@ Create the `fluentd.conf` file and add your configuration:
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 Read more about [Fluentd configuration here](/send-data/fluentd)
@@ -2888,14 +2901,13 @@ Source: https://axiom.co/docs/send-data/aws-iot-rules
 
 This page explains how to route device log data from AWS IoT Core to Axiom using AWS IoT and Lambda functions
 
-import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+To determine the best method to send data from different AWS services, see [Send data from AWS to Axiom](/send-data/aws-overview).
 
-<AwsDisclaimer />
+## Prerequisites
 
-<Prerequisites />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - Create an AWS account with permissions to create and manage IoT rules, Lambda functions, and IAM roles.
 
 ## Create AWS Lambda function
@@ -2942,8 +2954,10 @@ def lambda_handler(event, context):
 ```
 
 In the environment variables section of the Lambda function configuration, add the following environment variables:
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 
 <Note>
 This example uses Python for the Lambda function. To use another language, change the code above accordingly.
@@ -2972,11 +2986,6 @@ Source: https://axiom.co/docs/send-data/aws-lambda-dot
 
 This page explains how to auto-instrument AWS Lambda functions and send telemetry data to Axiom using AWS Distro for OpenTelemetry.
 
-import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 This page explains how to auto-instrument and monitor applications running on AWS Lambda using the AWS Distro for OpenTelemetry (ADOT). ADOT is an OpenTelemetry collector layer managed by and optimized for AWS.
 
 Alternatively, you can use the Axiom Lambda Extension to send Lambda function logs and platform events to Axiom. For more information, see [AWS Lambda](/send-data/aws-lambda).
@@ -2989,9 +2998,13 @@ Axiom detects the extension and provides you with quick filters and a dashboard.
 
 With the ADOT collector layer, you can send telemetry data to Axiom with a simple configuration.
 
-<AwsDisclaimer />
+To determine the best method to send data from different AWS services, see [Send data from AWS to Axiom](/send-data/aws-overview).
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Set up ADOT Lambda layer
 
@@ -3061,8 +3074,10 @@ service:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 </Step>
@@ -3096,11 +3111,6 @@ Source: https://axiom.co/docs/send-data/aws-lambda
 
 This page explains how to send Lambda function logs and platform events to Axiom.
 
-import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 <Frame>
   <img src="/doc-assets/shots/aws/blog-monitor-aws-lambda.png" alt="Axiom Lambda Extension logo" />
 </Frame>
@@ -3111,13 +3121,17 @@ Alternatively, you can use the AWS Distro for OpenTelemetry to send Lambda funct
 
 Axiom detects the extension and provides you with quick filters and a dashboard. For more information on how this enriches your Axiom organization, see [AWS Lambda app](/apps/lambda).
 
-<AwsDisclaimer />
+To determine the best method to send data from different AWS services, see [Send data from AWS to Axiom](/send-data/aws-overview).
 
 <Note>
     The Axiom Lambda Extension is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-lambda-extension).
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create an account on AWS Cloud](https://signin.aws.amazon.com/signup?request_type=register).
 
 ## Setup
@@ -3164,8 +3178,10 @@ AXIOM_URL: AXIOM_DOMAIN
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 </Step>
@@ -3211,8 +3227,10 @@ resource "aws_lambda_function" "test_lambda" {
 Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
 Replace `ARCH` with the system architecture type. For example, `arm64`.
 Replace `VERSION` with the latest version number specified on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 </Accordion>
@@ -3248,8 +3266,10 @@ module "lambda_function" {
 Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
 Replace `ARCH` with the system architecture type. For example, `arm64`.
 Replace `VERSION` with the latest version number specified on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 </Accordion>
@@ -3283,7 +3303,9 @@ AXIOM_DATASET: DATASET_NAME
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 </Step>
@@ -3392,16 +3414,15 @@ Source: https://axiom.co/docs/send-data/aws-s3
 
 Efficiently send log data from AWS S3 to Axiom via Lambda function
 
-import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-
 This page explains how to set up an AWS Lambda function to send logs from an S3 bucket to Axiom. The Lambda function triggers when a new log file is uploaded to an S3 bucket, processes the log data, and sends it to Axiom.
 
-<AwsDisclaimer />
+To determine the best method to send data from different AWS services, see [Send data from AWS to Axiom](/send-data/aws-overview).
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - Create an AWS account with permissions to create and manage S3 buckets, Lambda functions, and IAM roles. For more information, see the [AWS documentation](https://docs.aws.amazon.com/lambda/latest/dg/with-s3-example.html).
 
 ## Package the requests module
@@ -3511,8 +3532,10 @@ def lambda_handler(event, context):
 
 In the environment variables section of the Lambda function configuration, add the following environment variables:
 
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 
 <CallOut kind="info">
 This example uses Python for the Lambda function. To use another language, change the code above accordingly.
@@ -3590,18 +3613,19 @@ Source: https://axiom.co/docs/send-data/cloudfront
 
 Send data from CloudFront to Axiom using AWS S3 bucket and Lambda to monitor your static and dynamic content.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
-
 Use the Axiom CloudFront Lambda to send CloudFront logs to Axiom using AWS S3 bucket and Lambda. After you set this up, you can observe your static and dynamic content and run deep queries on your CloudFront distribution logs efficiently and properly.
 
-<AwsDisclaimer />
+To determine the best method to send data from different AWS services, see [Send data from AWS to Axiom](/send-data/aws-overview).
 
 <Note>
     The Axiom CloudFront Lambda is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-cloudfront-lambda).
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create an account on AWS Cloud](https://signin.aws.amazon.com/signup?request_type=register).
 
 ## Setup
@@ -3631,10 +3655,6 @@ Source: https://axiom.co/docs/send-data/cloudwatch
 
 This page explains how to send data from Amazon CloudWatch to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import AwsDisclaimer from "/snippets/aws-disclaimer.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-
 Axiom CloudWatch Forwarder is a set of easy-to-use AWS CloudFormation stacks designed to forward logs from Amazon CloudWatch to Axiom. It includes a Lambda function to handle the forwarding and stacks to create Amazon CloudWatch log group subscription filters for both existing and future log groups.
 
 Axiom CloudWatch Forwarder includes templates for the following CloudFormation stacks:
@@ -3644,13 +3664,17 @@ Axiom CloudWatch Forwarder includes templates for the following CloudFormation s
 - **Listener** creates a Lambda function that listens for new log groups and creates subscription filters for them on Forwarder. This way, you don’t have to create subscription filters manually for new log groups.
 - **Unsubscriber** runs once to remove subscription filters on Forwarder for Amazon CloudWatch log groups specified by a combination of names, prefix, and regular expression filters.
 
-<AwsDisclaimer />
+To determine the best method to send data from different AWS services, see [Send data from AWS to Axiom](/send-data/aws-overview).
 
 <Note>
     The Axiom CloudWatch Forwarder is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-cloudwatch-forwarder).
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create an account on AWS Cloud](https://signin.aws.amazon.com/signup?request_type=register).
 
 ## Installation
@@ -3683,7 +3707,9 @@ module "forwarder" {
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Alternatively, create a dataset with the [Axiom Terraform provider](/apps/terraform#create-dataset).
@@ -3780,11 +3806,13 @@ Source: https://axiom.co/docs/send-data/convex
 
 This guide explains how to send data from Convex to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 [Convex](https://convex.dev) lets you manage the backend of your app (database, server, and more) from a centralized cloud interface. Set up a log stream in Convex to send your app’s logs to Axiom and make it your single source of truth about events.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create a Convex account](https://www.convex.dev/login) with a Professional plan.
 - Set up your app with Convex. For example, follow one of the quickstart guides in the [Convex documentation](https://docs.convex.dev/quickstarts).
 
@@ -3830,16 +3858,15 @@ Source: https://axiom.co/docs/send-data/cribl
 
 Learn how to configure Cribl LogStream to forward logs to Axiom using both HTTP and Syslog destinations.
 
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import ReplaceDataset from "/snippets/replace-dataset.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceToken from "/snippets/replace-token.mdx"
-
 Cribl is a data processing framework often used with machine data. It allows you to parse, reduce, transform, and route data to and from various systems in your infrastructure.
 
 You can send logs from Cribl LogStream to Axiom using HTTP or Syslog destination.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Set up log forwarding from Cribl to Axiom using the HTTP destination
 
@@ -3860,8 +3887,8 @@ Open Cribl’s UI and navigate to **Destinations > HTTP**. Click on `+` Add New 
 - **Endpoint URL:** The URL of your Axiom log ingest endpoint `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`.
 
     <Info>
-    <ReplaceDomain />
-    <ReplaceDataset />
+    Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+    Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
     </Info>
 
 - **Method:** Choose `POST`.
@@ -3881,7 +3908,7 @@ You may need to add some headers. Here is a common example:
 - **Authorization:** Set this to `Bearer API_TOKEN`.
 
     <Info>
-    <ReplaceToken />
+    Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
     </Info>
 
 <Frame caption="Cribl LogStream destination headers">
@@ -3899,8 +3926,6 @@ After you’ve finished configuring the destination, save your changes and make 
 ## Set up log forwarding from Cribl to Axiom using the Syslog destination
 
 ### Create Syslog endpoint
-
-import SetUpEndpoint from "/snippets/set-up-endpoint-no-heading.mdx"
 
 <SetUpEndpoint endpointName="Syslog" />
 
@@ -3955,10 +3980,6 @@ Source: https://axiom.co/docs/send-data/elastic-beats
 
 Collect metrics and logs from elastic beats, and monitor them with Axiom.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 [Elastic Beats](https://www.elastic.co/beats/) serves as a lightweight platform for data shippers that transfer information from the source to Axiom and other tools based on the configuration. Before shipping data, it collects metrics and logs from different sources, which later are deployed to your Axiom deployments.
 
 There are different [Elastic Beats](https://www.elastic.co/beats/) you could use to ship logs. Axiom’s documentation provides a detailed step by step procedure on how to use each Beats.
@@ -3972,7 +3993,11 @@ To ensure compatibility with Axiom, use the following versions:
 If you get a 400 error when you use the field name `_time` or when you override the [`timestamp` field](/reference/limits), use the query parameter `?timestamp-field` to set a field as the time field.
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Filebeat
 
@@ -4008,8 +4033,10 @@ output.elasticsearch:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Metricbeat
@@ -4046,8 +4073,10 @@ output.elasticsearch:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ### Send AWS RDS metric set to Axiom
@@ -4075,8 +4104,10 @@ output.elasticsearch:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Winlogbeat
@@ -4131,8 +4162,10 @@ output.elasticsearch:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 #### Validate configuration
@@ -4187,8 +4220,10 @@ output.elasticsearch:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 You can start Winlogbeat from the command line by running `.\winlogbeat.exe -c winlogbeat.yml` in the Winlogbeat installation directory.
@@ -4225,8 +4260,10 @@ logging.files:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 You can start Winlogbeat from the command line by running `.\winlogbeat.exe -c winlogbeat.yml` in the Winlogbeat installation directory.
@@ -4287,8 +4324,10 @@ output.elasticsearch:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Auditbeat
@@ -4335,8 +4374,10 @@ output.elasticsearch:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Packetbeat
@@ -4426,8 +4467,10 @@ output.elasticsearch:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 For more information on configuring Packetbeats, visit the [documentation](https://www.elastic.co/guide/en/beats/packetbeat/current/configuring-howto-packetbeat.html).
@@ -4471,8 +4514,10 @@ output.elasticsearch:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 For more information on configuring Journalbeat, visit the [documentation](https://www.elastic.co/guide/en/beats/journalbeat/current/configuration-journalbeat-options.html).
@@ -4483,10 +4528,6 @@ For more information on configuring Journalbeat, visit the [documentation](https
 Source: https://axiom.co/docs/send-data/elasticsearch-bulk-api
 
 This page explains how to get started with migrating from Elasticsearch to Axiom using the Elastic Bulk API
-
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 Axiom is a log management platform that offers an Elasticsearch Bulk API emulation to facilitate migration from Elasticsearch or integration with tools that support the Elasticsearch Bulk API.
 
@@ -4499,7 +4540,11 @@ The Elasticsearch Bulk API expects the timestamp to be formatted as `@timestamp`
 {"@timestamp": "2024-01-07T12:00:00Z", "message": "axiom elastic bulk", "severity": "INFO"}
 ```
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Send logs to Axiom using the Elasticsearch Bulk API and Go
 
@@ -4567,8 +4612,10 @@ func main() {
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Send logs to Axiom using the Elasticsearch Bulk API and Python
@@ -4635,8 +4682,10 @@ else:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Send logs to Axiom using the Elasticsearch Bulk API and JavaScript
@@ -4696,8 +4745,10 @@ axios.post(AxiomApiUrl, data, {
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Send logs to Axiom using the Elasticsearch Bulk API and PHP
@@ -4775,8 +4826,10 @@ try {
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ---
@@ -4786,13 +4839,13 @@ Source: https://axiom.co/docs/send-data/fluent-bit
 
 This page explains how to send data from Fluent Bit to Axiom.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 Fluent Bit is an open-source log processor and forwarder that allows you to collect any data like metrics and logs from different sources, enrich them with filters, and send them to multiple destinations like Axiom.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Install Fluent Bit](https://docs.fluentbit.io/manual/installation/getting-started-with-fluent-bit).
 
 ## Configure Fluent Bit
@@ -4816,8 +4869,10 @@ Fluent Bit is an open-source log processor and forwarder that allows you to coll
     ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ---
@@ -4827,16 +4882,15 @@ Source: https://axiom.co/docs/send-data/fluentd
 
 This page explains how to collect, aggregate, analyze, and route log files from multiple Fluentd sources into Axiom
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDataset from "/snippets/replace-dataset.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 Fluentd is an open-source log collector that allows you to collect, aggregate, process, analyze, and route log files.
 
 With Fluentd, you can collect logs from multiple sources and ship it instantly into Axiom
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Installation
 
@@ -4884,8 +4938,10 @@ The example below shows a Fluentd configuration that sends data to Axiom using t
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Configuring Fluentd using the OpenSearch output plugin
@@ -4922,8 +4978,8 @@ The example below shows a Fluentd configuration that sends data to Axiom using t
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDataset />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Configure buffer interval with filter patterns
@@ -4995,8 +5051,8 @@ The example below shows a Fluentd configuration to hold logs in memory with spec
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDataset />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Collect and send PHP logs to Axiom
@@ -5048,8 +5104,8 @@ The example below shows a Fluentd configuration that sends PHP data to Axiom.
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDataset />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Collect and send Scala logs to Axiom
@@ -5093,8 +5149,8 @@ The example below shows a Fluentd configuration that sends Scala data to Axiom
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDataset />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Send virtual machine logs to Axiom using the HTTP output plugin
@@ -5147,7 +5203,9 @@ The example below shows a Fluentd configuration that sends data from your virtua
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 The example below shows a Fluentd configuration that sends data from your virtual machine to Axiom using the `nginx` source type.
@@ -5198,7 +5256,9 @@ The example below shows a Fluentd configuration that sends data from your virtua
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ---
@@ -5208,16 +5268,17 @@ Source: https://axiom.co/docs/send-data/heroku-log-drains
 
 This page explains how to send data from Heroku Log Drains to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-
 Use [Heroku Log Drains](https://devcenter.heroku.com/articles/log-drains) to send data from your Heroku apps and deployments to Axiom.
 
 <Warning>
 With Heroku Log Drains, you can only send data to the US East 1 (AWS) edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Warning>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create an account on Heroku](https://heroku.com/).
 - [Download and install the Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli).
 - [Create a Heroku app](https://devcenter.heroku.com/articles/creating-apps).
@@ -5231,7 +5292,9 @@ heroku drains:add "https://axiom:API_TOKEN@api.axiom.co/v1/datasets/DATASET_NAME
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 Replace `HEROKU_APPLICATION_NAME` with the name of the Heroku app.
 </Info>
 
@@ -5242,13 +5305,13 @@ Source: https://axiom.co/docs/send-data/kubernetes
 
 This step-by-step guide helps you ingest logs from your Kubernetes cluster into Axiom using the DaemonSet configuration.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 Axiom makes it easy to collect, analyze, and monitor logs from your Kubernetes clusters. Integrate popular tools like Filebeat, Vector, or Fluent Bit with Axiom to send your cluster logs.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Send Kubernetes Cluster logs to Axiom using Filebeat
 
@@ -5415,8 +5478,10 @@ spec:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 After editing your values, apply the changes to your cluster using `kubectl apply -f daemonset.yaml`
@@ -5571,8 +5636,10 @@ spec:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 After editing your values, apply the changes to your cluster using `kubectl apply -f daemonset.yaml`
@@ -5730,8 +5797,10 @@ spec:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 After editing your values, apply the changes to your cluster using `kubectl apply -f daemonset.yaml`
@@ -5771,10 +5840,6 @@ Source: https://axiom.co/docs/send-data/logstash
 
 This step-by-step guide helps you collect, and parse logs from your logstash processing pipeline into Axiom
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 Logstash is an open-source log aggregation, transformation tool, and server-side data processing pipeline that simultaneously ingests data from many sources. With Logstash, you can collect, parse, send, and store logs for future use on Axiom.
 
 Logstash works as a data pipeline tool with Axiom, where, from one end, the data is input from your servers and system and, from the other end, Axiom takes out the data and converts it into useful information.
@@ -5783,7 +5848,11 @@ It can read data from various `input` sources, filter data for the specified con
 
 Logstash sits between your data and where you want to keep it.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - Visit the [Logstash download page](https://www.elastic.co/downloads/logstash) to install Logstash on your system.
 
 ## Configuration
@@ -5823,8 +5892,10 @@ output{
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Combining filters with conditionals on Logstash events
@@ -5872,8 +5943,10 @@ output{
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 This configuration parses Apache log data by matching the pattern of `COMBINEDAPACHELOG`.
@@ -5911,8 +5984,10 @@ output{
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 This configuration renames the field `hostname` to `host`, converts the `response` field value to an integer, changes the `method` field to uppercase, and removes the `request` and `httpversion` fields.
@@ -5947,8 +6022,10 @@ output{
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 This configuration drops all events of type `syslog` with severity `debug`.
@@ -5983,8 +6060,10 @@ output{
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 This configuration creates a new event named `cloned_event` that’s a clone of the original event.
@@ -6019,8 +6098,10 @@ output{
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 This configuration adds geographical location data for the IP address in the `ip` field. Note that you may need to specify the path to the GeoIP database file in the plugin configuration, depending on your setup.
@@ -6032,10 +6113,6 @@ Source: https://axiom.co/docs/send-data/loki-multiplexer
 
 This step-by-step guide provides a gateway for you to connect a direct link interface to Axiom via Loki endpoint.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import ReplaceToken from "/snippets/replace-token.mdx"
-
 Loki by Prometheus is a multi-tenant log aggregation system that’s highly scalable and capable of indexing metadata about your logs.
 
 Loki exposes an HTTP API for pushing, querying, and tailing Axiom log data.
@@ -6044,7 +6121,11 @@ Axiom Loki Proxy provides a gateway for you to connect a direct link interface t
 
 Using the Axiom Loki Proxy, you can ship logs to Axiom via the [Loki HTTP API](https://grafana.com/docs/loki/latest/reference/loki-http-api/#ingest-logs).
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Installation
 
@@ -6087,8 +6168,8 @@ AXIOM_TOKEN = API_TOKEN
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
 </Info>
 
 ## Run and test
@@ -6107,7 +6188,7 @@ docker run -p8080:8080/tcp \
 ```
 
 <Info>
-<ReplaceToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
 </Info>
 
 For more information on Axiom Loki Proxy and how you can propose bug fix, report issues and submit PRs, see the [GitHub repository](https://github.com/axiomhq/axiom-loki-proxy).
@@ -6118,8 +6199,6 @@ For more information on Axiom Loki Proxy and how you can propose bug fix, report
 Source: https://axiom.co/docs/send-data/nextjs
 
 This page explains how to send data from your Next.js app to Axiom.
-
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
 
 Next.js is a popular open-source JavaScript framework built on top of React, developed by Vercel. It’s used by a wide range of companies and organizations, from startups to large enterprises, due to its performance benefits and developer-friendly features.
 
@@ -6149,7 +6228,11 @@ For information on the Axiom Vercel app and migrating from the Vercel app to the
 
 The rest of this page explains how to send data from your Next.js app to Axiom using the next-axiom or the @axiomhq/nextjs library.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [A new or existing Next.js app](https://nextjs.org/).
 
 ## Use @axiomhq/nextjs library
@@ -6988,10 +7071,6 @@ Source: https://axiom.co/docs/send-data/opentelemetry
 
 Learn how OpenTelemetry-compatible events flow into Axiom and explore Axiom comprehensive observability through browsing, querying, dashboards, and alerting of OpenTelemetry data.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 OpenTelemetry (OTel) is a set of APIs, libraries, and agents to capture distributed traces and metrics from your app. It’s a Cloud Native Computing Foundation (CNCF) project that was started to create a unified solution for service and app performance monitoring.
 
 The OpenTelemetry project has published strong specifications for the three main pillars of observability: logs, traces, and metrics. These schemas are supported by all tools and services that support interacting with OpenTelemetry. Axiom supports OpenTelemetry natively on an API level, allowing you to connect any existing OpenTelemetry shipper, library, or tool to Axiom for sending data.
@@ -7008,7 +7087,11 @@ OpenTelemetry-compatible events flow into Axiom, where they’re organized into 
 You must use a different, dedicated dataset for each OTel component. When you create a dataset, select **Events** for logs or traces data, and select **Metrics** for metrics data. For more information, see [Create dataset](/reference/datasets#create-dataset).
 </Info>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## OpenTelemetry Collector
 
@@ -7085,8 +7168,10 @@ service:
 </Tabs>
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 When configuring metrics, use the `x-axiom-metrics-dataset` header instead of `x-axiom-dataset`.
 </Info>
 
@@ -7176,8 +7261,10 @@ func InstallExportPipeline(ctx context.Context) (func(context.Context) error, er
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## OpenTelemetry for Ruby
@@ -7209,8 +7296,10 @@ end
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## OpenTelemetry for Java
@@ -7276,8 +7365,10 @@ public class OtelConfiguration {
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## OpenTelemetry for .NET
@@ -7335,8 +7426,10 @@ public static class TracingConfiguration
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## OpenTelemetry for Python
@@ -7379,8 +7472,10 @@ service1_tracer = trace.get_tracer("service1")
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## OpenTelemetry for Node
@@ -7421,8 +7516,10 @@ sdk.start();
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## OpenTelemetry for Cloudflare Workers
@@ -7491,8 +7588,6 @@ Source: https://axiom.co/docs/send-data/react
 
 This page explains how to send data from your client-side React apps to Axiom using the @axiomhq/react library.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 React is a popular open-source JavaScript library developed by Meta for building user interfaces. Known for its component-based architecture and efficient rendering with a virtual DOM, React is widely used by companies of all sizes to create fast, scalable, and dynamic web applications.
 
 This page explains how to use the @axiomhq/react library to send data from your client-side React apps to Axiom.
@@ -7501,7 +7596,11 @@ This page explains how to use the @axiomhq/react library to send data from your 
     The @axiomhq/react library is part of the Axiom JavaScript SDK, an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-js).
 </Info>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - A new or existing React app.
 
 ## Install @axiomhq/react library
@@ -7589,12 +7688,13 @@ Source: https://axiom.co/docs/send-data/render
 
 This page explains how to send logs from Render to Axiom.
 
-import SetUpEndpoint from "/snippets/set-up-endpoint-no-heading.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 Render is a unified cloud to build and run all your apps and websites. Axiom provides complete visibility into your Render projects, allowing you to monitor the behavior of your websites and apps.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create an account on Render](https://dashboard.render.com/login).
 
 ## Setup
@@ -7616,9 +7716,6 @@ Source: https://axiom.co/docs/send-data/secure-syslog
 
 This page explains how to send data securely from a syslog logging system to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import SetUpEndpoint from "/snippets/set-up-endpoint.mdx"
-
 The Secure Syslog endpoint allows you to send syslog data to Axiom over a secure connection. With the Secure Syslog endpoint, the logs you send to Axiom are encrypted using SSL/TLS.
 
 ## Syslog limitations and recommended alternatives
@@ -7632,7 +7729,11 @@ Syslog is an outdated protocol. Some of the limitations are the following:
 For a more reliable and modern logging experience, consider using tools like [Vector](https://vector.dev/) to receive syslog messages and [forward them to Axiom](/send-data/vector). This approach bypasses many of syslog’s limitations.
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 <SetUpEndpoint endpointName="Secure Syslog" />
 
@@ -7672,9 +7773,6 @@ Source: https://axiom.co/docs/send-data/syslog-proxy
 
 This page explains how to send data from a syslog logging system to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-
 The Axiom Syslog Proxy acts as a syslog server to send data to Axiom.
 
 <Note>
@@ -7692,7 +7790,11 @@ Syslog is an outdated protocol. Some of the limitations are the following:
 For a more reliable and modern logging experience, consider using tools like [Vector](https://vector.dev/) to receive syslog messages and [forward them to Axiom](/send-data/vector). This approach bypasses many of syslog’s limitations.
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 Other requirements:
 
@@ -7772,7 +7874,9 @@ docker run -p601:601/tcp -p514:514/udp  \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Test configuration
@@ -7796,9 +7900,6 @@ To test that the Axiom Syslog Proxy configuration:
 Source: https://axiom.co/docs/send-data/tremor
 
 This step-by-step guide helps you configure Tremor connectors and events components to interact with your databases, APIs, and ingest data from these sources into Axiom.
-
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 Axiom provides a unique way of ingesting [Tremor logs](https://www.tremor.rs/) into Axiom. With your connector definitions, you can configure Tremor connectors and events components to interact with your external systems, such as databases, message queues, or APIs, and eventually ingest data from these sources into Axiom.
 
@@ -7866,15 +7967,15 @@ deploy flow client_sink_only;
 This assumes you have set `TREMOR_PATH` in your environment pointing to `tremor-runtime/tremor-script/lib` if you are using a `src` clone then you can execute it as follows `tremor server run axiom-http.troy`
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ## Configuration using Syslog
 
 You can also send logs via Tremor to the Syslog endpoint using a file as an example data source.
-
-import SetUpEndpoint from "/snippets/set-up-endpoint-no-heading.mdx"
 
 <SetUpEndpoint endpointName="Syslog" />
 
@@ -7940,13 +8041,13 @@ Source: https://axiom.co/docs/send-data/vector
 
 This page explains how to configure Vector to read and collect metrics from your sources using the Axiom sink.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 Vector is a lightweight and ultra-fast tool for building observability pipelines. It has a built-in support for shipping logs to Axiom through the [`axiom` sink](https://vector.dev/docs/reference/configuration/sinks/axiom/).
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Installation
 
@@ -7986,8 +8087,10 @@ The example below configures Vector to read and collect logs from files and send
     
     Replace `SINK_ID` with the sink ID.
     
-    <ReplaceDatasetToken />
-    <ReplaceDomain />
+    Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+    Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
     </Info>
 
 1. Run Vector to send logs to Axiom.
@@ -8025,8 +8128,10 @@ Replace `FIELD_TO_REMOVE` with the field you want to remove.
 
 Replace `SINK_ID` with the sink ID.
 
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 <Note>
@@ -8065,7 +8170,9 @@ region = "AXIOM_DOMAIN"
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Send Docker logs to Axiom
@@ -8088,7 +8195,9 @@ region = "AXIOM_DOMAIN"
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Run Vector: Start Vector with the configuration file you just created:
@@ -8118,7 +8227,9 @@ region = "AXIOM_DOMAIN"
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Finally, run Vector with the configuration file using `vector --config ./vector.toml`. This starts Vector and begins reading logs from the specified S3 bucket and sending them to the specified Axiom dataset.
@@ -8144,7 +8255,9 @@ region = "AXIOM_DOMAIN"
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Finally, you can start Vector with your configuration file: `vector --config /path/to/your/vector.toml`
@@ -8193,7 +8306,9 @@ region = "AXIOM_DOMAIN"
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Finally, you can start Vector with your configuration file: `vector --config /path/to/your/vector.toml`
@@ -8218,7 +8333,9 @@ region = "AXIOM_DOMAIN"
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Send Prometheus metrics to Axiom
@@ -8241,7 +8358,9 @@ region = "AXIOM_DOMAIN"
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Check out the [advanced configuration on Batch, Buffer configuration, and Encoding on Vector Documentation](https://vector.dev/docs/reference/configuration/sinks/axiom/)
@@ -9540,8 +9659,6 @@ Source: https://axiom.co/docs/query-data/metrics/overview
 
 This section explains how to work with OpenTelemetry (OTel) metrics.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 Axiom’s dedicated MetricsDB provides a purpose-built metrics datastore that handles high-cardinality time-series data without the cost penalties and performance degradation common in traditional metrics systems. This section explains how to work with OpenTelemetry (OTel) metrics in Axiom.
 
 ## What makes MetricsDB different
@@ -9570,7 +9687,11 @@ Logs and metrics are different forms of event data. It’s often possible to rep
 
 When in doubt, use MetricsDB. It’s designed for metrics workloads and scales better as volume grows.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 <Note>
 You must use a dedicated dataset for OTel metrics. When you create a dataset, select the type of OTel data you want to send to it. For more information, see [Create dataset](/reference/datasets#create-dataset).
@@ -10872,12 +10993,14 @@ Source: https://axiom.co/docs/dashboard-elements/heatmap
 
 This section explains how to create heatmap dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-prerequisites.mdx"
-import CreateElement from "/snippets/create-dashboard-element.mdx"
-
 Heatmaps represent the distribution of numerical data by grouping values into ranges or buckets. Each bucket reflects a frequency count of data points that fall within its range. Instead of showing individual events or measurements, heatmaps give a clear view of the overall distribution patterns. This allows you to identify performance bottlenecks, outliers, or shifts in behavior. For instance, you can use heatmaps to track response times, latency, or error rates.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets) where you send your data.
+- [Send data](/send-data/methods) to your Axiom dataset.
+- [Create an empty dashboard](/dashboards/create).
 
 <CreateElement elementName="heatmap" elementButtonLabel="Heatmap"/>
 
@@ -10905,12 +11028,14 @@ Source: https://axiom.co/docs/dashboard-elements/log-stream
 
 This section explains how to create log stream dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-prerequisites.mdx"
-import CreateElement from "/snippets/create-dashboard-element.mdx"
-
 The log stream dashboard element displays your logs as they come in real-time. Each log appears as a separate line with various details. The benefit of a log stream is that it provides immediate visibility into your system’s operations. When you debug an issue or trying to understand an ongoing event, the log stream allows you to see exactly what’s happening as it occurs.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets) where you send your data.
+- [Send data](/send-data/methods) to your Axiom dataset.
+- [Create an empty dashboard](/dashboards/create).
 
 <CreateElement elementName="log stream" elementButtonLabel="Log stream"/>
 
@@ -10938,11 +11063,12 @@ Source: https://axiom.co/docs/dashboard-elements/monitor-list
 
 This section explains how to create monitor list dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-minimal-prerequisites.mdx"
-
 The monitor list dashboard element provides a visual overview of the monitors you specify. It offers a quick glance into important developments about the monitors such as their status and history.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create an empty dashboard](/dashboards/create).
 - [Create a monitor](/monitor-data/monitors).
 
 ## Create monitor list
@@ -10972,11 +11098,12 @@ Source: https://axiom.co/docs/dashboard-elements/note
 
 This section explains how to create note dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-minimal-prerequisites.mdx"
-
 The note dashboard element adds a textbox to your dashboard that you can customise to your needs. For example, you can provide context in a note about the other dashboard elements.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create an empty dashboard](/dashboards/create).
 
 ## Create note
 
@@ -10995,12 +11122,14 @@ Source: https://axiom.co/docs/dashboard-elements/pie-chart
 
 This section explains how to create pie chart dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-prerequisites.mdx"
-import CreateElement from "/snippets/create-dashboard-element.mdx"
-
 Pie charts can illustrate the distribution of different types of event data. Each slice represents the proportion of a specific value relative to the total. For example, a pie chart can show the breakdown of status codes in HTTP logs. This helps quickly identify the dominant types of status responses and assess the system’s health at a glance.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets) where you send your data.
+- [Send data](/send-data/methods) to your Axiom dataset.
+- [Create an empty dashboard](/dashboards/create).
 
 <CreateElement elementName="pie chart" elementButtonLabel="Pie"/>
 
@@ -11028,14 +11157,16 @@ Source: https://axiom.co/docs/dashboard-elements/scatter-plot
 
 This section explains how to create scatter plot dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-prerequisites.mdx"
-import CreateElement from "/snippets/create-dashboard-element.mdx"
-
 Scatter plots are used to visualize the correlation or distribution between two distinct metrics or logs. Each point in the scatter plot could represent a log entry, with the X and Y axes showing different log attributes (like request time and response size). The scatter plot chart can be created using the simple query builder or advanced query builder.
 
 For example, plot response size against response time for an API to see if larger responses are correlated with slower response times.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets) where you send your data.
+- [Send data](/send-data/methods) to your Axiom dataset.
+- [Create an empty dashboard](/dashboards/create).
 
 <CreateElement elementName="scatter plot" elementButtonLabel="Scatter"/>
 
@@ -11063,12 +11194,14 @@ Source: https://axiom.co/docs/dashboard-elements/statistic
 
 This section explains how to create statistic dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-prerequisites.mdx"
-import CreateElement from "/snippets/create-dashboard-element.mdx"
-
 Statistics dashboard elements display a summary of the selected metrics over a given time period. For example, you can use a statistic dashboard element to show the average, sum, min, max, and count of response times or error counts.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets) where you send your data.
+- [Send data](/send-data/methods) to your Axiom dataset.
+- [Create an empty dashboard](/dashboards/create).
 
 <CreateElement elementName="statistic" elementButtonLabel="Statistic"/>
 
@@ -11096,12 +11229,14 @@ Source: https://axiom.co/docs/dashboard-elements/table
 
 This section explains how to create table dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-prerequisites.mdx"
-import CreateElement from "/snippets/create-dashboard-element.mdx"
-
 The table dashboard element displays a summary of any attributes from your metrics, logs, or traces in a sortable table format. Each row in the table could represent a different service, host, or other entity, with columns showing various attributes or metrics for that entity.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets) where you send your data.
+- [Send data](/send-data/methods) to your Axiom dataset.
+- [Create an empty dashboard](/dashboards/create).
 
 <CreateElement elementName="table" elementButtonLabel="Table"/>
 
@@ -11129,12 +11264,14 @@ Source: https://axiom.co/docs/dashboard-elements/time-series
 
 This section explains how to create time series dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-prerequisites.mdx"
-import CreateElement from "/snippets/create-dashboard-element.mdx"
-
 Time series charts show the change in your data over time which can help identify infrastructure issues, spikes, or dips in the data. This can be a simple line chart, an area chart, or a bar chart. A time series chart might be used to show the change in the volume of log events, error rates, latency, or other time-sensitive data.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets) where you send your data.
+- [Send data](/send-data/methods) to your Axiom dataset.
+- [Create an empty dashboard](/dashboards/create).
 
 <CreateElement elementName="time series" elementButtonLabel="Timeseries"/>
 
@@ -11244,9 +11381,12 @@ Filters let you choose the data you want to display in your dashboard. This page
 
 Try out all the examples explained on this page in the [HTTP logs dashboard of the Axiom Playground](https://play.axiom.co/axiom-play-qf1k/dashboards/gZXp8KNJy68q7yGsuA).
 
-import Prerequisites from "/snippets/dashboard-prerequisites.mdx"
+## Prerequisites
 
-<Prerequisites />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets) where you send your data.
+- [Send data](/send-data/methods) to your Axiom dataset.
+- [Create an empty dashboard](/dashboards/create).
 
 ## Filter types
 
@@ -11407,10 +11547,6 @@ Source: https://axiom.co/docs/query-data/annotate-charts
 
 This page explains how to use annotations to add context to your dashboard elements.
 
-import Prerequisites from "/snippets/minimal-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceToken from "/snippets/replace-token.mdx"
-
 Annotating charts lets you add context to your charts. For example, use annotations to mark the time of the following:
 
 - Deployments
@@ -11420,7 +11556,10 @@ Annotating charts lets you add context to your charts. For example, use annotati
 
 This adds context to the trends displayed in your charts and makes it easier to investigate issues in your app or system.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
 - [Send data](/send-data/methods) to your Axiom dataset.
 - [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete annotations.
 
@@ -11456,7 +11595,9 @@ To create an annotation when a deployment happens in GitHub, add the following t
     ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Customize the other fields of the code above such as the title, the description, and the URL.
@@ -11482,7 +11623,9 @@ curl -X 'POST' 'https://api.axiom.co/v2/annotations' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Customize the other fields of the code above such as the title, the description, and the URL. For more information on the allowed fields, see [Annotation object](#annotation-object).
@@ -11513,7 +11656,7 @@ curl -X 'GET' 'https://api.axiom.co/v2/annotations' \
 ```
 
 <Info>
-<ReplaceToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
 </Info>
 
 Use the following parameters in the endpoint URL to filter for a specific time interval and dataset:
@@ -11564,7 +11707,7 @@ curl -X 'GET' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
 
 <Info>
 Replace `ANNOTATION_ID` with the ID of the annotation.
-<ReplaceToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
 </Info>
 
 **Example response**
@@ -11598,7 +11741,7 @@ curl -X 'PUT' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
 
 <Info>
 Replace `ANNOTATION_ID` with the ID of the annotation. For more information about how to determine the annotation ID, see [Get information about annotations](#get-information-about-annotations).
-<ReplaceToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
 In the payload, specify the properties of the annotation that you want to change. The example above adds an `endTime` field to the annotation created above. For more information on the allowed fields, see [Annotation object](#annotation-object).
 </Info>
 
@@ -11628,7 +11771,7 @@ curl -X 'DELETE' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
 
 <Info>
 Replace `ANNOTATION_ID` with the ID of the annotation. For more information about how to determine the annotation ID, see [Get information about annotations](#get-information-about-annotations).
-<ReplaceToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
 </Info>
 
 ## Annotation object
@@ -11675,7 +11818,7 @@ curl -X 'POST' 'https://api.axiom.co/v2/annotations' \
 ```
 
 <Info>
-<ReplaceToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
 </Info>
 
 ### Create a monitor
@@ -12357,8 +12500,6 @@ Source: https://axiom.co/docs/reference/settings
 
 This section explains how to configure Role-Based Access Control (RBAC).
 
-import AccessToDatasets from "/snippets/access-to-datasets.mdx"
-
 Role-Based Access Control (RBAC) allows you to manage and restrict access to your data and resources efficiently. You can control access to your data with the following:
 
 - [Groups](#groups)
@@ -12471,7 +12612,12 @@ The table below describes these dataset-level capabilities:
 | Vacuum          | —                                                         | —              | User can vacuum datasets.                                                                     | —                                            |
 | Virtual fields | User can create a new virtual field. | User can see the list of virtual fields. | User can modify the definition of a virtual field. | User can delete a virtual field. |
 
-<AccessToDatasets />
+### Access to datasets
+
+The datasets that individual users have access to determine the following:
+
+- The data they see in dashboards. If a user has access to a dashboard but only to some of the datasets referenced in the dashboard’s elements, the user only sees data from the datasets they have access to.
+- The monitors they see. A user only sees the monitors that reference the datasets that the user has access to. If a user has access to the monitors of an organization but only to some of the datasets referenced in the monitors, the user only sees the monitors that reference the datasets they have access to. If a monitor joins several datasets, a user can only see the monitor if the user has access to all of the datasets.
 
 ## Users
 
@@ -13145,8 +13291,6 @@ Source: https://axiom.co/docs/reference/organization-settings
 
 This section explains how to configure your Axiom organization.
 
-import AiSetting from "/snippets/ai-setting.mdx"
-
 ## Determine organization ID
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > General**.
@@ -13168,7 +13312,16 @@ For more information, see [Edge deployments](/reference/edge-deployments).
 
 ## Turn Axiom AI on or off
 
-<AiSetting />
+Features powered by Axiom AI allow you to get insights from your data faster. These features are powered by leading foundation models through trusted enterprise providers including Amazon Bedrock and Google Vertex. Your inputs and outputs are never used to train generative models.
+
+AI features are available for all organizations. They comply with the Health Insurance Portability and Accountability Act (HIPAA) regulations. This means that you can use them even if your organization has a Business Associate Agreements (BAAs) with Axiom.
+
+AI features are turned on by default for most customers. If your organization is on the Enterprise plan, AI features are turned off by default. You can turn AI features on or off anytime for the whole organization,for example, for regulatory and compliance reasons.
+
+To turn Axiom AI on or off:
+
+1. Click <Icon icon="gear" iconType="solid"/> **Settings > General**.
+1. Click **Turn on Axiom AI** or **Turn off Axiom AI**.
 
 ## Delete organization
 
@@ -13581,9 +13734,6 @@ Source: https://axiom.co/docs/apps/cloudflare-workers
 
 This page explains how to enrich your Axiom experience with Cloudflare Workers.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-
 The Axiom Cloudflare Workers app provides granular detail about the traffic coming in from your monitored sites. This includes edge requests, static resources, client auth, response duration, and status. Axiom gives you an all-at-once view of key Cloudflare Workers metrics and logs, out of the box, with the dynamic Cloudflare Workers dashboard.
 
 The data obtained with the Axiom dashboard gives you better insights into the state of your Cloudflare Workers so you can easily monitor bad requests, popular URLs, cumulative execution time, successful requests, and more. The app is part of Axiom’s unified logging and observability platform, so you can easily track Cloudflare Workers edge requests alongside a comprehensive view of other resources in your Cloudflare Worker environments.
@@ -13596,7 +13746,11 @@ Axiom Cloudflare Workers is an open-source project and welcomes your contributio
 
 [Cloudflare Workers](https://developers.cloudflare.com/workers/) is a serverless computing platform developed by Cloudflare. The Workers platform allows developers to deploy and run JavaScript code directly at the network edge in more than 200 data centers worldwide. This serverless architecture enables high performance, low latency, and efficient scaling for web apps and APIs.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Send Cloudflare Worker logs to Axiom
 
@@ -13609,7 +13763,9 @@ Axiom Cloudflare Workers is an open-source project and welcomes your contributio
     const axiomToken = "API_TOKEN"
     ```
 
-    <ReplaceDatasetToken />
+    Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 
 1. Add triggers for the worker. For example, add a route trigger using the [Cloudflare documentation](https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route-in-the-dashboard).
 
@@ -14055,16 +14211,15 @@ Source: https://axiom.co/docs/apps/hex
 
 This page exlains how to visualize geospatial log data from Axiom using Hex interactive maps.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import ReplaceDataset from "/snippets/replace-dataset.mdx"
-
 Hex is a powerful collaborative data platform that allows you to create notebooks with Python/SQL code and interactive visualizations.
 
 This page explains how to integrate Hex with Axiom to visualize geospatial data from your logs. You ingest location data into Axiom, query it using APL, and create interactive map visualizations in Hex.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create a Hex account](https://app.hex.tech/).
 
 ## Send geospatial data to Axiom
@@ -14089,8 +14244,10 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 Verify that your data has been ingested correctly by running an APL query in the Axiom UI.
@@ -14182,8 +14339,8 @@ except Exception as e:
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDataset />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Create map visualisation
@@ -14197,8 +14354,6 @@ Source: https://axiom.co/docs/apps/netlify
 
 This page explains how to integrate Axiom with Netlify.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 Netlify is a platform for building and deploying highly performant websites, e-commerce stores, and web apps. Netlify automatically builds your site and deploys it across its global edge network.
 
 Integrating Axiom with Netlify allows you to stream traffic, function, and deployment logs directly to Axiom, giving you comprehensive observability over your Netlify projects. With real-time, unsampled data, you can monitor site performance, detect errors quickly, and make informed decisions about your Jamstack apps.
@@ -14209,7 +14364,11 @@ The Netlify integration supports all [edge deployments](/reference/edge-deployme
 This integration is only available for Netlify customers on enterprise-level plans where Log Drains are supported. For more information, see [Netlify documentation](https://docs.netlify.com/manage/monitoring/log-drains/).
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create a Netlify account](https://app.netlify.com/signup).
 
 ## Setup
@@ -14253,13 +14412,15 @@ Source: https://axiom.co/docs/apps/supabase
 
 This page explains how to integrate Axiom with Supabase.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 Supabase is an open-source Firebase alternative that provides a Postgres database, authentication, instant APIs, edge functions, real-time subscriptions, storage, and vector embeddings.
 
 Integrating Axiom with Supabase allows you to stream your project's raw log events directly to Axiom using Supabase's log drain feature. With your logs in Axiom, you can query, visualize, and monitor your Supabase projects in real time, giving you full observability over your database operations, authentication events, and edge functions.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create a Supabase account](https://supabase.com/dashboard) and upgrade to a Pro, Team, or Enterprise plan.
 
 ## Setup
@@ -14292,13 +14453,15 @@ Source: https://axiom.co/docs/apps/tailscale
 
 This page explains how to integrate Axiom with Tailscale.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 Tailscale is a secure networking solution that allows you to create and manage a private network (tailnet), securely connecting all your devices.
 
 Integrating Axiom with Tailscale allows you to stream your audit and network flow logs directly to Axiom seamlessly, unlocking powerful insights and analysis. Whether you’re conducting a security audit, optimizing performance, or ensuring compliance, Axiom’s Tailscale dashboard equips you with the tools to maintain a secure and efficient network, respond quickly to potential issues, and make informed decisions about your network configuration and usage.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Create a Tailscale account](https://login.tailscale.com/start).
 
 ## Setup
@@ -15060,11 +15223,6 @@ Source: https://axiom.co/docs/console/intelligence/mcp-server
 
 This page explains how to get deeper insights with Axiom MCP Server.
 
-import Prerequisites from "/snippets/minimal-prerequisites.mdx"
-import ReplaceToken from "/snippets/replace-token.mdx"
-import PrerequisiteToken from "/snippets/prerequisite-token.mdx"
-import ReplaceOrgId from "/snippets/replace-org-id.mdx"
-
 Axiom MCP Server is a [Model Context Protocol](https://modelcontextprotocol.io/) server implementation that enables AI agents to query your data using Axiom Processing Language (APL).
 
 For guidance on when to use Axiom MCP Server and Axiom Skills, see [AI agents](/console/intelligence/ai-agents-overview).
@@ -15112,7 +15270,10 @@ Axiom MCP Server works with all AI agents that support MCP.
 
 The Axiom-hosted MCP Server is located in the US. When you query your data using the Axiom MCP Server using a remote MCP connection, query results are routed through US infrastructure.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
 
 ## Setup
 
@@ -15219,7 +15380,7 @@ If your AI agent doesn’t support browser-based OAuth authentication (for examp
     <Info>
     Replace `PERSONAL_ACCESS_TOKEN` with the personal access token you have generated.
 
-    <ReplaceOrgId />
+    Replace `ORGANIZATION_ID` with your organization ID. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
     </Info>
 
     If your AI agent only supports setting the Authorization header, pass the organization ID as a URL parameter: `https://mcp.axiom.co/mcp?org-id=ORGANIZATION_ID`
@@ -15253,7 +15414,7 @@ Axiom MCP Server is an open-source project and welcomes your contributions. For 
 
 ### Create API token
 
-<PrerequisiteToken />
+[Create an API token in Axiom](/reference/tokens) with permissions to update the dataset you have created.
 
 ### Configure
 
@@ -15278,7 +15439,7 @@ Configure your AI agent to use the MCP Server in one of the following ways:
     ```
 
     <Info>
-    <ReplaceToken />
+    Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
     </Info>
 
     Optionally, configure the rate and the burst limits at the query, dataset, and monitor levels. The rate limit is the maximum number of requests that your AI agent can make per second. The burst limit is the maximum number of requests that your AI agent can make in a short period (burst) before the rate limit applies to further requests.
@@ -15336,9 +15497,9 @@ For example, if you use the Claude desktop app, add `axiom` to the `mcpServers` 
 <Info>
 Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of Axiom MCP Server.
 
-<ReplaceToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
 
-<ReplaceDomain />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 Optionally, configure the rate and the burst limits at the query, dataset, and monitor levels. The rate limit is the maximum number of requests that your AI agent can make per second. The burst limit is the maximum number of requests that your AI agent can make in a short period (burst) before the rate limit applies to further requests.
@@ -15383,8 +15544,6 @@ Source: https://axiom.co/docs/console/intelligence/skills
 
 This page explains how to use Axiom Skills to give AI coding agents structured investigation capabilities for Axiom.
 
-import SkillsCredentials from "/snippets/skills-credentials.mdx"
-
 Axiom Skills are instruction files that give AI coding agents specialized capabilities. Unlike Axiom MCP Server, which provides a standardized protocol for tool discovery and execution, Axiom Skills work by embedding methodology and context directly into the agent's prompt.
 
 For guidance on when to use Axiom Skills and Axiom MCP Server, see [AI agents](/console/intelligence/ai-agents-overview).
@@ -15418,7 +15577,32 @@ Axiom provides the following skills:
   </Card>
 </CardGroup>
 
-<SkillsCredentials />
+## Install Axiom Skills
+
+Install all Axiom skills at once for Claude Code, Cursor, and other Claude-compatible agents:
+
+```bash
+npx skills add axiomhq/skills
+```
+
+### Configure Axiom credentials
+
+All Axiom Skills share the same credential configuration. Create a configuration file at `~/.axiom.toml`:
+
+```toml ~/.axiom.toml
+[deployments.dev]
+url = "https://api.axiom.co"
+token = "API_TOKEN"
+org_id = "ORGANIZATION_ID"
+edge_url = "AXIOM_DOMAIN"
+```
+
+<Info>
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+Replace `ORGANIZATION_ID` with your organization ID. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+For token creation and scoping guidance, see [Token hygiene for AI agents](/console/intelligence/ai-agents-overview#token-hygiene-for-ai-agents).
+</Info>
 
 ---
 
@@ -15426,9 +15610,6 @@ Axiom provides the following skills:
 Source: https://axiom.co/docs/console/intelligence/skills/build-dashboards
 
 This page explains how to use the Build dashboards skill to give AI coding agents the ability to design and build Axiom dashboards.
-
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import SkillsCredentials from "/snippets/skills-credentials.mdx"
 
 The Build dashboards skill turns AI agents into dashboard design experts:
 
@@ -15439,9 +15620,38 @@ The Build dashboards skill turns AI agents into dashboard design experts:
 - **API helpers**: Scripts for creating, updating, and validating dashboards via the Axiom API
 - **Templates**: Pre-built dashboard templates for common use cases
 
-<Prerequisites />
+## Prerequisites
 
-<SkillsCredentials />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
+
+## Install Axiom Skills
+
+Install all Axiom skills at once for Claude Code, Cursor, and other Claude-compatible agents:
+
+```bash
+npx skills add axiomhq/skills
+```
+
+### Configure Axiom credentials
+
+All Axiom Skills share the same credential configuration. Create a configuration file at `~/.axiom.toml`:
+
+```toml ~/.axiom.toml
+[deployments.dev]
+url = "https://api.axiom.co"
+token = "API_TOKEN"
+org_id = "ORGANIZATION_ID"
+edge_url = "AXIOM_DOMAIN"
+```
+
+<Info>
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+Replace `ORGANIZATION_ID` with your organization ID. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+For token creation and scoping guidance, see [Token hygiene for AI agents](/console/intelligence/ai-agents-overview#token-hygiene-for-ai-agents).
+</Info>
 
 ## Use Build dashboards skill
 
@@ -15477,9 +15687,6 @@ Source: https://axiom.co/docs/console/intelligence/skills/control-costs
 
 This page explains how to use the Control costs skill to give AI coding agents the ability to analyze usage and optimize Axiom costs.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import SkillsCredentials from "/snippets/skills-credentials.mdx"
-
 The Control costs skill helps AI agents optimize Axiom usage and reduce costs:
 
 - **Waste identification**: Find unused columns, never-queried datasets, and high-volume low-value data
@@ -15488,9 +15695,38 @@ The Control costs skill helps AI agents optimize Axiom usage and reduce costs:
 - **Monitor creation**: Set up monitors for contract limits, spike detection, and reduction glidepaths
 - **Analysis workflow**: Systematic approach to prioritize and analyze datasets by impact
 
-<Prerequisites />
+## Prerequisites
 
-<SkillsCredentials />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
+
+## Install Axiom Skills
+
+Install all Axiom skills at once for Claude Code, Cursor, and other Claude-compatible agents:
+
+```bash
+npx skills add axiomhq/skills
+```
+
+### Configure Axiom credentials
+
+All Axiom Skills share the same credential configuration. Create a configuration file at `~/.axiom.toml`:
+
+```toml ~/.axiom.toml
+[deployments.dev]
+url = "https://api.axiom.co"
+token = "API_TOKEN"
+org_id = "ORGANIZATION_ID"
+edge_url = "AXIOM_DOMAIN"
+```
+
+<Info>
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+Replace `ORGANIZATION_ID` with your organization ID. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+For token creation and scoping guidance, see [Token hygiene for AI agents](/console/intelligence/ai-agents-overview#token-hygiene-for-ai-agents).
+</Info>
 
 ## Use Control costs skill
 
@@ -15527,9 +15763,6 @@ Source: https://axiom.co/docs/console/intelligence/skills/query-metrics
 
 This page explains how to use the Query metrics skill to give AI coding agents the ability to query and explore OpenTelemetry metrics in Axiom's MetricsDB.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import SkillsCredentials from "/snippets/skills-credentials.mdx"
-
 The Query metrics skill turns AI agents into metrics exploration experts:
 
 - **Metrics query specification**: Self-describing query endpoint that teaches the agent how to write metrics queries on demand
@@ -15537,13 +15770,42 @@ The Query metrics skill turns AI agents into metrics exploration experts:
 - **Query execution**: Compose and run metrics queries with filtering, aggregation, and grouping
 - **Error handling**: Structured error reporting with trace IDs for backend debugging
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 <Note>
 The target dataset must be an OTel metrics dataset.
 </Note>
 
-<SkillsCredentials />
+## Install Axiom Skills
+
+Install all Axiom skills at once for Claude Code, Cursor, and other Claude-compatible agents:
+
+```bash
+npx skills add axiomhq/skills
+```
+
+### Configure Axiom credentials
+
+All Axiom Skills share the same credential configuration. Create a configuration file at `~/.axiom.toml`:
+
+```toml ~/.axiom.toml
+[deployments.dev]
+url = "https://api.axiom.co"
+token = "API_TOKEN"
+org_id = "ORGANIZATION_ID"
+edge_url = "AXIOM_DOMAIN"
+```
+
+<Info>
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+Replace `ORGANIZATION_ID` with your organization ID. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+For token creation and scoping guidance, see [Token hygiene for AI agents](/console/intelligence/ai-agents-overview#token-hygiene-for-ai-agents).
+</Info>
 
 ## Use Query metrics skill
 
@@ -15578,9 +15840,6 @@ Source: https://axiom.co/docs/console/intelligence/skills/sre
 
 This page explains how to use the SRE skill to give AI coding agents expert investigation capabilities for incidents and debugging.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import SkillsCredentials from "/snippets/skills-credentials.mdx"
-
 The SRE skill turns AI agents into expert SRE investigators:
 
 - **Investigation methodology**: Hypothesis-driven debugging with systematic triage using Golden Signals and USE/RED methods
@@ -15588,9 +15847,38 @@ The SRE skill turns AI agents into expert SRE investigators:
 - **Memory system**: Persistent storage that learns from debugging sessions, capturing what works and what doesn't
 - **API helpers**: Scripts for querying Axiom directly from the agent
 
-<Prerequisites />
+## Prerequisites
 
-<SkillsCredentials />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
+
+## Install Axiom Skills
+
+Install all Axiom skills at once for Claude Code, Cursor, and other Claude-compatible agents:
+
+```bash
+npx skills add axiomhq/skills
+```
+
+### Configure Axiom credentials
+
+All Axiom Skills share the same credential configuration. Create a configuration file at `~/.axiom.toml`:
+
+```toml ~/.axiom.toml
+[deployments.dev]
+url = "https://api.axiom.co"
+token = "API_TOKEN"
+org_id = "ORGANIZATION_ID"
+edge_url = "AXIOM_DOMAIN"
+```
+
+<Info>
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+Replace `ORGANIZATION_ID` with your organization ID. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+For token creation and scoping guidance, see [Token hygiene for AI agents](/console/intelligence/ai-agents-overview#token-hygiene-for-ai-agents).
+</Info>
 
 ## Use SRE skill
 
@@ -15640,9 +15928,6 @@ Source: https://axiom.co/docs/console/intelligence/skills/translate-spl-to-apl
 
 This page explains how to use the Translate SPL to APL skill to give AI coding agents the ability to convert Splunk queries to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import SkillsCredentials from "/snippets/skills-credentials.mdx"
-
 The Translate SPL to APL skill helps AI agents translate Splunk queries to Axiom:
 
 - **Command mappings**: Complete translation of SPL commands to APL operators
@@ -15651,9 +15936,38 @@ The Translate SPL to APL skill helps AI agents translate Splunk queries to Axiom
 - **Common patterns**: Ready-to-use translations for frequent query patterns
 - **Performance tips**: Guidance on writing efficient APL queries
 
-<Prerequisites />
+## Prerequisites
 
-<SkillsCredentials />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
+
+## Install Axiom Skills
+
+Install all Axiom skills at once for Claude Code, Cursor, and other Claude-compatible agents:
+
+```bash
+npx skills add axiomhq/skills
+```
+
+### Configure Axiom credentials
+
+All Axiom Skills share the same credential configuration. Create a configuration file at `~/.axiom.toml`:
+
+```toml ~/.axiom.toml
+[deployments.dev]
+url = "https://api.axiom.co"
+token = "API_TOKEN"
+org_id = "ORGANIZATION_ID"
+edge_url = "AXIOM_DOMAIN"
+```
+
+<Info>
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+Replace `ORGANIZATION_ID` with your organization ID. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+For token creation and scoping guidance, see [Token hygiene for AI agents](/console/intelligence/ai-agents-overview#token-hygiene-for-ai-agents).
+</Info>
 
 ## Use Translate SPL to APL skill
 
@@ -15678,9 +15992,6 @@ Source: https://axiom.co/docs/console/intelligence/skills/write-evals
 
 This page explains how to use the Write evaluations skill to give AI coding agents the ability to scaffold and run evaluation suites for AI capabilities using Axiom AI SDK.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import SkillsCredentials from "/snippets/skills-credentials.mdx"
-
 The Write evaluations skill turns AI agents into evaluation suite authors for AI capabilities.
 
 Evaluations are the test suite for non-deterministic systems: they measure whether a capability still behaves correctly after every change. You can write offline evaluations to test your AI capability against a curated collection of inputs with expected outputs (ground truth). Or you can write online evaluations to score your AI capability's outputs on live production traffic.
@@ -15703,11 +16014,40 @@ For more information, see [Evaluations](/ai-engineering/evaluate/overview).
 - **Sampling controls**: Lets you score a fraction of traffic or apply conditional logic to decide what to evaluate
 - **Trace linking**: Connects evaluation results back to the traces that produced them
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - Follow the procedure in [Quickstart](/ai-engineering/quickstart) to set up Axiom AI SDK in your TypeScript project. Authenticate with [environment variables](/ai-engineering/quickstart#store-environment-variables).
 - Install [vitest](https://www.npmjs.com/package/vitest) as a dev dependency by running `npm install vitest --save-dev`.
 
-<SkillsCredentials />
+## Install Axiom Skills
+
+Install all Axiom skills at once for Claude Code, Cursor, and other Claude-compatible agents:
+
+```bash
+npx skills add axiomhq/skills
+```
+
+### Configure Axiom credentials
+
+All Axiom Skills share the same credential configuration. Create a configuration file at `~/.axiom.toml`:
+
+```toml ~/.axiom.toml
+[deployments.dev]
+url = "https://api.axiom.co"
+token = "API_TOKEN"
+org_id = "ORGANIZATION_ID"
+edge_url = "AXIOM_DOMAIN"
+```
+
+<Info>
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+Replace `ORGANIZATION_ID` with your organization ID. For more information, see [Determine organization ID](/reference/tokens#determine-organization-id).
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+For token creation and scoping guidance, see [Token hygiene for AI agents](/console/intelligence/ai-agents-overview#token-hygiene-for-ai-agents).
+</Info>
 
 ## Use the skill
 
@@ -15754,11 +16094,12 @@ Source: https://axiom.co/docs/dashboard-elements/spacer
 
 This section explains how to create spacer dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-minimal-prerequisites.mdx"
-
 The spacer dashboard element adds empty space to your dashboard layout. Use spacers to create visual separation between dashboard elements, improve the organization of your dashboard, and control the positioning of other elements.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create an empty dashboard](/dashboards/create).
 
 ## Create spacer
 
@@ -15778,12 +16119,14 @@ Source: https://axiom.co/docs/dashboard-elements/top-list
 
 This section explains how to create top list dashboard elements and add them to your dashboard.
 
-import Prerequisites from "/snippets/dashboard-prerequisites.mdx"
-import CreateElement from "/snippets/create-dashboard-element.mdx"
-
 The top list dashboard element displays the top results from your query, showing the most significant items based on your aggregation and grouping. It can display results as either a table of totals or as time series charts, depending on the aggregation type used.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets) where you send your data.
+- [Send data](/send-data/methods) to your Axiom dataset.
+- [Create an empty dashboard](/dashboards/create).
 
 <CreateElement elementName="top list" elementButtonLabel="Top list"/>
 
@@ -15963,11 +16306,6 @@ Source: https://axiom.co/docs/ai-engineering/quickstart
 
 Install and configure Axiom AI SDK to begin capturing telemetry from your generative AI applications.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import AIInstrumentationApproaches from "/snippets/ai-instrumentation-approaches.mdx"
-
 Quickly start capturing telemetry data from your generative AI capabilities. After installation and configuration, follow the Axiom AI engineering workflow to create, evaluate, observe, and iterate.
 
 <Tip>
@@ -15975,10 +16313,25 @@ This page explains how to set up instrumentation with Axiom AI SDK. Expand the s
 </Tip>
 
 <Accordion title="Choose your instrumentation approach">
-<AIInstrumentationApproaches />
+Axiom offers the following approaches to capture generative AI telemetry:
+
+| Instrumentation approach    | Language support | Characteristics                                                   |
+|:-----------------------------|:------------------|:----------------------------------------------------------------|
+| [Axiom AI SDK](/ai-engineering/observe/axiom-ai-sdk-instrumentation)                | TypeScript       | Quick setup.<br/>Minimal code changes.                            |
+| [Manual](/ai-engineering/observe/manual-instrumentation)                      | Any              | More involved setup.<br/>Full control over instrumentation.       |
+
+**Instrumentation with Axiom AI SDK** is the right choice for you if you have a TypeScript app and you want the SDK to capture and send traces with the correct semantic conventions.
+
+**Manual instrumentation** is the right choice for you if you want to use your own tooling or if you use a language other than TypeScript. You need to instrument your app manually to emit traces compatible with Axiom’s AI engineering features.
+
+Both approaches emit identical attributes. This means that all the telemetry analysis features work the same way.
 </Accordion>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Install
 
@@ -16167,8 +16520,10 @@ ANTHROPIC_API_KEY=""
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 
 Enter the API keys for the LLMs you want to work with.
 </Info>
@@ -18130,13 +18485,22 @@ Source: https://axiom.co/docs/ai-engineering/observe
 
 Learn how to observe your deployed AI capabilities in production using Axiom AI SDK to capture telemetry.
 
-import AIInstrumentationApproaches from "/snippets/ai-instrumentation-approaches.mdx"
-
 In the Observe stage of the AI engineering lifecycle, the focus is on understanding how your deployed generative AI capabilities perform in the real world. After creating and evaluating a capability, observing its production behavior is crucial for identifying unexpected issues, tracking costs, and gathering the data needed for future improvements.
 
 ## Instrument your app
 
-<AIInstrumentationApproaches />
+Axiom offers the following approaches to capture generative AI telemetry:
+
+| Instrumentation approach    | Language support | Characteristics                                                   |
+|:-----------------------------|:------------------|:----------------------------------------------------------------|
+| [Axiom AI SDK](/ai-engineering/observe/axiom-ai-sdk-instrumentation)                | TypeScript       | Quick setup.<br/>Minimal code changes.                            |
+| [Manual](/ai-engineering/observe/manual-instrumentation)                      | Any              | More involved setup.<br/>Full control over instrumentation.       |
+
+**Instrumentation with Axiom AI SDK** is the right choice for you if you have a TypeScript app and you want the SDK to capture and send traces with the correct semantic conventions.
+
+**Manual instrumentation** is the right choice for you if you want to use your own tooling or if you use a language other than TypeScript. You need to instrument your app manually to emit traces compatible with Axiom’s AI engineering features.
+
+Both approaches emit identical attributes. This means that all the telemetry analysis features work the same way.
 
 ## Review production conversations
 
@@ -18893,9 +19257,6 @@ Source: https://axiom.co/docs/ai-engineering/observe/user-feedback
 
 Capture user ratings and comments on AI capability outputs to identify quality issues and prioritize improvements.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 User feedback captures direct signals from end users about your AI capability’s performance. By linking feedback events to traces, you can correlate user perception with system behavior to understand exactly what went wrong and prioritize high-impact improvements.
 
 ## How user feedback works
@@ -18989,8 +19350,10 @@ AXIOM_URL="AXIOM_DOMAIN"
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ### Send feedback
@@ -21383,11 +21746,12 @@ Source: https://axiom.co/docs/apl/introduction
 
 This section explains how to use the Axiom Processing Language to get deeper insights from your data.
 
-import Prerequisites from "/snippets/minimal-prerequisites.mdx"
-
 The Axiom Processing Language (APL) is a query language that’s perfect for getting deeper insights from your data. Whether logs, events, analytics, or similar, APL provides the flexibility to filter, manipulate, and summarize your data exactly the way you need it.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
 
 ## Build an APL query
 
@@ -68262,8 +68626,6 @@ Source: https://axiom.co/docs/apl/data-types/map-fields
 
 This page explains what map fields are and how to query them.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-
 Map fields are a special type of field that can hold a collection of nested key-value pairs within a single field. You can think of the content of a map field as a JSON object.
 
 Axiom automatically creates map fields in datasets that use [OpenTelemetry](/send-data/opentelemetry) and you can create map fields yourself in any dataset.
@@ -68324,7 +68686,9 @@ curl --request POST \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 Replace `MAP_FIELD` with the name of the field that you want to change to a map field.
 </Info>
 
@@ -70211,14 +70575,12 @@ Source: https://axiom.co/docs/restapi/introduction
 
 This section explains how to send data to Axiom, query data, and manage resources using the Axiom API.
 
-import Prerequisites from "/snippets/minimal-prerequisites.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import BaseDomains from "/snippets/base-domains.mdx"
-
 You can use the Axiom API (Application Programming Interface) to send data to Axiom, query data, and manage resources programmatically. This page covers the basics for interacting with the Axiom API.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
 
 ## API basics
 
@@ -70238,8 +70600,10 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 For more information, see [Send data to Axiom via API](/restapi/ingest) and [Ingest data endpoint](/restapi/endpoints/ingestToDataset).
@@ -70250,7 +70614,10 @@ The base domain of an API request depends on the following:
 
 - To ingest data, use the [Ingest data endpoint](/restapi/endpoints/ingestToDataset) with the base domain of your edge deployment.
 
-    <BaseDomains />
+    | Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
 
     For more information on edge deployments, see [Edge deployments](/reference/edge-deployments).
 
@@ -70308,10 +70675,6 @@ Source: https://axiom.co/docs/restapi/ingest
 
 This page explains how to send to Axiom using the API.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 The Axiom REST API accepts the following data formats:
 
 - [JSON](#send-data-in-json-format)
@@ -70328,7 +70691,11 @@ For an introduction to the basics of the Axiom API and to the authentication opt
 
 The API requests on this page use the ingest data endpoint. For more information, see the [API reference](/restapi/endpoints/ingestToDataset).
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 <Note>
 The [Ingest data endpoint](/restapi/endpoints/ingestToDataset) only supports API tokens. Personal access tokens (PATs) aren't supported. For more information, see [Tokens](/reference/tokens).
@@ -70345,8 +70712,10 @@ To send data to Axiom in JSON format:
 1. Send the POST request to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`.
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ### Example with grouped events
@@ -70372,8 +70741,10 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 **Example response**
@@ -70440,8 +70811,10 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 **Example response**
@@ -70484,8 +70857,10 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 **Example response**
@@ -70512,8 +70887,10 @@ To send data to Axiom in NDJSON format:
 1. Send the POST request to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`. Replace `DATASET_NAME` with the name of the Axiom dataset where you want to send data.
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 **Example request**
@@ -70531,8 +70908,10 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 **Example response**
@@ -70559,8 +70938,10 @@ To send data to Axiom in JSON format:
 1. Send the POST request to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`. Replace `DATASET_NAME` with the name of the Axiom dataset where you want to send data.
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 **Example request**
@@ -70574,8 +70955,10 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 **Example response**
@@ -70603,8 +70986,10 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
     ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 For more information on other libraries you can use to query data, see [Send data](send-data/methods).
@@ -70620,12 +71005,6 @@ Source: https://axiom.co/docs/restapi/query
 
 Learn how to use the Axiom API to query data.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceToken from "/snippets/replace-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDataset from "/snippets/replace-dataset.mdx"
-
 This page explains how to query data via the Axiom API using the following:
 
 - [cURL](#query-data-with-curl)
@@ -70635,7 +71014,11 @@ For an introduction to the basics of the Axiom API and to the authentication opt
 
 The API requests on this page use the query data endpoint. For more information, see the [API reference](/restapi/endpoints/queryApl).
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Query data with cURL
 
@@ -70665,8 +71048,10 @@ curl --request POST \
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 **Example response**
@@ -70947,7 +71332,7 @@ curl --request POST \
     console.log(res);
     ```
     <Info>
-    <ReplaceDataset />
+    Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
     </Info>
 
 For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-js/tree/main/examples).
@@ -70961,16 +71346,17 @@ Source: https://axiom.co/docs/restapi/pagination
 
 Learn how to use pagination with the Axiom API.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 Pagination allows you to retrieve responses in manageable chunks.
 
 You can use pagination for the following endpoints:
 - [Run Query](/restapi/endpoints/queryApl)
 - [Run Query (Legacy)](/restapi/endpoints/queryDataset)
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Pagination mechanisms
 
@@ -71045,7 +71431,9 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 #### Example request Run Query (Legacy)
@@ -71063,7 +71451,9 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/query' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 #### Example request to page through the result set
@@ -71082,7 +71472,9 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Example request to go to next page for Run Query (Legacy):
@@ -71100,7 +71492,9 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/query' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Cursor-based pagination
@@ -71177,7 +71571,9 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 #### Example request Run Query (Legacy)
@@ -71195,7 +71591,9 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/query' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 #### Example response
@@ -71232,7 +71630,9 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/_apl?format=tabular' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 Example request to go to next page for Run Query (Legacy):
@@ -71251,7 +71651,9 @@ curl -X 'POST' 'https://api.axiom.co/v1/datasets/DATASET_NAME/query' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ---
@@ -71326,8 +71728,6 @@ Source: https://axiom.co/docs/restapi/delete-blocks
 
 This page explains how to delete blocks of data.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-
 After data ingestion, Axiom stores events in blocks of tens of thousands of events. Currently, you can’t delete individual events after you send them to Axiom, but you can delete entire blocks of data. With the `/v2/datasets/_apl/delete` endpoint, you can specify an APL query and delete all blocks that contain matching events.
 
 <Warning>
@@ -71382,7 +71782,9 @@ curl -X 'POST' 'https://api.axiom.co/v2/datasets/_apl/delete' \
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Example response
@@ -71642,14 +72044,15 @@ Source: https://axiom.co/docs/restapi/endpoints/ingestToDataset
 
 v1-edge-ingest post /ingest/{dataset-id}
 
-import BaseDomains from "/snippets/base-domains.mdx"
-
 <Warning>
 Use this endpoint to ingest data into a specific edge deployment. For more information, see [Ingest data](/restapi/ingest) and [Edge deployments](/reference/edge-deployments).
 
 The base domain for this endpoint is the base domain of the edge deployment where you want to ingest data.
 
-<BaseDomains />
+| Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
 
 This endpoint only supports API tokens. Personal access tokens (PATs) aren't supported. For more information, see [Tokens](/reference/tokens).
 </Warning>
@@ -71661,9 +72064,18 @@ Source: https://axiom.co/docs/restapi/endpoints/queryEdge
 
 v1-edge-query post /query/_apl?format=tabular
 
-import edgeQuery from "/snippets/edge-query.mdx"
+<Warning>
+Use this endpoint to query data from a specific edge deployment. The data you query must be stored in the edge deployment where you query it. For more information, see [Query data](/restapi/ingest) and [Edge deployments](/reference/edge-deployments).
 
-<edgeQuery />
+The base domain for this endpoint is the base domain of the edge deployment where you want to query data.
+
+| Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
+
+This endpoint only supports API tokens. Personal access tokens (PATs) aren't supported. For more information, see [Tokens](/reference/tokens).
+</Warning>
 
 ---
 
@@ -71672,9 +72084,18 @@ Source: https://axiom.co/docs/restapi/endpoints/queryBatch
 
 v1-edge-query post /query/batch
 
-import edgeQuery from "/snippets/edge-query.mdx"
+<Warning>
+Use this endpoint to query data from a specific edge deployment. The data you query must be stored in the edge deployment where you query it. For more information, see [Query data](/restapi/ingest) and [Edge deployments](/reference/edge-deployments).
 
-<edgeQuery />
+The base domain for this endpoint is the base domain of the edge deployment where you want to query data.
+
+| Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
+
+This endpoint only supports API tokens. Personal access tokens (PATs) aren't supported. For more information, see [Tokens](/reference/tokens).
+</Warning>
 
 ---
 
@@ -71683,13 +72104,22 @@ Source: https://axiom.co/docs/restapi/endpoints/queryMetrics
 
 v1-edge-query post /query/_mpl
 
-import edgeQuery from "/snippets/edge-query.mdx"
-
 <Info>
 Support for MPL queries is currently in public preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
 </Info>
 
-<edgeQuery />
+<Warning>
+Use this endpoint to query data from a specific edge deployment. The data you query must be stored in the edge deployment where you query it. For more information, see [Query data](/restapi/ingest) and [Edge deployments](/reference/edge-deployments).
+
+The base domain for this endpoint is the base domain of the edge deployment where you want to query data.
+
+| Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
+
+This endpoint only supports API tokens. Personal access tokens (PATs) aren't supported. For more information, see [Tokens](/reference/tokens).
+</Warning>
 
 ---
 
@@ -71698,9 +72128,18 @@ Source: https://axiom.co/docs/restapi/endpoints/getDatasetMetrics
 
 v1-edge-query get /query/metrics/info/datasets/{dataset}/metrics
 
-import edgeQuery from "/snippets/edge-query.mdx"
+<Warning>
+Use this endpoint to query data from a specific edge deployment. The data you query must be stored in the edge deployment where you query it. For more information, see [Query data](/restapi/ingest) and [Edge deployments](/reference/edge-deployments).
 
-<edgeQuery />
+The base domain for this endpoint is the base domain of the edge deployment where you want to query data.
+
+| Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
+
+This endpoint only supports API tokens. Personal access tokens (PATs) aren't supported. For more information, see [Tokens](/reference/tokens).
+</Warning>
 
 ---
 
@@ -71709,9 +72148,18 @@ Source: https://axiom.co/docs/restapi/endpoints/getDatasetMetricTags
 
 v1-edge-query get /query/metrics/info/datasets/{dataset}/metrics/{metric}/tags
 
-import edgeQuery from "/snippets/edge-query.mdx"
+<Warning>
+Use this endpoint to query data from a specific edge deployment. The data you query must be stored in the edge deployment where you query it. For more information, see [Query data](/restapi/ingest) and [Edge deployments](/reference/edge-deployments).
 
-<edgeQuery />
+The base domain for this endpoint is the base domain of the edge deployment where you want to query data.
+
+| Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
+
+This endpoint only supports API tokens. Personal access tokens (PATs) aren't supported. For more information, see [Tokens](/reference/tokens).
+</Warning>
 
 ---
 
@@ -71720,9 +72168,18 @@ Source: https://axiom.co/docs/restapi/endpoints/getDatasetMetricTagValues
 
 v1-edge-query get /query/metrics/info/datasets/{dataset}/metrics/{metric}/tags/{tag}/values
 
-import edgeQuery from "/snippets/edge-query.mdx"
+<Warning>
+Use this endpoint to query data from a specific edge deployment. The data you query must be stored in the edge deployment where you query it. For more information, see [Query data](/restapi/ingest) and [Edge deployments](/reference/edge-deployments).
 
-<edgeQuery />
+The base domain for this endpoint is the base domain of the edge deployment where you want to query data.
+
+| Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
+
+This endpoint only supports API tokens. Personal access tokens (PATs) aren't supported. For more information, see [Tokens](/reference/tokens).
+</Warning>
 
 ---
 
@@ -71731,9 +72188,18 @@ Source: https://axiom.co/docs/restapi/endpoints/getDatasetTags
 
 v1-edge-query get /query/metrics/info/datasets/{dataset}/tags
 
-import edgeQuery from "/snippets/edge-query.mdx"
+<Warning>
+Use this endpoint to query data from a specific edge deployment. The data you query must be stored in the edge deployment where you query it. For more information, see [Query data](/restapi/ingest) and [Edge deployments](/reference/edge-deployments).
 
-<edgeQuery />
+The base domain for this endpoint is the base domain of the edge deployment where you want to query data.
+
+| Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
+
+This endpoint only supports API tokens. Personal access tokens (PATs) aren't supported. For more information, see [Tokens](/reference/tokens).
+</Warning>
 
 ---
 
@@ -71742,9 +72208,18 @@ Source: https://axiom.co/docs/restapi/endpoints/getDatasetTagValues
 
 v1-edge-query get /query/metrics/info/datasets/{dataset}/tags/{tag}/values
 
-import edgeQuery from "/snippets/edge-query.mdx"
+<Warning>
+Use this endpoint to query data from a specific edge deployment. The data you query must be stored in the edge deployment where you query it. For more information, see [Query data](/restapi/ingest) and [Edge deployments](/reference/edge-deployments).
 
-<edgeQuery />
+The base domain for this endpoint is the base domain of the edge deployment where you want to query data.
+
+| Edge deployment | Base domain for ingest and query |
+| :--- | :--- |
+| `US East 1 (AWS)` | `us-east-1.aws.edge.axiom.co` |
+| `EU Central 1 (AWS)` | `eu-central-1.aws.edge.axiom.co` |
+
+This endpoint only supports API tokens. Personal access tokens (PATs) aren't supported. For more information, see [Tokens](/reference/tokens).
+</Warning>
 
 ---
 
@@ -72141,12 +72616,13 @@ Source: https://axiom.co/docs/endpoints/honeycomb
 
 Integrate Axiom in your existing Honeycomb stack with minimal effort and without breaking any of your existing Honeycomb workflows.
 
-import SetUpEndpoint from "/snippets/set-up-endpoint.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 This page explains how to send data from Honeycomb to Axiom.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 <SetUpEndpoint endpointName="Honeycomb" />
 
@@ -72221,12 +72697,13 @@ Source: https://axiom.co/docs/endpoints/loki
 
 Integrate Axiom in your existing Loki stack with minimal effort and without breaking any of your existing Loki workflows.
 
-import SetUpEndpoint from "/snippets/set-up-endpoint.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 This page explains how to send data from Loki to Axiom.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 <SetUpEndpoint endpointName="Loki" />
 
@@ -72305,12 +72782,13 @@ Source: https://axiom.co/docs/endpoints/splunk
 
 Integrate Axiom in your existing Splunk app with minimal effort and without breaking any of your existing Splunk stack.
 
-import SetUpEndpoint from "/snippets/set-up-endpoint.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 This page explains how to send data from Splunk to Axiom.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 <SetUpEndpoint endpointName="Splunk" />
 
@@ -72415,16 +72893,17 @@ Source: https://axiom.co/docs/guides/apex
 
 This page explains how to send logs generated by the apex/log library to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDataset from "/snippets/replace-dataset.mdx"
-
 Use the adapter of the Axiom Go SDK to send logs generated by the [apex/log](https://github.com/apex/log) library to Axiom.
 
 <Note>
 The Axiom Go SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-go).
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Set up SDK
 
@@ -72443,7 +72922,7 @@ handler, err := adapter.New(
 )
 ```
 
-<ReplaceDataset />
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 
 ## Configure client
 
@@ -72482,13 +72961,13 @@ Source: https://axiom.co/docs/guides/flutter
 
 This page explains how to send data from Flutter apps to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 This page explains how to send structured logs from Flutter apps to Axiom using a custom logging library built with the [Dio HTTP client](https://pub.dev/packages/dio).
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Install Flutter SDK](https://docs.flutter.dev/install) version 3.0.0 or higher.
 
 ## Install required dependencies
@@ -72840,8 +73319,10 @@ Future<void> main() async {
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ## Run the app and observe logs in Axiom
@@ -73155,9 +73636,11 @@ To send data from a Go app to Axiom, use the Axiom Go SDK.
 The Axiom Go SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-go).
 </Note>
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
+## Prerequisites
 
-<Prerequisites />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Install SDK
 
@@ -73247,9 +73730,6 @@ Source: https://axiom.co/docs/guides/javascript
 
 This page explains how to send data from a JavaScript app to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDataset from "/snippets/replace-dataset.mdx"
-
 JavaScript is a versatile, high-level programming language primarily used for creating dynamic and interactive web content.
 
 To send data from a JavaScript app to Axiom, use one of the following libraries of the Axiom JavaScript SDK:
@@ -73275,7 +73755,11 @@ The `@axiomhq/logging` library is a logging solution that also serves as the bas
 The @axiomhq/js and the @axiomhq/logging libraries are part of the Axiom JavaScript SDK, an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-js).
 </Info>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Use @axiomhq/js
 
@@ -73317,7 +73801,7 @@ await axiom.flush();
 ```
 
 <Info>
-<ReplaceDataset />
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 The client automatically batches events in the background. In most cases, call `flush()` only before your application exits.
@@ -73332,7 +73816,7 @@ console.log(res);
 ```
 
 <Info>
-<ReplaceDataset />
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-js/tree/main/examples).
@@ -73523,16 +74007,17 @@ Source: https://axiom.co/docs/guides/logrus
 
 This page explains how to send logs generated by the sirupsen/logrus library to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDataset from "/snippets/replace-dataset.mdx"
-
 Use the adapter of the Axiom Go SDK to send logs generated by the [sirupsen/logrus](https://github.com/sirupsen/logrus) library to Axiom.
 
 <Note>
 The Axiom Go SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-go).
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Set up SDK
 
@@ -73551,7 +74036,7 @@ hook, err := adapter.New(
 )
 ```
 
-<ReplaceDataset />
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 
 ## Configure client
 
@@ -73589,9 +74074,6 @@ For a full reference of the adapter’s functions, see the [Go Packages page](ht
 Source: https://axiom.co/docs/guides/opentelemetry-claude-code
 
 Configure Claude Code to send OpenTelemetry metrics and logs to Axiom for usage monitoring and observability.
-
-import ReplaceToken from "/snippets/replace-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 Claude Code has built-in [OpenTelemetry support](https://code.claude.com/docs/en/monitoring-usage) that exports metrics and logs. Axiom natively ingests OTLP data, making the two a natural fit. This guide covers the Axiom-specific configuration to connect Claude Code telemetry to Axiom.
 
@@ -73661,8 +74143,8 @@ echo "Axiom OTel configured: metrics -> ${AXIOM_METRICS_DATASET}, logs -> ${AXIO
 ```
 
 <Info>
-<ReplaceToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 Replace `METRICS_DATASET_NAME` with the name of the Axiom dataset for metrics.
 
 Replace `LOGS_DATASET_NAME` with the name of the Axiom dataset for logs.
@@ -73755,17 +74237,17 @@ Source: https://axiom.co/docs/guides/opentelemetry-cloudflare-workers
 
 This guide explains how to configure a Cloudflare Workers app to send telemetry data to Axiom.
 
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-
 This guide demonstrates how to configure OpenTelemetry in Cloudflare Workers to send telemetry data to Axiom using the [OTel CF Worker package](https://github.com/evanderkoogh/otel-cf-workers).
 
 <Note>
 This guide also applies to web frameworks that run on Cloudflare Workers. For example, you can use the same OpenTelemetry configuration described below for [Hono](https://hono.dev/) apps deployed to Cloudflare Workers.
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - Create a Cloudflare account.
 - [Install Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/), the CLI tool for Cloudflare.
 
@@ -73824,7 +74306,7 @@ export default instrument(handler, config);
 ```
 
 <Info>
-<ReplaceDomain />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ## Wrangler Configuration (`wrangler.toml`)
@@ -73847,7 +74329,9 @@ AXIOM_DATASET = "DATASET_NAME"
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ## Install Dependencies
@@ -74032,7 +74516,7 @@ Wrap your Cloudflare Workers script with the `instrument` function from the **`@
     ```
 
     <Info>
-    <ReplaceDomain />
+    Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
     </Info>
 
 After instrumenting your Worker script, the `@microlabs/otel-cf-workers` package takes care of tracing automatically.
@@ -74141,11 +74625,11 @@ Source: https://axiom.co/docs/guides/opentelemetry-django
 
 This guide explains how to send OpenTelemetry data from a Django app to Axiom using the Python OpenTelemetry SDK.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
+## Prerequisites
 
-<Prerequisites />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Install Python version 3.7 or higher](https://www.python.org/downloads/).
 
 ## Install required dependencies
@@ -74269,8 +74753,10 @@ tracer = trace.get_tracer("your-service-name")
 ```
 
 <Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 ### Use the tracer in your views
@@ -74370,8 +74856,10 @@ Manual instrumentation in Python with OpenTelemetry involves adding code to crea
     ```
 
     <Info>
-    <ReplaceDomain />
-    <ReplaceDatasetToken />
+    Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+    Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
     </Info>
 
 3. Configure OpenTelemetry to your Django settings to capture telemetry data upon app startup.
@@ -74459,8 +74947,10 @@ Automatic instrumentation in Django with OpenTelemetry simplifies the process of
     ```
 
     <Info>
-    <ReplaceDomain />
-    <ReplaceDatasetToken />
+    Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+    Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
     </Info>
 
 3. Initialize OpenTelemetry in Django to capture telemetry data from all HTTP requests automatically.
@@ -74601,13 +75091,13 @@ Source: https://axiom.co/docs/guides/opentelemetry-dotnet
 
 This guide explains how to configure a .NET app using the .NET OpenTelemetry SDK to send telemetry data to Axiom.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 OpenTelemetry provides a [unified approach to collecting telemetry data](https://opentelemetry.io/docs/languages/net/) from your .NET apps. This guide explains how to configure OpenTelemetry in a .NET app to send telemetry data to Axiom using the OpenTelemetry SDK.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - Install the .NET 6.0 SDK on your development machine.
 - Use your existing .NET app or start with the sample provided in the `program.cs` below.
 
@@ -74775,8 +75265,10 @@ public static class TracingConfiguration
 
 <Info>
 Replace the value of the `serviceName` variable with the name of the service you want to trace. This is used for identifying and categorizing trace data, particularly in systems with multiple services.
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ## Run the instrumented app
@@ -74854,8 +75346,10 @@ Automatic instrumentation uses the OpenTelemetry SDK and additional libraries to
     ```
 
     <Info>
-    <ReplaceDatasetToken />
-    <ReplaceDomain />
+    Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+    Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
     </Info>
 
 2. Install and configure additional OpenTelemetry instrumentation packages as needed, based on the technologies your app uses. For example, to automatically trace SQL database queries, you might add the corresponding database instrumentation package.
@@ -74954,9 +75448,6 @@ This package provides automatic instrumentation for HTTP clients in .NET apps. I
 Source: https://axiom.co/docs/guides/opentelemetry-go
 
 This guide explains how to configure a Go app using the Go OpenTelemetry SDK to send telemetry data to Axiom.
-
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
 
 OpenTelemetry offers a [single set of APIs and libraries](https://opentelemetry.io/docs/languages/go/instrumentation/) that standardize how you collect and transfer telemetry data. This guide focuses on setting up OpenTelemetry in a Go app to send traces to Axiom.
 
@@ -75224,8 +75715,10 @@ func InstallExportPipeline(ctx context.Context) (func(context.Context) error, er
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ## Run the app
@@ -75404,13 +75897,13 @@ Source: https://axiom.co/docs/guides/opentelemetry-java
 
 This page explains how to configure a Java app using the Java OpenTelemetry SDK to send telemetry data to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 OpenTelemetry provides a unified approach to collecting telemetry data from your Java applications. This page demonstrates how to configure OpenTelemetry in a Java app to send telemetry data to Axiom using the OpenTelemetry SDK.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Install JDK 11](https://www.oracle.com/java/technologies/java-se-glance.html) or later
 - [Install Maven](https://maven.apache.org/download.cgi)
 - Use your own app written in Java or the provided `DiceRollerApp.java` sample.
@@ -75542,8 +76035,10 @@ public class OtelConfiguration {
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ## Configure project
@@ -75721,8 +76216,10 @@ public class OtelConfiguration {
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 </Step>
@@ -76212,9 +76709,6 @@ Source: https://axiom.co/docs/guides/opentelemetry-nodejs
 
 This guide demonstrates how to configure OpenTelemetry in a Node.js app to send telemetry data to Axiom.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 OpenTelemetry provides a [unified approach to collecting telemetry data](https://opentelemetry.io/docs/languages/js/instrumentation/) from your Node.js and TypeScript apps. This guide demonstrates how to configure OpenTelemetry in a Node.js app to send telemetry data to Axiom using OpenTelemetry SDK.
 
 ## Prerequisites
@@ -76345,8 +76839,10 @@ sdk.start();
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ## Installing the Dependencies
@@ -76610,13 +77106,13 @@ Source: https://axiom.co/docs/guides/opentelemetry-nuxtjs
 
 This page explains how to configure OpenTelemetry in a Nuxt.js app to send telemetry data to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 OpenTelemetry provides a [unified approach to collecting telemetry data](https://opentelemetry.io/docs/languages/js/instrumentation/) from your Nuxt.js and TypeScript apps. This page demonstrates how to configure OpenTelemetry in a Nuxt.js app to send telemetry data to Axiom using OpenTelemetry SDK.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Install Node.js](https://nodejs.org/en/download/package-manager) version 18 or newer.
 - Use your own app written in Nuxt.js, or follow this guide to create a new one.
 
@@ -76647,8 +77143,10 @@ AXIOM_DATASET=DATASET_NAME
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ## Configure Nuxt.js app
@@ -77102,15 +77600,15 @@ Source: https://axiom.co/docs/guides/opentelemetry-python
 
 This guide explains how to send OpenTelemetry data from a Python app to Axiom using the Python OpenTelemetry SDK.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 This guide explains how to send OpenTelemetry data from a Python app to Axiom using the [Python OpenTelemetry SDK](https://opentelemetry.io/docs/languages/python/instrumentation/).
 
 ## Prerequisites
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - Install Python version 3.7 or higher.
 
 ## Install required dependencies
@@ -77229,8 +77727,10 @@ service1_tracer = trace.get_tracer("service1")
 
 <Info>
 Replace `NAME_OF_SERVICE` with the name of the service you want to trace. This is important for identifying and categorizing trace data, particularly in systems with multiple services.
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 For more information on the libraries imported by the `exporter.py` file, see the [Reference](#reference) below.
@@ -77378,13 +77878,13 @@ Source: https://axiom.co/docs/guides/opentelemetry-ruby
 
 This guide explains how to send OpenTelemetry data from a Ruby on Rails App to Axiom using the Ruby OpenTelemetry SDK.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 This guide provides detailed steps on how to configure OpenTelemetry in a Ruby app to send telemetry data to Axiom using the [OpenTelemetry Ruby SDK](https://opentelemetry.io/docs/languages/ruby/).
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - Install a [Ruby version manager](https://www.ruby-lang.org/en/documentation/installation/) like `rbenv` and use it to install the latest Ruby version.
 - Install [Rails](https://guides.rubyonrails.org/v5.0/getting_started.html) using the `gem install rails` command.
 
@@ -77435,8 +77935,10 @@ end
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ## Run the instrumented app
@@ -77614,9 +78116,11 @@ Source: https://axiom.co/docs/guides/pino
 
 This page explains how to send data from a Node.js app to Axiom through Pino.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
+## Prerequisites
 
-<Prerequisites />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Install SDK
 
@@ -77662,15 +78166,17 @@ Source: https://axiom.co/docs/guides/python
 
 This page explains how to send data from a Python app to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 To send data from a Python app to Axiom, use the Axiom Python SDK.
 
 <Note>
 The Axiom Python SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-py).
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Install SDK
 
@@ -77768,15 +78274,17 @@ Source: https://axiom.co/docs/guides/rust
 
 This page explains how to send data from a Rust app to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 To send data from a Rust app to Axiom, use the Axiom Rust SDK.
 
 <Note>
 The Axiom Rust SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-rs).
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Install SDK
 
@@ -77847,13 +78355,13 @@ Source: https://axiom.co/docs/guides/send-logs-from-apache-log4j
 
 This guide explains how to configure Apache Log4j to send logs to Axiom
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 Log4j is a Java logging framework developed by the Apache Software Foundation and widely used in the Java community. This page covers how to get started with Log4j, configure it to forward log messages to Fluentd, and send logs to Axiom.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Install JDK 11](https://www.oracle.com/java/technologies/java-se-glance.html) or later
 - [Install Maven](https://maven.apache.org/download.cgi)
 - [Install Fluentd](https://www.fluentd.org/download)
@@ -78209,8 +78717,10 @@ To configure Fluentd, create a configuration file. Create a new file named `flue
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 This configuration does the following:
@@ -78310,11 +78820,11 @@ Source: https://axiom.co/docs/guides/send-logs-from-dotnet
 
 This guide explains how to set up and configure logging in a .NET app, and how to send logs to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
+## Prerequisites
 
-<Prerequisites />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - [Install the .NET SDK](https://dotnet.microsoft.com/download).
 
 ## Option 1: Using HTTP Client
@@ -78397,8 +78907,10 @@ public static class AxiomLogger
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ### Configure the main program
@@ -78650,8 +79162,10 @@ public class Program
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ### Project file configuration
@@ -78738,8 +79252,10 @@ Set up NLog by creating an `NLog.config` file or configuring it programmatically
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ### Configure the main program
@@ -78850,13 +79366,13 @@ Source: https://axiom.co/docs/guides/send-logs-from-laravel
 
 This guide demonstrates how to configure logging in a Laravel app to send logs to Axiom
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-
 This guide explains integrating Axiom as a logging solution in a Laravel app. Using Axiom’s capabilities with a custom log channel, you can efficiently send your app’s logs to Axiom for storage, analysis, and monitoring. This integration uses Monolog, Laravel’s underlying logging library, to create a custom logging handler that forwards logs to Axiom.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - PHP development [environment](https://www.php.net/manual/en/install.php)
 - [Composer](https://laravel.com/docs/11.x/installation) installed on your system
 - Laravel app setup
@@ -78982,8 +79498,10 @@ LOG_DEPRECATIONS_CHANNEL=null
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ### Deprecations log channel
@@ -79242,13 +79760,13 @@ Source: https://axiom.co/docs/guides/send-logs-from-ruby-on-rails
 
 This guide provides step-by-step instructions on how to send logs from a Ruby on Rails app to Axiom using the Faraday library.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import ReplaceDomain from "/snippets/replace-domain.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-
 This guide provides step-by-step instructions on how to send logs from a Ruby on Rails app to Axiom using the Faraday library. By following this guide, you configure your Rails app to send logs to Axiom, allowing you to monitor and analyze your app logs effectively.
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 - Install a [Ruby version manager](https://www.ruby-lang.org/en/documentation/installation/) like `rbenv` and use it to install the latest Ruby version.
 - Install [Ruby on Rails](https://guides.rubyonrails.org/v5.0/getting_started.html) using the `gem install rails` command.
 
@@ -79309,8 +79827,10 @@ end
 ```
 
 <Info>
-<ReplaceDatasetToken />
-<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
+Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
 </Info>
 
 ## Test with the Axiom logger
@@ -79421,10 +79941,11 @@ Source: https://axiom.co/docs/guides/winston
 
 This page explains how to send data from a Node.js app to Axiom through Winston.
 
-import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
+## Prerequisites
 
-<Prerequisites />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Install SDK
 
@@ -79459,7 +79980,9 @@ const logger = winston.createLogger({
 ```
 
 <Info>
-<ReplaceDatasetToken />
+Replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 </Info>
 
 After setting up the Axiom transport for Winston, use the logger as usual:
@@ -79517,16 +80040,17 @@ Source: https://axiom.co/docs/guides/zap
 
 This page explains how to send logs generated by the uber-go/zap library to Axiom.
 
-import Prerequisites from "/snippets/standard-prerequisites.mdx"
-import ReplaceDataset from "/snippets/replace-dataset.mdx"
-
 Use the adapter of the Axiom Go SDK to send logs generated by the [uber-go/zap](https://github.com/uber-go/zap) library to Axiom.
 
 <Note>
 The Axiom Go SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/axiom-go).
 </Note>
 
-<Prerequisites />
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
 
 ## Set up SDK
 
@@ -79545,7 +80069,7 @@ core, err := adapter.New(
 )
 ```
 
-<ReplaceDataset />
+Replace `DATASET_NAME` with the name of the Axiom dataset where you send your data.
 
 ## Configure client
 
