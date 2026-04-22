@@ -147,6 +147,8 @@ function parsePage(pagePath: string): PageData | null {
   const raw = readFileSync(filePath, 'utf-8');
   const { data, content } = matter(raw);
 
+  if (data.noindex === 'true' || data.noindex === true) return null;
+
   const openapiRef = String(data.openapi || data.api || '');
   const isStub = Boolean(openapiRef);
 
