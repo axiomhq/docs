@@ -1,171 +1,55 @@
 ---
-title: Query logs, traces, and events in Console
-description: 'Learn how to filter, manipulate, extend, and summarize your logs, traces, and events in Console.'
-sidebarTitle: Query
-keywords: ['axiom documentation', 'documentation', 'axiom', 'dashboards', 'monitors', 'notifiers', 'slack', 'data explorer', 'apl', 'count', 'operator']
+title: Query data
+description: This section explains how to query your data using Console.
+sidebarTitle: Overview
+keywords: ["query", "logs", "traces", "events", "metrics", "datasets", "stream", "builder", "editor", "APL", "MPL"]
 ---
 
-The Query tab of the Console provides you with robust computation and processing power to get deeper insights into your data. It enables you to filter, manipulate, extend, and summarize your data.
+Axiom provides powerful tools to query your data. Whether you work with logs, traces, events, or metrics, and whether you prefer a visual interface or a text-based query language, Axiom has you covered.
 
-To query your data, click the Query tab and choose one of the following options:
+Console has three tabs for exploring your data:
+- [**Datasets**](/query-data/datasets): Browse and analyze the fields in any dataset. Use this to understand the shape of your data before writing a query.
+- [**Stream**](/query-data/stream): Watch events arrive in real time and inspect individual events as they're ingested.
+- **Query**: Run queries against your data using either a visual interface or a text-based query language.
 
-- [Generate a query using AI based on a natural-language prompt](#generate-query-using-ai)
-- [Create a query using the visual query builder](#create-a-query-using-visual-query-builder)
-- [Create a query using Axiom Processing Language (APL)](#create-a-query-using-apl)
+The Datasets and Stream tabs work the same way for all data types. The Query tab experience differs based on what you query and how you query it.
 
-You can easily switch between these methods at any point when creating the query.
+## Query tab
 
-## Generate query using AI
+The Query tab is where you run queries against your data. It offers two interfaces:
 
-Explain what you want to infer from your data in your own words and Axiom AI generates the valid APL query for you.
+- **Builder**: A visual interface for filtering, grouping, and visualizing data.
+- **Editor**: Write queries in a text-based query language.
 
-1. Click the Query tab.
-1. Click **APL**, and then click in the query editor.
-1. Press <kbd>Cmd/Ctrl</kbd>&nbsp;<kbd>K</kbd>.
-1. Type what you want to infer from your data in your own words using natural language, and then click **Generate**. For example, type `Show me the most common status responses in HTTP logs.`
-1. Axiom’s AI generates the APL query based on your prompt and gives you the following options:
-    - Click **Accept** to update the editor with the generated query and change the generated query before running it. Any previous input in the query editor is lost.
-    - Click **Accept and run** to update the editor with the generated query and run it immediately. Any previous input in the query editor is lost.
-    - Click **Reject** to go back to your previous input in the query editor and close the query generator.
+Axiom has two query languages, each designed for different data types:
 
-### Iterate over prompt history
+- **APL** (Axiom Processing Language) queries logs, traces, and events stored in [EventDB](/platform-overview/architecture).
+- **MPL** (Metrics Processing Language) queries metrics stored in [MetricsDB](/platform-overview/architecture).
 
-Axiom saves the prompts you type in the query generator. To find one of your previous prompts and generate an APL query for it:
+Both Builder and Editor are available for each query language.
 
-1. Click the Query tab.
-1. Click **APL**, and then click in the query editor.
-1. Press <kbd>Cmd/Ctrl</kbd>&nbsp;<kbd>K</kbd>.
-1. Cycle through your history using the arrow keys <Icon icon="arrow-up" iconType="solid" /> and <Icon icon="arrow-down" iconType="solid" /> to find the prompt.
-1. Click **Generate**.
+| | Builder (visual) | Editor (query language) |
+|:---|:---|:---|
+| Logs, traces, events | [Query using Builder](/query-data/explore#create-query-using-visual-query-builder)<br />[Traces](/query-data/traces) for trace-specific UI | [Query using APL](/query-data/explore#create-query-using-apl)<br />[APL reference](/apl/introduction) |
+| Metrics | [Query using Builder](/query-data/metrics/query-metrics) | [Query using MPL](/query-data/metrics/query-metrics-mpl) |
 
-## Create query using visual query builder
+The following features are available for logs, traces, and events:
 
-1. In the top left, click **Builder**.
-2. From the list, select the dataset that you want to query.
-3. Optional: In the **Where** section, create filters to narrow down the query results.
-4. Optional: In the **Summarize** section, select a way to visualize the query results.
-5. Optional: In the **More** section, specify additional options such as sorting the results or limiting the number of displayed events.
-6. Select the time range.
-7. Click **Run**.
+- [Views](/query-data/views): Apply filters and transformations to datasets to create reusable virtual tables with scoped access control.
+- [Virtual fields](/query-data/virtual-fields): Derive new values from data in real-time during queries without pre-structuring or transforming data during ingestion.
 
-While the query runs, the status bar gives you continuous updates about the number of rows examined, matched, and returned.
+## Query data with AI
 
-See below for more information about each of these steps.
+Console supports multiple ways to query data with AI:
 
-### Add filters
+| Method | Description | Query language |
+|:---|:---|:---|
+| [Query using natural language](/query-data/query-natural-language) | Use natural language to generate APL queries in Console. | APL |
+| [MCP Server](/console/intelligence/mcp-server) | A Model Context Protocol (MCP) server that enables AI agents to query your data. | APL, MPL |
+| [Skills](/console/intelligence/skills) | Give AI agents the ability to query your data. | APL, MPL |
 
-Use the **Where** section to filter the results to specific events. For example, to filter for events that originate in a specific geolocation like France.
+AI agents can use MCP Server and Skills for many other tasks like building dashboards. For more information, see [AI agents](/console/intelligence/ai-agents-overview).
 
-To add a filter:
+## Query data with API
 
-1. Click **+** in the **Where** section.
-2. Select the field where you want to filter for values. For example, `geo.country`.
-3. Select the logical operator of the filter. These are different for each field type. For example, you can use **starts-with** for string fields and **>=** for number fields. In this example, select `==` for an exact match.
-4. Specify the value for which you want to filter. In this example, enter `France`.
-
-When you run the query, the results only show events matching the criteria you specified for the filter.
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20where%20%5B'geo.country'%5D%20%3D~%20'France'%22%7D)
-
-### Add multiple filters
-
-You can add multiple filters and combine them with AND/OR operators. For example, to filter for events that originate in France or Germany.
-
-To add and combine multiple filters:
-
-1. Add a filter for France as explained in [Add filters](#add-filters).
-2. Add a filter for Germany as explained in [Add filters](#add-filters).
-3. Click **and** that appears between the two filters, and then select **or**.
-
-The query results display events that originate in France or Germany.
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20where%20(%5B'geo.country'%5D%20%3D~%20'France'%20or%20%5B'geo.country'%5D%20%3D~%20'Germany')%22%7D)
-
-<Note>
-    You can add groups of filters using the **New Group** element.
-    Axiom supports AND/OR operators at the top level and one level deep.
-</Note>
-
-### Add visualizations
-
-Axiom provides powerful visualizations that display the output of aggregate functions across your dataset. The **Summarize** section provides you with several ways to visualize the query results. For example, the `count` visualization displays the number of events matching your query over time. Some visualizations require an argument such as a field or other parameters.
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20count()%20by%20bin_auto(_time)%22%7D)
-
-For more information about visualizations, see [Visualize data](/query-data/visualizations).
-
-### Segment data
-
-When visualizing data, segment data into specific groups to see more clearly how the data behaves. For example, to see how many events originate in each geolocation, select the `count` visualization and group by `geo.country`.
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20count()%20by%20bin_auto(_time)%2C%20%5B'geo.country'%5D%22%7D)
-
-### More options
-
-In the **More** section, specify the following additional options:
-
-- By default, Axiom automatically chooses the best ordering for the query results. To specify the sorting order manually, click **Sort by**, and then select the field according to which you want to sort the results.
-- To limit the number of events the query returns, click **Limit**, and then specify the maximum number of returned events.
-- Specify whether to display or hide open intervals.
-
-### Select time range
-
-When you select the time range of a query, you specify the time interval where you want to look for events.
-
-To select the time range, choose one of the following options:
-1. In the top left, click <Icon icon="clock" iconType="regular"/> **Time range**.
-1. Choose one of the following options:
-    - Use the **Quick range** items to quickly select popular time ranges.
-    - To the right of the **Start date** and **End date** fields, click <Icon icon="calendar-days" iconType="light"/> **Select date and time** to select specific times.
-    - Enter the specific time in the **Start date** and **End date** fields using natural language. For example, `1 hour ago` or `last Monday at 3pm`. For more information on the supported natural language inputs, see the [Sugar documentation](https://sugarjs.com/docs/#/DateParsing). Don’t use the `from` and `after` keywords in your input.
-
-## Create query using APL
-
-APL is a data processing language that supports filtering, extending, and summarizing data. For more information, see [Introduction to APL](/apl/introduction).
-
-Some APL queries are explained below. The pipe symbol `|` separates the operations as they flow from left to right, and top to bottom.
-
-APL is case-sensitive for everything: dataset names, field names, operators, functions, etc.
-
-Use double forward slashes (`//`) for comments.
-
-### APL count operator
-
-The below query returns the number of events from the `sample-http-logs` dataset.
-
-```kusto
-['sample-http-logs']
-| summarize count()
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20count()%22%7D)
-
-### APL limit operator
-
-The `limit` operator returns a random subset of rows from a dataset up to the specified number of rows. This query returns a thousand rows from `sample-http-logs` randomly chosen by APL.
-
-```kusto
-['sample-http-logs']
-| limit 1000
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20limit%201000%22%7D)
-
-### APL summarize operator
-
-The `summarize` operator produces a table that aggregates the content of the dataset. This query returns a chart of the `avg(req_duration_ms)`, and a table of `geo.city` and `avg(req_duration_ms)` of the `sample-http-logs` dataset from the time range of 2 days and time interval of 4 hours.
-
-```kusto
-['sample-http-logs']
-| where _time > ago(2d)
-| summarize avg(req_duration_ms) by _time=bin(_time, 4h), ['geo.city']
-```
-
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20where%20_time%20%3E%20ago(2d)%5Cn%7C%20summarize%20avg(req_duration_ms)%20by%20_time%3Dbin(_time%2C%204h)%2C%20%5B'geo.city'%5D%22%7D)
-
-## What's next
-
-- [Interpret query results](/query-data/interpret-query-results)
-- [Visualize data](/query-data/visualizations)
-- [Views](/query-data/views)
-- [Virtual fields](/query-data/virtual-fields)
+You can query data programmatically using the Axiom API. For more information, see [Query data via Axiom API](/restapi/query).

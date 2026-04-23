@@ -1,28 +1,105 @@
 ---
-title: Query metrics using Builder
-description: This page explains how to use the visual query builder to query OpenTelemetry metrics.
-sidebarTitle: Query using Builder
-keywords: ["metrics", "opentelemetry", "otel", "builder", "metricsdb"]
+title: Query using Builder
+description: This page explains how to use the visual query builder to query your data in Console.
+sidebarTitle: With Builder
+keywords: ["query", "builder", "logs", "traces", "events", "metrics"]
 ---
 
-Query and analyze your OpenTelemetry metrics data using Builder, a visual interface in Axiom Console. This page shows you how to extract insights from your metrics through filtering, aggregation, and transformation operations.
+Query your data using the visual query builder in Console.
 
-For more information on working with metrics at Axiom, see [Metrics overview](/query-data/metrics/overview).
+## Query logs, traces, and events
 
-<Info>
-To write queries directly using a text-based language, use [MPL (Metrics Processing Language)](/query-data/metrics/query-metrics-mpl).
+To query logs, traces, and events using the visual query builder:
 
-To migrate existing PromQL queries to Axiom, see [Migrate PromQL queries to Axiom](/mpl/migrate-metrics).
-</Info>
+1. In the top left, click **Builder**.
+2. From the list, select the dataset that you want to query.
+3. Optional: In the **Where** section, create filters to narrow down the query results.
+4. Optional: In the **Summarize** section, select a way to visualize the query results.
+5. Optional: In the **More** section, specify additional options such as sorting the results or limiting the number of displayed events.
+6. Select the time range.
+7. Click **Run**.
 
-## Concepts
+While the query runs, the status bar gives you continuous updates about the number of rows examined, matched, and returned.
+
+See below for more information about each of these steps.
+
+### Add filters
+
+Use the **Where** section to filter the results to specific events. For example, to filter for events that originate in a specific geolocation like France.
+
+To add a filter:
+
+1. Click **+** in the **Where** section.
+2. Select the field where you want to filter for values. For example, `geo.country`.
+3. Select the logical operator of the filter. These are different for each field type. For example, you can use **starts-with** for string fields and **>=** for number fields. In this example, select `==` for an exact match.
+4. Specify the value for which you want to filter. In this example, enter `France`.
+
+When you run the query, the results only show events matching the criteria you specified for the filter.
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20where%20%5B'geo.country'%5D%20%3D~%20'France'%22%7D)
+
+### Add multiple filters
+
+You can add multiple filters and combine them with AND/OR operators. For example, to filter for events that originate in France or Germany.
+
+To add and combine multiple filters:
+
+1. Add a filter for France as explained in [Add filters](#add-filters).
+2. Add a filter for Germany as explained in [Add filters](#add-filters).
+3. Click **and** that appears between the two filters, and then select **or**.
+
+The query results display events that originate in France or Germany.
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20where%20(%5B'geo.country'%5D%20%3D~%20'France'%20or%20%5B'geo.country'%5D%20%3D~%20'Germany')%22%7D)
+
+<Note>
+    You can add groups of filters using the **New Group** element.
+    Axiom supports AND/OR operators at the top level and one level deep.
+</Note>
+
+### Add visualizations
+
+Axiom provides powerful visualizations that display the output of aggregate functions across your dataset. The **Summarize** section provides you with several ways to visualize the query results. For example, the `count` visualization displays the number of events matching your query over time. Some visualizations require an argument such as a field or other parameters.
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20count()%20by%20bin_auto(_time)%22%7D)
+
+For more information about visualizations, see [Visualize data](/query-data/visualizations).
+
+### Segment data
+
+When visualizing data, segment data into specific groups to see more clearly how the data behaves. For example, to see how many events originate in each geolocation, select the `count` visualization and group by `geo.country`.
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20count()%20by%20bin_auto(_time)%2C%20%5B'geo.country'%5D%22%7D)
+
+### More options
+
+In the **More** section, specify the following additional options:
+
+- By default, Axiom automatically chooses the best ordering for the query results. To specify the sorting order manually, click **Sort by**, and then select the field according to which you want to sort the results.
+- To limit the number of events the query returns, click **Limit**, and then specify the maximum number of returned events.
+- Specify whether to display or hide open intervals.
+
+### Select time range
+
+When you select the time range of a query, you specify the time interval where you want to look for events.
+
+To select the time range, choose one of the following options:
+1. In the top left, click <Icon icon="clock" iconType="regular"/> **Time range**.
+1. Choose one of the following options:
+    - Use the **Quick range** items to quickly select popular time ranges.
+    - To the right of the **Start date** and **End date** fields, click <Icon icon="calendar-days" iconType="light"/> **Select date and time** to select specific times.
+    - Enter the specific time in the **Start date** and **End date** fields using natural language. For example, `1 hour ago` or `last Monday at 3pm`. For more information on the supported natural language inputs, see the [Sugar documentation](https://sugarjs.com/docs/#/DateParsing). Don’t use the `from` and `after` keywords in your input.
+
+## Query metrics
+
+Your metrics data is organized into datasets, metrics, tags, and series:
 
 - **Dataset:** A group of related metrics.
 - **Metric:** A measurement that tracks a specific aspect of your system over time.
 - **Tag:** A key-value pair identifying a series.
 - **Series:** A unique combination of a metric and tag set.
 
-## Build metrics query
+### Build metrics query
 
 To build a typical metrics query:
 
@@ -37,7 +114,7 @@ To build a typical metrics query:
 The metric selector only shows metrics that were active during the selected time range. Expand the time range to see more metrics in the dropdown.
 </Note>
 
-## Example query
+### Example query
 
 <Frame>
 <img src="/doc-assets/shots/example-metrics-query.png" alt="Example metrics query" />
@@ -45,17 +122,17 @@ The metric selector only shows metrics that were active during the selected time
 
 This example queries the `axiom-dev.metrics` dataset’s `alertmanager_alerts` metric one hour before the current time. It filters results to events where `k8s.namespace.name` is `monitoring` and aggregates events over 30-second time windows into their average value.
 
-## Elements of queries
+### Elements of queries
 
 The following explains each element of a metrics query.
 
-### Source
+#### Source
 
 Specify the dataset and the metric in the **Dataset** field. The dataset and metric names are separated by a colon in the Builder interface.
 
 For example, `axiom-dev.metrics:alertmanager_alerts`.
 
-### Filter
+#### Filter
 
 Use the **Where** section to filter series based on tag values.
 1. Click **+** in the **Where** section.
@@ -68,7 +145,7 @@ Use the **Where** section to filter series based on tag values.
 
 For example, the following joins three filters: `project == /.*metrics.*/ and code >= 200 and code < 300`.
 
-### Transformations
+#### Transformations
 
 Use the **Transformations** section to transform individual values or series.
 
@@ -79,7 +156,7 @@ Use the **Transformations** section to transform individual values or series.
     - **group:** Group the data by a set of tags using the aggregation function you specify.
     - **bucket** Aggregate the data by time and tag dimensions simultaneously.
 
-#### Map
+##### Map
 
 Use `map` to transform individual values.
 
