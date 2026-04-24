@@ -145,9 +145,9 @@ npx skills add axiomhq/skills
 | Automated data ingestion in production | ✓ | | |
 | One-off data exploration | | | ✓ |
 | Batch ingestion from local files | | ✓ | |
-| Building dashboards and monitors | | | ✓ |
+| Building dashboards and monitors | ✓ | | ✓ |
 | Programmatic dataset management | ✓ | ✓ | |
-| Real-time data streaming | | ✓ | |
+| Live-tailing a data stream | | ✓ | |
 | Complex queries with visualizations | | | ✓ |
 | CI/CD pipeline integration | ✓ | ✓ | |
 
