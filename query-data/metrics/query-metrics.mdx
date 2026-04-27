@@ -87,12 +87,23 @@ Available mapping functions:
 
 | Function              | Description                                                      |
 |-----------------------|------------------------------------------------------------------|
-| `rate`                | Computes the per-second rate of change for a metric.             |
+| `rate`                | Computes the per-second rate of change for a metric. Handles counter resets by treating negative deltas as resets and only computing the rate from the increase after the reset.             |
 | `abs`                 | Returns the absolute value of each data point.                   |
 | `interpolate::linear` |  Linear interpolation of missing values. |
 | `fill::prev`          | Fills missing values using the previous non-null value.          |
 
 For example, to calculate rate per second for the metric, use `map rate`. To fill empty values with the latest value, use `map fill::prev`.
+
+### Handle cumulative counter resets
+
+Cumulative counters are metrics that only increase over time, such as total requests served or total errors counted. These counters can reset to zero when the source restarts (for example, due to a deployment, power cycle, or crash).
+
+When calculating rates or aggregating cumulative counters, use `map rate` or `align ... using prom::rate` to correctly handle these resets:
+
+- **`map rate`** computes the per-second rate of change and treats any negative delta (where the new value is lower than the previous value) as a counter reset. It discards the data point spanning the reset and computes the rate from subsequent increases.
+- **`align ... using prom::rate`** provides PromQL-style rate calculation over a specified time window with the same counter-reset handling.
+
+To display the total value of a cumulative counter over a time window despite resets, combine `map rate` with `align ... using sum` to sum the per-second rates back into totals over each interval.
 
 #### Align
 

@@ -55,3 +55,25 @@ To delete a monitor:
 1. Click the monitor in the list that you want to delete.
 1. In the top right, click <Icon icon="ellipsis-vertical" iconType="solid"/> **More**.
 1. Click **Delete monitor**.
+
+## Trigger after N consecutive failures
+
+By default, a monitor triggers on the first check run that crosses the threshold or matches the condition. To reduce noise from transient spikes, you can require the condition to hold across multiple consecutive check runs before the monitor triggers.
+
+This setting is not available in the Axiom UI. Configure it using the [REST API](/restapi/endpoints/createMonitor).
+
+Set `triggerFromNRuns` in the request body when creating or updating a monitor:
+
+```json
+{
+  "triggerFromNRuns": 3
+}
+```
+
+With `triggerFromNRuns` set to `3`, the monitor only triggers after three consecutive check runs where the condition is met. If any run does not meet the condition, the count resets. This is useful when you want to avoid alerting on brief, temporary anomalies.
+
+<Note>
+  `triggerFromNRuns` applies to [threshold monitors](/monitor-data/threshold-monitors) and [anomaly monitors](/monitor-data/anomaly-monitors). The minimum value is `1`, which is the default behavior (trigger immediately).
+</Note>
+
+To verify the current value, use the [Get monitor](/restapi/endpoints/getMonitor) endpoint and check the `triggerFromNRuns` field in the response.

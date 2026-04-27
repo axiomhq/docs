@@ -99,6 +99,16 @@ To import data to a dataset, follow these steps:
 1. Optional: Specify the timestamp field. This is only necessary if your data contains a timestamp field and it’s different from `_time`.
 1. Upload the file, and then click **Import**.
 
+## Delete individual events
+
+Axiom doesn’t support deleting individual events after ingestion. Axiom stores events in compressed blocks of tens of thousands of events, so granular per-event deletion isn’t possible.
+
+To remove data, use one of these approaches:
+
+- **Trim by date**: Delete all data blocks older than a date you specify. See [Trim dataset](#trim-dataset).
+- **Delete by query (exceptional cases)**: Use the [block delete API](/restapi/delete-blocks) to delete all blocks that contain events matching an APL query. This is intended for situations such as accidentally ingesting sensitive data that must be removed immediately. Note that this deletes entire blocks, so it may remove more events than your query matches.
+- **Delete the dataset**: Permanently delete all data in the dataset. See [Delete dataset](#delete-dataset).
+
 ## Trim dataset
 
 Trimming permanently deletes data stored in blocks that are older than a date you specify. Note that this action doesn’t delete data that’s older than the specified date but shares a block with newer data.
@@ -133,6 +143,11 @@ Vacuuming fields doesn’t delete any events from your dataset. To delete events
 <Note>
 You can only vacuum fields once per day for each dataset.
 </Note>
+
+If you hit this limit while prototyping and iterating quickly on your event schema, consider the following alternatives:
+- **Use a separate dataset for development.** Keep a dedicated dataset for experimentation so you can delete and recreate it freely without affecting your production data or hitting the vacuum limit on datasets that matter.
+- **Delete and recreate the dataset.** If the dataset only contains test data you don't need, delete it and create a fresh one. This resets the field schema without needing to vacuum.
+- **Trim before vacuuming.** If the unwanted fields come from events that are still within the retention period, first [trim the dataset](#trim-dataset) to remove those events, then vacuum the fields to rebuild the schema.
 
 To vacuum fields, follow these steps:
 
@@ -195,7 +210,9 @@ This procedure only removes the shared dataset from your organization. The under
 
 ## Specify data retention period
 
-The data retention period determines how long Axiom stores your data. By default, the data retention period is the same for all datasets. You can configure custom retention periods for individual datasets. As a result, Axiom automatically trims data after the specified time period instead of the default period. For example, this can be useful if your dataset contains sensitive event data that you don’t want to retain for a long time.
+The data retention period determines how long Axiom stores your data. Axiom automatically deletes data that exceeds the retention period. You don't need to manually trim data to stay within the retention window. The automatic deletion runs periodically in the background, so data may remain briefly queryable after it passes the retention threshold.
+
+By default, the data retention period is the same for all datasets. You can configure custom retention periods for individual datasets. As a result, Axiom automatically trims data after the specified time period instead of the default period. For example, this can be useful if your dataset contains sensitive event data that you don’t want to retain for a long time.
 
 The custom data retention period you set for a dataset must be shorter than the default data retention period. For example, if you’re on the Personal plan, the default data retention period is 30 days and you can only specify a shorter period. For more information, see [Pricing-based limits](/reference/limits#pricing-based-limits) and [Set default dataset retention period](/reference/organization-settings#set-default-dataset-retention-period).
 
@@ -209,6 +226,18 @@ To change the data retention period for a dataset, follow these steps:
 1. In the list, find the dataset for which you want to change the retention period, and then click <Icon icon="calendar-clock" iconType="sharp-light"/> **Edit dataset retention** on the right.
 1. Enter a data retention period. The custom retention period must be greater than 0 days.
 1. Click **Submit**.
+
+## Delete events by query
+
+Axiom stores events in blocks of tens of thousands of events. You can't delete individual events after they're ingested, but you can delete all blocks that contain events matching an APL query.
+
+Use the `/v2/datasets/_apl/delete` endpoint to specify an APL query. Axiom deletes every block that contains at least one matching event. This means a deletion request can remove more events than the query matches.
+
+<Warning>
+This operation is slow, resource-intensive, and irreversible. Use it only in exceptional cases, such as when you accidentally ingested sensitive data and need to remove it immediately.
+</Warning>
+
+For full details and example requests, see [Delete blocks of data](/restapi/delete-blocks).
 
 ## Delete dataset
 
