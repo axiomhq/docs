@@ -27,7 +27,9 @@ The choice between these options depends on your individual requirements:
 | Send data to Axiom                                  | Yes         | Yes              |
 | Query data                                          | Yes         | No               |
 | Capture errors                                      | Yes         | No               |
-| Create annotations                                  | Yes         | No               |
+| Manage annotations                                  | Yes         | No               |
+| Manage datasets                                     | Yes         | No               |
+| Manage monitors                                     | Yes         | No               |
 | Transports                                          | No          | Yes              |
 | Structured logging by default                       | No          | Yes              |
 | Send data to multiple places from a single function | No          | Yes              |
@@ -85,6 +87,17 @@ await axiom.flush();
 
 The client automatically batches events in the background. In most cases, call `flush()` only before your application exits.
 
+If you need each ingest call to send immediately without batching, use `AxiomWithoutBatching` instead:
+
+```ts
+import { AxiomWithoutBatching } from '@axiomhq/js';
+
+const axiom = new AxiomWithoutBatching({ token: process.env.AXIOM_TOKEN });
+const status = await axiom.ingest('DATASET_NAME', [{ foo: 'bar' }]);
+```
+
+`AxiomWithoutBatching.ingest()` returns an `IngestStatus` directly, so you can inspect how many events were ingested or failed without waiting for a flush.
+
 ### Query data
 
 The following example queries data from Axiom:
@@ -97,6 +110,30 @@ console.log(res);
 <Info>
 <ReplaceDataset />
 </Info>
+
+Pass `QueryOptions` to scope queries by time or control caching:
+
+```ts
+const res = await axiom.query(`['DATASET_NAME'] | count`, {
+  startTime: '2024-01-01T00:00:00Z',
+  endTime:   '2024-01-02T00:00:00Z',
+  noCache: true,
+});
+```
+
+Use the `tabular` format to iterate over result rows as plain objects:
+
+```ts
+const res = await axiom.query(`['DATASET_NAME'] | limit 100`, {
+  format: 'tabular',
+});
+
+for (const table of res.tables) {
+  for (const row of table.events()) {
+    console.log(row);
+  }
+}
+```
 
 For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-js/tree/main/examples).
 
@@ -116,21 +153,147 @@ let client = new Axiom({
 
 By default, `onError` is set to `console.error`.
 
-### Create annotations
+### Manage annotations
 
-The following example creates an annotation:
+The `annotations.Service` class provides methods to create, retrieve, update, and delete annotations.
+
+Create an annotation:
 
 ```ts
 import { annotations } from '@axiomhq/js';
 
 const client = new annotations.Service({ token: process.env.AXIOM_TOKEN });
 
-await annotations.create({
+const annotation = await client.create({
   type: 'deployment',
   datasets: ['DATASET_NAME'],
   title: 'New deployment',
   description: 'Deployed version 1.0.0',
-})
+});
+```
+
+List annotations, optionally filtered by dataset or time range:
+
+```ts
+const all = await client.list();
+
+const filtered = await client.list({
+  datasets: ['DATASET_NAME'],
+  start: '2024-01-01T00:00:00Z',
+  end: '2024-01-02T00:00:00Z',
+});
+```
+
+Get a single annotation by ID:
+
+```ts
+const annotation = await client.get('ANNOTATION_ID');
+```
+
+Update an annotation:
+
+```ts
+await client.update('ANNOTATION_ID', {
+  title: 'Hotfix deployment',
+  description: 'Patched version 1.0.1',
+});
+```
+
+Delete an annotation:
+
+```ts
+await client.delete('ANNOTATION_ID');
+```
+
+### Manage datasets
+
+The `axiom.datasets` property exposes methods to create, retrieve, update, delete, and trim datasets. It uses the same client you already configured.
+
+List all datasets:
+
+```ts
+const datasets = await axiom.datasets.list();
+```
+
+Get a single dataset by name:
+
+```ts
+const dataset = await axiom.datasets.get('DATASET_NAME');
+```
+
+Create a dataset:
+
+```ts
+const dataset = await axiom.datasets.create({ name: 'my-dataset', description: 'My dataset' });
+```
+
+Update a dataset's description:
+
+```ts
+await axiom.datasets.update('DATASET_NAME', { description: 'Updated description' });
+```
+
+Trim a dataset to keep only events within a given duration:
+
+```ts
+await axiom.datasets.trim('DATASET_NAME', '24h');
+```
+
+Delete a dataset:
+
+```ts
+await axiom.datasets.delete('DATASET_NAME');
+```
+
+### Manage monitors
+
+The `monitors.Service` class provides methods to list, get, create, update, and delete monitors.
+
+```ts
+import { monitors } from '@axiomhq/js';
+
+const client = new monitors.Service({ token: process.env.AXIOM_TOKEN });
+```
+
+List all monitors:
+
+```ts
+const all = await client.list();
+```
+
+Get a single monitor by ID:
+
+```ts
+const monitor = await client.get('MONITOR_ID');
+```
+
+Create a monitor:
+
+```ts
+const monitor = await client.create({
+  name: 'High error rate',
+  type: 'Threshold',
+  aplQuery: `['DATASET_NAME'] | where level == 'error' | count`,
+  operator: 'Above',
+  threshold: 100,
+  intervalMinutes: 5,
+  rangeMinutes: 5,
+  alertOnNoData: false,
+  notifyByGroup: false,
+  notifierIDs: [],
+});
+```
+
+Update a monitor:
+
+```ts
+await client.update('MONITOR_ID', { threshold: 200 });
+```
+
+Delete a monitor:
+
+```ts
+await client.delete('MONITOR_ID');
 ```
 
 ## Use @axiomhq/logging
