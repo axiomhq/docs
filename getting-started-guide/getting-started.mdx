@@ -1,101 +1,184 @@
 ---
-title: 'Get started'
-description: 'This guide introduces you to the concepts behind working with Axiom and give a short introduction to each of the high-level features.'
-keywords: ['axiom documentation', 'documentation', 'axiom', 'stream data', 'analyze data', 'explore data']
+title: "Quickstart"
+description: "Go from zero to confident with Axiom. Learn datasets, queries, virtual fields, monitors, and dashboards in progressive steps."
+sidebarTitle: Quickstart
+keywords: ["axiom", "quickstart", "getting started", "APL", "query", "dashboard", "monitor", "virtual fields"]
 ---
 
-<Frame caption="Axiom user interface">
-  <img src="/doc-assets/intro.png" alt="Axiom user interface" />
-</Frame>
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
 
-Axiom enables you to make the most of your event data without compromises: all your data, all the time, for all possible needs. Say goodbye to data sampling, waiting times, and hefty fees.
+This guide takes you from foundational knowledge to advanced proficiency with Axiom. The sections are structured to build upon one another but can also serve as standalone references. By the end, you can independently query data, diagnose performance, derive insights, and set up proactive alerting.
 
-This page explains how to start using Axiom and leverage the power of event data in your organization.
+## Axiom fundamentals
 
-## 1. Send your data to Axiom
+Axiom is a platform for storing and querying massive volumes of machine data. Think of it as a high-performance database designed specifically for logs, traces, metrics, events, and other timestamped information.
 
-You can send data to Axiom in a variety of ways. Each individual piece of data is an event.
+**Event** is a single record or log entry. An event could be a page load, a user clicking a button, an API request, or a server-side performance measurement.
 
-Events can be emitted from internal or third-party services, cloud functions, containers, virtual machines (VMs), or even scripts. Events follow the [JSON specification](https://www.json.org/json-en.html) for which field types are supported, an event could look like this:
+**Dataset** is a collection of related events, similar to a table in a traditional database. For example, the Axiom Playground includes datasets like `sample-http-logs` for HTTP request logs and `github-push-event` for GitHub activity.
 
-```json
-{
-  "service": "api-http",
-  "severity": "error",
-  "duration": 231,
-  "customer_id": "ghj34g32poiu4",
-  "tags": ["aws-east-1", "zone-b"],
-  "metadata": {
-    "version": "3.1.2"
-  }
-}
+**Field** is a piece of information within an event, like a column in a spreadsheet. Fields have a name (for example, `status`, `resp_body_size_bytes`, `geo.city`) and a value. Axiom supports various data types including strings, numbers, booleans, and complex JSON objects.
+
+<Tip title="When to split a dataset">
+When to split a dataset:
+- **Single dataset:** Use one dataset when events share many common fields and you often query them together.
+- **Multiple datasets:** Split into multiple datasets when the data is structurally different or serves entirely different use cases. This prevents a single dataset from accumulating fields that are only relevant to a small subset of its events.
+</Tip>
+
+## Send data to Axiom
+
+You can send your first event with a single HTTP request:
+
+```shell wrap
+curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
+    -H 'Authorization: Bearer API_TOKEN' \
+    -H 'Content-Type: application/x-ndjson' \
+    -d '{ "http": { "request": { "method": "GET", "duration_ms": 231 }, "response": { "body": { "size": 3012 } } }, "url": { "path": "/download" } }'
 ```
 
-An event must belong to a dataset which is a collection of similar events. You can have multiple datasets that help to segment your events to make them easier to query and visualize, and also aide in access control.
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
 
-Axiom stores every event you send and makes it available to you for querying either by streaming logs in real-time, or by analyzing events to produce visualizations.
+To send events continuously, Axiom supports a wide range of tools and libraries:
 
-The underlying data store of Axiom is a time series database. This means every event is indexed with a timestamp specified at ingress or set automatically.
+- **[OpenTelemetry](/send-data/opentelemetry)** for industry-standard instrumentation of traces, logs, and metrics.
+- **[Axiom API](/restapi/ingest)** for direct HTTP ingestion from any language or platform.
+- **Language libraries** for [JavaScript](/guides/javascript), [Python](/guides/python), [Go](/guides/go), [Rust](/guides/rust), [.NET](/guides/send-logs-from-dotnet), and more.
+- **Log shippers** like [Vector](/send-data/vector), [Fluent Bit](/send-data/fluent-bit), and [Logstash](/send-data/logstash).
+- **Platform integrations** for [AWS](/send-data/cloudwatch), [Kubernetes](/send-data/kubernetes), [Vercel](/apps/vercel), and [Cloudflare Logpush](/apps/cloudflare-logpush).
 
-Axiom doesn’t sample your data on ingest or querying, unless you’ve expressly instructed it to.
+For the full list, see [Methods for sending data](/send-data/methods).
 
-<Card title="Send data to Axiom" icon="paper-plane" href="/send-data/methods" horizontal></Card>
+## Explore your data
 
-## 2. Stream your data
+Start by identifying the correct dataset in the [Datasets tab](https://app.axiom.co/datasets). You can explore the fields within a dataset to find relevant information. For example, in `sample-http-logs` you might look at `resp_header_size_bytes` (response size), `status` (HTTP status code), and `geo.country` (geographic origin).
 
-Axiom makes it really easy to view your data as it’s being ingested live. This is also referred to as "Live Stream" or "Live Tail," and the result is having a terminal-like feel of being able to view all your events in real-time:
+<Tip>
+Pay attention to field data types. A field stored as a number behaves differently than one stored as a string. The schema view in the Datasets tab shows the type for each field.
+</Tip>
 
-From the Stream tab, you can easily add filters to narrow down the results as well as save popular searches and share them with your organization members. You can also hide/show specific fields
+## Build your first queries
 
-Another useful feature of the Stream tab is to only show events in a particular time-window. This could be the last N minutes or a more-specific time range you specify manually. This feature is extremely useful when you need to closely inspect your data, allowing you to get an chronological view of every event in that time window.
+You typically interact with this data by creating queries using one of the following interfaces:
 
-<Card title="Stream data" icon="screencast" href="/query-data/stream" horizontal></Card>
+- **[Builder](/query-data/explore):** A point-and-click interface that helps you build filters and aggregations without writing code. It's excellent for simple, quick-look analyses.
+- **[Editor](/query-data/query-editor)**: An interface where you can write queries using powerful, text-based query languages for sophisticated analysis. Use [APL (Axiom Processing Language)](/apl/introduction) for logs, traces, and events, and [MPL (Metrics Processing Language)](/mpl/introduction) for metrics.
+- **[Axiom API](/restapi/query)**: Query your data programmatically.
+- **[AI-assisted query building](/query-data/query-editor#generate-query-using-natural-language)**: Generate APL queries from natural language descriptions after pressing <kbd>Cmd+K</kbd> (macOS) or <kbd>Ctrl+K</kbd> (Windows/Linux) in the Query tab.
+- **[MCP Server](/console/intelligence/mcp-server) and [Skills](/console/intelligence/skills)**: Enable AI agents to query your data.
 
-## 3. Analyze your data
+**Example: APL query that counts distinct users per day**
 
-In Axiom, an individual piece of data is an event, and a dataset is a collection of related events. Datasets contain incoming event data. The Datasets tab allows you to analyze fields within your datasets. For example:
+An APL query starts with a data source, followed by operators connected by the pipe `|` character. Each pipe takes the output of the previous line and uses it as input for the next, allowing you to chain operations. A common pattern is dataset, filter (`where`), transform (`extend`), analyze (`summarize`).
 
-- Determine field data types and names.
-- Edit field properties.
-- Gain insights about the underlying data using quick charts.
-- Add virtual fields.
+This example counts distinct users per day, grouped by HTTP method:
 
-<Card title="Analyze data" icon="server" href="/query-data/datasets" horizontal></Card>
+```kusto
+['sample-http-logs']
+| summarize dcount(id) by bin(_time, 1d), method
+```
 
-## 4. Explore your data
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20dcount(id)%20by%20bin(_time%2C%201d)%2C%20method%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
 
-While viewing individual events can be very useful, at scale and for general monitoring and observability, it’s important to be able to quickly aggregate, filter, and segment your data.
+- `['sample-http-logs']` selects the dataset.
+- `|` passes the data to the next operator.
+- `summarize` groups rows that share values in the `by` clause.
+- `dcount(id)` calculates the distinct count of the `id` field. This is a probabilistic function that provides a highly accurate approximation and runs faster than an exact count.
+- `by bin(_time, 1d), method` groups by time binned into 1-day intervals and by HTTP method.
 
-The Query tab gives you various tools to extract insights from your data:
-- Visualize aggregations with count, min, max, average, percentiles, heatmaps, and more.
-- Filter events.
-- Segment data with `group-by`.
+<Tip>
+- Start with Builder to understand the basic structure of a query, then switch to Editor to refine it.
+- Use the AI assistant as a learning tool. Generate a query and then study its structure to understand the APL.
+- Use the `where` operator early to narrow down events. This is important for performance.
+- Review your team's saved queries in Axiom to learn from real-world examples.
+- The full list of functions and operators is available in the [Query reference](/apl/overview).
+</Tip>
 
-<Card title="Explore data" icon="magnifying-glass" href="/query-data/explore" horizontal></Card>
+## Set up monitors
 
-## 5. Monitor for problems
+[Monitors](/monitor-data/monitors) run queries on a schedule and trigger notifications when conditions are met. This moves you from reactive investigation to proactive awareness.
 
-Get alerted when there are problems with your data. For example:
+- **[Threshold monitors](/monitor-data/threshold-monitors)** trigger when an aggregated value crosses a threshold (for example, error counts above 100 in 5 minutes). This is the most common type.
+- **[Match monitors](/monitor-data/match-monitors)** trigger for each individual event that matches a specific pattern (for example, a critical error message). Use these sparingly for high-volume events.
+- **[Anomaly monitors](/monitor-data/anomaly-monitors)** use machine learning to detect unexpected deviations from a historical baseline, without a static threshold.
 
-- A queue size is larger than acceptable limits.
-- Web containers take too long to respond.
-- A specific customer starts using a new feature.
+**Example: Alert on increased error rate**
 
-<Card title="Monitor data" icon="desktop" href="/monitor-data/monitors" horizontal></Card>
+This example creates a threshold monitor to get a notification if the number of server errors exceeds a threshold.
 
-## 6. Integrate with data shippers
+1. Write and test the query:
 
-Integrations can be installed and configured using different third-party Data shippers to quickly get insights from your logs and services by setting up a background task that continuously synchronizes events into Axiom.
+    ```kusto
+    ['sample-http-logs']
+    | where status >= 500
+    | summarize error_count = count()
+    ```
 
-<Card title="Integrate with data shippers" icon="ship" href="/send-data/methods" horizontal></Card>
+1. Go to **Monitors** tab and create a new threshold monitor.
+1. Paste your query and set the trigger condition, for example, `When error_count is above 50`.
+1. Set the schedule, for example, evaluate every 5 minutes.
+1. Select or create a [notifier](/monitor-data/notifiers-overview) (Slack, PagerDuty, email, and more).
 
-## 7. Customize your organization
+<Tip>
+- Customize the notifier description to include important context such as a link to a relevant dashboard.
+- Avoid creating match monitors on high-volume logs without specific filters. This can lead to excessive notifications.
+</Tip>
 
-As your use of Axiom widens, customize it for your organization’s needs. For example:
+## Build dashboards
 
-- Add users.
-- Set up third-party authentication providers.
-- Set up role-based access control.
-- Create and manage API tokens.
+[Dashboards](/dashboards/create) are collections of saved queries visualized as charts, tables, and other elements. They provide a single view for monitoring a service, tracking an experiment, or sharing key metrics.
 
-<Card title="Customize your organization" icon="gear" href="/reference/settings" horizontal></Card>
+This example below creates a dashboard to monitor HTTP request performance.
+
+**Element 1: P75 and P95 latency (time series)**
+
+This query calculates the 75th and 95th percentiles of request duration and displays them as a time series.
+
+```kusto
+['sample-http-logs']
+| summarize
+    P75 = percentile(req_duration_ms, 75),
+    P95 = percentile(req_duration_ms, 95)
+  by bin_auto(_time)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%5Cn%20%20%20%20P75%20%3D%20percentile(req_duration_ms%2C%2075)%2C%5Cn%20%20%20%20P95%20%3D%20percentile(req_duration_ms%2C%2095)%5Cn%20%20by%20bin_auto(_time)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+
+**Element 2: Requests by country (table)**
+
+This query counts the number of requests by country and displays them as a table.
+
+```kusto
+['sample-http-logs']
+| summarize request_count = count() by ['geo.country']
+| sort by request_count desc
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20request_count%20%3D%20count()%20by%20%5B'geo.country'%5D%5Cn%7C%20sort%20by%20request_count%20desc%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+
+**Element 3: Total distinct users (statistic)**
+
+This query counts the number of distinct users and displays them as a statistic.
+
+```kusto
+['sample-http-logs']
+| summarize dcount(id)
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20dcount(id)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
+
+<Tip> 
+- Give dashboards and their elements clear, descriptive names.
+- Use dashboard filters to allow viewers to slice data by dimensions like region, status code, or service.
+- Avoid cluttering a single dashboard with unrelated metrics. Create separate dashboards for different use cases.
+</Tip>
+
+## What's next
+
+- [APL introduction](/apl/introduction) for the full query language reference.
+- [Sample queries](/apl/tutorial) for real-world APL examples you can run in the Playground.
+- [Send data to Axiom](/send-data/methods) to connect your own data sources.
+- [Monitor examples](/monitor-data/monitor-examples) for more alerting patterns.
