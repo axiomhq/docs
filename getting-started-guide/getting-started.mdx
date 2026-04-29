@@ -17,41 +17,33 @@ Axiom is a platform for storing and querying massive volumes of machine data. Th
 
 **Field** is a piece of information within an event, like a column in a spreadsheet. Fields have a name (for example, `status`, `resp_body_size_bytes`, `geo.city`) and a value. Axiom supports various data types including strings, numbers, booleans, and complex JSON objects.
 
-You typically interact with this data by creating queries using one of the following interfaces:
-
-- **[Builder](/query-data/explore):** A visual interface for building queries.
-- **[APL (Axiom Processing Language)](/apl/introduction)** and **[MPL (Metrics Processing Language)](/mpl/introduction)**: Text-based query languages.
-- **[Axiom API](/restapi/query)**: Query your data programmatically.
-- **[AI-assisted query building](/query-data/query-editor#generate-query-using-natural-language)**: Generate APL queries from natural language descriptions.
-- **[MCP Server](/console/intelligence/mcp-server) and [Skills](/console/intelligence/skills)**: Enable AI agents to query your data.
-
 ### Explore your data
 
 Start by identifying the correct dataset in the [Datasets page](https://app.axiom.co/datasets). You can explore the fields within a dataset to find relevant information. For example, in `sample-http-logs` you might look at `resp_header_size_bytes` (response size), `status` (HTTP status code), and `geo.country` (geographic origin).
 
-<Tip>
-If you're new to writing queries, check out the [AI-assisted query building](#ai-assisted-query-building) section below. You can describe what you want in natural language and Axiom generates the APL for you.
-</Tip>
+<Accordion title="Field data types">
+Pay attention to field data types. A field stored as a number behaves differently than one stored as a string. The schema view in the Axiom console shows the type for each field.
 
-### Tips
-
-- Familiarize yourself with the key datasets your team uses. A quick look at your team's saved queries is a great starting point.
-- Pay attention to field data types. A field stored as a number behaves differently than one stored as a string. The schema view in the Axiom console shows the type for each field. For more details, see [Performance best practices](/reference/performance).
-
-<Note>
 If a field has mixed types (for example, a status code that is sometimes a number `200` and sometimes a string `"200"`), queries can produce unexpected results. Normalize the data at query time using typecasting functions like `tostring()` or `toint()`. For example, `| where tostring(status) startswith "2"` works reliably on a field with mixed types.
-</Note>
+</Accordion>
 
 ## Build your first queries
 
-Axiom provides two main ways to query data:
+You typically interact with this data by creating queries using one of the following interfaces:
 
-- **Builder** is a point-and-click interface that helps you build filters and aggregations without writing code. It's excellent for simple, quick-look analyses. For more information, see [Query using Builder](/query-data/explore).
-- **APL (Axiom Processing Language)** is a powerful, pipe-based query language for sophisticated analysis, transformation, and aggregation. An APL query starts with a data source (a dataset), followed by operators connected by the pipe `|` character. Each pipe takes the output of the previous line and uses it as input for the next, allowing you to chain operations. A common pattern is dataset, filter (`where`), transform (`extend`), analyze (`summarize`). For more information, see [Introduction to APL](/apl/introduction).
+- **[Builder](/query-data/explore):** A point-and-click interface that helps you build filters and aggregations without writing code. It's excellent for simple, quick-look analyses.
+- **[Editor](/query-data/query-editor)**: An interface where you can write queries using powerful, text-based query languages for sophisticated analysis. Use [APL (Axiom Processing Language)](/apl/introduction) for logs, traces, and events, and [MPL (Metrics Processing Language)](/mpl/introduction) for metrics.
+- **[Axiom API](/restapi/query)**: Query your data programmatically.
+- **[AI-assisted query building](/query-data/query-editor#generate-query-using-natural-language)**: Generate APL queries from natural language descriptions.
+- **[MCP Server](/console/intelligence/mcp-server) and [Skills](/console/intelligence/skills)**: Enable AI agents to query your data.
 
-### Example: Count events over time
+## APL basics
 
-Count distinct users per day, grouped by HTTP method:
+An APL query starts with a data source, followed by operators connected by the pipe `|` character. Each pipe takes the output of the previous line and uses it as input for the next, allowing you to chain operations. A common pattern is dataset, filter (`where`), transform (`extend`), analyze (`summarize`).
+
+### Example: Count distinct users per day
+
+This example counts distinct users per day, grouped by HTTP method:
 
 ```kusto
 ['sample-http-logs']
@@ -66,7 +58,7 @@ Count distinct users per day, grouped by HTTP method:
 - `dcount(id)` calculates the distinct count of the `id` field. This is a probabilistic function that provides a highly accurate approximation and runs faster than an exact count.
 - `by bin(_time, 1d), method` groups by time binned into 1-day intervals and by HTTP method.
 
-### Handling nested JSON
+### Example: Handle nested JSON
 
 A common scenario is dealing with fields that contain JSON objects. Use `parse_json` to access nested data.
 
@@ -82,23 +74,23 @@ A common scenario is dealing with fields that contain JSON objects. Use `parse_j
 - `extend parsedField = parse_json(...)` converts JSON text into a structured field you can access with dot notation.
 - `project _time, method, status, geo.city` selects only the fields you need.
 
-### Tips
-
-- Start with Builder to understand the basic structure of a query, then switch to the APL editor to refine it.
+<Tip>
+- Start with Builder to understand the basic structure of a query, then switch to Editor to refine it.
 - Use the `where` operator early to narrow down events. This is important for performance.
 - Review your team's saved queries in Axiom to learn from real-world examples.
-- The full list of [tabular operators](/apl/tabular-operators/overview), [aggregation functions](/apl/aggregation-function/statistical-functions), and [scalar functions](/apl/scalar-functions/string-functions) is available in the APL reference.
+- The full list of functions and operators is available in the [Query reference](/apl/overview).
+</Tip>
 
-## Write faster queries
+## APL best practices
 
 A well-written query runs faster, consumes fewer resources, and gets you answers more efficiently. The two most important principles:
 
 1. **Filter early.** Reduce the amount of data as soon as possible.
-2. **Project only what you need.** Avoid selecting unnecessary fields.
+1. **Project only what you need.** Avoid selecting unnecessary fields.
 
-### The power of project
+### Project only what you need
 
-Some datasets are extremely wide, containing hundreds or thousands of fields. When you query these datasets, use `project` to select only the fields you need. Omitting it forces Axiom to retrieve all fields for each event, which dramatically slows down queries.
+Some datasets are wide, containing hundreds or thousands of fields. When you query these datasets with APL, use `project` to select only the fields you need. Without `project`, Axiom retrieves all fields for each event, which slows down queries.
 
 **Sub-optimal:**
 
@@ -125,13 +117,13 @@ By adding `project`, the query ignores all other fields, minimizing I/O and redu
 
 ### AI-assisted query building
 
-Axiom includes AI tooling to help you build queries. Describe what you want to achieve in plain English and the assistant generates an APL query. This is useful when starting out or attempting an analysis you're unsure how to write. Press <kbd>Cmd+K</kbd> (macOS) or <kbd>Ctrl+K</kbd> (Windows/Linux) in the Query tab to open the assistant.
+Axiom includes AI tooling to help you build APL queries. Describe what you want to achieve in plain English and the assistant generates an APL query. This is useful when starting out or attempting an analysis you're unsure how to write. Press <kbd>Cmd+K</kbd> (macOS) or <kbd>Ctrl+K</kbd> (Windows/Linux) in the Query tab to open the assistant.
 
-### Tips
-
+<Tip>
 - Always use `project` or `project-away` after your `where` filters to reduce data volume. `project` keeps specified fields, `project-away` removes them.
 - Place your most restrictive `where` filters as early as possible in the query.
 - Use the AI assistant as a learning tool. Generate a query and then study its structure to understand the APL.
+</Tip>
 
 ## Master virtual fields
 
@@ -153,13 +145,13 @@ Use conditional logic to segment data. Define a virtual field to categorize HTTP
 
 Now you can run queries like `... | summarize count() by response_category` to compare behavior across these groups.
 
-### Tips
-
+<Tip>
 - Use virtual fields to avoid sending redundant data. If you can derive a value, you don't need to add it to your raw logs.
 - Use virtual fields to normalize data from different sources. If one service logs `request_time` and another logs `duration`, create a virtual field using `coalesce(request_time, duration)` to standardize them.
 - For very common, expensive transformations queried frequently, consider performing them at ingest time instead.
+</Tip>
 
-## Understand platform limitations
+## Optimize performance
 
 ### Factors impacting query performance
 
@@ -175,15 +167,10 @@ Now you can run queries like `... | summarize count() by response_category` to c
 
 ### Data management
 
-**When to split a dataset:**
+When to split a dataset:
 
 - **Single dataset:** Use one dataset when events share many common fields and you often query them together.
 - **Multiple datasets:** Split into multiple datasets when the data is structurally different or serves entirely different use cases. This prevents a single dataset from accumulating fields that are only relevant to a small subset of its events.
-
-**Console tips:**
-
-- The query editor does not auto-save. Run your query periodically so it shows in your history, or use the save query feature.
-- You can start in Builder and switch to the APL editor to refine. However, you cannot always convert a hand-written APL query back into Builder since not all operations are supported. Once you switch to APL, continue editing in that mode.
 
 ## Set up monitors
 
@@ -205,15 +192,15 @@ Get a notification if the number of server errors exceeds a threshold.
 | summarize error_count = count()
 ```
 
-2. Navigate to the **Monitors** section and create a new Threshold Monitor.
+1. Go to **Monitors** tab and create a new threshold monitor.
 3. Paste your query and set the trigger condition, for example, `When error_count is above 50`.
 4. Set the schedule, for example, evaluate every 5 minutes.
 5. Select or create a [notifier](/monitor-data/notifiers-overview) (Slack, PagerDuty, email, and more).
 
-### Tips
-
+<Tip>
 - Customize the notifier description to include important context such as a link to a runbook or relevant dashboard.
-- Avoid creating Match Monitors on high-volume logs without specific filters, as this can lead to excessive notifications.
+- Avoid creating match monitors on high-volume logs without specific filters, as this can lead to excessive notifications.
+</Tip>
 
 ## Build dashboards
 
@@ -254,11 +241,11 @@ Create a dashboard to monitor HTTP request performance.
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%5Cn%7C%20summarize%20dcount(id)%22%2C%22queryOptions%22%3A%7B%22quickRange%22%3A%2230d%22%7D%7D)
 
-### Tips
-
+<Tip> 
 - Give dashboards and their elements clear, descriptive names.
 - Use dashboard filters to allow viewers to slice data by dimensions like region, status code, or service.
 - Avoid cluttering a single dashboard with unrelated metrics. Create separate dashboards for different use cases.
+</Tip>
 
 ## What's next
 
