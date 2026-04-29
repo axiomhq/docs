@@ -5,6 +5,9 @@ sidebarTitle: Quickstart
 keywords: ["axiom", "quickstart", "getting started", "APL", "query", "dashboard", "monitor", "virtual fields"]
 ---
 
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+
 This guide takes you from foundational knowledge to advanced proficiency with Axiom. The sections are structured to build upon one another but can also serve as standalone references. By the end, you can independently query data, diagnose performance, derive insights, and set up proactive alerting.
 
 ## Axiom fundamentals
@@ -25,7 +28,29 @@ When to split a dataset:
 
 ## Send data to Axiom
 
+You can send your first event with a single HTTP request:
 
+```shell wrap
+curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
+    -H 'Authorization: Bearer API_TOKEN' \
+    -H 'Content-Type: application/x-ndjson' \
+    -d '{ "http": { "request": { "method": "GET", "duration_ms": 231 }, "response": { "body": { "size": 3012 } } }, "url": { "path": "/download" } }'
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+To send events continuously, Axiom supports a wide range of tools and libraries:
+
+- **[OpenTelemetry](/send-data/opentelemetry)** for industry-standard instrumentation of traces, logs, and metrics.
+- **[Axiom API](/restapi/ingest)** for direct HTTP ingestion from any language or platform.
+- **Language libraries** for [JavaScript](/guides/javascript), [Python](/guides/python), [Go](/guides/go), [Rust](/guides/rust), [.NET](/guides/send-logs-from-dotnet), and more.
+- **Log shippers** like [Vector](/send-data/vector), [Fluent Bit](/send-data/fluent-bit), and [Logstash](/send-data/logstash).
+- **Platform integrations** for [AWS](/send-data/cloudwatch), [Kubernetes](/send-data/kubernetes), [Vercel](/apps/vercel), and [Cloudflare Logpush](/apps/cloudflare-logpush).
+
+For the full list, see [Methods for sending data](/send-data/methods).
 
 ## Explore your data
 
@@ -42,7 +67,7 @@ You typically interact with this data by creating queries using one of the follo
 - **[Builder](/query-data/explore):** A point-and-click interface that helps you build filters and aggregations without writing code. It's excellent for simple, quick-look analyses.
 - **[Editor](/query-data/query-editor)**: An interface where you can write queries using powerful, text-based query languages for sophisticated analysis. Use [APL (Axiom Processing Language)](/apl/introduction) for logs, traces, and events, and [MPL (Metrics Processing Language)](/mpl/introduction) for metrics.
 - **[Axiom API](/restapi/query)**: Query your data programmatically.
-- **[AI-assisted query building](/query-data/query-editor#generate-query-using-natural-language)**: Generate APL queries from natural language descriptions.
+- **[AI-assisted query building](/query-data/query-editor#generate-query-using-natural-language)**: Generate APL queries from natural language descriptions after pressing <kbd>Cmd+K</kbd> (macOS) or <kbd>Ctrl+K</kbd> (Windows/Linux) in the Query tab.
 - **[MCP Server](/console/intelligence/mcp-server) and [Skills](/console/intelligence/skills)**: Enable AI agents to query your data.
 
 **Example: APL query that counts distinct users per day**
@@ -63,10 +88,6 @@ This example counts distinct users per day, grouped by HTTP method:
 - `summarize` groups rows that share values in the `by` clause.
 - `dcount(id)` calculates the distinct count of the `id` field. This is a probabilistic function that provides a highly accurate approximation and runs faster than an exact count.
 - `by bin(_time, 1d), method` groups by time binned into 1-day intervals and by HTTP method.
-
-### AI-assisted query building
-
-Axiom includes AI tooling to help you build APL queries. Describe what you want to achieve in plain English and the assistant generates an APL query. This is useful when starting out or attempting an analysis you're unsure how to write. Press <kbd>Cmd+K</kbd> (macOS) or <kbd>Ctrl+K</kbd> (Windows/Linux) in the Query tab to open the assistant.
 
 <Tip>
 - Start with Builder to understand the basic structure of a query, then switch to Editor to refine it.
@@ -90,20 +111,20 @@ This example creates a threshold monitor to get a notification if the number of 
 
 1. Write and test the query:
 
-```kusto
-['sample-http-logs']
-| where status >= 500
-| summarize error_count = count()
-```
+    ```kusto
+    ['sample-http-logs']
+    | where status >= 500
+    | summarize error_count = count()
+    ```
 
 1. Go to **Monitors** tab and create a new threshold monitor.
-3. Paste your query and set the trigger condition, for example, `When error_count is above 50`.
-4. Set the schedule, for example, evaluate every 5 minutes.
-5. Select or create a [notifier](/monitor-data/notifiers-overview) (Slack, PagerDuty, email, and more).
+1. Paste your query and set the trigger condition, for example, `When error_count is above 50`.
+1. Set the schedule, for example, evaluate every 5 minutes.
+1. Select or create a [notifier](/monitor-data/notifiers-overview) (Slack, PagerDuty, email, and more).
 
 <Tip>
-- Customize the notifier description to include important context such as a link to a runbook or relevant dashboard.
-- Avoid creating match monitors on high-volume logs without specific filters, as this can lead to excessive notifications.
+- Customize the notifier description to include important context such as a link to a relevant dashboard.
+- Avoid creating match monitors on high-volume logs without specific filters. This can lead to excessive notifications.
 </Tip>
 
 ## Build dashboards
