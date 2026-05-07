@@ -3030,6 +3030,91 @@
           }
         }
       }
+    },
+    "/dashboards/uid/{uid}/charts/{chartId}": {
+      "patch": {
+        "tags": [
+          "dashboards"
+        ],
+        "summary": "Patch dashboard chart",
+        "description": "Patch a single chart in a dashboard by chart ID.",
+        "operationId": "patchDashboardChart",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "chartId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardChartPatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid dashboard chart patch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dashboard or chart not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardError"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Version conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3953,6 +4038,34 @@
           }
         }
       },
+      "DashboardChartPatchDocument": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "DashboardChartPatchRequest": {
+        "type": "object",
+        "required": [
+          "chart"
+        ],
+        "properties": {
+          "chart": {
+            "$ref": "#/components/schemas/DashboardChartPatchDocument",
+            "description": "JSON merge patch applied to the existing chart. If id is present, it must match the chartId path parameter."
+          },
+          "message": {
+            "type": "string"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false
+          },
+          "version": {
+            "description": "Required when overwrite is false.",
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "DashboardDocument": {
         "type": "object",
         "additionalProperties": true,
@@ -4736,8 +4849,6 @@
             "type": "string",
             "enum": [
               "personal",
-              "basicDirect",
-              "teamMonthlyDirect",
               "teamMonthlyAws",
               "axiomCloud",
               "teamPlus",
@@ -5257,8 +5368,6 @@
             "type": "string",
             "enum": [
               "personal",
-              "basicDirect",
-              "teamMonthlyDirect",
               "teamMonthlyAws",
               "axiomCloud",
               "teamPlus",
@@ -7290,7 +7399,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/TimeSeriesNonMetricsAplQuery"
+            "$ref": "#/components/schemas/TimeSeriesChartQuery"
           }
         },
         "required": [
@@ -7331,6 +7440,17 @@
       },
       "OverrideDashboardCompareAgainst": {
         "type": "boolean"
+      },
+      "TimeSeriesChartQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/TimeSeriesNonMetricsAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/TimeSeriesNativeMplQuery"
+          }
+        ],
+        "title": "ChartQuery"
       },
       "AplString": {
         "type": "string",
@@ -7487,6 +7607,28 @@
         ],
         "additionalProperties": false,
         "title": "APL"
+      },
+      "TimeSeriesNativeMplQuery": {
+        "type": "object",
+        "properties": {
+          "mpl": {
+            "$ref": "#/components/schemas/MplString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/TimeSeriesQueryOptions"
+          }
+        },
+        "required": [
+          "mpl"
+        ],
+        "additionalProperties": false,
+        "title": "MPL"
+      },
+      "MplString": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500000,
+        "title": "MplString"
       },
       "Aggregation": {
         "type": "object",
@@ -7716,7 +7858,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/HeatmapNonMetricsAplQuery"
+            "$ref": "#/components/schemas/HeatmapChartQuery"
           }
         },
         "required": [
@@ -7726,6 +7868,17 @@
         ],
         "additionalProperties": false,
         "title": "Heatmap"
+      },
+      "HeatmapChartQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/HeatmapNonMetricsAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/HeatmapNativeMplQuery"
+          }
+        ],
+        "title": "ChartQuery"
       },
       "HeatmapQueryOptions": {
         "type": "object",
@@ -7758,6 +7911,22 @@
         "additionalProperties": false,
         "title": "APL"
       },
+      "HeatmapNativeMplQuery": {
+        "type": "object",
+        "properties": {
+          "mpl": {
+            "$ref": "#/components/schemas/MplString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/HeatmapQueryOptions"
+          }
+        },
+        "required": [
+          "mpl"
+        ],
+        "additionalProperties": false,
+        "title": "MPL"
+      },
       "LogStreamChart": {
         "type": "object",
         "properties": {
@@ -7776,7 +7945,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           },
           "tableSettings": {
             "$ref": "#/components/schemas/TableSettings"
@@ -7790,6 +7959,17 @@
         "additionalProperties": false,
         "title": "Log stream"
       },
+      "SimpleChartQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/SimpleNativeMplQuery"
+          }
+        ],
+        "title": "ChartQuery"
+      },
       "SimpleNonMetricsAplQuery": {
         "type": "object",
         "properties": {
@@ -7802,6 +7982,22 @@
         ],
         "additionalProperties": false,
         "title": "APL"
+      },
+      "SimpleNativeMplQuery": {
+        "type": "object",
+        "properties": {
+          "mpl": {
+            "$ref": "#/components/schemas/MplString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/SimpleChartQueryOptions"
+          }
+        },
+        "required": [
+          "mpl"
+        ],
+        "additionalProperties": false,
+        "title": "MPL"
       },
       "TableSettings": {
         "type": "object",
@@ -7898,7 +8094,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           }
         },
         "required": [
@@ -7927,7 +8123,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           }
         },
         "required": [
@@ -7956,7 +8152,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           },
           "tableSettings": {
             "$ref": "#/components/schemas/TableSettings"
@@ -7988,7 +8184,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           }
         },
         "required": [
@@ -8017,7 +8213,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           },
           "colorScheme": {
             "type": "string",
