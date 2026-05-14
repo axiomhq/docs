@@ -163,4 +163,43 @@ The default option of a select filter is the option chosen when the dashboard lo
 
 ## Handle empty values
 
-The examples on this page assume that you use the default setting where the **All** key means an empty value, and the empty value in a filter means that the data isn’t filtered in the chart. The example chart queries above handle this empty (null) value in the `where` clause. For example, `where isempty(country_filter) or ['geo.country'] == country_filter` means that if no option is chosen in the country filter, `isempty(country_filter)` is true and the data isn’t filtered. If any other option is chosen with a non-null value, the chart only displays data where the `geo.country` field’s value is the same as the value chosen in the filter.
+The examples on this page assume that you use the default setting where the **All** key means an empty value, and the empty value in a filter means that the data isn’t filtered in the chart. The example chart queries above handle this empty (null) value in the `where` clause. For example, `where isempty(country_filter) or [‘geo.country’] == country_filter` means that if no option is chosen in the country filter, `isempty(country_filter)` is true and the data isn’t filtered. If any other option is chosen with a non-null value, the chart only displays data where the `geo.country` field’s value is the same as the value chosen in the filter.
+
+## Use filters with metrics queries
+
+Filter bars work with MPL metrics queries as well as APL queries.
+
+### Configure the filter bar for optional filtering
+
+When creating a filter that you want to use with a metrics query, mark its default value as unset:
+
+1. Create a select filter as described in [Create select filters](#create-select-filters).
+1. In the filter options, check the **Unset** box for the default value.
+
+Checking **Unset** tells Axiom to treat the filter as optional. When no option is selected, the variable is not passed to the query and any `ifdef` block that references it is skipped.
+
+### Reference optional filters in MPL queries
+
+Use an `ifdef` block in your MPL query to conditionally apply the filter:
+
+```kusto
+dataset:metric
+| ifdef($filter_id) { where tag_name == $filter_id }
+| align to $__interval using avg
+```
+
+Replace `filter_id` with the unique ID you gave the filter, and `tag_name` with the metric tag you want to filter on.
+
+The `ifdef` block runs only when the filter bar has a value selected. When the filter is unset, Axiom skips the block and returns unfiltered data.
+
+**Example:**
+
+The query below filters by `service.name` only when the filter bar with ID `service_filter` has a value selected. When the filter is unset, the query returns data for all services.
+
+```kusto
+`otel-demo-metrics`:`http.server.request.duration`
+| ifdef($service_filter) { where `service.name` == $service_filter }
+| align to $__interval using avg
+```
+
+For more details on `ifdef` syntax, see [Conditional filter](/mpl/introduction#conditional-filter).
