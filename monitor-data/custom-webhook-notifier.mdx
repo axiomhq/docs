@@ -30,6 +30,24 @@ To create a custom webhook notifier, follow these steps:
 1. Optional: Add headers to the POST request sent to the webhook URL.
 1. Click **Create**.
 
+## JSON-safe template variables
+
+When you embed template variables inside a JSON string value, the variable's content must be valid JSON. If the value contains characters like double quotes (`"`), backslashes (`\`), or newlines, the resulting payload will be malformed JSON and your receiving service won't parse it.
+
+To safely embed a free-text variable in a JSON string, wrap it in the built-in `js` function, which JSON-encodes the value and strips the surrounding quotes so you can place it inside your own quotes:
+
+```json
+{
+  "title": "{{js .Title}}",
+  "body": "{{js .Body}}",
+  "description": "{{js .Description}}"
+}
+```
+
+The `js` function is the Go template standard JSON-encoding helper. Use it any time the variable could contain user-generated text, log lines, or other content that might include special characters.
+
+Variables that render as structured JSON rather than plain strings (`{{.Value}}`, `{{jsonObject .MatchedEvent}}`, `{{jsonArray .GroupKeys}}`, `{{jsonArray .GroupValues}}`) don't need the `js` wrapper because they produce valid JSON on their own.
+
 ## Examples
 
 The example below is the default template for a custom webhook notification:
