@@ -3030,6 +3030,91 @@
           }
         }
       }
+    },
+    "/dashboards/uid/{uid}/charts/{chartId}": {
+      "patch": {
+        "tags": [
+          "dashboards"
+        ],
+        "summary": "Patch dashboard chart",
+        "description": "Patch a single chart in a dashboard by chart ID.",
+        "operationId": "patchDashboardChart",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "chartId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardChartPatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid dashboard chart patch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dashboard or chart not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardError"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Version conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3953,6 +4038,34 @@
           }
         }
       },
+      "DashboardChartPatchDocument": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "DashboardChartPatchRequest": {
+        "type": "object",
+        "required": [
+          "chart"
+        ],
+        "properties": {
+          "chart": {
+            "$ref": "#/components/schemas/DashboardChartPatchDocument",
+            "description": "JSON merge patch applied to the existing chart. If id is present, it must match the chartId path parameter."
+          },
+          "message": {
+            "type": "string"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false
+          },
+          "version": {
+            "description": "Required when overwrite is false.",
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "DashboardDocument": {
         "type": "object",
         "additionalProperties": true,
@@ -4736,8 +4849,6 @@
             "type": "string",
             "enum": [
               "personal",
-              "basicDirect",
-              "teamMonthlyDirect",
               "teamMonthlyAws",
               "axiomCloud",
               "teamPlus",
@@ -5257,8 +5368,6 @@
             "type": "string",
             "enum": [
               "personal",
-              "basicDirect",
-              "teamMonthlyDirect",
               "teamMonthlyAws",
               "axiomCloud",
               "teamPlus",
