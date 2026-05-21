@@ -1,0 +1,113 @@
+---
+title: "Set up alerts for AI quality regression"
+description: "Configure threshold and anomaly monitors to detect when AI capability quality degrades in production."
+sidebarTitle: Quality alerts
+keywords: ["cookbook", "monitor", "alerts", "threshold", "anomaly", "quality", "regression"]
+---
+
+This recipe shows how to set up monitors that alert you when your AI capability's quality drops, costs spike, or latency increases. Catching regressions early prevents degraded user experiences.
+
+## Prerequisites
+
+- An [Axiom account](https://app.axiom.co/register) with AI telemetry data flowing in
+- A [notifier configured](/monitor-data/notifiers-overview) (Slack, email, PagerDuty, etc.)
+- Online evaluations running in production (see [Add online evaluations to production](/cookbook/monitor-online-evals)), or AI telemetry with `gen_ai.*` attributes
+
+## Alert 1: Online eval score drops below threshold
+
+If you use online evaluations, monitor the average scorer output to detect quality degradation.
+
+1. Click the **Monitor** tab and create a new [threshold monitor](/monitor-data/threshold-monitors).
+2. Use this APL query:
+
+    ```kusto
+    ['your-dataset']
+    | where ['attributes.gen_ai.capability.name'] == 'support-agent'
+    | where isnotnull(['attributes.eval.relevance.score'])
+    | summarize avg_relevance = avg(todouble(['attributes.eval.relevance.score'])) by bin(_time, 5m)
+    ```
+
+3. Configure the monitor:
+    - **Threshold**: `0.7` (adjust based on your quality baseline)
+    - **Comparison**: Below
+    - **Frequency**: Every 5 minutes
+    - **Range**: 15 minutes
+    - **Notifier**: Your preferred channel
+
+This alerts when the average relevance score drops below 0.7 over any 15-minute window.
+
+## Alert 2: Error rate spike
+
+Monitor for sudden increases in AI call failures:
+
+1. Create a new [threshold monitor](/monitor-data/threshold-monitors).
+2. Use this APL query:
+
+    ```kusto
+    ['your-dataset']
+    | where isnotnull(['attributes.gen_ai.capability.name'])
+    | extend is_error = iff(['status.code'] == 'ERROR', 1.0, 0.0)
+    | summarize error_rate = avg(is_error) by bin(_time, 5m)
+    ```
+
+3. Configure the monitor:
+    - **Threshold**: `0.05` (5% error rate)
+    - **Comparison**: Above or equal
+    - **Frequency**: Every 5 minutes
+    - **Range**: 10 minutes
+
+## Alert 3: Latency anomaly
+
+Detect unusual latency spikes without setting a fixed threshold by using an anomaly monitor:
+
+1. Create a new [anomaly monitor](/monitor-data/anomaly-monitors).
+2. Use this APL query:
+
+    ```kusto
+    ['your-dataset']
+    | where isnotnull(['attributes.gen_ai.capability.name'])
+    | summarize p95_latency = percentile(duration, 95) by ['attributes.gen_ai.capability.name'], bin(_time, 5m)
+    ```
+
+3. Configure the monitor:
+    - **Comparison**: Above (alert only on high latency, not low)
+    - **Frequency**: Every 5 minutes
+    - **Range**: 60 minutes (uses last hour to establish baseline)
+    - **Notify by group**: Enabled (separate alerts per capability)
+
+## Alert 4: Cost budget exceeded
+
+Monitor hourly AI spend to catch cost runaway:
+
+1. Create a new [threshold monitor](/monitor-data/threshold-monitors).
+2. Use this APL query:
+
+    ```kusto
+    ['your-dataset']
+    | where isnotnull(['attributes.gen_ai.usage.input_tokens'])
+    | extend cost = genai_cost(
+        ['attributes.gen_ai.response.model'],
+        toint(['attributes.gen_ai.usage.input_tokens']),
+        toint(['attributes.gen_ai.usage.output_tokens'])
+      )
+    | summarize hourly_cost = sum(cost) by bin(_time, 1h)
+    ```
+
+3. Configure the monitor:
+    - **Threshold**: Your hourly budget (for example, `10.0` for $10/hour)
+    - **Comparison**: Above or equal
+    - **Frequency**: Every 15 minutes
+    - **Range**: 60 minutes
+
+## Verify
+
+1. Click the **Monitor** tab to see all configured monitors and their current status.
+2. Click a monitor to view its alert history and recent evaluations.
+3. Test alerts by temporarily lowering thresholds and verifying notifications arrive.
+
+## What's next?
+
+- Visualize these metrics on a dashboard with [Build an AI performance dashboard](/cookbook/monitor-ai-dashboard)
+- Track detailed cost breakdowns with [Track AI costs with APL](/cookbook/monitor-ai-costs)
+- Feed quality regressions back into testing with [Turn failures into test cases](/cookbook/improve-failures-to-tests)
+- Learn more about monitor types in [Monitors](/monitor-data/monitors)

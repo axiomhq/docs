@@ -1,0 +1,133 @@
+---
+title: "Add conversation tracking to a chat app"
+description: "Set gen_ai.conversation.id to group multi-turn interactions and query conversation-level metrics with APL."
+sidebarTitle: Conversation tracking
+keywords: ["cookbook", "observe", "conversation", "multi-turn", "chat", "tracking"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+
+When users have multi-turn conversations with your AI, individual traces only tell part of the story. This recipe shows how to tag every trace with a conversation ID so you can analyze entire conversations as a unit.
+
+## Prerequisites
+
+<Prerequisites />
+
+- Axiom AI SDK [installed and configured](/ai-engineering/quickstart) with an instrumented capability
+
+## Step 1: Generate and propagate conversation IDs
+
+Generate a unique conversation ID when a conversation starts and pass it to every subsequent request:
+
+```ts app/api/chat/route.ts
+import { streamText } from 'ai';
+import { withSpan, wrapAISDKModel } from 'axiom/ai';
+import { createOpenAI } from '@ai-sdk/openai';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = wrapAISDKModel(openai('gpt-4o'));
+
+export async function POST(req: Request) {
+  const { messages, conversationId } = await req.json();
+
+  return withSpan(
+    { capability: 'chatbot', step: 'respond' },
+    async (span) => {
+      span.setAttribute('gen_ai.conversation.id', conversationId);
+      span.setAttribute('gen_ai.conversation.turn', messages.length);
+
+      const result = streamText({
+        model,
+        system: 'You are a helpful assistant.',
+        messages,
+      });
+
+      return result.toDataStreamResponse();
+    }
+  );
+}
+```
+
+On the client, generate the ID when the conversation starts and include it in every request:
+
+```ts
+const conversationId = crypto.randomUUID();
+
+async function sendMessage(messages: Message[]) {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ messages, conversationId }),
+  });
+  return response;
+}
+```
+
+## Step 2: Query conversation-level metrics
+
+### List recent conversations with turn counts
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.conversation.id'])
+| summarize
+    turns = max(toint(['attributes.gen_ai.conversation.turn'])),
+    first_message = min(_time),
+    last_message = max(_time),
+    total_tokens = sum(toint(['attributes.gen_ai.usage.input_tokens']) + toint(['attributes.gen_ai.usage.output_tokens']))
+  by ['attributes.gen_ai.conversation.id']
+| order by last_message desc
+| take 50
+```
+
+### Find long-running conversations
+
+Conversations with many turns may indicate confused users or complex issues:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.conversation.id'])
+| summarize turns = max(toint(['attributes.gen_ai.conversation.turn'])) by ['attributes.gen_ai.conversation.id']
+| where turns > 10
+| order by turns desc
+```
+
+### Average conversation length and cost
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.conversation.id'])
+| extend cost = genai_cost(
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens'])
+  )
+| summarize
+    turns = max(toint(['attributes.gen_ai.conversation.turn'])),
+    total_cost = sum(cost)
+  by ['attributes.gen_ai.conversation.id']
+| summarize
+    avg_turns = avg(turns),
+    avg_cost = avg(total_cost),
+    total_conversations = count()
+```
+
+## Step 3: Build a conversation dashboard
+
+Add these elements to a dashboard:
+
+1. **Conversations over time** (Time series): Count of distinct conversation IDs per hour
+2. **Average turns per conversation** (Statistic): Rolling average conversation length
+3. **Cost per conversation** (Time series): Average cost trend
+4. **Long conversations** (Table): Conversations with 10+ turns for investigation
+
+## Verify
+
+1. Have a multi-turn conversation with your chatbot.
+2. In the Axiom Console, run the "List recent conversations" query above.
+3. Confirm that all turns for your conversation share the same `gen_ai.conversation.id` and the turn count matches.
+
+## What's next?
+
+- Add user feedback linked to conversations with [Collect user feedback](/cookbook/improve-user-feedback)
+- Monitor conversation quality with [Add online evaluations to production](/cookbook/monitor-online-evals)
+- Track costs per conversation with [Track AI costs with APL](/cookbook/monitor-ai-costs)

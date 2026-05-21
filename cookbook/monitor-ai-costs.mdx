@@ -1,0 +1,150 @@
+---
+title: "Track AI costs with APL"
+description: "Calculate per-request and per-conversation costs using token counts and model pricing, build cost dashboards, and set budget alerts."
+sidebarTitle: AI costs
+keywords: ["cookbook", "monitor", "cost", "tokens", "pricing", "budget", "genai_cost"]
+---
+
+AI costs can grow rapidly in production. This recipe shows how to use Axiom's built-in `genai_cost` function and APL queries to track, analyze, and control AI spending.
+
+## Prerequisites
+
+- An [Axiom account](https://app.axiom.co/register) with AI telemetry data flowing in
+- A dataset containing `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens` attributes
+
+## Total cost over time
+
+Track cumulative spend with the built-in `genai_cost` function, which knows the pricing for common models:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.usage.input_tokens'])
+| extend cost = genai_cost(
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens'])
+  )
+| summarize total_cost = sum(cost) by bin(_time, 1h)
+```
+
+For more information on the `genai_cost` function, see [GenAI functions](/apl/scalar-functions/genai-functions).
+
+## Cost per capability
+
+Identify which capabilities drive the most spend:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.usage.input_tokens'])
+| extend cost = genai_cost(
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens'])
+  )
+| summarize
+    total_cost = sum(cost),
+    request_count = count(),
+    avg_cost_per_request = avg(cost)
+  by ['attributes.gen_ai.capability.name']
+| order by total_cost desc
+```
+
+## Cost per conversation
+
+If you track conversation IDs (see [Conversation tracking](/cookbook/observe-conversation-tracking)), calculate per-conversation costs:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.conversation.id'])
+| extend cost = genai_cost(
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens'])
+  )
+| summarize conversation_cost = sum(cost), turns = count()
+  by ['attributes.gen_ai.conversation.id']
+| summarize
+    avg_cost = avg(conversation_cost),
+    p95_cost = percentile(conversation_cost, 95),
+    avg_turns = avg(turns),
+    total_conversations = count()
+```
+
+## Cost per model
+
+Compare spending across models to find optimization opportunities:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.usage.input_tokens'])
+| extend cost = genai_cost(
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens'])
+  )
+| summarize
+    total_cost = sum(cost),
+    requests = count(),
+    avg_input_tokens = avg(toint(['attributes.gen_ai.usage.input_tokens'])),
+    avg_output_tokens = avg(toint(['attributes.gen_ai.usage.output_tokens']))
+  by ['attributes.gen_ai.response.model']
+| extend cost_per_request = total_cost / requests
+| order by total_cost desc
+```
+
+## Input vs output token split
+
+Understand whether costs are driven by large prompts (input) or verbose responses (output):
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.usage.input_tokens'])
+| extend
+    input_cost = genai_input_cost(
+      ['attributes.gen_ai.response.model'],
+      toint(['attributes.gen_ai.usage.input_tokens'])
+    ),
+    output_cost = genai_output_cost(
+      ['attributes.gen_ai.response.model'],
+      toint(['attributes.gen_ai.usage.output_tokens'])
+    )
+| summarize
+    total_input_cost = sum(input_cost),
+    total_output_cost = sum(output_cost)
+  by bin(_time, 1h)
+```
+
+If input costs dominate, focus on reducing prompt size (shorter system prompts, fewer examples, or summarizing context). If output costs dominate, use `max_tokens` or tighter instructions.
+
+## High-cost requests
+
+Surface individual requests that cost the most:
+
+```kusto
+['your-dataset']
+| where isnotnull(['attributes.gen_ai.usage.input_tokens'])
+| extend cost = genai_cost(
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens'])
+  )
+| where cost > 0.10
+| project
+    _time,
+    ['attributes.gen_ai.capability.name'],
+    ['attributes.gen_ai.response.model'],
+    toint(['attributes.gen_ai.usage.input_tokens']),
+    toint(['attributes.gen_ai.usage.output_tokens']),
+    cost
+| order by cost desc
+| take 20
+```
+
+Click the trace ID on any high-cost request to investigate the full prompt and response.
+
+## What's next?
+
+- Set up budget alerts with [Set up quality regression alerts](/cookbook/monitor-quality-alerts)
+- Compare model costs with [Compare models side-by-side](/cookbook/evaluate-model-comparison)
+- Track all AI metrics in one place with [Build an AI performance dashboard](/cookbook/monitor-ai-dashboard)
+- Explore all cost functions in the [GenAI functions reference](/apl/scalar-functions/genai-functions)
