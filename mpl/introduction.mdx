@@ -191,11 +191,13 @@ Use `is::` instead of `filter::` when you need to preserve the shape of the time
 ### Align
 
 Use `align` to aggregate over time windows. You can specify the time window and the aggregation function to apply.
+If you omit `to <time_window>`, `align` aggregates over the full query range and returns a single value per series. 
 
 **Syntax:**
 
 ```kusto
 | align to <time_window> using <aggregation_function>
+| align using <aggregation_function>
 ```
 
 Available aggregation functions:
@@ -218,6 +220,9 @@ Available aggregation functions:
 
 // Count the data points in the last hour
 | align to 1h using count
+
+// Sum over the full query range
+| align using sum
 ```
 
 ### Group
@@ -317,6 +322,24 @@ Available operators:
 | `min`    | Minimum across result series.     |
 | `max`    | Maximum across result series.     |
 | `avg`    | Average across result series.     |
+
+`compute` uses strict intersection semantics. It only combines series with matching tag sets, and it only emits values for timestamps present on both sides. If you need time-wise union-like behavior for matching series, fill missing values before applying `compute`.
+
+```kusto
+// Use 0 as the default for addition
+(
+  <subquery1> | map fill::const(0),
+  <subquery2> | map fill::const(0)
+)
+| compute total using +
+
+// Use 1 as the default for multiplication
+(
+  <subquery1> | map fill::const(1),
+  <subquery2> | map fill::const(1)
+)
+| compute product using *
+```
 
 **Example:**
 
