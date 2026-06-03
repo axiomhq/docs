@@ -6,7 +6,7 @@ sidebarTitle: Observability
 
 Axiom helps you leverage the power of timestamped event data. A common use case of event data is observability (o11y) in the field of software engineering. Observability is the ability to explain what’s happening inside a software system by observing it from the outside. It allows you to understand the behavior of systems based on their outputs such as telemetry data, which is a type of event data.
 
-Software engineers most often work with timestamped event data in the form of logs or metrics. However, Axiom believes that event data reflects a much broader range of interactions, crossing boundaries from engineering to product management, security, and beyond.
+Software engineers most often work with timestamped event data in the form of logs, metrics, and traces. However, Axiom believes that event data reflects a much broader range of interactions, crossing boundaries from engineering to product management, security, and beyond.
 
 ## Types of event data in observability
 
@@ -22,36 +22,50 @@ In Axiom, these observability elements are stored as event data, allowing for fi
 
 Axiom excels at collecting, storing, and analyzing timestamped event data.
 
-For logs and traces, Axiom offers unparalleled efficiency and query performance. You can send logs and traces to Axiom from a wide range of popular sources. For information, see [Send data to Axiom
-](/send-data/methods).
+For logs and traces, Axiom offers unparalleled efficiency and query performance. You can send logs and traces to Axiom from a wide range of popular sources. For more information, see [Send data to Axiom](/send-data/methods).
 
 ## Metrics support
 
-For metrics data, Axiom is well-suited for event-level metrics that behave like logs, with each data point representing a discrete event.
+Axiom provides first-class support for metrics through MetricsDB, a purpose-built metrics datastore. MetricsDB handles high-cardinality time-series data and is designed to store and query OpenTelemetry (OTel) metrics efficiently.
 
-For example, you have the following timestamped data in Axiom:
+### MetricsDB
 
-```json
-{
-  "job_id": "train_123",
-  "user_name": "acme",
-  "timestamp": "2024-10-08T15:30:00Z",
-  "node_host": "worker-01",
-  "metric_name": "gpu_utilization",
-  "metric_value": 87.5,
-  "training_type": "image_classification"
-}
-```
+MetricsDB is optimized for metrics workloads in ways that a general-purpose event store is not:
 
-You can easily query and analyze this type of metrics data in Axiom. The query below computes the average GPU utilization across nodes:
+- **High-cardinality tags**: Store metrics with many tag dimensions without cost penalties or performance degradation.
+- **Efficient compression**: Client-side aggregation reduces data volume for high-frequency measurements.
+- **Standardized OTel types**: Supports Gauge, Histogram, Sum, and Summary metric types with clear query semantics.
+- **Faster queries**: Storage format is optimized for time-series visualizations without per-query processing overhead.
+- **Unified observability**: Query metrics alongside logs, traces, and events using the same platform.
+
+For a detailed comparison of MetricsDB and EventDB, see [Metrics](/query-data/metrics).
+
+### Ingest metrics
+
+Axiom ingests OTel metrics the same way it ingests other OTel data—via the OpenTelemetry Collector or any OTLP-compatible SDK. You must use a dedicated dataset with the **Metrics** type selected when creating it.
+
+For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
+
+To get started quickly, [axiom-hostmetrics](https://github.com/axiomhq/axiom-hostmetrics) is a small CLI that streams host metrics (CPU, memory, disk, network) directly to Axiom with no full Collector setup required.
+
+### Query metrics with MPL
+
+Axiom includes MPL (Metrics Processing Language), a query language designed for metrics data. MPL combines the readability of APL with expressive power similar to PromQL.
+
+A typical MPL query:
 
 ```kusto
-dataset
-| summarize avg(metric_value) by node_host, bin_auto(_time)
+`otel-demo-metrics`:`go.memory.used`
+| where `k8s.deployment.name` == "checkout"
+| align to 5m using avg
 ```
 
-Axiom’s support for metrics data currently comes with the following limitations:
-- Axiom doesn’t support pre-aggregated metrics such as scrape samples.
-- Axiom isn’t optimized for high-dimensional metric time series with a very large number of metric/label combinations.
+MPL supports filtering by tags, time-window alignment, grouping, histogram aggregations, and arithmetic across multiple metrics. If you already use PromQL, you can translate your existing queries to MPL with minimal changes.
 
-Support for these types of metrics data is coming soon. If you’re interested, [contact Axiom](https://axiom.co/contact).
+For more information, see [Introduction to MPL](/mpl/introduction) and [Migrate PromQL queries to Axiom](/mpl/migrate-metrics).
+
+### Dashboards and monitors
+
+OTel metrics work in dashboards and monitors the same way as logs and traces. You can build visualizations from metrics queries, set threshold-based alerts, and combine multiple signals in a single panel.
+
+For more information, see [Dashboards](/dashboards/overview) and [Monitors](/monitor-data/monitors).
