@@ -37,6 +37,7 @@ A typical MPL query contains the following:
     - **Align:** Aggregates the data over time to align to a given time interval.
     - **Group:** Aggregates the data over tag values.
     - **Bucket:** A two-dimensional transformation that aggregates along both the time and tag dimensions.
+    - **Extend:** Adds new constant-valued tags to every series in the result.
 
 **Example:**
 
@@ -293,6 +294,34 @@ Available functions:
 
 // Compute the 50th and 99th percentiles of request duration for histogram data stored using delta temporality
 | bucket by service to 1m using interpolate_delta_histogram(0.50, 0.99)
+```
+
+### Extend
+
+Use `extend` to add new tags to every series in the query result. `extend` supports `${}` interpolation to reference existing tag values or parameters.
+
+`extend` can only be applied after aggregations (after `align`, `group`, `bucket`, and `map`).
+
+**Syntax:**
+
+```kusto
+| extend <tag1> = <value1> [, <tag2> = <value2> ...]
+```
+
+- The value must be a string, integer, float, or boolean literal.
+- The tag name must be net-new: if any input series already has a tag with the same name, the query fails. To overwrite an existing tag, first drop it with `group by`, then re-add it with `extend`.
+
+**Examples:**
+
+```kusto
+// Add a constant string tag
+| extend environment = "production"
+
+// Reference existing tag values
+`my-metrics`:http_latency
+| where host is string and port is int
+| align to 5m using avg
+| extend url = "http://${host}:${port}"
 ```
 
 ## Other operations
