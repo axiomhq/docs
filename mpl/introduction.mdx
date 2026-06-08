@@ -56,6 +56,42 @@ The following explains each element of an MPL query.
 
 To learn more about the language features of MPL, see [Language features](#language-features).
 
+### Directives
+
+Use `set` directives at the start of a query to control query behavior and visualization settings.
+
+Directives must appear before the query body.
+
+**Syntax:**
+
+```kusto
+set <directive_name> = <directive_value>;
+```
+
+#### Supported directives
+
+The following directives are currently supported in Axiom's MPL implementation:
+
+| Directive | Description |
+|-----------|-------------|
+| `custom_unit` | Sets the unit used when visualizing query results in Axiom. |
+
+Use string values for `custom_unit`. Set it to `"1"` to render values as unitless numbers.
+
+**Examples:**
+
+```kusto
+set custom_unit = "ms";
+`otel-demo-metrics`:`http.server.request.duration`
+| align to 5m using avg
+```
+
+```kusto
+set custom_unit = "1";
+`otel-demo-metrics`:`http.server.request.duration`
+| align to 5m using avg
+```
+
 ### Source
 
 Specify the dataset, the metric, and optional time bounds.
@@ -263,11 +299,13 @@ Available aggregation functions:
 ### Bucket
 
 Use `bucket` to aggregate over time and tag dimensions simultaneously.
+If you omit `to <time_window>`, `bucket` aggregates over the full query range and returns a single value per series.
 
 **Syntax:**
 
 ```kusto
 | bucket [by <tags>] to <window> using <function>
+| bucket [by <tags>] using <function>
 ```
 
 Available functions:
