@@ -246,6 +246,7 @@
                       "description": "This is an example dataset",
                       "id": "example-dataset",
                       "name": "example-dataset",
+                      "updatedAt": "2020-01-01T00:00:00Z",
                       "who": "John Doe"
                     },
                     {
@@ -253,6 +254,7 @@
                       "description": "This is an example dataset",
                       "id": "example-dataset-2",
                       "name": "example-dataset-2",
+                      "updatedAt": "2020-02-01T00:00:00Z",
                       "who": "Foo Bar"
                     }
                   ]
@@ -4240,6 +4242,7 @@
           "name",
           "description",
           "created",
+          "updatedAt",
           "who",
           "kind"
         ],
@@ -4297,6 +4300,11 @@
             "description": "ID of the org that shared this resource, if it's shared",
             "type": "string"
           },
+          "updatedAt": {
+            "description": "The RFC3339-formatted time when the dataset was last updated.",
+            "type": "string",
+            "format": "date-time"
+          },
           "useRetentionPeriod": {
             "description": "Whether to use the retention period",
             "type": "boolean",
@@ -4313,6 +4321,7 @@
           "id": "string",
           "kind": "axiom:events:v1",
           "name": "string",
+          "updatedAt": "2022-07-20T02:35:14.137Z",
           "who": "string"
         }
       },
@@ -5124,6 +5133,12 @@
               "AnomalyDetection"
             ],
             "example": "Threshold"
+          },
+          "updatedAt": {
+            "description": "Timestamp when the monitor was last updated",
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-03-20T10:30:00Z"
           }
         }
       },
@@ -5228,6 +5243,13 @@
           },
           "properties": {
             "$ref": "#/components/schemas/NotifierProperties"
+          },
+          "updatedAt": {
+            "description": "Timestamp when the notifier was last updated",
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "example": "2024-01-15T11:00:00Z"
           }
         }
       },
@@ -7399,7 +7421,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/TimeSeriesNonMetricsAplQuery"
+            "$ref": "#/components/schemas/TimeSeriesChartQuery"
           }
         },
         "required": [
@@ -7440,6 +7462,17 @@
       },
       "OverrideDashboardCompareAgainst": {
         "type": "boolean"
+      },
+      "TimeSeriesChartQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/TimeSeriesNonMetricsAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/TimeSeriesNativeMplQuery"
+          }
+        ],
+        "title": "ChartQuery"
       },
       "AplString": {
         "type": "string",
@@ -7540,6 +7573,7 @@
       },
       "DefaultLimit": {
         "type": "integer",
+        "minimum": 0,
         "exclusiveMinimum": true,
         "maximum": 1000000
       },
@@ -7566,6 +7600,7 @@
       },
       "MaxBinAutoGroups": {
         "type": "integer",
+        "minimum": 0,
         "exclusiveMinimum": true,
         "maximum": 10000
       },
@@ -7596,6 +7631,28 @@
         ],
         "additionalProperties": false,
         "title": "APL"
+      },
+      "TimeSeriesNativeMplQuery": {
+        "type": "object",
+        "properties": {
+          "mpl": {
+            "$ref": "#/components/schemas/MplString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/TimeSeriesQueryOptions"
+          }
+        },
+        "required": [
+          "mpl"
+        ],
+        "additionalProperties": false,
+        "title": "MPL"
+      },
+      "MplString": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500000,
+        "title": "MplString"
       },
       "Aggregation": {
         "type": "object",
@@ -7825,7 +7882,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/HeatmapNonMetricsAplQuery"
+            "$ref": "#/components/schemas/HeatmapChartQuery"
           }
         },
         "required": [
@@ -7835,6 +7892,17 @@
         ],
         "additionalProperties": false,
         "title": "Heatmap"
+      },
+      "HeatmapChartQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/HeatmapNonMetricsAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/HeatmapNativeMplQuery"
+          }
+        ],
+        "title": "ChartQuery"
       },
       "HeatmapQueryOptions": {
         "type": "object",
@@ -7867,6 +7935,22 @@
         "additionalProperties": false,
         "title": "APL"
       },
+      "HeatmapNativeMplQuery": {
+        "type": "object",
+        "properties": {
+          "mpl": {
+            "$ref": "#/components/schemas/MplString"
+          },
+          "queryOptions": {
+            "$ref": "#/components/schemas/HeatmapQueryOptions"
+          }
+        },
+        "required": [
+          "mpl"
+        ],
+        "additionalProperties": false,
+        "title": "MPL"
+      },
       "LogStreamChart": {
         "type": "object",
         "properties": {
@@ -7885,7 +7969,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           },
           "tableSettings": {
             "$ref": "#/components/schemas/TableSettings"
@@ -7899,6 +7983,17 @@
         "additionalProperties": false,
         "title": "Log stream"
       },
+      "SimpleChartQuery": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/SimpleNativeMplQuery"
+          }
+        ],
+        "title": "ChartQuery"
+      },
       "SimpleNonMetricsAplQuery": {
         "type": "object",
         "properties": {
@@ -7911,6 +8006,19 @@
         ],
         "additionalProperties": false,
         "title": "APL"
+      },
+      "SimpleNativeMplQuery": {
+        "type": "object",
+        "properties": {
+          "mpl": {
+            "$ref": "#/components/schemas/MplString"
+          }
+        },
+        "required": [
+          "mpl"
+        ],
+        "additionalProperties": false,
+        "title": "MPL"
       },
       "TableSettings": {
         "type": "object",
@@ -7948,6 +8056,7 @@
           },
           "width": {
             "type": "integer",
+            "minimum": 0,
             "exclusiveMinimum": true,
             "maximum": 9007199254740991
           }
@@ -8007,7 +8116,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           }
         },
         "required": [
@@ -8036,7 +8145,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           }
         },
         "required": [
@@ -8065,7 +8174,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           },
           "tableSettings": {
             "$ref": "#/components/schemas/TableSettings"
@@ -8097,7 +8206,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           }
         },
         "required": [
@@ -8126,7 +8235,7 @@
             "maxLength": 500
           },
           "query": {
-            "$ref": "#/components/schemas/SimpleNonMetricsAplQuery"
+            "$ref": "#/components/schemas/SimpleChartQuery"
           },
           "colorScheme": {
             "type": "string",
@@ -8715,6 +8824,7 @@
         "properties": {
           "rowHeight": {
             "type": "integer",
+            "minimum": 0,
             "exclusiveMinimum": true,
             "maximum": 9007199254740991
           }

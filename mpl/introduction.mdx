@@ -56,6 +56,42 @@ The following explains each element of an MPL query.
 
 To learn more about the language features of MPL, see [Language features](#language-features).
 
+### Directives
+
+Use `set` directives at the start of a query to control query behavior and visualization settings.
+
+Directives must appear before the query body.
+
+**Syntax:**
+
+```kusto
+set <directive_name> = <directive_value>;
+```
+
+#### Supported directives
+
+The following directives are currently supported in Axiom's MPL implementation:
+
+| Directive | Description |
+|-----------|-------------|
+| `custom_unit` | Sets the unit used when visualizing query results in Axiom. |
+
+Use string values for `custom_unit`. Set it to `"1"` to render values as unitless numbers.
+
+**Examples:**
+
+```kusto
+set custom_unit = "ms";
+`otel-demo-metrics`:`http.server.request.duration`
+| align to 5m using avg
+```
+
+```kusto
+set custom_unit = "1";
+`otel-demo-metrics`:`http.server.request.duration`
+| align to 5m using avg
+```
+
 ### Source
 
 Specify the dataset, the metric, and optional time bounds.
@@ -191,11 +227,13 @@ Use `is::` instead of `filter::` when you need to preserve the shape of the time
 ### Align
 
 Use `align` to aggregate over time windows. You can specify the time window and the aggregation function to apply.
+If you omit `to <time_window>`, `align` aggregates over the full query range and returns a single value per series.
 
 **Syntax:**
 
 ```kusto
 | align to <time_window> using <aggregation_function>
+| align using <aggregation_function>
 ```
 
 Available aggregation functions:
@@ -218,6 +256,9 @@ Available aggregation functions:
 
 // Count the data points in the last hour
 | align to 1h using count
+
+// Sum over the full query range
+| align using sum
 ```
 
 ### Group
@@ -258,11 +299,13 @@ Available aggregation functions:
 ### Bucket
 
 Use `bucket` to aggregate over time and tag dimensions simultaneously.
+If you omit `to <time_window>`, `bucket` aggregates over the full query range and returns a single value per series.
 
 **Syntax:**
 
 ```kusto
 | bucket [by <tags>] to <window> using <function>
+| bucket [by <tags>] using <function>
 ```
 
 Available functions:
@@ -288,6 +331,34 @@ Available functions:
 
 // Compute the 50th and 99th percentiles of request duration for histogram data stored using delta temporality
 | bucket by service to 1m using interpolate_delta_histogram(0.50, 0.99)
+```
+
+### Extend
+
+Use `extend` to add new tags to every series in the query result. `extend` supports `${}` interpolation to reference existing tag values or parameters.
+
+`extend` can only be applied after aggregations (after `align`, `group`, `bucket`, and `map`).
+
+**Syntax:**
+
+```kusto
+| extend <tag1> = <value1> [, <tag2> = <value2> ...]
+```
+
+- The value must be a string, integer, float, or boolean literal.
+- The tag name must be net-new: if any input series already has a tag with the same name, the query fails. To overwrite an existing tag, first drop it with `group by`, then re-add it with `extend`.
+
+**Examples:**
+
+```kusto
+// Add a constant string tag
+| extend environment = "production"
+
+// Reference existing tag values
+`my-metrics`:http_latency
+| where host is string and port is int
+| align to 5m using avg
+| extend url = "http://${host}:${port}"
 ```
 
 ## Other operations
@@ -317,6 +388,24 @@ Available operators:
 | `min`    | Minimum across result series.     |
 | `max`    | Maximum across result series.     |
 | `avg`    | Average across result series.     |
+
+`compute` uses strict intersection semantics. It only combines series with matching tag sets, and it only emits values for timestamps present on both sides. If you want results for timestamps where only one side has a value, fill missing values using `map` functions.
+
+```kusto
+// Use 0 as the default for addition
+(
+  <subquery1> | map fill::const(0),
+  <subquery2> | map fill::const(0)
+)
+| compute total using +
+
+// Use 1 as the default for multiplication
+(
+  <subquery1> | map fill::const(1),
+  <subquery2> | map fill::const(1)
+)
+| compute product using *
+```
 
 **Example:**
 
@@ -370,6 +459,21 @@ Quote an identifier in your MPL query if any of the following is true:
 If any of the above is true, you must quote the identifier by enclosing it in backticks (`` ` ``). For example, `` `my-field` ``.
 
 If none of the above is true, you don't need to quote the identifier in your MPL query. For example, `myfield`. In this case, quoting the identifier name is optional.
+
+### Built-in variables
+
+MPL provides the following built-in variables that can be used in queries:
+
+| Variable | Type | Description |
+|---|---|---|
+| `$__interval` | duration | Provides a suitable interval size for charting, depending on the time range of the query. |
+
+**Example:**
+
+```kusto
+`otel-demo-metrics`:`http.server.request.duration`
+| align to $__interval using avg
+```
 
 ### Time ranges
 
