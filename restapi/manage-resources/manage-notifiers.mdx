@@ -1,0 +1,219 @@
+---
+title: Manage notifiers via API
+sidebarTitle: "Notifiers"
+description: "Learn how to manage Axiom notifiers via API."
+---
+
+import Prerequisites from "/snippets/minimal-prerequisites.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+import ReplaceToken from "/snippets/replace-token.mdx"
+
+This page explains how to manage notifiers programmatically via the API.
+
+<Prerequisites />
+- [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete datasets.
+- In the code samples below, replace `API_TOKEN` with the Axiom API token you have generated. For added security, store the API token in an environment variable.
+
+## Create notifiers
+
+To create a notifier, send a POST request to the `notifiers` endpoint. In the body of the request, specify the following:
+- `name` of the notifier.
+- The `properties` field takes an object that defines the attributes of the notifier. The required attributes depend on the type of notifier you create. For example, to create an email notifier, specify the list of emails to be notified.
+
+For example:
+
+```bash
+curl -X 'POST' 'https://AXIOM_DOMAIN/v2/notifiers' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer API_TOKEN' \
+-d '{
+    "name": "test_notifier",
+    "properties": {
+      "email": {
+        "emails": [
+          "example1@abc.com",
+          "example2@abc.com"
+        ]
+      }
+    }
+  }'
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
+
+The example response contains the notifier ID that you can later use to access the notifier programmatically.
+
+```json
+{
+  "createdAt":"2024-09-04T11:42:50.225Z",
+  "disabledUntil": "0001-01-01T00:00:00Z",
+  "id": "abc123",
+  "name": "test_notifier",
+  "properties": {
+    "email": {
+      "emails": [
+        "example1@abc.com",
+        "example2@abc.com"
+      ]
+    }
+  }
+}
+```
+
+For more information, see the [API reference](/restapi/endpoints/createNotifier).
+
+## Get information about notifiers
+
+### Get information about all notifiers
+
+To get information about all the notifiers in your Axiom organization, send a GET request to the `notifiers` endpoint. For example:
+
+```bash
+curl -X 'GET' 'https://AXIOM_DOMAIN/v2/notifiers' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer API_TOKEN'
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
+
+The example response is a list of notifier objects. Each object contains a unique notifier ID that you can later use to access the notifier programmatically.
+
+```json
+[
+  {
+    "createdAt":"2024-09-04T11:42:50.225Z",
+    "disabledUntil": "0001-01-01T00:00:00Z",
+    "id": "abc123",
+    "name": "test_notifier1",
+    "properties": {
+      "email": {
+        "emails": [
+          "example1@abc.com",
+          "example2@abc.com"
+        ]
+      }
+    }
+  },
+  {
+    "createdAt":"2024-09-04T11:42:50.225Z",
+    "disabledUntil": "0001-01-01T00:00:00Z",
+    "id": "abc321",
+    "name": "test_notifier2",
+    "properties": {
+      "email": {
+        "emails": [
+          "example3@abc.com",
+          "example4@abc.com"
+        ]
+      }
+    }
+  }
+]
+```
+
+For more information, see the [API reference](/restapi/endpoints/getNotifiers).
+
+### Get information about specific notifier
+
+To get information about a specific notifier, send a GET request to the `notifiers/NOTIFIER_ID` endpoint where `NOTIFIER_ID` is the unique ID of the notifier. For example:
+
+```bash
+curl -X 'GET' 'https://AXIOM_DOMAIN/v2/notifiers/abc123' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer API_TOKEN'
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
+
+Example response:
+
+```json
+{
+  "createdAt":"2024-09-04T11:42:50.225Z",
+  "disabledUntil": "0001-01-01T00:00:00Z",
+  "id": "abc123",
+  "name": "test_notifier",
+  "properties": {
+    "email": {
+      "emails": [
+        "example1@abc.com",
+        "example2@abc.com"
+      ]
+    }
+  }
+}
+```
+
+For more information, see the [API reference](/restapi/endpoints/getNotifier).
+
+## Update notifiers
+
+To update a notifier, send a PUT request to the `notifiers/NOTIFIER_ID` endpoint where `NOTIFIER_ID` is the unique ID of the notifier. In the body of the request, specify the properties you want to update. Include the `name` field even if you don’t want to change it. For example:
+
+```bash
+curl -X 'PUT' 'https://AXIOM_DOMAIN/v2/notifiers/abc123' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer API_TOKEN' \
+-d '{
+    "name": "test_notifier",
+    "properties": {
+      "email": {
+        "emails": [
+          "example3@abc.com",
+          "example4@abc.com"
+        ]
+      }
+    }
+  }'
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
+
+Example response:
+
+```json
+{
+  "disabledUntil": "0001-01-01T00:00:00Z",
+  "id": "abc123",
+  "name": "test_notifier",
+  "properties": {
+    "email": {
+      "emails": [
+        "example3@abc.com",
+        "example4@abc.com"
+      ]
+    }
+  }
+}
+```
+
+For more information, see the [API reference](/restapi/endpoints/updateNotifier).
+
+## Delete notifiers
+
+To delete a notifier, send a DELETE request to the `notifiers/NOTIFIER_ID` endpoint where `NOTIFIER_ID` is the unique ID of the notifier. For example:
+
+```bash
+curl -X 'DELETE' 'https://AXIOM_DOMAIN/v2/notifiers/abc123' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer API_TOKEN'
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
+
+For more information, see the [API reference](/restapi/endpoints/deleteNotifier).
