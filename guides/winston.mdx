@@ -92,6 +92,55 @@ const logger = winston.createLogger({
 Running on Edge runtime isn’t supported.
 </Warning>
 
+## Configure region
+
+By default, the transport sends data to `api.axiom.co`. To target a specific edge region, set the `edge` option on `AxiomTransport` to the edge domain that matches the region your dataset lives in:
+
+<CodeGroup>
+
+```ts EU Central 1
+new AxiomTransport({
+    dataset: 'DATASET_NAME',
+    token: 'API_TOKEN',
+    edge: 'eu-central-1.aws.edge.axiom.co',
+});
+```
+
+```ts US East 1
+new AxiomTransport({
+    dataset: 'DATASET_NAME',
+    token: 'API_TOKEN',
+    edge: 'us-east-1.aws.edge.axiom.co',
+});
+```
+
+</CodeGroup>
+
+The following edge domains are available:
+
+| Edge deployment    | Base domain for ingest and query |
+| ------------------ | -------------------------------- |
+| US East 1 (AWS)    | `us-east-1.aws.edge.axiom.co`    |
+| EU Central 1 (AWS) | `eu-central-1.aws.edge.axiom.co` |
+
+For more information about edge deployments, see [Edge deployments](/reference/edge-deployments).
+
+<Warning>
+Always use the `edge` option to target a region. Don't put a regional hostname in `url` — `url` is reserved for non-ingest API operations and won't route ingest correctly. (This is unrelated to the Edge runtime note above, which is about where your code runs.)
+</Warning>
+
+### Transport options
+
+| Option     | Required | Description                                                                                                       |
+| ---------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `dataset`  | yes      | The Axiom dataset to ingest logs into. Falls back to the `AXIOM_DATASET` environment variable.                   |
+| `token`    | yes      | An Axiom API token with `ingest` permission for the dataset.                                                      |
+| `orgId`    | no       | Organization ID. Required when using a personal token.                                                            |
+| `edge`     | no       | Edge domain for ingest, without scheme. Example: `eu-central-1.aws.edge.axiom.co`. Use this to target a region.   |
+| `edgeUrl`  | no       | Full edge URL with scheme. Takes precedence over `edge` if both are set. Useful for self-hosted or proxy setups.  |
+| `url`      | no       | Base URL for non-ingest API operations.                                                                          |
+| `onError`  | no       | Callback invoked when sending data fails.                                                                        |
+
 ## Examples
 
 For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-js/tree/main/examples/winston).

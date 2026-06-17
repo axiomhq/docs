@@ -71,6 +71,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-rs/tree/main/examples).
 
+## Configure region
+
+By default, the client sends data to `api.axiom.co`. To target a specific edge region, add the `with_edge` method to the builder with the edge domain that matches the region your dataset lives in:
+
+<CodeGroup>
+
+```rust EU Central 1
+let client = Client::builder()
+    .with_token("xaat-your-api-token")
+    .with_edge("eu-central-1.aws.edge.axiom.co")
+    .build()?;
+```
+
+```rust US East 1
+let client = Client::builder()
+    .with_token("xaat-your-api-token")
+    .with_edge("us-east-1.aws.edge.axiom.co")
+    .build()?;
+```
+
+</CodeGroup>
+
+The following edge domains are available:
+
+| Edge deployment    | Base domain for ingest and query |
+| ------------------ | -------------------------------- |
+| US East 1 (AWS)    | `us-east-1.aws.edge.axiom.co`    |
+| EU Central 1 (AWS) | `eu-central-1.aws.edge.axiom.co` |
+
+For more information about edge deployments, see [Edge deployments](/reference/edge-deployments).
+
+You can also configure the region without changing code by exporting environment variables. When you build the client with `Client::new()`, these are read automatically:
+
+```sh
+export AXIOM_EDGE="eu-central-1.aws.edge.axiom.co"
+# or, for a full URL (takes precedence over AXIOM_EDGE):
+export AXIOM_EDGE_URL="https://eu-central-1.aws.edge.axiom.co"
+```
+
+To point at a custom edge endpoint such as a proxy or load balancer, use `.with_edge_url("https://your-edge-host")`. `with_edge_url` takes precedence over `with_edge` if both are set.
+
+<Note>
+Edge endpoints require an API token (`xaat-`), not a personal token (`xapt-`). Ingesting with a personal token against an edge endpoint returns a `PersonalTokenNotSupportedForEdge` error.
+</Note>
+
 ## Optional features
 
 You can use the [Cargo features](https://doc.rust-lang.org/stable/cargo/reference/features.html#the-features-section):
