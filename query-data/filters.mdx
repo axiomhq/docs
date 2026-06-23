@@ -55,13 +55,15 @@ Try out this filter in the [HTTP logs dashboard of the Axiom Playground](https:/
 1. Specify a unique filter ID that you later use to reference the filter. For example, `country_filter`.
 1. In the **Value** section, define the list of options to choose from in the select filter as key-value pairs. Axiom displays the key in the list of options in the filter dropdown, and uses the value to filter your data. For example, the key `France` is displayed in the list of options, and the value `FR` is used to filter data in your charts. Define the key-value pairs in one of the following ways:
     - Choose **List** to manually define a static list of options. Enter the options as a list of key-value pairs.
-    - Choose **Query** to define a dynamic list of options. In this case, Axiom determines the list of options displayed in the filter dynamically based on a query. You can use an APL query or an MPL metrics query:
-        - For an APL query, the results must contain two fields which Axiom interprets as key-value pairs. Use the `project` command to create key-value fields from any output. See the example below.
-        - For an MPL metrics query, group by a single tag. Axiom uses the distinct values of that tag as the filter options. For more information, see [Generate filter options from a metrics query](#generate-filter-options-from-a-metrics-query).
+    - Choose **Query** to define a dynamic list of options. In this case, Axiom determines the list of options displayed in the filter dynamically based on a query. You can use an APL query or an MPL metrics query, as explained in [Define options with an APL query](#define-options-with-an-apl-query) and [Define options with a metrics query](#define-options-with-a-metrics-query).
 
 <Note>
 The value in the key-value pairs must be a string. To use number or Boolean fields, convert their values to strings using [`tostring()`](/apl/scalar-functions/conversion-functions#tostring()).
 </Note>
+
+### Define options with an APL query
+
+To populate the list of options from an APL query, the results must contain a `key` and a `value` field, which Axiom interprets as key-value pairs. Use the `project` command to create these fields from any output.
 
 The example APL query below uses the distinct values in the `geo.country` field to populate the list of options. It projects these values as both the key and the value and sorts them in alphabetical order.
 
@@ -73,6 +75,26 @@ The example APL query below uses the distinct values in the `geo.country` field 
 ```
 
 See this filter in action in the [HTTP logs dashboard of the Axiom Playground](https://play.axiom.co/axiom-play-qf1k/dashboards/gZXp8KNJy68q7yGsuA).
+
+### Define options with a metrics query
+
+To populate the list of options from an MPL metrics query, group by exactly one tag. Axiom uses the distinct values of that tag as the filter options. If the query groups by zero or several tags, Axiom can’t determine the filter options.
+
+<Tip>
+Add `align using last` before the `group by` clause to simplify the query and reduce the data Axiom processes when generating the options.
+</Tip>
+
+The example MPL query below populates the list of options with the distinct values of the `service.name` tag in the `http.server.request.duration` metric:
+
+```kusto
+`otel-demo-metrics`:`http.server.request.duration`
+| align using last
+| group by `service.name` using count
+```
+
+<Note>
+Only APL and MPL queries are supported for generating dynamic filter options. Structured queries aren’t supported.
+</Note>
 
 ### Create dependent select filters
 
@@ -170,32 +192,6 @@ The examples on this page assume that you use the default setting where the **Al
 ## Use filters with metrics queries
 
 Filter bars work with MPL metrics queries as well as APL queries.
-
-### Generate filter options from a metrics query
-
-In addition to APL queries, you can populate a select filter’s dynamic list of options from an MPL metrics query. This lets you build the list of options from the tag values present in your metrics data.
-
-To create a select filter whose options come from a metrics query:
-
-1. Create a select filter as described in [Create select filters](#create-select-filters).
-1. In the **Value** section, choose **Query**.
-1. Enter an MPL query that groups by a single tag. Axiom uses the distinct values of that tag as the filter options. Group by exactly one tag. If the query groups by zero or several tags, Axiom can’t determine the filter options.
-
-<Tip>
-Add `align using last` before the `group by` clause to simplify the query and reduce the data Axiom processes when generating the options.
-</Tip>
-
-The MPL query below populates the filter options with the distinct values of the `service.name` tag in the `http.server.request.duration` metric:
-
-```kusto
-`otel-demo-metrics`:`http.server.request.duration`
-| align using last
-| group by `service.name` using count
-```
-
-<Note>
-Only APL and MPL queries are supported for generating dynamic filter options. Structured queries aren’t supported.
-</Note>
 
 ### Reference filter variables
 
