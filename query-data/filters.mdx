@@ -55,7 +55,9 @@ Try out this filter in the [HTTP logs dashboard of the Axiom Playground](https:/
 1. Specify a unique filter ID that you later use to reference the filter. For example, `country_filter`.
 1. In the **Value** section, define the list of options to choose from in the select filter as key-value pairs. Axiom displays the key in the list of options in the filter dropdown, and uses the value to filter your data. For example, the key `France` is displayed in the list of options, and the value `FR` is used to filter data in your charts. Define the key-value pairs in one of the following ways:
     - Choose **List** to manually define a static list of options. Enter the options as a list of key-value pairs.
-    - Choose **Query** to define a dynamic list of options. In this case, Axiom determines the list of options displayed in the filter dynamically based on an APL query. The results of the APL query must contain two fields which Axiom interprets as key-value pairs. Use the `project` command to create key-value fields from any output.
+    - Choose **Query** to define a dynamic list of options. In this case, Axiom determines the list of options displayed in the filter dynamically based on an APL or MPL query.
+        - For APL queries, the result must contain two fields named `key` and `value`, which Axiom interprets as the key-value pair for each option. First `distinct` the field to get unique values, then use `project` to create the `key` and `value` fields.
+        - For MPL queries, group by a single tag. First `align using last` to simplify the query. Axiom uses each distinct value of the tag as both the key and the value of an option.
 
 <Note>
 The value in the key-value pairs must be a string. To use number or Boolean fields, convert their values to strings using [`tostring()`](/apl/scalar-functions/conversion-functions#tostring()).
@@ -68,6 +70,14 @@ The example APL query below uses the distinct values in the `geo.country` field 
 | distinct ['geo.country']
 | project key=['geo.country'] , value=['geo.country']
 | sort by key asc
+```
+
+The example MPL query below groups `http.server.request.duration` by a single tag, `service.name`. The distinct service names returned by the query populate the list of options.
+
+```mpl
+`otel-demo-metrics`:`http.server.request.duration`
+| align using last
+| group by `service.name` using count
 ```
 
 See this filter in action in the [HTTP logs dashboard of the Axiom Playground](https://play.axiom.co/axiom-play-qf1k/dashboards/gZXp8KNJy68q7yGsuA).
