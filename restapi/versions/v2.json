@@ -4265,6 +4265,11 @@
             "type": "string",
             "x-omitempty": true
           },
+          "edgeDeploymentUrl": {
+            "description": "URL of the edge deployment",
+            "type": "string",
+            "x-omitempty": true
+          },
           "id": {
             "description": "Dataset ID",
             "type": "string"
@@ -8504,7 +8509,7 @@
         "title": "Filter bar"
       },
       "SmartFilterConfig": {
-        "oneOf": [
+        "anyOf": [
           {
             "$ref": "#/components/schemas/SmartFilterSearch"
           },
@@ -8516,9 +8521,55 @@
       "SmartFilterSearch": {
         "type": "object",
         "properties": {
-          "__isPlaceholderData": {
-            "$ref": "#/components/schemas/SmartFilterIsPlaceholderData"
+          "id": {
+            "$ref": "#/components/schemas/SmartFilterId"
           },
+          "name": {
+            "$ref": "#/components/schemas/SmartFilterName"
+          },
+          "active": {
+            "$ref": "#/components/schemas/SmartFilterActive"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "search"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type"
+        ],
+        "additionalProperties": false,
+        "title": "SmartFilterSearch"
+      },
+      "SmartFilterId": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "SmartFilterName": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "SmartFilterActive": {
+        "type": "boolean"
+      },
+      "SmartFilterSelect": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/SmartFilterSelectList"
+          },
+          {
+            "$ref": "#/components/schemas/SmartFilterSelectQuery"
+          }
+        ],
+        "title": "SmartFilterSelect"
+      },
+      "SmartFilterSelectList": {
+        "type": "object",
+        "properties": {
           "id": {
             "$ref": "#/components/schemas/SmartFilterId"
           },
@@ -8531,36 +8582,27 @@
           "options": {
             "$ref": "#/components/schemas/SmartFilterOptions"
           },
-          "datasetId": {
-            "$ref": "#/components/schemas/SmartFilterDatasetId"
-          },
           "type": {
             "type": "string",
             "enum": [
-              "search"
+              "select"
+            ]
+          },
+          "selectType": {
+            "type": "string",
+            "enum": [
+              "list"
             ]
           }
         },
         "required": [
           "id",
-          "type"
+          "name",
+          "type",
+          "selectType"
         ],
         "additionalProperties": false,
-        "title": "SmartFilterSearch"
-      },
-      "SmartFilterIsPlaceholderData": {
-        "type": "boolean"
-      },
-      "SmartFilterId": {
-        "type": "string",
-        "maxLength": 200
-      },
-      "SmartFilterName": {
-        "type": "string",
-        "maxLength": 200
-      },
-      "SmartFilterActive": {
-        "type": "boolean"
+        "title": "SmartFilterSelectList"
       },
       "SmartFilterOptions": {
         "anyOf": [
@@ -8589,10 +8631,6 @@
       "SmartFilterOption": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "maxLength": 200
-          },
           "key": {
             "type": "string",
             "maxLength": 500
@@ -8603,6 +8641,9 @@
           },
           "default": {
             "type": "boolean"
+          },
+          "unset": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -8611,16 +8652,9 @@
         ],
         "additionalProperties": false
       },
-      "SmartFilterDatasetId": {
-        "type": "string",
-        "maxLength": 200
-      },
-      "SmartFilterSelect": {
+      "SmartFilterSelectQuery": {
         "type": "object",
         "properties": {
-          "__isPlaceholderData": {
-            "$ref": "#/components/schemas/SmartFilterIsPlaceholderData"
-          },
           "id": {
             "$ref": "#/components/schemas/SmartFilterId"
           },
@@ -8631,10 +8665,33 @@
             "$ref": "#/components/schemas/SmartFilterActive"
           },
           "options": {
-            "$ref": "#/components/schemas/SmartFilterOptions"
-          },
-          "datasetId": {
-            "$ref": "#/components/schemas/SmartFilterDatasetId"
+            "description": "Pre-defined options merged with the dynamic options returned by `query` at runtime. Typically used to seed a default option (for example an \"All\" entry with `unset: true`) so the filter has a sensible initial selection before — or independent of — query results.",
+            "allOf": [
+              {
+                "anyOf": [
+                  {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/SmartFilterOption"
+                    }
+                  },
+                  {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      null
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      ""
+                    ]
+                  }
+                ]
+              }
+            ]
           },
           "type": {
             "type": "string",
@@ -8643,42 +8700,70 @@
             ]
           },
           "selectType": {
-            "$ref": "#/components/schemas/SmartFilterSelectType"
+            "type": "string",
+            "enum": [
+              "query"
+            ]
           },
-          "apl": {
-            "$ref": "#/components/schemas/SmartFilterApl"
+          "query": {
+            "$ref": "#/components/schemas/SmartFilterQuery"
           }
         },
         "required": [
           "id",
-          "type"
+          "name",
+          "type",
+          "selectType"
         ],
         "additionalProperties": false,
-        "title": "SmartFilterSelect"
+        "title": "SmartFilterSelectQuery"
       },
-      "SmartFilterSelectType": {
-        "nullable": true,
-        "type": "string",
-        "enum": [
-          "list",
-          "apl",
-          ""
-        ]
-      },
-      "SmartFilterApl": {
-        "title": "SmartFilterApl",
-        "allOf": [
+      "SmartFilterQuery": {
+        "anyOf": [
           {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AplQuery"
-              },
-              {
-                "$ref": "#/components/schemas/EmptyAplObject"
-              }
-            ]
+            "$ref": "#/components/schemas/SmartFilterAplQuery"
+          },
+          {
+            "$ref": "#/components/schemas/SmartFilterNativeMplQuery"
           }
-        ]
+        ],
+        "title": "SmartFilterQuery"
+      },
+      "SmartFilterAplQuery": {
+        "type": "object",
+        "properties": {
+          "apl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500000,
+            "description": "APL query that returns the list of options for the filter dropdown. The result must contain a `key` column and a `value` column — Axiom interprets each row as a `{ key, value }` pair for an option. Use `distinct` to collapse the source field to unique values, then `project` to expose the `key` and `value` columns.\n\nExample:\n```\n['dataset-name'] | distinct field_name | project key=field_name, value=field_name\n```"
+          }
+        },
+        "required": [
+          "apl"
+        ],
+        "additionalProperties": false,
+        "title": "APL"
+      },
+      "SmartFilterNativeMplQuery": {
+        "type": "object",
+        "properties": {
+          "mpl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500000,
+            "description": "MPL query that returns the list of options for the filter dropdown. The query must group by exactly one tag — Axiom uses each distinct value of that tag as both the key and the value of an option. Use `align using last` to simplify the query.\n\nExample:\n```\ndataset:metric | align using last | group by tag using count\n```"
+          }
+        },
+        "required": [
+          "mpl"
+        ],
+        "additionalProperties": false,
+        "title": "MPL"
+      },
+      "SmartFilterDatasetId": {
+        "type": "string",
+        "maxLength": 200
       },
       "NonMetricsAplQuery": {
         "type": "object",
@@ -8695,22 +8780,6 @@
         ],
         "additionalProperties": false,
         "title": "APL"
-      },
-      "EmptyAplObject": {
-        "type": "object",
-        "properties": {
-          "apl": {
-            "type": "string",
-            "enum": [
-              ""
-            ]
-          }
-        },
-        "required": [
-          "apl"
-        ],
-        "additionalProperties": {},
-        "title": "EmptyAplObject"
       },
       "LogoUrl": {
         "type": "string",
