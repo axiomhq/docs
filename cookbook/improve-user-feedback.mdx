@@ -1,0 +1,231 @@
+---
+title: "Collect user feedback and link to traces"
+description: "Capture thumbs up/down ratings from your frontend, link them to AI traces, and query feedback data to prioritize improvements."
+sidebarTitle: User feedback
+keywords: ["cookbook", "improve", "feedback", "thumbs up", "thumbs down", "traces", "user signals"]
+---
+
+import Prerequisites from "/snippets/standard-prerequisites.mdx"
+import ReplaceDatasetToken from "/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "/snippets/replace-domain.mdx"
+
+User feedback is one of the highest-signal indicators of AI quality. This recipe shows how to add thumbs up/down feedback buttons to a Next.js chat interface, send feedback to Axiom linked to the original AI trace, and query feedback data to find capabilities that need improvement.
+
+## Prerequisites
+
+<Prerequisites />
+
+- Axiom AI SDK [installed and configured](/ai-engineering/quickstart) with an instrumented capability
+- A Next.js project with App Router
+- A separate [Axiom dataset](/reference/datasets#create-dataset) for feedback data
+- An [API token](/reference/tokens) with ingest-only permissions on the feedback dataset
+
+<Warning>
+The feedback token is exposed in the browser. Create a separate token with ingest-only permissions on the feedback dataset. Don't reuse your main API token.
+</Warning>
+
+## Step 1: Return trace context from the server
+
+Modify your AI capability to return `FeedbackLinks` alongside the response. These link feedback events to the exact trace:
+
+```ts app/actions.ts
+'use server';
+
+import { withSpan, wrapAISDKModel } from 'axiom/ai';
+import type { FeedbackLinks } from 'axiom/ai/feedback';
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+
+const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = wrapAISDKModel(openai('gpt-4o'));
+
+export async function chat(userMessage: string) {
+  return withSpan(
+    { capability: 'support-agent', step: 'respond' },
+    async (span) => {
+      const result = await generateText({
+        model,
+        system: 'You are a helpful customer support agent.',
+        messages: [{ role: 'user', content: userMessage }],
+      });
+
+      const links: FeedbackLinks = {
+        traceId: span.spanContext().traceId,
+        spanId: span.spanContext().spanId,
+        capability: 'support-agent',
+      };
+
+      return { text: result.text, links };
+    }
+  );
+}
+```
+
+## Step 2: Initialize the feedback client
+
+Create a feedback client on the client side. This client sends feedback events directly to Axiom from the browser:
+
+```ts app/lib/feedback.ts
+import { createFeedbackClient } from 'axiom/ai/feedback';
+
+export const { sendFeedback } = createFeedbackClient({
+  url: process.env.NEXT_PUBLIC_AXIOM_URL!,
+  dataset: process.env.NEXT_PUBLIC_AXIOM_FEEDBACK_DATASET!,
+  token: process.env.NEXT_PUBLIC_AXIOM_FEEDBACK_TOKEN!,
+});
+```
+
+Add the public environment variables to `.env.local`:
+
+```bash .env.local
+NEXT_PUBLIC_AXIOM_URL="AXIOM_DOMAIN"
+NEXT_PUBLIC_AXIOM_FEEDBACK_DATASET="FEEDBACK_DATASET_NAME"
+NEXT_PUBLIC_AXIOM_FEEDBACK_TOKEN="INGEST_ONLY_TOKEN"
+```
+
+<Info>
+<ReplaceDatasetToken />
+<ReplaceDomain />
+</Info>
+
+## Step 3: Build the feedback UI
+
+Create a chat message component with thumbs up/down buttons:
+
+```tsx app/components/ChatMessage.tsx
+'use client';
+
+import { useState } from 'react';
+import { Feedback } from 'axiom/ai/feedback';
+import type { FeedbackLinks } from 'axiom/ai/feedback';
+import { sendFeedback } from '@/lib/feedback';
+
+export function ChatMessage({
+  message,
+  links,
+}: {
+  message: string;
+  links: FeedbackLinks;
+}) {
+  const [voted, setVoted] = useState<'up' | 'down' | null>(null);
+
+  async function handleVote(value: 'up' | 'down') {
+    setVoted(value);
+
+    await sendFeedback(
+      links,
+      Feedback.thumb({ name: 'response-quality', value })
+    );
+  }
+
+  return (
+    <div>
+      <p>{message}</p>
+      <div>
+        <button onClick={() => handleVote('up')} disabled={voted !== null}>
+          {voted === 'up' ? 'Liked' : 'Like'}
+        </button>
+        <button onClick={() => handleVote('down')} disabled={voted !== null}>
+          {voted === 'down' ? 'Disliked' : 'Dislike'}
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+## Step 4: Wire up the chat page
+
+Connect the server action, feedback links, and UI component:
+
+```tsx app/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { chat } from './actions';
+import { ChatMessage } from './components/ChatMessage';
+import type { FeedbackLinks } from 'axiom/ai/feedback';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  links?: FeedbackLinks;
+}
+
+export default function ChatPage() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const userMessage = input;
+    setInput('');
+
+    setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+
+    const { text, links } = await chat(userMessage);
+
+    setMessages((prev) => [
+      ...prev,
+      { role: 'assistant', content: text, links },
+    ]);
+  }
+
+  return (
+    <div>
+      {messages.map((msg, i) =>
+        msg.role === 'assistant' && msg.links ? (
+          <ChatMessage key={i} message={msg.content} links={msg.links} />
+        ) : (
+          <p key={i}>{msg.content}</p>
+        )
+      )}
+      <form onSubmit={handleSubmit}>
+        <input value={input} onChange={(e) => setInput(e.target.value)} />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  );
+}
+```
+
+## Verify
+
+1. Send a few messages in the chat and click thumbs up or down on the responses.
+2. In the Axiom Console, click the **Query** tab, select your feedback dataset, and run:
+
+    ```kusto
+    ['feedback-dataset']
+    | where event == 'feedback'
+    | project
+        _time,
+        ['links.capability'],
+        kind,
+        value,
+        ['links.traceId']
+    | order by _time desc
+    ```
+
+3. Click a `traceId` value to navigate to the AI trace and see exactly what the capability did when the user gave feedback.
+
+4. Aggregate feedback to identify which capabilities need attention:
+
+    ```kusto
+    ['feedback-dataset']
+    | where event == 'feedback' and kind == 'thumb'
+    | summarize
+        thumbs_up = countif(value == 1),
+        thumbs_down = countif(value == -1),
+        satisfaction_rate = round(countif(value == 1) * 100.0 / count(), 1)
+      by ['links.capability']
+    | order by thumbs_down desc
+    ```
+
+5. Click the **AI engineering** tab, then **Feedback** in the sidebar to see feedback events per capability with links to the original traces.
+
+## What's next?
+
+- Turn negative feedback into evaluation test cases with [Turn failures into test cases](/cookbook/improve-failures-to-tests)
+- Add online scoring alongside feedback with [Add online evaluations to production](/cookbook/monitor-online-evals)
+- Build dashboards that include feedback metrics with [Build an AI performance dashboard](/cookbook/monitor-ai-dashboard)
+- Learn more about all feedback types in the [User feedback reference](/ai-engineering/observe/user-feedback)
