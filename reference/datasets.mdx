@@ -130,6 +130,8 @@ In this case, vacuuming fields in a dataset can help you reduce the number of fi
 
 Vacuuming fields doesn’t delete any events from your dataset. To delete events, [trim the dataset](#trim-dataset). You can use trimming and vacuuming in combination. For example, if you accidentally ingested events with fields you didn’t want to send to Axiom, and these events are within your retention period, vacuuming alone doesn’t solve your problem. In this case, first trim the dataset to delete the events with the unintended fields, and then vacuum the fields to rebuild the data schema.
 
+You can vacuum the fields of a dataset whose schema is locked. In this case, Axiom vacuums the fields and then regenerates the locked schema so that it matches the vacuumed fields. For more information, see [Lock dataset schema](#lock-dataset-schema).
+
 <Note>
 You can only vacuum fields once per day for each dataset.
 </Note>
@@ -142,12 +144,12 @@ To vacuum fields, follow these steps:
 
 ## Lock dataset schema
 
-By default, the data schema of a dataset grows together with your data. When you ingest an event with a field that isn’t yet part of the data schema, Axiom adds the new field to the schema.
+By default, the data schema of a dataset grows together with your data. When you ingest an event with a field that isn’t yet part of the data schema, Axiom adds the new field to the schema. Similarly, when you ingest an event where the value of an existing field has a new type, Axiom extends the field’s type to support both the existing and the new type.
 
 Locking the schema of a dataset freezes its set of fields and the type of each field. While the schema is locked, Axiom discards the following during the data ingestion process:
 
 - Fields that aren’t part of the locked schema.
-- Field values whose type doesn’t match the type of the field in the locked schema. For example, if the locked schema defines a field as a number and you ingest an event where the field contains a string, Axiom drops the field’s value from that event.
+- Field values whose type doesn’t match the type of the field in the locked schema and can’t be promoted to that type. For example, if the locked schema defines a field as a number and you ingest an event where the field contains a string, Axiom drops the field’s value from that event. Axiom keeps values that it can promote to the locked type. For example, if the locked type of a field is float, Axiom accepts integer values in that field. Null values never violate a locked schema.
 
 Axiom still ingests the events themselves and only drops the fields that don’t match the locked schema. When Axiom drops a field, the response to the ingest request contains a warning message that identifies the field and the reason. For example:
 
