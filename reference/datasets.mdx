@@ -144,12 +144,31 @@ To vacuum fields, follow these steps:
 
 By default, the data schema of a dataset grows together with your data. When you ingest an event with a field that isn’t yet part of the data schema, Axiom adds the new field to the schema.
 
-Locking the schema of a dataset freezes its set of fields and the type of each field. When you lock the schema, Axiom takes a snapshot of the fields that occur in events within your retention period, together with their types. While the schema is locked, Axiom discards the following during the data ingestion process:
+Locking the schema of a dataset freezes its set of fields and the type of each field. While the schema is locked, Axiom discards the following during the data ingestion process:
 
-- Fields that aren’t part of the snapshot.
-- Field values whose type doesn’t match the type of the field in the snapshot. For example, if the locked schema defines a field as a number and you ingest an event where the field contains a string, Axiom drops the field’s value from that event.
+- Fields that aren’t part of the locked schema.
+- Field values whose type doesn’t match the type of the field in the locked schema. For example, if the locked schema defines a field as a number and you ingest an event where the field contains a string, Axiom drops the field’s value from that event.
 
-Axiom still ingests the events themselves and only drops the fields that don’t match the locked schema.
+Axiom still ingests the events themselves and only drops the fields that don’t match the locked schema. When Axiom drops a field, the response to the ingest request contains a warning message that identifies the field and the reason. For example:
+
+```json
+"messages": [
+  {
+    "priority": "warn",
+    "code": "schema_rules_drop:debug",
+    "count": 1,
+    "msg": "field \"debug\" dropped: not in declared schema"
+  },
+  {
+    "priority": "warn",
+    "code": "schema_rules_drop:status",
+    "count": 1,
+    "msg": "field \"status\" dropped: type rule violated (allowed integer, saw string)"
+  }
+]
+```
+
+Axiom calculates ingest usage based on the data as it arrives. Fields that Axiom discards because the schema is locked still count towards your ingest usage.
 
 Locking the schema can be useful if you want to protect a dataset with a well-defined schema from unexpected fields, ensure that fields have consistent types, or keep the number of fields within the [allowed limits](/reference/limits#pricing-based-limits). To reduce the number of fields already associated with a dataset, [vacuum its fields](#vacuum-fields).
 
