@@ -130,6 +130,8 @@ In this case, vacuuming fields in a dataset can help you reduce the number of fi
 
 Vacuuming fields doesn’t delete any events from your dataset. To delete events, [trim the dataset](#trim-dataset). You can use trimming and vacuuming in combination. For example, if you accidentally ingested events with fields you didn’t want to send to Axiom, and these events are within your retention period, vacuuming alone doesn’t solve your problem. In this case, first trim the dataset to delete the events with the unintended fields, and then vacuum the fields to rebuild the data schema.
 
+You can vacuum the fields of a dataset whose schema is locked. In this case, Axiom vacuums the fields and then regenerates the locked schema so that it matches the vacuumed fields. For more information, see [Lock dataset schema](#lock-dataset-schema).
+
 <Note>
 You can only vacuum fields once per day for each dataset.
 </Note>
@@ -139,6 +141,63 @@ To vacuum fields, follow these steps:
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
 1. In the list, find the dataset where you want to vacuum fields, and then click <img src="/doc-assets/icons/vacuum.svg" className="inline-icon" alt="Vacuum fields icon" /> **Vacuum fields** on the right.
 1. Select the checkbox, and then click **Vacuum**.
+
+## Lock dataset schema
+
+By default, the data schema of a dataset grows together with your data. When you ingest an event with a field that isn’t yet part of the data schema, Axiom adds the new field to the schema. Similarly, when you ingest an event where the value of an existing field has a new type, Axiom extends the field’s type to support both the existing and the new type.
+
+Locking the schema of a dataset freezes its set of fields and the type of each field. While the schema is locked, Axiom discards the following during the data ingestion process:
+
+- Fields that aren’t part of the locked schema.
+- Field values whose type doesn’t match the type of the field in the locked schema and can’t be promoted to that type. For example, if the locked schema defines a field as a number and you ingest an event where the field contains a string, Axiom drops the field’s value from that event. Axiom keeps values that it can promote to the locked type. For example, if the locked type of a field is float, Axiom accepts integer values in that field. Null values never violate a locked schema.
+
+Axiom still ingests the events themselves and only drops the fields that don’t match the locked schema. When Axiom drops a field, the response to the ingest request contains a warning message that identifies the field and the reason. For example:
+
+```json
+"messages": [
+  {
+    "priority": "warn",
+    "code": "schema_rules_drop:debug",
+    "count": 1,
+    "msg": "field \"debug\" dropped: not in declared schema"
+  },
+  {
+    "priority": "warn",
+    "code": "schema_rules_drop:status",
+    "count": 1,
+    "msg": "field \"status\" dropped: type rule violated (allowed integer, saw string)"
+  }
+]
+```
+
+Axiom calculates ingest usage based on the data as it arrives. Fields that Axiom discards because the schema is locked still count towards your ingest usage.
+
+Locking the schema can be useful if you want to protect a dataset with a well-defined schema from unexpected fields, ensure that fields have consistent types, or keep the number of fields within the [allowed limits](/reference/limits#pricing-based-limits). To reduce the number of fields already associated with a dataset, [vacuum its fields](#vacuum-fields).
+
+Locking and unlocking the schema take effect immediately and don’t change the data stored in the dataset. When you unlock the schema, Axiom restores the default behavior and adds new fields to the schema during the data ingestion process. Unlocking doesn’t restore fields or values that Axiom discarded while the schema was locked.
+
+<Note>
+- You can only lock the schema of event datasets. Metrics datasets don’t support schema locking.
+- To lock or unlock the schema, you need update permissions for datasets. Without these permissions, Axiom doesn’t display the menu options below.
+- You can’t lock the schema of a dataset that another organization has shared with your organization.
+- You can’t lock the schema of a dataset that you have set up through the [Cloudflare Logpush](/apps/cloudflare-logpush), [Vercel](/apps/vercel), or [Netlify](/apps/netlify) integration.
+</Note>
+
+To lock the schema of a dataset, follow these steps:
+
+1. Go to the Datasets tab.
+1. In the list, select the dataset whose schema you want to lock.
+1. In the **Fields** panel, click <Icon icon="ellipsis-vertical" iconType="solid"/> **More > Lock schema**.
+
+Axiom displays a **Schema locked** message. While the schema is locked, the title of the Fields panel is **Fields (Locked)**.
+
+To unlock the schema of a dataset, follow these steps:
+
+1. Go to the Datasets tab.
+1. In the list, select the dataset whose schema you want to unlock.
+1. In the **Fields** panel, click <Icon icon="ellipsis-vertical" iconType="solid"/> **More > Unlock schema**.
+
+Axiom displays a **Schema unlocked** message.
 
 ## Share datasets
 
