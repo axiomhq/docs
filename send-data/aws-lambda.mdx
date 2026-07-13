@@ -49,6 +49,10 @@ To install the Axiom Lambda Extension, choose one of the following methods:
 - [Terraform](#install-with-terraform)
 - [AWS Lambda function UI](#install-with-aws-lambda-function-ui)
 
+<Warning>
+The layer `VERSION` in the ARN isn’t the same as the extension release version on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. AWS assigns layer version numbers automatically, one per publish, so the two numbering schemes differ. For example, extension release v16 is published as layer version `17` in all supported regions. After you install or upgrade, [verify the extension version](#verify-the-extension-version) that your functions run.
+</Warning>
+
 ### Install with AWS CLI
 
 <Steps>
@@ -63,7 +67,7 @@ aws lambda update-function-configuration --function-name my-function \
 
 - Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
 - Replace `ARCH` with the system architecture type. For example, `arm64`.
-- Replace `VERSION` with the latest version number specified on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
+- Replace `VERSION` with the latest Lambda layer version. For example, `17`, which contains extension release v16. The layer version doesn’t match the release version on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page because AWS assigns layer version numbers automatically.
 
 </Step>
 <Step>
@@ -123,7 +127,7 @@ resource "aws_lambda_function" "test_lambda" {
 <Info>
 Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
 Replace `ARCH` with the system architecture type. For example, `arm64`.
-Replace `VERSION` with the latest version number specified on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
+Replace `VERSION` with the latest Lambda layer version. For example, `17`, which contains extension release v16. The layer version doesn’t match the release version on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page because AWS assigns layer version numbers automatically.
 <ReplaceDatasetToken />
 <ReplaceDomain />
 </Info>
@@ -160,7 +164,7 @@ module "lambda_function" {
 <Info>
 Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
 Replace `ARCH` with the system architecture type. For example, `arm64`.
-Replace `VERSION` with the latest version number specified on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
+Replace `VERSION` with the latest Lambda layer version. For example, `17`, which contains extension release v16. The layer version doesn’t match the release version on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page because AWS assigns layer version numbers automatically.
 <ReplaceDatasetToken />
 <ReplaceDomain />
 </Info>
@@ -182,7 +186,7 @@ arn:aws:lambda:AWS_REGION:694952825951:layer:axiom-extension-ARCH:VERSION
 <Info>
 Replace `AWS_REGION` with the AWS Region to send the request to. For example, `us-west-1`.
 Replace `ARCH` with the system architecture type. For example, `arm64`.
-Replace `VERSION` with the latest version number specified on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. For example, `11`.
+Replace `VERSION` with the latest Lambda layer version. For example, `17`, which contains extension release v16. The layer version doesn’t match the release version on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page because AWS assigns layer version numbers automatically.
 </Info>
 
 </Step>
@@ -203,6 +207,18 @@ AXIOM_DATASET: DATASET_NAME
 </Steps>
 
 You have installed the Axiom Lambda Extension. Go to the Axiom UI and ensure your dataset receives events properly.
+
+## Verify the extension version
+
+The extension stamps its release version on every event it sends to Axiom. After you install or upgrade, check which release your functions actually run:
+
+```kusto
+['DATASET_NAME']
+| where isnotnull(['axiom.awsLambdaExtensionVersion'])
+| summarize count() by ['axiom.awsLambdaExtensionVersion']
+```
+
+The result is the extension release version, such as `v16`. If the result shows an older release than you expect, the layer version in your function configuration points to an older build. Update the layer ARN to the latest layer version and redeploy.
 
 ## Turn off Amazon CloudWatch logging
 
@@ -233,7 +249,7 @@ For most workloads, this trade-off is the right default. If you run high-volume 
 - **Alternatively, use Amazon CloudWatch as the buffer.** Keep CloudWatch logging turned on (skip the [turn-off step](#turn-off-amazon-cloudwatch-logging) above) and ship logs with the [Axiom CloudWatch Forwarder](/send-data/cloudwatch). Delivery to Axiom is then fully decoupled from your functions, with CloudWatch providing durable storage and retries, at the cost of CloudWatch pricing and some added latency.
 
 <Note>
-With extension v16 and later, you can tune the in-memory buffer size with the `AXIOM_MAX_BUFFERED_EVENTS` environment variable (default `10000`; the oldest events are dropped beyond this limit) and the per-flush time budget with `AXIOM_FLUSH_TIMEOUT` (a Go duration, default `5s`; a flush never runs past the invocation deadline).
+With extension release v16 (layer version `17`) and later, you can tune the in-memory buffer size with the `AXIOM_MAX_BUFFERED_EVENTS` environment variable (default `10000`; the oldest events are dropped beyond this limit) and the per-flush time budget with `AXIOM_FLUSH_TIMEOUT` (a Go duration, default `5s`; a flush never runs past the invocation deadline).
 </Note>
 
 ## Troubleshooting
