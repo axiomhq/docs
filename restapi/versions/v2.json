@@ -1333,6 +1333,39 @@
         "x-axiom-no-org-required": true
       }
     },
+    "/orgs/provision": {
+      "post": {
+        "security": [],
+        "tags": [
+          "orgs"
+        ],
+        "summary": "Provision a temporary organization for an agent",
+        "description": "Publicly provisions a temporary organization intended for automated agents. The organization is marked temporary with a TTL and is deleted automatically if it is not claimed before it expires. The response includes a claim URL that lets a human take ownership of the org. This endpoint is unauthenticated and rate limited per client IP.",
+        "operationId": "provisionOrg",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProvisionOrg"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Provisioned organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvisionOrgResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/orgs/{id}": {
       "get": {
         "security": [
@@ -5440,6 +5473,53 @@
             "type": "string"
           },
           "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ProvisionOrg": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Optional display name for the organization. If omitted, a name is auto-generated and the owner can rename it later.",
+            "type": "string"
+          },
+          "edgeDeployment": {
+            "description": "Optional edge deployment (region) the organization is created in. If omitted, the environment's default region is used.",
+            "type": "string"
+          }
+        }
+      },
+      "ProvisionOrgResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "defaultEdgeDeployment",
+          "expiresAt",
+          "claimUrl",
+          "token"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "defaultEdgeDeployment": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "claimUrl": {
+            "description": "URL a human follows to claim ownership of the temporary org.",
+            "type": "string"
+          },
+          "token": {
+            "description": "Full-permission API token the agent uses to create datasets, ingest, and query. Returned once and never retrievable again.",
             "type": "string"
           }
         }
