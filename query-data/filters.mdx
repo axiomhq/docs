@@ -55,7 +55,11 @@ Try out this filter in the [HTTP logs dashboard of the Axiom Playground](https:/
 1. Specify a unique filter ID that you later use to reference the filter. For example, `country_filter`.
 1. In the **Value** section, define the list of options to choose from in the select filter as key-value pairs. Axiom displays the key in the list of options in the filter dropdown, and uses the value to filter your data. For example, the key `France` is displayed in the list of options, and the value `FR` is used to filter data in your charts. Define the key-value pairs in one of the following ways:
     - Choose **List** to manually define a static list of options. Enter the options as a list of key-value pairs.
-    - Choose **Query** to define a dynamic list of options. In this case, Axiom determines the list of options displayed in the filter dynamically based on an APL query. The results of the APL query must contain two fields which Axiom interprets as key-value pairs. Use the `project` command to create key-value fields from any output.
+    - Choose **Query** to define a dynamic list of options. In this case, Axiom determines the list of options displayed in the filter dynamically based on a query. You can use an APL query or an MPL metrics query, as explained in [Define options with an APL query](#define-options-with-an-apl-query) and [Define options with a metrics query](#define-options-with-a-metrics-query).
+
+### Define options with an APL query
+
+To populate the list of options from an APL query, the results must contain a `key` and a `value` field, which Axiom interprets as key-value pairs. Use the `project` command to create these fields from any output.
 
 <Note>
 The value in the key-value pairs must be a string. To use number or Boolean fields, convert their values to strings using [`tostring()`](/apl/scalar-functions/conversion-functions#tostring()).
@@ -71,6 +75,22 @@ The example APL query below uses the distinct values in the `geo.country` field 
 ```
 
 See this filter in action in the [HTTP logs dashboard of the Axiom Playground](https://play.axiom.co/axiom-play-qf1k/dashboards/gZXp8KNJy68q7yGsuA).
+
+### Define options with a metrics query
+
+To populate the list of options from an MPL metrics query, group by exactly one tag. Axiom uses the distinct values of that tag as the filter options.
+
+<Tip>
+Add `align using last` before the `group by` clause to simplify the query and reduce the data Axiom processes when generating the options.
+</Tip>
+
+The example MPL query below populates the list of options with the distinct values of the `service.name` tag in the `http.server.request.duration` metric:
+
+```kusto
+`otel-demo-metrics`:`http.server.request.duration`
+| align using last
+| group by `service.name` using count
+```
 
 ### Create dependent select filters
 
@@ -163,4 +183,61 @@ The default option of a select filter is the option chosen when the dashboard lo
 
 ## Handle empty values
 
-The examples on this page assume that you use the default setting where the **All** key means an empty value, and the empty value in a filter means that the data isn’t filtered in the chart. The example chart queries above handle this empty (null) value in the `where` clause. For example, `where isempty(country_filter) or ['geo.country'] == country_filter` means that if no option is chosen in the country filter, `isempty(country_filter)` is true and the data isn’t filtered. If any other option is chosen with a non-null value, the chart only displays data where the `geo.country` field’s value is the same as the value chosen in the filter.
+The examples on this page assume that you use the default setting where the **All** key means an empty value, and the empty value in a filter means that the data isn’t filtered in the chart. The example chart queries above handle this empty (null) value in the `where` clause. For example, `where isempty(country_filter) or [‘geo.country’] == country_filter` means that if no option is chosen in the country filter, `isempty(country_filter)` is true and the data isn’t filtered. If any other option is chosen with a non-null value, the chart only displays data where the `geo.country` field’s value is the same as the value chosen in the filter.
+
+## Use filters with metrics queries
+
+Filter bars work with MPL metrics queries as well as APL queries.
+
+### Reference filter variables
+
+In an MPL query, reference a filter by prefixing its ID with `$`. For example, a filter with ID `service_filter` is referenced as `$service_filter`.
+
+Use `$filter_id` in a `where` clause to filter metric series by the selected value:
+
+```kusto
+dataset:metric
+| where tag_name == $filter_id
+| align to $__interval using avg
+```
+
+**Example:**
+
+The query below filters `http.server.request.duration` to a specific service chosen in the filter bar with ID `service_filter`:
+
+```kusto
+`otel-demo-metrics`:`http.server.request.duration`
+| where `service.name` == $service_filter
+| align to $__interval using avg
+```
+
+### Optional filters
+
+By default, a filter must have a value selected for the query to run. To make a filter optional — so the query returns all data when no value is selected — use the **Unset** default and an `ifdef` block.
+
+**Configure the filter bar:**
+
+1. Create a select filter as described in [Create select filters](#create-select-filters).
+1. In the filter options, check the **Unset** box for the default value.
+
+Checking **Unset** tells Axiom to treat the variable as optional. When no option is selected, the variable is not passed to the query.
+
+**Write the query:**
+
+Wrap the `where` clause in an `ifdef` block so it only runs when the variable is set:
+
+```kusto
+dataset:metric
+| ifdef($filter_id) { where tag_name == $filter_id }
+| align to $__interval using avg
+```
+
+**Example:**
+
+The query below filters by `service.name` only when a value is selected. When the filter is unset, the query returns data for all services.
+
+```kusto
+`otel-demo-metrics`:`http.server.request.duration`
+| ifdef($service_filter) { where `service.name` == $service_filter }
+| align to $__interval using avg
+```
