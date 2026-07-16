@@ -240,17 +240,36 @@ The Stream and Query tabs allow you to easily detect warnings and errors in your
 
 ## Best practices for production workloads
 
-The Axiom Lambda Extension favors the performance of your function over guaranteed log delivery. It buffers events in memory inside the Lambda execution environment and sends them to Axiom as your function is invoked and when the execution environment shuts down. Failed sends are retried on later invocations, but the time the extension spends sending is strictly capped so it can never block your function until timeout, and the buffer only lives as long as the execution environment. During a sustained inability to reach Axiom, the oldest buffered events are dropped.
+The Axiom Lambda Extension runs inside your Lambda execution environment and shares its CPU, memory, and network with your function. It favors the performance of your function over guaranteed log delivery. It buffers events in memory, sends them to Axiom as your function is invoked and when the execution environment shuts down, and retries failed sends on later invocations. The buffer only lives as long as the execution environment. When Axiom is unreachable for a sustained period, the extension drops the oldest buffered events.
 
-For most workloads, this trade-off is the right default. If you run high-volume or delivery-critical workloads, the best practice is to decouple your functions from Axiom by placing a collector between them:
+Both the memory the buffer uses and the time the extension spends sending are bounded. A slow or unreachable endpoint can’t grow the buffer without limit, and the extension abandons a stalled send in time to shut the execution environment down normally instead of holding it open until your function times out. Tune the bounds with the following environment variables:
 
-- **Deploy a collector you control between Lambda and Axiom.** Run a log pipeline such as Vector or the OpenTelemetry Collector on infrastructure you manage. Your functions hand logs to the nearby collector quickly, and the collector takes care of durable buffering, batching, backpressure, and retries before forwarding to Axiom. This isolates your functions from any slowness or downtime between your environment and Axiom. Vector ships with a native [Axiom sink](/send-data/vector), and Axiom ingests [OpenTelemetry](/send-data/opentelemetry) data natively. The choice, sizing, and operation of the collector are up to you.
-- **Keep using the extension by pointing it at your collector.** Set the `AXIOM_URL` environment variable to your collector's endpoint. The extension sends gzip-compressed NDJSON to the `/v1/datasets/DATASET_NAME/ingest` path of that URL, so any intermediary that accepts the [Axiom ingest API](/restapi/ingest) and forwards to Axiom works.
-- **Alternatively, use Amazon CloudWatch as the buffer.** Keep CloudWatch logging turned on (skip the [turn-off step](#turn-off-amazon-cloudwatch-logging) above) and ship logs with the [Axiom CloudWatch Forwarder](/send-data/cloudwatch). Delivery to Axiom is then fully decoupled from your functions, with CloudWatch providing durable storage and retries, at the cost of CloudWatch pricing and some added latency.
+| Environment variable | Default | Description |
+| --- | --- | --- |
+| `AXIOM_MAX_BUFFERED_EVENTS` | `10000` | The maximum number of events in the in-memory buffer. Beyond this limit, the extension drops the oldest events. |
+| `AXIOM_FLUSH_TIMEOUT` | `5s` | The time budget for a single send, expressed as a Go duration. The extension also ends a send early to stay within the invocation deadline. |
 
-<Note>
-With extension release v16 (layer version `17`) and later, you can tune the in-memory buffer size with the `AXIOM_MAX_BUFFERED_EVENTS` environment variable (default `10000`; the oldest events are dropped beyond this limit) and the per-flush time budget with `AXIOM_FLUSH_TIMEOUT` (a Go duration, default `5s`; a flush never runs past the invocation deadline).
-</Note>
+<Warning>
+These bounds only exist in extension release v16 (layer version `17`) and later. On earlier releases, a sustained inability to reach Axiom grows the buffer until your function reaches its memory limit, and a stalled send holds the execution environment open, and billed, until your function times out. Upgrade to v16 or later before you run high-volume or delivery-critical workloads. To check the version your functions run, see [Verify the extension version](#verify-the-extension-version).
+</Warning>
+
+For most workloads, sending directly from the extension is the right default. If you run high-volume, high-concurrency, or delivery-critical workloads, decouple your functions from Axiom by placing a collector between them. Your functions hand logs to a nearby collector instead of waiting on the network path to Axiom, which keeps your function durations predictable and isolates your functions from any slowness or downtime on that path. The collector takes care of durable buffering, batching, backpressure, and retries.
+
+### Run a collector you manage
+
+Run a log pipeline such as Vector or the OpenTelemetry Collector on infrastructure you manage, such as Amazon ECS or EC2. Vector ships with a native [Axiom sink](/send-data/vector), and Axiom ingests [OpenTelemetry](/send-data/opentelemetry) data natively. The choice, sizing, and operation of the collector are up to you.
+
+To keep using the extension with your collector, set the `AXIOM_URL` environment variable to your collector’s endpoint. The extension sends gzip-compressed NDJSON to the `/v1/datasets/DATASET_NAME/ingest` path of that URL, so any intermediary that accepts the [Axiom ingest API](/restapi/ingest) and forwards to Axiom works.
+
+### Run a collector as a Lambda layer
+
+If you want a collector without managing separate infrastructure, use the [OpenTelemetry Lambda layer](https://github.com/open-telemetry/opentelemetry-lambda/blob/main/collector/README.md) instead of the Axiom Lambda Extension. It runs an OpenTelemetry Collector as a layer on your function, and you configure it to export OpenTelemetry data to Axiom. For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
+
+Because this collector also runs inside the execution environment, it shares your function’s resources. It doesn’t isolate your functions from the network path to Axiom the way a collector you run separately does.
+
+### Use Amazon CloudWatch as the buffer
+
+If you prefer not to run a collector, use AWS-native tooling to decouple delivery. Keep CloudWatch logging turned on (skip the [turn-off step](#turn-off-amazon-cloudwatch-logging) above) and ship logs with the [Axiom CloudWatch Forwarder](/send-data/cloudwatch). Delivery to Axiom is then fully decoupled from your functions, with CloudWatch providing durable storage and retries, at the cost of CloudWatch pricing and some added latency.
 
 ## Troubleshooting
 
