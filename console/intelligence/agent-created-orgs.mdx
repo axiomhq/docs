@@ -5,24 +5,20 @@ sidebarTitle: Agent-created orgs
 keywords: ["ai agents", "agent", "provision", "temporary organization", "claim", "org", "bootstrap", "mcp"]
 ---
 
-<Note>
-Agent-created organizations are currently in public preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
-</Note>
-
 An AI agent can create a real, fully functional Axiom organization with a single unauthenticated HTTP request. The response includes an API token the agent can use immediately to create datasets, ingest and query data, and build dashboards and monitors.
 
 The organization starts out temporary. A human follows the claim URL returned at provisioning time to take ownership and make the organization permanent, keeping everything the agent built. If nobody claims the organization within 24 hours, Axiom permanently deletes it together with all its data.
 
 ## Provision an organization
 
-Send a POST request to `https://api.axiom.co/v2/orgs/provision`. The endpoint is public: no authentication header is required. Requests are rate limited per client IP, and a global daily cap applies across all callers.
+Send a POST request to `https://api.axiom.co/v2/orgs/provision`. The endpoint is public: no authentication header is required.
 
 The request body is a JSON object. Both fields are optional, so the minimal valid body is `{}`.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `name` | string | Optional display name for the organization. If omitted, Axiom generates a name like `Agent Org 3f2a91bc`. The owner can rename the organization after claiming it. |
-| `edgeDeployment` | string | Optional [edge deployment](/reference/edge-deployments) where the organization stores its data. If omitted, Axiom uses the default edge deployment. |
+| `edgeDeployment` | string | Optional [edge deployment](/reference/edge-deployments) where the organization stores its data. If omitted, the organization is created in the default edge deployment, `US East 1 (AWS)`. |
 
 For example:
 
@@ -84,29 +80,26 @@ Claiming also has the following effects:
 
 - The temporary markers are removed. The organization no longer expires and behaves like any other Axiom organization on the Personal plan.
 - The throttled limits are lifted and the full [Personal plan limits](/reference/limits) apply.
-- The synthetic agent user is removed, and the API token issued at provisioning stops working. If the agent needs continued API access after the claim, create a new [API token](/reference/tokens) and hand it to the agent.
+- The synthetic agent user is removed. The API token issued at provisioning continues to work, so the agent keeps its API access. As the new owner, you can revoke it or create additional [API tokens](/reference/tokens) at any time.
 
-Claim links are single-use: after an organization has been claimed, its claim URL and claim token are invalid. Claim links also stop working once the organization expires — an expired organization can’t be claimed, even if it hasn’t been deleted yet.
+Claim links are single-use: after an organization has been claimed, its claim URL is invalid.
 
 ## Limits for unclaimed organizations
 
 While an organization is unclaimed, reduced limits apply that are sized for its 24-hour lifespan:
 
-- **Ingest and query:** The organization gets one thirtieth of the Personal plan’s monthly ingest and query allowances. See [Limits and requirements](/reference/limits) for the Personal plan limits.
-- **Notifiers:** Notifiers are disabled until the organization is claimed. Agents can create monitors, but notifications aren’t delivered while the organization is temporary.
-- **Provisioning:** The provisioning endpoint itself is rate limited per client IP, and a global daily cap applies across all callers.
+- **Ingest and query:** The organization can ingest up to 10 GB of data and use up to 1 GB-hour of query compute during its 24-hour lifespan.
+- **Notifiers:** Agents can create and configure monitors and notifiers, but notifiers are disabled: notifications aren’t delivered until the organization is claimed.
+- **Provisioning:** An agent can create at most 3 organizations in a day.
 
 Claiming the organization restores the full Personal plan allowances and enables notifiers.
 
 ## Expiry
 
-If the organization isn’t claimed within 24 hours (see `expiresAt` in the provisioning response), Axiom hard-deletes it: the organization, all datasets and ingested data, dashboards, monitors, the API token, and the synthetic agent user are permanently removed. Deleted organizations can’t be recovered.
+If the organization isn’t claimed within 24 hours (see `expiresAt` in the provisioning response), Axiom deletes it: the organization, all datasets and ingested data, dashboards, monitors, the API token, and the synthetic agent user are permanently removed. Deleted organizations can’t be recovered.
 
 ## Error behavior
 
-| Status | Meaning | What to do |
-| :--- | :--- | :--- |
-| `404 Not Found` | Agent-created organizations aren’t available in the environment you’re calling. | Don’t retry. Create an organization by [signing up](https://app.axiom.co/register) instead. |
-| `429 Too Many Requests` | Your client IP has exceeded the provisioning rate limit, or the global daily provisioning cap has been reached. | Retry later with backoff. Don’t provision more than one organization for the same task. |
+If provisioning returns `429 Too Many Requests`, you have exceeded the provisioning rate limit. Retry later with backoff, and don’t provision more than one organization for the same task.
 
 For the full request and response schema, see the [API reference](/restapi/endpoints/provisionOrg).
