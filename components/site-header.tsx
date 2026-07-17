@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Menu, Moon, Search, Sparkles, Sun, X } from 'lucide-react';
+import { Menu, Moon, Search, Sun, X } from 'lucide-react';
 import { useSearchContext } from 'fumadocs-ui/contexts/search';
 import { useState } from 'react';
 
@@ -38,10 +38,9 @@ export function SiteHeader({ onMenu }: { onMenu: () => void }) {
         {tabs.map((tab) => <Link key={tab.href} href={tab.href} className={tab.match(pathname) ? 'active' : ''} onClick={() => setMobileOpen(false)}>{tab.label}</Link>)}
       </nav>
       <div className="header-actions">
-        <button className="header-search" aria-label="Search documentation" onClick={() => setOpenSearch(true)}>
-          <Search size={14} /><span>Search docs…</span><kbd>⌘K</kbd>
+        <button className="header-search" aria-label="Search documentation and ask AI" onClick={() => setOpenSearch(true)}>
+          <Search size={14} /><span>Search or ask AI…</span><kbd>⌘K</kbd>
         </button>
-        <button className="header-button ask-ai" onClick={() => setOpenSearch(true)}><Sparkles size={13} />Ask AI</button>
         <button className="header-icon" aria-label="Toggle color theme" onClick={toggleTheme}>
           <Sun className="theme-icon-dark" size={14} />
           <Moon className="theme-icon-light" size={14} />

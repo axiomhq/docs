@@ -2,6 +2,7 @@ import { highlight } from 'fumadocs-core/highlight';
 import type { ReactNode } from 'react';
 import { CopyButton } from './copy-button';
 import { ApiCodeBlock, type ApiCodeSample } from './api-code-block';
+import { ApiTryIt, type ApiTryItParameter } from './api-try-it';
 import { getApiOperation, resolveSchema, schemaExample } from '@/lib/openapi';
 
 // OpenAPI documents are heterogeneous recursive JSON objects.
@@ -62,10 +63,11 @@ function schemaRows(document: JsonObject, input: JsonObject | undefined, require
 
 function SchemaTable({ document, rows, label }: { document: JsonObject; rows: SchemaRow[]; label: string }) {
   if (rows.length === 0) return null;
+  const hasLocation = rows.some((row) => row.location);
   return (
     <div className="api-schema-wrap">
-      <table className="api-schema-table" aria-label={label}>
-        <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+      <table className="api-schema-table" data-has-location={hasLocation || undefined} aria-label={label}>
+        <thead><tr><th>Property</th><th>Type</th>{hasLocation && <th>Location</th>}<th>Description</th></tr></thead>
         <tbody>{rows.map((row) => (
           <tr className={row.hasChildren ? 'api-schema-object-row' : undefined} data-depth={row.depth} key={row.key}>
             <td className="api-schema-name" style={{ paddingLeft: 12 + row.depth * 18 }}>
@@ -75,8 +77,8 @@ function SchemaTable({ document, rows, label }: { document: JsonObject; rows: Sc
             <td className="api-schema-type">
               <code>{schemaType(document, row.field)}</code>
               {row.required && <b>Required</b>}
-              {row.location && <span>{row.location}</span>}
             </td>
+            {hasLocation && <td className="api-schema-location"><code>{row.location}</code></td>}
             <td className="api-schema-description"><PlainMarkdown value={row.description} />{!row.description && <span aria-hidden="true">—</span>}</td>
           </tr>
         ))}</tbody>
@@ -149,7 +151,7 @@ async function highlightedSamples(samples: ReturnType<typeof requestSamples>): P
     id: sample.id,
     label: sample.label,
     code: sample.code,
-    highlighted: await highlight(sample.code, { lang: sample.language, themes: { light: 'github-light', dark: 'github-dark' } }),
+    highlighted: await highlight(sample.code, { lang: sample.language, themes: { light: 'github-light-high-contrast', dark: 'github-dark-high-contrast' } }),
   })));
 }
 
@@ -168,14 +170,7 @@ export async function ApiOperation({ value, children }: { value: string; childre
   const concretePath = displayPath.replace(/\{([^}]+)\}/g, (_, name) => name.toUpperCase().replace(/-/g, '_'));
   const requestUrl = baseUrl ? new URL(path.replace(/^\//, '').replace(/\{([^}]+)\}/g, (_, name) => name.toUpperCase().replace(/-/g, '_')), baseUrl).toString() : concretePath;
   const bodyExample = bodyType ? schemaExample(document, bodySchema) : undefined;
-  const responseExample = JSON.stringify(schemaExample(document, responseSchema), null, 2);
   const requestCodeSamples = await highlightedSamples(requestSamples(method, requestUrl, bodyType, bodyExample));
-  const responseCodeSample: ApiCodeSample = {
-    id: 'json',
-    label: 'JSON',
-    code: responseExample,
-    highlighted: await highlight(responseExample, { lang: 'json', themes: { light: 'github-light', dark: 'github-dark' } }),
-  };
   const parameterRows: SchemaRow[] = parameters.map((parameter: JsonObject) => ({
     key: `${parameter.in}-${parameter.name}`,
     name: parameter.name,
@@ -188,6 +183,19 @@ export async function ApiOperation({ value, children }: { value: string; childre
   }));
   const bodyRows = schemaRows(document, bodySchema, resolveSchema(document, bodySchema)?.required);
   const responseRows = schemaRows(document, responseSchema, resolveSchema(document, responseSchema)?.required);
+  const tryParameters: ApiTryItParameter[] = parameters.map((parameter: JsonObject) => ({
+    name: parameter.name,
+    location: parameter.in,
+    required: Boolean(parameter.required),
+    description: parameter.description,
+    example: parameter.example ?? parameter.schema?.example ?? parameter.schema?.default,
+  }));
+  const serverVariables = Object.entries<JsonObject>(document.servers?.[0]?.variables ?? {}).map(([name, variable]) => ({
+    name,
+    required: true,
+    description: variable.description,
+    example: variable.default,
+  }));
 
   return <div className="api-operation">
     <div className="endpoint-bar"><span className={`endpoint-method method-${method}`}>{method.toUpperCase()}</span><code>{displayPath}</code><CopyButton value={displayPath} label="" /></div>
@@ -195,7 +203,7 @@ export async function ApiOperation({ value, children }: { value: string; childre
     {children}
     {parameters.length > 0 && <section className="api-section" id="parameters"><h2>Parameters <a href="#parameters">#</a></h2><SchemaTable document={document} rows={parameterRows} label="Request parameters" /></section>}
     {bodyContent && <section className="api-section" id="body"><h2>Body <a href="#body">#</a></h2><p className="api-section-copy"><PlainMarkdown value={resolveSchema(document, bodySchema)?.description ?? operation.requestBody?.description} /></p><div className="media-types">{Object.keys(bodyContent).map((type) => <code key={type}>{type}</code>)}</div><SchemaTable document={document} rows={bodyRows} label="Request body schema" /></section>}
-    <section className="api-section" id="example"><h2>Example request <a href="#example">#</a></h2><ApiCodeBlock samples={requestCodeSamples} /></section>
-    {responseEntries.length > 0 && <section className="api-section" id="response"><h2>Response <a href="#response">#</a></h2>{responseEntries.map(([code, response]) => <div className="api-response" key={code}><div><span className={/^2/.test(code) ? 'status-dot success' : 'status-dot error'} /><code>{code}</code><span>{response.description}</span></div>{response.content && <small>{Object.keys(response.content).join(', ')}</small>}</div>)}{responseSchema && <><SchemaTable document={document} rows={responseRows} label="Response schema" /><ApiCodeBlock samples={[responseCodeSample]} label={`${successResponse?.[0]} response`} /></>}</section>}
+    <section className="api-section" id="example"><h2>Request <a href="#example">#</a></h2><ApiCodeBlock samples={requestCodeSamples} /><ApiTryIt operation={value} method={method} parameters={tryParameters} serverVariables={serverVariables} bodyType={bodyType} bodyExample={bodyExample} /></section>
+    {responseEntries.length > 0 && <section className="api-section" id="response"><h2>Response <a href="#response">#</a></h2>{responseEntries.map(([code, response]) => <div className="api-response" key={code}><div><span className={/^2/.test(code) ? 'status-dot success' : 'status-dot error'} /><code>{code}</code><span>{response.description}</span></div>{response.content && <small>{Object.keys(response.content).join(', ')}</small>}</div>)}{responseSchema && <SchemaTable document={document} rows={responseRows} label="Response schema" />}</section>}
   </div>;
 }

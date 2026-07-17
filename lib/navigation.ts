@@ -14,6 +14,22 @@ type LegacyNested = { group: string; pages: LegacyPage[] };
 type LegacyPage = string | LegacyNested;
 
 const apiFrontmatter = /^v\d+\s+(get|post|put|patch|delete)\s+/i;
+const apiGroupNames: Record<string, string> = {
+  'Annotation endpoints': 'Annotations',
+  'API token endpoints': 'API tokens',
+  'Dashboard endpoints': 'Dashboards',
+  'Dataset endpoints': 'Datasets',
+  'Edge endpoints': 'Edge',
+  'Map field endpoints': 'Map fields',
+  'Monitor endpoints': 'Monitors',
+  'Notifier endpoints': 'Notifiers',
+  'Organization endpoints': 'Organizations',
+  'Role-Based Access Control endpoints': 'Role-based access control',
+  'Saved queries endpoints': 'Saved queries',
+  'User endpoints': 'Users',
+  'Views endpoints': 'Views',
+  'Virtual fields endpoints': 'Virtual fields',
+};
 
 function humanize(value: string) {
   return value
@@ -36,7 +52,7 @@ function pageItem(slug: string): NavigationItem {
 
 function nestedItem(item: LegacyPage): NavigationItem {
   if (typeof item === 'string') return pageItem(item);
-  return { title: item.group, children: item.pages.map(nestedItem) };
+  return { title: apiGroupNames[item.group] ?? item.group, children: item.pages.map(nestedItem) };
 }
 
 export function getNavigation(section: 'documentation' | 'query' | 'api' | 'changelog'): NavigationGroup[] {
@@ -47,7 +63,7 @@ export function getNavigation(section: 'documentation' | 'query' | 'api' | 'chan
   const index = section === 'documentation' ? 0 : section === 'query' ? 1 : 2;
   const tab = legacyConfig.navigation.tabs[index];
   return tab.groups.map((group) => ({
-    title: group.group,
+    title: section === 'api' ? (apiGroupNames[group.group] ?? group.group) : group.group,
     items: (group.pages as LegacyPage[]).map(nestedItem),
   }));
 }

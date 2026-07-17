@@ -20,6 +20,7 @@ test('landing, guide, query, and API routes render', async ({ page }) => {
 
 test('API reference uses highlighted code, compact schemas, and persistent language tabs', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/docs/restapi/endpoints/getToken');
 
   const requestCode = page.locator('#example .api-code');
@@ -33,11 +34,30 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
     [...new Set(elements.map((element) => getComputedStyle(element).color))]
   ));
   expect(tokenColors.length).toBeGreaterThan(1);
+  expect(tokenColors).toContain('rgb(240, 243, 246)');
   await expect(requestCode.locator('pre code')).toHaveCSS('border-top-width', '0px');
 
   const parametersHeading = page.getByRole('heading', { name: 'Parameters', level: 2 });
   await expect(parametersHeading).toHaveCSS('border-bottom-width', '0px');
-  await expect(page.getByRole('table', { name: 'Request parameters' })).toBeVisible();
+  const parameterTable = page.getByRole('table', { name: 'Request parameters' });
+  await expect(parameterTable).toBeVisible();
+  await expect(parameterTable.getByRole('columnheader', { name: 'Location' })).toBeVisible();
+  await expect(parameterTable.getByRole('cell', { name: 'path' })).toBeVisible();
+
+  await expect(page.locator('.sidebar-group h2').filter({ hasText: /^API tokens$/ })).toBeVisible();
+  await expect(page.locator('.sidebar-group h2').filter({ hasText: /endpoints/i })).toHaveCount(0);
+  await expect(page.locator('.site-header .ask-ai')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Search documentation and ask AI' })).toBeVisible();
+
+  const tryIt = page.locator('.api-try');
+  await tryIt.getByText('Try it', { exact: true }).click();
+  await expect(tryIt.getByLabel('API token Required')).toHaveAttribute('data-ph-no-capture', 'true');
+  await expect(tryIt.getByLabel('Organization ID Optional')).toHaveAttribute('data-ph-no-capture', 'true');
+  await expect(tryIt.getByRole('button', { name: 'Run GET request' })).toBeDisabled();
+  await tryIt.getByLabel('API token Required').fill('test-token');
+  await tryIt.getByRole('button', { name: 'Run GET request' }).click();
+  await expect(tryIt.getByRole('alert')).toHaveText('Enter a value for id.');
+  await expect(page.locator('#response .api-code')).toHaveCount(0);
 
   const responseSchema = page.getByRole('table', { name: 'Response schema' });
   const expiresRow = responseSchema.getByRole('row').filter({ hasText: 'expiresAt' });
