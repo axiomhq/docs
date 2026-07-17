@@ -51,8 +51,9 @@ function subscribeValues(callback: () => void) {
   return () => window.removeEventListener('axiom-placeholder-change', callback);
 }
 
-function subscribeToHydration() {
-  return () => {};
+function subscribeToHydration(callback: () => void) {
+  const timeout = window.setTimeout(callback, 0);
+  return () => window.clearTimeout(timeout);
 }
 
 function parseValues(snapshot: string): Values {

@@ -4,6 +4,7 @@ import { DocsBody, DocsDescription, DocsTitle } from 'fumadocs-ui/page';
 import { DocsShell } from '@/components/docs-shell';
 import { ApiOperation } from '@/components/api-operation';
 import { mdxComponents } from '@/components/mdx-components';
+import { TableOfContents, type TocItem } from '@/components/table-of-contents';
 import { getNavigation, getSection } from '@/lib/navigation';
 import { source } from '@/lib/source';
 
@@ -17,6 +18,14 @@ export default async function DocumentationPage({ params }: PageProps) {
   const href = page.url;
   const section = getSection(href);
   const Body = page.data.body;
+  const tocItems: TocItem[] = page.data.openapi
+    ? [
+        { title: 'Parameters', url: '#parameters', depth: 2 },
+        { title: 'Body', url: '#body', depth: 2 },
+        { title: 'Example request', url: '#example', depth: 2 },
+        { title: 'Response', url: '#response', depth: 2 },
+      ]
+    : page.data.toc.map((item) => ({ title: item.title, url: item.url, depth: item.depth }));
 
   return (
     <DocsShell navigation={getNavigation(section)} activeHref={href}>
@@ -32,12 +41,7 @@ export default async function DocumentationPage({ params }: PageProps) {
             <a href={`https://github.com/axiomhq/docs/edit/main/content/docs/${page.path}`} target="_blank" rel="noreferrer">Edit this page on GitHub</a>
           </div>
         </article>
-        {(page.data.toc.length > 0 || page.data.openapi) && (
-          <aside className="floating-toc" aria-label="On this page">
-            <strong>On this page</strong>
-            {page.data.openapi ? <><a href="#parameters">Parameters</a><a href="#body">Body</a><a href="#example">Example request</a><a href="#response">Response</a></> : page.data.toc.map((item) => <a key={item.url} href={item.url} style={{ paddingLeft: Math.max(0, item.depth - 2) * 10 }}>{item.title}</a>)}
-          </aside>
-        )}
+        {tocItems.length > 0 && <TableOfContents items={tocItems} />}
       </div>
     </DocsShell>
   );

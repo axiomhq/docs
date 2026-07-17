@@ -55,6 +55,28 @@ test('article remains viewport-centered across desktop and tablet widths', async
   }
 });
 
+test('table of contents tracks the active heading and keeps a transparent surface', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/docs/platform-overview/architecture');
+
+  const toc = page.getByRole('complementary', { name: 'On this page' });
+  const queryArchitecture = toc.getByRole('link', { name: 'Query architecture' });
+  await expect(toc).toBeVisible();
+  await expect.poll(() => toc.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+
+  await queryArchitecture.click();
+  await expect(queryArchitecture).toHaveAttribute('aria-current', 'location');
+  await expect(page.getByRole('heading', { name: 'Query architecture', level: 2 })).toBeInViewport();
+
+  const consoleExpander = page.locator('.nav-nested summary').filter({ hasText: 'Console' });
+  await expect(consoleExpander.locator('span')).toHaveText('Console');
+  const label = await consoleExpander.locator('span').boundingBox();
+  const chevron = await consoleExpander.locator('svg').boundingBox();
+  expect(label).not.toBeNull();
+  expect(chevron).not.toBeNull();
+  expect(chevron!.x).toBeGreaterThan(label!.x + label!.width);
+});
+
 test('client navigation and configurable code examples hydrate without errors', async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (message) => {

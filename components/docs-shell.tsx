@@ -11,7 +11,7 @@ function NavItem({ item, activeHref, depth = 0 }: { item: NavigationItem; active
     const open = item.children.some((child) => child.href === activeHref || child.children?.some((nested) => nested.href === activeHref));
     return (
       <details className="nav-nested" open={open}>
-        <summary style={{ paddingLeft: 10 + depth * 10 }}><ChevronRight size={12} />{item.title}</summary>
+        <summary style={{ paddingLeft: 10 + depth * 10 }}><span>{item.title}</span><ChevronRight size={12} /></summary>
         <div>{item.children.map((child) => <NavItem key={child.href ?? child.title} item={child} activeHref={activeHref} depth={depth + 1} />)}</div>
       </details>
     );
