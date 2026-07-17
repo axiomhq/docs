@@ -6,9 +6,14 @@ import { useState } from 'react';
 import type { NavigationGroup, NavigationItem } from '@/lib/navigation';
 import { SiteHeader } from './site-header';
 
+function containsActive(item: NavigationItem, activeHref: string): boolean {
+  if (item.href === activeHref) return true;
+  return item.children?.some((child) => containsActive(child, activeHref)) ?? false;
+}
+
 function NavItem({ item, activeHref, depth = 0 }: { item: NavigationItem; activeHref: string; depth?: number }) {
   if (item.children) {
-    const open = item.children.some((child) => child.href === activeHref || child.children?.some((nested) => nested.href === activeHref));
+    const open = containsActive(item, activeHref);
     return (
       <details className="nav-nested" open={open}>
         <summary style={{ paddingLeft: 10 + depth * 10 }}><span>{item.title}</span><ChevronRight size={12} /></summary>

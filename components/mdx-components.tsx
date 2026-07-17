@@ -2,6 +2,7 @@ import { Children, cloneElement, isValidElement } from 'react';
 import type { AnchorHTMLAttributes, ComponentProps, ImgHTMLAttributes, ReactElement, ReactNode } from 'react';
 import type { MDXComponents } from 'mdx/types';
 import Link from 'next/link';
+import { ExternalLink, Play } from 'lucide-react';
 import defaultComponents from 'fumadocs-ui/mdx';
 import { Accordion as FumaAccordion, Accordions } from 'fumadocs-ui/components/accordion';
 import { Card, Cards } from 'fumadocs-ui/components/card';
@@ -11,10 +12,13 @@ import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
 import { PlaceholderPre as InteractivePlaceholderPre } from './placeholder-code';
 import { HeadingAnchor } from './heading-anchor';
 
-function DocsLink({ href = '', ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
+function DocsLink({ href = '', children, className, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
   const target = href.startsWith('/') && !href.startsWith('/docs/') && !href.startsWith('/doc-assets/') && !href.startsWith('/llms') ? `/docs${href}` : href;
-  if (target.startsWith('/') || target.startsWith('#')) return <Link href={target} {...props} />;
-  return <a href={target} {...props} />;
+  if (target.startsWith('/') || target.startsWith('#')) return <Link href={target} className={className} {...props}>{children}</Link>;
+  if (target.startsWith('https://play.axiom.co/')) {
+    return <a href={target} className={['playground-link', className].filter(Boolean).join(' ')} target="_blank" rel="noreferrer" {...props}><Play size={12} /><span>{children}</span><ExternalLink size={11} aria-label="Opens in a new tab" /></a>;
+  }
+  return <a href={target} className={className} {...props}>{children}</a>;
 }
 
 function DocsImage(props: ImgHTMLAttributes<HTMLImageElement>) {
@@ -49,13 +53,14 @@ function Accordion({ children, title }: { children: ReactNode; title: ReactNode 
 }
 
 function AccordionGroup({ children }: { children: ReactNode }) {
-  return <div className="accordion-group">{children}</div>;
+  const items = Children.toArray(children).filter(isValidElement) as ReactElement<{ children?: ReactNode; title?: ReactNode }>[];
+  return <div className="accordion-group"><Accordions type="single">{items.map((item, index) => <FumaAccordion key={index} title={item.props.title}>{item.props.children}</FumaAccordion>)}</Accordions></div>;
 }
 
 function Tabs({ children }: { children: ReactNode }) {
   const tabs = Children.toArray(children).filter(isValidElement) as ReactElement<{ title?: string; value?: string }>[];
   const items = tabs.map((tab, index) => tab.props.title ?? `Tab ${index + 1}`);
-  return <FumaTabs items={items}>{tabs.map((tab, index) => cloneElement(tab, { ...tab.props, value: items[index] }))}</FumaTabs>;
+  return <div className="docs-tabs"><FumaTabs items={items}>{tabs.map((tab, index) => cloneElement(tab, { ...tab.props, value: items[index] }))}</FumaTabs></div>;
 }
 
 function Tab({ children, value }: { children: ReactNode; title?: string; value?: string }) {

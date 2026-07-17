@@ -17,6 +17,7 @@ export default async function DocumentationPage({ params }: PageProps) {
 
   const href = page.url;
   const section = getSection(href);
+  const querySyntaxTitle = section === 'query' && slug?.at(-1) !== 'overview' && slug?.some((segment) => /(?:function|operator)s?$/.test(segment));
   const Body = page.data.body;
   const tocItems: TocItem[] = page.data.openapi
     ? [
@@ -32,7 +33,7 @@ export default async function DocumentationPage({ params }: PageProps) {
       <div className="article-layout">
         <article className="doc-article">
           <div className="doc-breadcrumbs"><span>{section === 'query' ? 'Query reference' : section === 'api' ? 'API reference' : section === 'changelog' ? 'Updates' : 'Documentation'}</span><b>/</b><span>{page.data.title}</span></div>
-          <DocsTitle>{page.data.title}</DocsTitle>
+          <DocsTitle className={querySyntaxTitle ? 'query-syntax-title' : undefined}>{page.data.title}</DocsTitle>
           <DocsDescription>{page.data.description}</DocsDescription>
           <DocsBody>
             {page.data.openapi ? <ApiOperation value={page.data.openapi}><Body components={mdxComponents} /></ApiOperation> : <Body components={mdxComponents} />}

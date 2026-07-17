@@ -172,6 +172,36 @@ test('table of contents tracks the active heading and keeps a transparent surfac
   expect(chevron!.x).toBeGreaterThan(label!.x + label!.width);
 });
 
+test('query reference navigation and MDX components follow the compact interaction model', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/docs/apl/scalar-functions/conditional-function/case');
+
+  const title = page.getByRole('heading', { name: 'case', exact: true, level: 1 });
+  await expect(title).toHaveCSS('font-family', /Mono/);
+
+  const accordionGroup = page.locator('.accordion-group > div');
+  await expect(accordionGroup).toHaveCSS('border-radius', '4px');
+  await expect(page.getByText('Splunk SPL users', { exact: true })).toHaveCSS('min-height', '40px');
+
+  const tabs = page.locator('.docs-tabs > div');
+  await expect(tabs).toHaveCSS('border-radius', '4px');
+  await expect(tabs.getByRole('tablist')).toHaveCSS('height', '38px');
+  await expect(tabs.locator('figure.shiki').first()).toHaveCSS('border-radius', '4px');
+
+  const playground = tabs.getByRole('link', { name: /Run in Playground/ }).first();
+  await expect(playground).toHaveAttribute('target', '_blank');
+  await expect(playground.locator('svg').last()).toHaveAttribute('aria-label', 'Opens in a new tab');
+
+  const outputTable = tabs.getByRole('table').first();
+  await expect(outputTable.locator('xpath=..')).toHaveCSS('border-radius', '4px');
+  await expect(outputTable.getByRole('columnheader').first()).toHaveCSS('padding', '7px 10px');
+
+  await expect(page.getByRole('link', { name: 'iff', exact: true }).last()).toHaveAttribute('href', '/docs/apl/scalar-functions/conditional-function/iff');
+  await page.locator('.sidebar').getByRole('link', { name: 'iff', exact: true }).click();
+  await expect(page).toHaveURL(/\/conditional-function\/iff$/);
+  await expect(page.locator('.nav-nested[open] > summary span')).toHaveText(['Functions', 'Scalar functions', 'Conditional functions']);
+});
+
 test('Axiom article chrome, callouts, and heading links follow the docs interaction model', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.setViewportSize({ width: 1440, height: 900 });
