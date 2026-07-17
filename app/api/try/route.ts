@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getApiOperation, resolveSchema } from '@/lib/openapi';
+import { isPersonalAccessToken } from '@/lib/token';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,6 +57,9 @@ export async function POST(request: Request) {
   if (typeof input.operation !== 'string') return error('A documented API operation is required.');
   if (typeof input.token !== 'string' || !input.token.trim()) return error('Enter an API token before running the request.');
   if (input.token.length > 4096) return error('The API token is too long.');
+  if (isPersonalAccessToken(input.token) && (typeof input.orgId !== 'string' || !input.orgId.trim())) {
+    return error('Enter your organization ID when using a personal access token.');
+  }
   const data = getApiOperation(input.operation);
   if (!data) return error('This API operation is not available.');
 

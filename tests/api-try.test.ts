@@ -30,6 +30,14 @@ describe('API try proxy', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it('requires an organization ID for both PAT prefix variants', async () => {
+    for (const token of ['xapt-test', 'xaapt-test']) {
+      const response = await POST(request({ operation: 'v2 get /tokens/{id}', token, parameters: { id: 'token-id' } }));
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: 'Enter your organization ID when using a personal access token.' });
+    }
+  });
+
   it('only forwards a documented request to the fixed Axiom host', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{"id":"token-id"}', {
       status: 200,
