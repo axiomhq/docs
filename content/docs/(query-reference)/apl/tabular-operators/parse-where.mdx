@@ -7,59 +7,6 @@ The `parse-where` operator lets you extract values from a string expression base
 
 You can use `parse-where` when working with logs or event data that follow a known structure but may contain noise or irrelevant lines. For example, you can parse request logs to extract structured information like HTTP method, status code, or error messages, and automatically discard any rows that don’t match the format.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you use the `rex` command with the `max_match=1` option to extract fields and filter out non-matching events. In APL, `parse-where` provides the same functionality in a more direct way. Rows that do not match the pattern are automatically excluded.
-
-<CodeGroup>
-```sql Splunk example
-... | rex field=log_line "\[(?<level>\w+)\] (?<message>.+)"
-````
-
-```kusto APL equivalent
-datatable(log_line:string)
-[
-    '[INFO] Service started',
-    'invalid line'
-]
-| parse-where log_line with '[', level:string, '] ', message:string
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL does not have a direct equivalent to `parse-where`. You often use `LIKE` or `REGEXP` functions to test string patterns and then combine them with `CASE` expressions to extract substrings. In APL, `parse-where` simplifies this by combining extraction and filtering into one operator.
-
-<CodeGroup>
-```sql SQL example
-SELECT
-  REGEXP_SUBSTR(log_line, '\\[(\\w+)\\]', 1, 1) AS level,
-  REGEXP_SUBSTR(log_line, '\\] (.+)', 1, 1) AS message
-FROM logs
-WHERE log_line REGEXP '\\[(\\w+)\\] (.+)';
-```
-
-```kusto APL equivalent
-datatable(log_line:string)
-[
-    '[INFO] Service started',
-    'invalid line'
-]
-| parse-where log_line with '[', level:string, '] ', message:string
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -110,3 +57,54 @@ This query extracts the method and status from the `uri` field and discards rows
 - [parse](/apl/tabular-operators/parse-operator): Extracts values from a string expression without filtering out non-matching rows. Use when you want to keep all rows, including those that fail to parse.
 - [project](/apl/tabular-operators/project-operator): Selects and computes columns without parsing. Use when you want to transform data rather than extract values.
 - [where](/apl/tabular-operators/where-operator): Filters rows based on conditions. Use alongside parsing functions if you want more control over filtering logic.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you use the `rex` command with the `max_match=1` option to extract fields and filter out non-matching events. In APL, `parse-where` provides the same functionality in a more direct way. Rows that do not match the pattern are automatically excluded.
+
+<CodeGroup>
+```sql Splunk example
+... | rex field=log_line "\[(?<level>\w+)\] (?<message>.+)"
+````
+
+```kusto APL equivalent
+datatable(log_line:string)
+[
+    '[INFO] Service started',
+    'invalid line'
+]
+| parse-where log_line with '[', level:string, '] ', message:string
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not have a direct equivalent to `parse-where`. You often use `LIKE` or `REGEXP` functions to test string patterns and then combine them with `CASE` expressions to extract substrings. In APL, `parse-where` simplifies this by combining extraction and filtering into one operator.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  REGEXP_SUBSTR(log_line, '\\[(\\w+)\\]', 1, 1) AS level,
+  REGEXP_SUBSTR(log_line, '\\] (.+)', 1, 1) AS message
+FROM logs
+WHERE log_line REGEXP '\\[(\\w+)\\] (.+)';
+```
+
+```kusto APL equivalent
+datatable(log_line:string)
+[
+    '[INFO] Service started',
+    'invalid line'
+]
+| parse-where log_line with '[', level:string, '] ', message:string
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

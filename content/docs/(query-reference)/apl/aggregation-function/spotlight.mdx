@@ -13,71 +13,6 @@ Spotlight is useful when you:
 
 This page explains the Spotlight APL function. For more information about how Spotlight works in the Axiom Console, see [Spotlight](/console/intelligence/spotlight).
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk, there is no one operator that compares a selected cohort to the baseline across many fields at once. You often create a flag with `eval`, run separate `stats`/`eventstats` for each field, and then `appendpipe` or `join` to compare rates. In APL, `spotlight` is an aggregation you call once inside `summarize`. You pass a Boolean predicate to define the cohort and a list of fields to inspect, and APL returns a scored table of differences.
-
-<CodeGroup>
-```sql Splunk example
-index=web earliest=-15m
-| eval is_error = if(status IN ("500","502","503"), 1, 0)
-| stats count by method uri status geo_country geo_city
-| eventstats sum(eval(is_error)) AS sel, sum(eval(1-is_error)) AS base
-| ... (manual rate/lift calculations and sorting) ...
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| where _time >= now(-15m)
-| summarize spotlight(status in ('500','502','503'),
-                      ['geo.country'], ['geo.city'], method, uri, status)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-Standard SQL does not include a built-in cohort-vs-baseline comparator. You typically `CASE` a selection flag, aggregate twice (selected vs baseline), compute proportions, deltas, and significance, then union and sort. In APL, you express the selection as a predicate and let `spotlight` compute proportions, lift, and scores for each field/value.
-
-<CodeGroup>
-```sql SQL example
-WITH scoped AS (
-  SELECT *,
-         CASE WHEN status IN ('500','502','503') THEN 1 ELSE 0 END AS is_sel
-  FROM sample_http_logs
-  WHERE _time >= NOW() - INTERVAL '15' MINUTE
-),
-per_field AS (
-  SELECT 'status' AS field, status AS value,
-         AVG(is_sel)              AS sel_rate,
-         AVG(1 - is_sel)          AS base_rate
-  FROM scoped
-  GROUP BY status
-)
-SELECT field, value, sel_rate, base_rate,
-       sel_rate / NULLIF(base_rate,0) AS lift
-FROM per_field
-ORDER BY lift DESC
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| where _time >= now(-15m)
-| summarize spotlight(status in ('500','502','503'),
-                      status, method, uri, ['geo.country'], ['geo.city'])
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -155,3 +90,66 @@ The query compares spans that ran longer than 500 ms to all other spans in the t
 - [summarize](/apl/tabular-operators/summarize-operator): Runs aggregations over events. `spotlight` is an aggregation you call within `summarize`.
 - [top](/apl/tabular-operators/top-operator): Returns the most frequent values. Use `top` for simple frequency counts; use `spotlight` to contrast a cohort against its baseline with lift and significance.
 - [lookup](/apl/tabular-operators/lookup-operator): Enriches events with reference attributes. Use `lookup` to add context before running `spotlight` across enriched fields.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk, there is no one operator that compares a selected cohort to the baseline across many fields at once. You often create a flag with `eval`, run separate `stats`/`eventstats` for each field, and then `appendpipe` or `join` to compare rates. In APL, `spotlight` is an aggregation you call once inside `summarize`. You pass a Boolean predicate to define the cohort and a list of fields to inspect, and APL returns a scored table of differences.
+
+<CodeGroup>
+```sql Splunk example
+index=web earliest=-15m
+| eval is_error = if(status IN ("500","502","503"), 1, 0)
+| stats count by method uri status geo_country geo_city
+| eventstats sum(eval(is_error)) AS sel, sum(eval(1-is_error)) AS base
+| ... (manual rate/lift calculations and sorting) ...
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| where _time >= now(-15m)
+| summarize spotlight(status in ('500','502','503'),
+                      ['geo.country'], ['geo.city'], method, uri, status)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Standard SQL does not include a built-in cohort-vs-baseline comparator. You typically `CASE` a selection flag, aggregate twice (selected vs baseline), compute proportions, deltas, and significance, then union and sort. In APL, you express the selection as a predicate and let `spotlight` compute proportions, lift, and scores for each field/value.
+
+<CodeGroup>
+```sql SQL example
+WITH scoped AS (
+  SELECT *,
+         CASE WHEN status IN ('500','502','503') THEN 1 ELSE 0 END AS is_sel
+  FROM sample_http_logs
+  WHERE _time >= NOW() - INTERVAL '15' MINUTE
+),
+per_field AS (
+  SELECT 'status' AS field, status AS value,
+         AVG(is_sel)              AS sel_rate,
+         AVG(1 - is_sel)          AS base_rate
+  FROM scoped
+  GROUP BY status
+)
+SELECT field, value, sel_rate, base_rate,
+       sel_rate / NULLIF(base_rate,0) AS lift
+FROM per_field
+ORDER BY lift DESC
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| where _time >= now(-15m)
+| summarize spotlight(status in ('500','502','503'),
+                      status, method, uri, ['geo.country'], ['geo.city'])
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

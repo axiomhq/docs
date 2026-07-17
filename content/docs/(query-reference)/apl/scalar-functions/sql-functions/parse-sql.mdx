@@ -13,43 +13,6 @@ The `parse_sql` function parses a SQL statement string and returns a structured 
 `parse_sql` supports simple SQL queries. It doesn't support stored procedures, window functions, common table expressions (CTEs), recursive queries, advanced statistical functions, or special join types.
 </Note>
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk doesn't have a native SQL parser function. You would typically use `rex` with regular expressions to extract parts of a SQL query string. APL's `parse_sql` provides structured access to every clause of the SQL statement in a single call.
-
-<CodeGroup>
-```sql Splunk example
-... | rex field=sql_query "FROM\s+(?<table_name>\w+)"
-```
-
-```kusto APL equivalent
-... | project parsed = parse_sql('SELECT id, status FROM logs WHERE status = 500')
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL has no built-in SQL parsing functions. `parse_sql` is unique to APL: it accepts a SQL string as input and returns a dictionary of its parsed components, enabling you to inspect and transform SQL statements using APL operators.
-
-<CodeGroup>
-```sql SQL example
--- No direct SQL equivalent; you would use application-level string parsing
-```
-
-```kusto APL equivalent
-... | project parsed = parse_sql('SELECT id, status FROM logs WHERE status = 500')
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -255,3 +218,38 @@ The query parses a SQL string with an OR condition in its WHERE clause. You can 
 - [format_sql](/apl/scalar-functions/sql-functions/format-sql): Converts the dictionary produced by `parse_sql` back into a SQL string. Use `format_sql` to normalize or round-trip a parsed query.
 - [parse_json](/apl/scalar-functions/string-functions/parse-json): Parses a JSON string into a dynamic dictionary. Use `parse_json` when your data contains JSON rather than SQL.
 - [extract](/apl/scalar-functions/string-functions/extract): Extracts a substring matching a regular expression from a string. Use `extract` for simple pattern matching when you don't need full SQL parsing.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk doesn't have a native SQL parser function. You would typically use `rex` with regular expressions to extract parts of a SQL query string. APL's `parse_sql` provides structured access to every clause of the SQL statement in a single call.
+
+<CodeGroup>
+```sql Splunk example
+... | rex field=sql_query "FROM\s+(?<table_name>\w+)"
+```
+
+```kusto APL equivalent
+... | project parsed = parse_sql('SELECT id, status FROM logs WHERE status = 500')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL has no built-in SQL parsing functions. `parse_sql` is unique to APL: it accepts a SQL string as input and returns a dictionary of its parsed components, enabling you to inspect and transform SQL statements using APL operators.
+
+<CodeGroup>
+```sql SQL example
+-- No direct SQL equivalent; you would use application-level string parsing
+```
+
+```kusto APL equivalent
+... | project parsed = parse_sql('SELECT id, status FROM logs WHERE status = 500')
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

@@ -7,48 +7,6 @@ The `genai_is_truncated` function checks whether an AI model response was trunca
 
 You can use this function to identify incomplete responses, monitor quality issues, detect token limit problems, or track when conversations need continuation.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would check the finish_reason field manually.
-
-<CodeGroup>
-```sql Splunk example
-| eval is_truncated=if(finish_reason="length", "true", "false")
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend is_truncated = genai_is_truncated(messages, finish_reason)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would check the finish_reason field value.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  conversation_id,
-  CASE WHEN finish_reason = 'length' THEN true ELSE false END as is_truncated
-FROM ai_logs
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend is_truncated = genai_is_truncated(messages, finish_reason)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -78,7 +36,7 @@ Check if a GenAI response was truncated due to token limits.
 ['otel-demo-genai']
 | extend finish_reason = ['attributes.gen_ai.response.finish_reasons']
 | extend is_truncated = genai_is_truncated(['attributes.gen_ai.input.messages'], finish_reason)
-| summarize 
+| summarize
     truncated_count = countif(is_truncated),
     total_count = count(),
     truncation_rate = round(100.0 * countif(is_truncated) / count(), 2)
@@ -101,3 +59,42 @@ This query tracks the rate of truncated responses, helping you identify when tok
 - [genai_extract_assistant_response](/apl/scalar-functions/genai-functions/genai-extract-assistant-response): Extracts assistant responses. Use this to examine truncated responses.
 - [strlen](/apl/scalar-functions/string-functions#strlen): Returns string length. Use this to analyze the length of truncated responses.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would check the finish_reason field manually.
+
+<CodeGroup>
+```sql Splunk example
+| eval is_truncated=if(finish_reason="length", "true", "false")
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend is_truncated = genai_is_truncated(messages, finish_reason)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would check the finish_reason field value.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  conversation_id,
+  CASE WHEN finish_reason = 'length' THEN true ELSE false END as is_truncated
+FROM ai_logs
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend is_truncated = genai_is_truncated(messages, finish_reason)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

@@ -13,53 +13,6 @@ The `topk` aggregation in APL is a statistical aggregation that returns estimate
 For completely accurate results, use the [`top` operator](/apl/tabular-operators/top-operator).
 </Note>
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk SPL doesn’t have the equivalent of the `topk` function. You can achieve similar results with SPL’s `top` command which is equivalent to APL’s `top` operator. The `topk` function in APL behaves similarly by returning the top `k` values of a specified field, but its syntax is unique to APL.
-
-The main difference between `top` (supported by both SPL and APL) and `topk` (supported only by APL) is that `topk` is estimated. This means that APL’s `topk` is faster, less resource intenstive, but less accurate than SPL’s `top`.
-
-<CodeGroup>
-```sql Splunk example
-| top limit=5 status by method
-```
-
-```kusto APL equivalent
-['sample-http-logs'] 
-| summarize topk(status, 5) by method 
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, identifying the top `k` rows often involves using the `ORDER BY` and `LIMIT` clauses. While the logic remains similar, APL’s `topk` simplifies this process by directly returning the top `k` values of a field in an aggregation.
-
-The main difference between SQL’s solution and APL’s `topk` is that `topk` is estimated. This means that APL’s `topk` is faster, less resource intenstive, but less accurate than SQL’s combination of `ORDER BY` and `LIMIT` clauses.
-
-<CodeGroup>
-```sql SQL example
-SELECT status, COUNT(*)
-FROM sample_http_logs
-GROUP BY status
-ORDER BY COUNT(*) DESC
-LIMIT 5;
-```
-
-```kusto APL equivalent
-['sample-http-logs'] 
-| summarize topk(status, 5)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -87,7 +40,7 @@ When analyzing HTTP logs, you can use the `topk` function to find the top 5 most
 **Query**
 
 ```kusto
-['sample-http-logs'] 
+['sample-http-logs']
 | summarize topk(status, 5)
 ```
 
@@ -139,7 +92,7 @@ You can use `topk` in security log analysis to find the top 5 cities generating 
 **Query**
 
 ```kusto
-['sample-http-logs'] 
+['sample-http-logs']
 | summarize topk(['geo.city'], 5)
 ```
 
@@ -167,3 +120,48 @@ This query returns the top 5 cities based on the number of HTTP requests.
 - [sort](/apl/tabular-operators/sort-operator): Orders the dataset based on one or more fields, which is useful if you need a complete ordered list rather than the top `k` values.
 - [extend](/apl/tabular-operators/extend-operator): Adds calculated fields to your dataset, which can be useful in combination with `topk` to create custom rankings.
 - [count](/apl/aggregation-function/count): Aggregates the dataset by counting occurrences, often used in conjunction with `topk` to find the most common values.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn’t have the equivalent of the `topk` function. You can achieve similar results with SPL’s `top` command which is equivalent to APL’s `top` operator. The `topk` function in APL behaves similarly by returning the top `k` values of a specified field, but its syntax is unique to APL.
+
+The main difference between `top` (supported by both SPL and APL) and `topk` (supported only by APL) is that `topk` is estimated. This means that APL’s `topk` is faster, less resource intenstive, but less accurate than SPL’s `top`.
+
+<CodeGroup>
+```sql Splunk example
+| top limit=5 status by method
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize topk(status, 5) by method
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, identifying the top `k` rows often involves using the `ORDER BY` and `LIMIT` clauses. While the logic remains similar, APL’s `topk` simplifies this process by directly returning the top `k` values of a field in an aggregation.
+
+The main difference between SQL’s solution and APL’s `topk` is that `topk` is estimated. This means that APL’s `topk` is faster, less resource intenstive, but less accurate than SQL’s combination of `ORDER BY` and `LIMIT` clauses.
+
+<CodeGroup>
+```sql SQL example
+SELECT status, COUNT(*)
+FROM sample_http_logs
+GROUP BY status
+ORDER BY COUNT(*) DESC
+LIMIT 5;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize topk(status, 5)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

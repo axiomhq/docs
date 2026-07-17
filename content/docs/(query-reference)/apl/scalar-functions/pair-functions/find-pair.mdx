@@ -7,49 +7,6 @@ Use the `find_pair` function in APL to search an array of key-value pairs and fi
 
 You use `find_pair` when working with arrays of pairs (such as tags, labels, or metadata) where you need to find a specific pair based on pattern matching. This is particularly useful in log analysis, OpenTelemetry traces with custom attributes, and any scenario where data is stored as key-value pair arrays.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you typically iterate through multi-value fields using `mvfind` or use `spath` for JSON data. APL's `find_pair` provides a specialized function for finding key-value pairs with pattern matching.
-
-<CodeGroup>
-```sql Splunk example
-| eval found_tag=mvfind(tags, 'host=server.*')
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend tags = dynamic(['host:server1', 'env:prod', 'region:us-west'])
-| extend found = find_pair(tags, 'host', 'server*')
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you typically use `JSON_EXTRACT` or array functions with `LIKE` patterns to search arrays. APL's `find_pair` provides a more direct approach for pair-based searches.
-
-<CodeGroup>
-```sql SQL example
-SELECT *
-FROM logs
-WHERE JSON_EXTRACT(tags, '$[*].key') LIKE 'host%'
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend tags = dynamic(['host:server1', 'env:prod'])
-| extend found = find_pair(tags, 'host*', '*')
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -104,3 +61,43 @@ This query searches tag arrays for server information and extracts the matching 
 - [array_index_of](/apl/scalar-functions/array-functions/array-index-of): Use `array_index_of` for exact match searches in arrays. Use `find_pair` for pattern-based pair matching.
 - [extract](/apl/scalar-functions/string-functions#extract): Use `extract` for regex-based extraction from single strings. Use `find_pair` for structured pair searching in arrays.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically iterate through multi-value fields using `mvfind` or use `spath` for JSON data. APL's `find_pair` provides a specialized function for finding key-value pairs with pattern matching.
+
+<CodeGroup>
+```sql Splunk example
+| eval found_tag=mvfind(tags, 'host=server.*')
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend tags = dynamic(['host:server1', 'env:prod', 'region:us-west'])
+| extend found = find_pair(tags, 'host', 'server*')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you typically use `JSON_EXTRACT` or array functions with `LIKE` patterns to search arrays. APL's `find_pair` provides a more direct approach for pair-based searches.
+
+<CodeGroup>
+```sql SQL example
+SELECT *
+FROM logs
+WHERE JSON_EXTRACT(tags, '$[*].key') LIKE 'host%'
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend tags = dynamic(['host:server1', 'env:prod'])
+| extend found = find_pair(tags, 'host*', '*')
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

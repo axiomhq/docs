@@ -7,51 +7,6 @@ The `genai_extract_function_results` function extracts function call results fro
 
 You can use this function to monitor function call outcomes, debug tool integrations, analyze API usage patterns, or track the effectiveness of function calls in AI workflows.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would need to use complex filtering and extraction logic to isolate function results from nested message structures.
-
-<CodeGroup>
-```sql Splunk example
-| eval function_results=mvfilter(match(role, "function") OR match(role, "tool"))
-| eval results=mvindex(function_results, 0)
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend results = genai_extract_function_results(messages)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would need to unnest arrays and filter for function or tool roles, which is more complex.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  conversation_id,
-  JSON_EXTRACT(content, '$.result') as function_results
-FROM conversations
-CROSS JOIN UNNEST(messages)
-WHERE role IN ('function', 'tool')
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend function_results = genai_extract_function_results(messages)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -102,3 +57,45 @@ This query shows function call results, helping you understand tool execution pe
 - [genai_get_content_by_role](/apl/scalar-functions/genai-functions/genai-get-content-by-role): Gets content by specific role. Use this for more granular extraction when you need specific role messages.
 - [genai_extract_assistant_response](/apl/scalar-functions/genai-functions/genai-extract-assistant-response): Extracts assistant responses. Use this when you need the AI's text response instead of function results.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would need to use complex filtering and extraction logic to isolate function results from nested message structures.
+
+<CodeGroup>
+```sql Splunk example
+| eval function_results=mvfilter(match(role, "function") OR match(role, "tool"))
+| eval results=mvindex(function_results, 0)
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend results = genai_extract_function_results(messages)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would need to unnest arrays and filter for function or tool roles, which is more complex.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  conversation_id,
+  JSON_EXTRACT(content, '$.result') as function_results
+FROM conversations
+CROSS JOIN UNNEST(messages)
+WHERE role IN ('function', 'tool')
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend function_results = genai_extract_function_results(messages)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

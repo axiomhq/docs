@@ -13,52 +13,6 @@ The `topkif` aggregation in APL is a statistical aggregation that returns estima
 For completely accurate results, use the [top operator](/apl/tabular-operators/top-operator) together with a filter.
 </Note>
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk SPL doesn’t have a direct equivalent to the `topkif` function. You can achieve similar results by using the top command combined with a where clause, which is closer to using APL’s top operator with a filter. However, APL’s `topkif` provides a more optimized, estimated solution when you want speed and efficiency.
-
-<CodeGroup>
-```sql Splunk example
-| where method="GET" | top limit=5 status
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize topkif(status, 5, method == 'GET')
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, identifying the top `k` rows filtered by a condition often involves a WHERE clause followed by ORDER BY and LIMIT. APL’s `topkif` simplifies this by combining the filtering and top-k selection in one function.
-
-<CodeGroup>
-```sql SQL example
-SELECT status, COUNT(*)
-FROM sample_http_logs
-WHERE method = 'GET'
-GROUP BY status
-ORDER BY COUNT(*) DESC
-LIMIT 5;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize topkif(status, 5, method == 'GET')
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
-# Usage
-
 ## Syntax
 
 ```kusto
@@ -165,3 +119,47 @@ This query returns the top 5 cities generating the most GET HTTP requests.
 - [sort](/apl/tabular-operators/sort-operator): Sorts the dataset based on one or more fields. Use sort if you need full ordered results.
 - [extend](/apl/tabular-operators/extend-operator): Adds calculated fields to your dataset, useful before applying topkif to create new fields to rank.
 - [count](/apl/aggregation-function/count): Counts occurrences in the dataset. Use count when you only need counts without focusing on the top entries.`
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn’t have a direct equivalent to the `topkif` function. You can achieve similar results by using the top command combined with a where clause, which is closer to using APL’s top operator with a filter. However, APL’s `topkif` provides a more optimized, estimated solution when you want speed and efficiency.
+
+<CodeGroup>
+```sql Splunk example
+| where method="GET" | top limit=5 status
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize topkif(status, 5, method == 'GET')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, identifying the top `k` rows filtered by a condition often involves a WHERE clause followed by ORDER BY and LIMIT. APL’s `topkif` simplifies this by combining the filtering and top-k selection in one function.
+
+<CodeGroup>
+```sql SQL example
+SELECT status, COUNT(*)
+FROM sample_http_logs
+WHERE method = 'GET'
+GROUP BY status
+ORDER BY COUNT(*) DESC
+LIMIT 5;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize topkif(status, 5, method == 'GET')
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>
+
+# Usage

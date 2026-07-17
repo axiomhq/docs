@@ -7,49 +7,6 @@ The `series_greater_equals` function compares two numeric arrays element by elem
 
 You use this function when you want to perform threshold comparisons across two series of values, such as checking performance metrics against baselines, comparing observed values to expected ranges, or evaluating time-aligned logs and traces.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you typically perform comparisons on fields or with `eval` expressions rather than array-based functions. If you want to compare series of values, you usually use `eval` with conditional expressions, but SPL doesn’t provide direct array-to-array comparison. In APL, `series_greater_equals` lets you apply the comparison element by element on arrays.
-
-<CodeGroup>
-```sql Splunk example
-... | eval greater_equals = if(field1 >= field2, true(), false())
-````
-
-```kusto APL equivalent
-print result = series_greater_equals(dynamic([2,4,6]), dynamic([1,4,10]))
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL does not natively support array-to-array operations in the same way. You often need to `UNNEST` arrays or join on row numbers to compare values across two arrays. APL provides a direct function, `series_greater_equals`, that simplifies these operations by applying the comparison across the entire array at once.
-
-<CodeGroup>
-```sql SQL example
--- SQL-style comparison would require unnesting
-SELECT a.value >= b.value AS greater_equals
-FROM UNNEST(ARRAY[2,4,6]) WITH ORDINALITY a(value, i)
-JOIN UNNEST(ARRAY[1,4,10]) WITH ORDINALITY b(value, j)
-  ON a.i = b.j
-```
-
-```kusto APL equivalent
-print result = series_greater_equals(dynamic([2,4,6]), dynamic([1,4,10]))
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -154,3 +111,44 @@ This query aggregates failed requests by country, builds a series of durations, 
 - [series_less](/apl/scalar-functions/time-series/series-less): Compares two arrays and returns `true` where the first array element is less than the second.
 - [series_less_equals](/apl/scalar-functions/time-series/series-less-equals): Compares two arrays and returns `true` where the first array element is less than or equal to the second.
 - [series_not_equals](/apl/scalar-functions/time-series/series-not-equals): Compares two arrays and returns `true` where elements aren’t equal.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically perform comparisons on fields or with `eval` expressions rather than array-based functions. If you want to compare series of values, you usually use `eval` with conditional expressions, but SPL doesn’t provide direct array-to-array comparison. In APL, `series_greater_equals` lets you apply the comparison element by element on arrays.
+
+<CodeGroup>
+```sql Splunk example
+... | eval greater_equals = if(field1 >= field2, true(), false())
+````
+
+```kusto APL equivalent
+print result = series_greater_equals(dynamic([2,4,6]), dynamic([1,4,10]))
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not natively support array-to-array operations in the same way. You often need to `UNNEST` arrays or join on row numbers to compare values across two arrays. APL provides a direct function, `series_greater_equals`, that simplifies these operations by applying the comparison across the entire array at once.
+
+<CodeGroup>
+```sql SQL example
+-- SQL-style comparison would require unnesting
+SELECT a.value >= b.value AS greater_equals
+FROM UNNEST(ARRAY[2,4,6]) WITH ORDINALITY a(value, i)
+JOIN UNNEST(ARRAY[1,4,10]) WITH ORDINALITY b(value, j)
+  ON a.i = b.j
+```
+
+```kusto APL equivalent
+print result = series_greater_equals(dynamic([2,4,6]), dynamic([1,4,10]))
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

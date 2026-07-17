@@ -5,52 +5,6 @@ description: 'This page explains how to use the parse_bytes function in APL.'
 
 The `parse_bytes` function parses a string representation of data size (like `1 KB`, `500 MB`) and returns the numeric value in bytes. Use this function to convert human-readable byte strings from logs or configuration files into numeric values for calculations and comparisons.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you typically need custom eval expressions to parse byte strings. APL's `parse_bytes` provides this functionality natively.
-
-<CodeGroup>
-```sql Splunk example
-| eval bytes=case(
-    match(size_str, "KB"), tonumber(replace(size_str, " KB", "")) * 1024,
-    match(size_str, "MB"), tonumber(replace(size_str, " MB", "")) * 1048576,
-    true(), 0)
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend bytes = parse_bytes(size_str)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, parsing byte strings requires complex CASE statements. APL's `parse_bytes` simplifies this operation.
-
-<CodeGroup>
-```sql SQL example
-SELECT CASE 
-  WHEN size_str LIKE '%KB%' THEN CAST(REPLACE(size_str, ' KB', '') AS FLOAT) * 1024
-  WHEN size_str LIKE '%MB%' THEN CAST(REPLACE(size_str, ' MB', '') AS FLOAT) * 1048576
-  ELSE 0
-END AS bytes FROM logs;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend bytes = parse_bytes(size_str)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -136,3 +90,46 @@ This query converts size strings to bytes for numeric analysis of payload sizes 
 - [format_bytes](/apl/scalar-functions/string-functions/format-bytes): Formats numeric bytes as human-readable strings. Use this to reverse the parsing operation.
 - [strlen](/apl/scalar-functions/string-functions/strlen): Returns the length of a string. Use this when you need string length rather than byte parsing.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically need custom eval expressions to parse byte strings. APL's `parse_bytes` provides this functionality natively.
+
+<CodeGroup>
+```sql Splunk example
+| eval bytes=case(
+    match(size_str, "KB"), tonumber(replace(size_str, " KB", "")) * 1024,
+    match(size_str, "MB"), tonumber(replace(size_str, " MB", "")) * 1048576,
+    true(), 0)
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend bytes = parse_bytes(size_str)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, parsing byte strings requires complex CASE statements. APL's `parse_bytes` simplifies this operation.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE
+  WHEN size_str LIKE '%KB%' THEN CAST(REPLACE(size_str, ' KB', '') AS FLOAT) * 1024
+  WHEN size_str LIKE '%MB%' THEN CAST(REPLACE(size_str, ' MB', '') AS FLOAT) * 1048576
+  ELSE 0
+END AS bytes FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend bytes = parse_bytes(size_str)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

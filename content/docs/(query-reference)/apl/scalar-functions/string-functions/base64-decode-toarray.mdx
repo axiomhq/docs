@@ -7,47 +7,6 @@ Use the `base64_decode_toarray` function to decode a Base64-encoded string into 
 
 This function is useful in scenarios where logs or telemetry data include fields that store binary data encoded as Base64, which is common for compact transmission or obfuscation. By decoding these values into byte arrays, you gain visibility into the underlying structure of the data.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, decoding Base64 requires using `eval` with the `base64decode` function, which returns a string. If you need a byte array representation, you must manually transform it. In APL, `base64_decode_toarray` directly produces an array of bytes, allowing you to work with binary data more precisely.
-
-<CodeGroup>
-```sql Splunk example
-| eval decoded=base64decode(encodedField)
-````
-
-```kusto APL equivalent
-['my-dataset']
-| extend decoded = base64_decode_toarray(encodedField)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-Standard ANSI SQL doesn’t include a native function to decode Base64 into byte arrays. You typically need to rely on a UDF or cast the result into `VARBINARY` if the engine supports it. APL provides a built-in function that directly yields an array of integers representing bytes.
-
-<CodeGroup>
-```sql SQL example
-SELECT CAST(FROM_BASE64(encodedField) AS BINARY) FROM my_table;
-```
-
-```kusto APL equivalent
-['my-dataset']
-| extend decoded = base64_decode_toarray(encodedField)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -125,3 +84,42 @@ This query decodes the trace ID from Base64 into its byte-level representation f
 - [array_length](/apl/scalar-functions/array-functions/array-length): Returns the number of elements in an array. Use after decoding to validate payload length.
 - [array_slice](/apl/scalar-functions/array-functions/array-slice): Extracts a subrange from an array. Use to focus on specific byte segments after decoding.
 - [base64_encode_fromarray](/apl/scalar-functions/string-functions/base64-encode-fromarray): Converts a sequence of bytes into a Base64-encoded string.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, decoding Base64 requires using `eval` with the `base64decode` function, which returns a string. If you need a byte array representation, you must manually transform it. In APL, `base64_decode_toarray` directly produces an array of bytes, allowing you to work with binary data more precisely.
+
+<CodeGroup>
+```sql Splunk example
+| eval decoded=base64decode(encodedField)
+````
+
+```kusto APL equivalent
+['my-dataset']
+| extend decoded = base64_decode_toarray(encodedField)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Standard ANSI SQL doesn’t include a native function to decode Base64 into byte arrays. You typically need to rely on a UDF or cast the result into `VARBINARY` if the engine supports it. APL provides a built-in function that directly yields an array of integers representing bytes.
+
+<CodeGroup>
+```sql SQL example
+SELECT CAST(FROM_BASE64(encodedField) AS BINARY) FROM my_table;
+```
+
+```kusto APL equivalent
+['my-dataset']
+| extend decoded = base64_decode_toarray(encodedField)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

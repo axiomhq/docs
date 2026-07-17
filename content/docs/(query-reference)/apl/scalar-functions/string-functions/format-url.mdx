@@ -5,45 +5,6 @@ description: 'This page explains how to use the format_url function in APL.'
 
 The `format_url` function constructs a properly formatted URL from a dynamic object containing URL components (scheme, host, path, port, etc.). Use this function when you need to build URLs programmatically from parsed components or when reconstructing URLs from log data.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you typically concatenate URL parts manually with `eval`. APL's `format_url` provides a structured approach.
-
-<CodeGroup>
-```sql Splunk example
-| eval full_url=scheme."://".host.":".port.path
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend full_url = format_url(dynamic({'scheme': 'https', 'host': host, 'port': 443, 'path': path}))
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, URL formatting requires string concatenation with null handling. APL's `format_url` simplifies this operation.
-
-<CodeGroup>
-```sql SQL example
-SELECT CONCAT(scheme, '://', host, COALESCE(CONCAT(':', port), ''), path) AS url FROM logs;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend url = format_url(dynamic({'scheme': scheme, 'host': host, 'port': port, 'path': path}))
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -151,3 +112,39 @@ This query constructs complete URLs including user information for failed authen
 - [url_encode](/apl/scalar-functions/string-functions/url-encode): Encodes a string for safe use in URLs. Use this to encode individual URL components before formatting.
 - [strcat](/apl/scalar-functions/string-functions/strcat): Concatenates strings. Use this for simple URL construction without the structure of format_url.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically concatenate URL parts manually with `eval`. APL's `format_url` provides a structured approach.
+
+<CodeGroup>
+```sql Splunk example
+| eval full_url=scheme."://".host.":".port.path
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend full_url = format_url(dynamic({'scheme': 'https', 'host': host, 'port': 443, 'path': path}))
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, URL formatting requires string concatenation with null handling. APL's `format_url` simplifies this operation.
+
+<CodeGroup>
+```sql SQL example
+SELECT CONCAT(scheme, '://', host, COALESCE(CONCAT(':', port), ''), path) AS url FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend url = format_url(dynamic({'scheme': scheme, 'host': host, 'port': port, 'path': path}))
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

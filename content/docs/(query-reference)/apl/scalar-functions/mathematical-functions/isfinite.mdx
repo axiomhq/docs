@@ -7,45 +7,6 @@ Use the `isfinite` function in APL to check whether a numeric value is finite, m
 
 `isfinite` is essential for data quality checks. Division by zero, logarithm of a non-positive number, or other edge cases can produce infinity or NaN in your computed columns. Use `isfinite` to identify or filter these invalid values before aggregating or visualizing data.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk SPL doesn't have a direct `isfinite()` function. You typically check for null or use `isnum()` to verify that a value is a valid number, but these checks don't cover infinity.
-
-<CodeGroup>
-```sql Splunk example
-| eval is_valid = if(isnum(value) AND value != 'Infinity', 1, 0)
-````
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend is_valid = isfinite(value)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-Standard SQL does not define an `ISFINITE()` function. You typically check for `IS NOT NULL` and whether the value falls within a valid range, but you cannot directly detect infinity in most SQL dialects.
-
-<CodeGroup>
-```sql SQL example
-SELECT CASE WHEN value IS NOT NULL AND value BETWEEN -1e308 AND 1e308 THEN 1 ELSE 0 END AS is_valid FROM logs
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend is_valid = isfinite(value)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -94,3 +55,40 @@ Use `isfinite` to check whether a computed value is finite before using it in ag
 - [isint](/apl/scalar-functions/mathematical-functions/isint): Returns `true` for integer values. Use it to check whether a numeric value is an integer rather than a floating-point result.
 - [log](/apl/scalar-functions/mathematical-functions/log): Returns the natural logarithm. Combine with `isfinite` to validate log computations on potentially non-positive inputs.
 - [gamma](/apl/scalar-functions/mathematical-functions/gamma): Returns the gamma function. Use `isfinite` to filter out overflow results when computing `gamma` on large values.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn't have a direct `isfinite()` function. You typically check for null or use `isnum()` to verify that a value is a valid number, but these checks don't cover infinity.
+
+<CodeGroup>
+```sql Splunk example
+| eval is_valid = if(isnum(value) AND value != 'Infinity', 1, 0)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_valid = isfinite(value)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Standard SQL does not define an `ISFINITE()` function. You typically check for `IS NOT NULL` and whether the value falls within a valid range, but you cannot directly detect infinity in most SQL dialects.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE WHEN value IS NOT NULL AND value BETWEEN -1e308 AND 1e308 THEN 1 ELSE 0 END AS is_valid FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_valid = isfinite(value)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

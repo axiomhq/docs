@@ -7,54 +7,6 @@ The `series_min` function compares two numeric arrays element by element and ret
 
 You use `series_min` when you want to create a lower bound from multiple series, combine baseline metrics with actual values while keeping the smaller value, or merge data from different sources by selecting the lower value at each point. For example, you can compare response times across different servers and keep the lower value at each time point, or create minimum thresholds from multiple sources.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, element-wise minimum comparisons typically require custom logic with `eval` or `foreach`. In contrast, APL provides the specialized `series_min` function to directly compare arrays element by element and return the minimum values.
-
-<CodeGroup>
-```sql Splunk example
-... | timechart avg(latency) as latency1, avg(latency_backup) as latency2
-| eval min_latency = if(latency1 < latency2, latency1, latency2)
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| make-series primary = avg(req_duration_ms), backup = avg(req_duration_ms) on _time step 1m
-| extend min_values = series_min(primary, backup)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you use the `LEAST()` function to compare scalar values. To compare sequences element-wise, you need window functions or complex joins. In APL, `series_min` simplifies this by applying the minimum operation across arrays in a single step.
-
-<CodeGroup>
-```sql SQL example
-SELECT _time,
-       LEAST(t1.req_duration_ms, t2.req_duration_ms) AS min_duration
-FROM logs t1
-JOIN logs t2
-  ON t1._time = t2._time
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| make-series series1 = avg(req_duration_ms), series2 = avg(req_duration_ms) on _time step 1m
-| extend min_series = series_min(series1, series2)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -137,3 +89,49 @@ This query compares success and failure counts and returns the lower value at ea
 - [series_less](/apl/scalar-functions/time-series/series-less): Compares two arrays and returns `true` where elements in the first array are less than the second.
 - [series_greater](/apl/scalar-functions/time-series/series-greater): Compares two arrays and returns `true` where the first array element is greater than the second.
 - [min](/apl/aggregation-function/min): Aggregation function that returns the minimum value across grouped records.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, element-wise minimum comparisons typically require custom logic with `eval` or `foreach`. In contrast, APL provides the specialized `series_min` function to directly compare arrays element by element and return the minimum values.
+
+<CodeGroup>
+```sql Splunk example
+... | timechart avg(latency) as latency1, avg(latency_backup) as latency2
+| eval min_latency = if(latency1 < latency2, latency1, latency2)
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| make-series primary = avg(req_duration_ms), backup = avg(req_duration_ms) on _time step 1m
+| extend min_values = series_min(primary, backup)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you use the `LEAST()` function to compare scalar values. To compare sequences element-wise, you need window functions or complex joins. In APL, `series_min` simplifies this by applying the minimum operation across arrays in a single step.
+
+<CodeGroup>
+```sql SQL example
+SELECT _time,
+       LEAST(t1.req_duration_ms, t2.req_duration_ms) AS min_duration
+FROM logs t1
+JOIN logs t2
+  ON t1._time = t2._time
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| make-series series1 = avg(req_duration_ms), series2 = avg(req_duration_ms) on _time step 1m
+| extend min_series = series_min(series1, series2)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

@@ -99,18 +99,23 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await expect(listResponseSchema.getByRole('row').filter({ hasText: /^└name/ }).first()).toHaveAttribute('data-depth', '1');
 });
 
-test('theme defaults to the system and persists an explicit preference cookie', async ({ page, context }) => {
+test('theme defaults to the system and persists an explicit local preference', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/docs');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  expect((await context.cookies()).find((cookie) => cookie.name === 'axiom-docs-theme')).toBeUndefined();
+  expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBeNull();
 
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
+  await page.getByRole('button', { name: 'Color theme: system' }).click();
+  await page.getByRole('menuitemradio', { name: 'Light' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await expect.poll(async () => (await context.cookies()).find((cookie) => cookie.name === 'axiom-docs-theme')?.value).toBe('light');
+  expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBe('light');
 
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByRole('button', { name: 'Color theme: light' }).click();
+  await page.getByRole('menuitemradio', { name: 'System' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBe('system');
 });
 
 test('search and mobile navigation are keyboard and touch accessible', async ({ page }) => {
@@ -177,12 +182,16 @@ test('query reference navigation and MDX components follow the compact interacti
   await page.goto('/docs/apl/scalar-functions/conditional-function/case');
 
   const title = page.getByRole('heading', { name: 'case', exact: true, level: 1 });
-  await expect(title).toHaveCSS('font-family', /Mono/);
+  await expect(title).toHaveCSS('font-family', /SF Mono|Menlo/);
 
-  const accordionGroup = page.locator('.accordion-group > div');
-  await expect(accordionGroup).toHaveCSS('border-radius', '4px');
-  await expect(page.getByText('Splunk SPL users', { exact: true })).toHaveCSS('min-height', '34px');
-  expect((await accordionGroup.boundingBox())!.height).toBeLessThan(75);
+  const languageComparisons = page.locator('.language-comparisons');
+  await expect(languageComparisons).toHaveCSS('border-radius', '4px');
+  const splunkComparison = languageComparisons.getByRole('button', { name: 'Splunk SPL users' });
+  await expect(splunkComparison).toHaveCSS('min-height', '34px');
+  expect((await languageComparisons.boundingBox())!.width).toBe((await page.locator('.doc-article .prose').boundingBox())!.width);
+  await expect(page.locator('.doc-article .prose > h2').last()).toContainText('Other query languages');
+  await splunkComparison.click();
+  await expect(languageComparisons.getByRole('region', { name: 'Splunk SPL users' })).toContainText(/alternating condition-value pairs/);
 
   const tabs = page.locator('.docs-tabs > div');
   await expect(tabs).toHaveCSS('border-radius', '4px');
@@ -205,10 +214,18 @@ test('query reference navigation and MDX components follow the compact interacti
   await expect(playground).toHaveAttribute('target', '_blank');
   await expect(playground.locator('svg').last()).toHaveAttribute('aria-label', 'Opens in a new tab');
   const queryFigure = tabs.locator('.query-example figure').first();
+  const copyButton = queryFigure.getByRole('button', { name: 'Copy Text' });
+  const copyControl = copyButton.locator('xpath=..');
+  await expect(copyControl).toHaveCSS('opacity', '0');
+  await queryFigure.hover();
+  await expect(copyControl).toHaveCSS('opacity', '1');
   const playgroundBox = (await playground.boundingBox())!;
   const queryBox = (await queryFigure.boundingBox())!;
+  const copyBox = (await copyButton.boundingBox())!;
   expect(playgroundBox.y).toBeGreaterThanOrEqual(queryBox.y);
   expect(playgroundBox.y + playgroundBox.height).toBeLessThan(queryBox.y + queryBox.height);
+  expect(copyBox.x + copyBox.width).toBeLessThan(playgroundBox.x);
+  expect(Math.abs(copyBox.y - playgroundBox.y)).toBeLessThanOrEqual(1);
 
   const outputTable = tabs.getByRole('table').first();
   await expect(outputTable.locator('xpath=..')).toHaveCSS('border-radius', '4px');
@@ -290,7 +307,8 @@ test('article copy keeps a distinct contrast hierarchy in both themes', async ({
   await expect(heading).toHaveCSS('color', 'rgb(250, 250, 250)');
   await expect(boldLabel).toHaveCSS('color', 'rgb(250, 250, 250)');
 
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
+  await page.getByRole('button', { name: 'Color theme: system' }).click();
+  await page.getByRole('menuitemradio', { name: 'Light' }).click();
   await expect(bodyCopy).toHaveCSS('color', 'rgb(82, 82, 82)');
   await expect(heading).toHaveCSS('color', 'rgb(10, 10, 10)');
   await expect(boldLabel).toHaveCSS('color', 'rgb(10, 10, 10)');

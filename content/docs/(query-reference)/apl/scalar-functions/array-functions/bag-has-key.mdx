@@ -7,55 +7,12 @@ Use the `bag_has_key` function in APL to check whether a dynamic property bag co
 
 You often encounter property bags in observability data where log entries, spans, or alerts carry key–value metadata. Use `bag_has_key` to filter, conditionally process, or join such records based on the existence of specific keys, without needing to extract the values themselves.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you often check whether a key exists in a JSON object using `spath` and conditional logic. APL simplifies this with `bag_has_key`, which returns a boolean directly and avoids explicit parsing.
-
-<CodeGroup>
-```sql Splunk example
-| eval hasKey=if(isnull(spath(data, "keyName")), false, true)
-````
-
-```kusto APL equivalent
-['sample-http-logs']
-| where bag_has_key(dynamic_field, 'keyName')
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL doesn’t include native support for property bags or dynamic fields. You typically use JSON functions to access keys in JSON-formatted strings. In APL, dynamic fields are first-class, and `bag_has_key` provides direct support for key existence checks.
-
-<CodeGroup>
-```sql SQL example
-SELECT *
-FROM logs
-WHERE JSON_EXTRACT(json_column, '$.keyName') IS NOT NULL
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| where bag_has_key(dynamic_field, 'keyName')
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
 
 ```kusto
-bag_has_key(bag: dynamic, key: string) 
+bag_has_key(bag: dynamic, key: string)
 ```
 
 ### Parameters
@@ -154,3 +111,44 @@ The query returns only logs where the `audit_info` bag includes the `'reason'` k
 
 - [bag_keys](/apl/scalar-functions/array-functions/bag-keys): Returns all keys in a dynamic property bag. Use it when you need to enumerate available keys.
 - [bag_pack](/apl/scalar-functions/array-functions/bag-pack): Converts a list of key-value pairs to a dynamic property bag. Use when you need to build a bag.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you often check whether a key exists in a JSON object using `spath` and conditional logic. APL simplifies this with `bag_has_key`, which returns a boolean directly and avoids explicit parsing.
+
+<CodeGroup>
+```sql Splunk example
+| eval hasKey=if(isnull(spath(data, "keyName")), false, true)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| where bag_has_key(dynamic_field, 'keyName')
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t include native support for property bags or dynamic fields. You typically use JSON functions to access keys in JSON-formatted strings. In APL, dynamic fields are first-class, and `bag_has_key` provides direct support for key existence checks.
+
+<CodeGroup>
+```sql SQL example
+SELECT *
+FROM logs
+WHERE JSON_EXTRACT(json_column, '$.keyName') IS NOT NULL
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| where bag_has_key(dynamic_field, 'keyName')
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

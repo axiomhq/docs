@@ -4,9 +4,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Menu, Moon, Search, Sun, X } from 'lucide-react';
+import { Check, Menu, Monitor, Moon, Search, Sun, X } from 'lucide-react';
 import { useSearchContext } from 'fumadocs-ui/contexts/search';
-import { useState } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 
 const tabs = [
   { label: 'Documentation', href: '/docs', match: (path: string) => !path.startsWith('/docs/apl/') && !path.startsWith('/docs/mpl/') && !path.startsWith('/docs/restapi/') },
@@ -16,15 +16,19 @@ const tabs = [
 
 export function SiteHeader({ onMenu }: { onMenu: () => void }) {
   const pathname = usePathname();
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { setOpenSearch } = useSearchContext();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const themeMenu = useRef<HTMLDetailsElement>(null);
+  const themeMounted = useSyncExternalStore(() => () => undefined, () => true, () => false);
 
-  function toggleTheme() {
-    const nextTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
-    document.cookie = `axiom-docs-theme=${nextTheme}; Path=/; Max-Age=31536000; SameSite=Lax`;
-    setTheme(nextTheme);
+  function chooseTheme(value: 'system' | 'dark' | 'light') {
+    setTheme(value);
+    themeMenu.current?.removeAttribute('open');
   }
+
+  const selectedTheme = themeMounted ? theme ?? 'system' : 'system';
+  const ThemeIcon = selectedTheme === 'dark' ? Moon : selectedTheme === 'light' ? Sun : Monitor;
 
   return (
     <header className="site-header">
@@ -41,10 +45,14 @@ export function SiteHeader({ onMenu }: { onMenu: () => void }) {
         <button className="header-search" aria-label="Search documentation and ask AI" onClick={() => setOpenSearch(true)}>
           <Search size={14} /><span>Search or ask AI…</span><kbd>⌘K</kbd>
         </button>
-        <button className="header-icon" aria-label="Toggle color theme" onClick={toggleTheme}>
-          <Sun className="theme-icon-dark" size={14} />
-          <Moon className="theme-icon-light" size={14} />
-        </button>
+        <details className="theme-menu" ref={themeMenu}>
+          <summary className="header-icon" role="button" aria-haspopup="menu" aria-label={`Color theme: ${selectedTheme}`}><ThemeIcon size={14} /></summary>
+          <div className="theme-menu-popover" role="menu" aria-label="Color theme">
+            <button role="menuitemradio" aria-checked={selectedTheme === 'system'} onClick={() => chooseTheme('system')}><Monitor size={14} /><span>System</span>{selectedTheme === 'system' && <Check size={13} />}</button>
+            <button role="menuitemradio" aria-checked={selectedTheme === 'dark'} onClick={() => chooseTheme('dark')}><Moon size={14} /><span>Dark</span>{selectedTheme === 'dark' && <Check size={13} />}</button>
+            <button role="menuitemradio" aria-checked={selectedTheme === 'light'} onClick={() => chooseTheme('light')}><Sun size={14} /><span>Light</span>{selectedTheme === 'light' && <Check size={13} />}</button>
+          </div>
+        </details>
         <a className="console-button" href="https://app.axiom.co" target="_blank" rel="noreferrer">Open console <span>→</span></a>
         <button className="header-icon mobile-tabs-trigger" aria-label="Toggle sections" onClick={() => setMobileOpen((value) => !value)}>
           {mobileOpen ? <X size={16} /> : <Menu size={16} />}

@@ -7,48 +7,6 @@ Use the `regex_quote` function in APL when you need to safely insert arbitrary s
 
 `regex_quote` is especially useful when your APL query constructs regular expressions dynamically using user input or field values. Without escaping, strings like `.*` or `[a-z]` would behave like regex wildcards or character classes, potentially leading to incorrect results or vulnerabilities. With `regex_quote`, you can ensure the string is treated exactly as-is.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk, the `re.escape()` function isn’t available natively in SPL, so you often handle escaping in external scripts or manually. In APL, `regex_quote` provides built-in support for quoting regular expression metacharacters.
-
-<CodeGroup>
-```sql Splunk example
-| eval pattern="hello.*world"
-| eval safe_pattern=replace(pattern, "\.", "\\.")
-````
-
-```kusto APL equivalent
-let pattern = 'hello.*world';
-print safe_pattern = regex_quote(pattern)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL lacks a standard function to escape regular expression strings. Escaping is typically handled manually or with vendor-specific features. In APL, `regex_quote` handles all necessary escaping for you, making regex construction safer and more convenient.
-
-<CodeGroup>
-```sql SQL example
-SELECT REGEXP_LIKE(col, 'hello\\.*world') FROM table;
-```
-
-```kusto APL equivalent
-let pattern = 'hello.*world';
-print is_match = tostring('hello.*world') matches regex regex_quote(pattern)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -143,3 +101,43 @@ This query detects malicious-looking strings literally, without treating `.` as 
 
 </Tab>
 </Tabs>
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk, the `re.escape()` function isn’t available natively in SPL, so you often handle escaping in external scripts or manually. In APL, `regex_quote` provides built-in support for quoting regular expression metacharacters.
+
+<CodeGroup>
+```sql Splunk example
+| eval pattern="hello.*world"
+| eval safe_pattern=replace(pattern, "\.", "\\.")
+````
+
+```kusto APL equivalent
+let pattern = 'hello.*world';
+print safe_pattern = regex_quote(pattern)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL lacks a standard function to escape regular expression strings. Escaping is typically handled manually or with vendor-specific features. In APL, `regex_quote` handles all necessary escaping for you, making regex construction safer and more convenient.
+
+<CodeGroup>
+```sql SQL example
+SELECT REGEXP_LIKE(col, 'hello\\.*world') FROM table;
+```
+
+```kusto APL equivalent
+let pattern = 'hello.*world';
+print is_match = tostring('hello.*world') matches regex regex_quote(pattern)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

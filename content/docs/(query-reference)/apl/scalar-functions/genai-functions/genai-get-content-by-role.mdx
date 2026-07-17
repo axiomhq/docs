@@ -7,52 +7,6 @@ The `genai_get_content_by_role` function retrieves the content of a message with
 
 You can use this function to extract messages by role, filter conversations by participant type, analyze specific role patterns, or process messages from particular conversation participants.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would use `mvfilter` to filter by role and then extract the content.
-
-<CodeGroup>
-```sql Splunk example
-| eval filtered_msgs=mvfilter(match(role, "system"))
-| eval content=mvindex(filtered_msgs, 0)
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend content = genai_get_content_by_role(messages, 'system')
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would unnest the array, filter by role, and limit to the first result.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  conversation_id,
-  content
-FROM conversations
-CROSS JOIN UNNEST(messages)
-WHERE role = 'system'
-LIMIT 1
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend content = genai_get_content_by_role(messages, 'system')
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -105,3 +59,46 @@ This query shows the distribution of system prompts being used, helping ensure c
 - [genai_extract_system_prompt](/apl/scalar-functions/genai-functions/genai-extract-system-prompt): Extracts the system prompt. Use this shorthand when you specifically need the system message.
 - [genai_message_roles](/apl/scalar-functions/genai-functions/genai-message-roles): Lists all roles in the conversation. Use this to understand what roles are present before extracting by role.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would use `mvfilter` to filter by role and then extract the content.
+
+<CodeGroup>
+```sql Splunk example
+| eval filtered_msgs=mvfilter(match(role, "system"))
+| eval content=mvindex(filtered_msgs, 0)
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend content = genai_get_content_by_role(messages, 'system')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would unnest the array, filter by role, and limit to the first result.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  conversation_id,
+  content
+FROM conversations
+CROSS JOIN UNNEST(messages)
+WHERE role = 'system'
+LIMIT 1
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend content = genai_get_content_by_role(messages, 'system')
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

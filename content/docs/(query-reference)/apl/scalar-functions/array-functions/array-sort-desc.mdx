@@ -7,52 +7,6 @@ Use the `array_sort_desc` function in APL to sort the elements of an array in de
 
 You can use `array_sort_desc` in scenarios where ordering matters within grouped aggregations, such as collecting response times per user or span durations per trace, and then sorting them to identify the highest or most impactful values.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk doesn’t have a direct equivalent to `array_sort_desc`, but similar outcomes can be achieved using `mvsort` with a custom sort order (and sometimes `reverse`). In APL, `array_sort_desc` explicitly performs a descending sort on array elements, making it more straightforward.
-
-<CodeGroup>
-```sql Splunk example
-... | stats list(duration) as durations by id
-... | eval durations=reverse(mvsort(durations))
-````
-
-```kusto APL equivalent
-['otel-demo-traces']
-| summarize durations=make_list(duration) by trace_id
-| extend durations=array_sort_desc(durations)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL does not support arrays or array functions natively. You typically use window functions or subqueries to order values. In APL, you can work with arrays directly and apply `array_sort_desc` to sort them.
-
-<CodeGroup>
-```sql SQL example
-SELECT trace_id, ARRAY_AGG(duration ORDER BY duration DESC) AS durations
-FROM traces
-GROUP BY trace_id;
-```
-
-```kusto APL equivalent
-['otel-demo-traces']
-| summarize durations=make_list(duration) by trace_id
-| extend durations=array_sort_desc(durations)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -102,3 +56,47 @@ If the input is a valid array, the function returns a new array with its element
 - [array_length](/apl/scalar-functions/array-functions/array-length): Returns the number of elements in an array. Useful for measuring the size of arrays before or after sorting.
 - [array_slice](/apl/scalar-functions/array-functions/array-slice): Extracts a range of elements from an array. Use it after sorting to get the top N or bottom N values.
 - [array_sort_asc](/apl/scalar-functions/array-functions/array-sort-asc): Sorts an array in ascending order. Use this when you want to prioritize smaller values first.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk doesn’t have a direct equivalent to `array_sort_desc`, but similar outcomes can be achieved using `mvsort` with a custom sort order (and sometimes `reverse`). In APL, `array_sort_desc` explicitly performs a descending sort on array elements, making it more straightforward.
+
+<CodeGroup>
+```sql Splunk example
+... | stats list(duration) as durations by id
+... | eval durations=reverse(mvsort(durations))
+````
+
+```kusto APL equivalent
+['otel-demo-traces']
+| summarize durations=make_list(duration) by trace_id
+| extend durations=array_sort_desc(durations)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not support arrays or array functions natively. You typically use window functions or subqueries to order values. In APL, you can work with arrays directly and apply `array_sort_desc` to sort them.
+
+<CodeGroup>
+```sql SQL example
+SELECT trace_id, ARRAY_AGG(duration ORDER BY duration DESC) AS durations
+FROM traces
+GROUP BY trace_id;
+```
+
+```kusto APL equivalent
+['otel-demo-traces']
+| summarize durations=make_list(duration) by trace_id
+| extend durations=array_sort_desc(durations)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

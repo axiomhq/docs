@@ -11,53 +11,6 @@ This aggregation is particularly useful in scenarios like the following:
 - Identify the longest span durations in OpenTelemetry traces with additional context (like span name, trace ID, and attributes) for the same row.
 - Highlight the highest severity security alerts in logs along with relevant metadata (such as alert type, source, and timestamp) for the same row.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk SPL doesn’t have an equivalent to `arg_max`. You can use `stats` with a combination of `max` and `by` clauses to evaluate the maximum value of a single numberic field. APL provides a dedicated `arg_max` aggregation that evaluates expressions.
-
-<CodeGroup>
-```sql Splunk example
-| stats max(req_duration_ms) as max_duration by id, uri
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize arg_max(req_duration_ms, id, uri)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you typically use a subquery to find the maximum value and then join it back to the original table to retrieve additional fields. APL’s `arg_max` provides a more concise and efficient alternative.
-
-<CodeGroup>
-```sql SQL example
-WITH MaxValues AS (
-    SELECT id, MAX(req_duration_ms) as max_duration
-    FROM sample_http_logs
-    GROUP BY id
-)
-SELECT logs.id, logs.uri, MaxValues.max_duration
-FROM sample_http_logs logs
-JOIN MaxValues
-ON logs.id = MaxValues.id;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize arg_max(req_duration_ms, id, uri)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -179,3 +132,48 @@ This query identifies the URI with the highest status code for each country.
 - [arg_min](/apl/aggregation-function/arg-min): Retrieves the record with the minimum value for a numeric field.
 - [max](/apl/aggregation-function/max): Retrieves the maximum value for a numeric field but doesn’t return additional fields.
 - [percentile](/apl/aggregation-function/percentile): Provides the value at a specific percentile of a numeric field.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn’t have an equivalent to `arg_max`. You can use `stats` with a combination of `max` and `by` clauses to evaluate the maximum value of a single numberic field. APL provides a dedicated `arg_max` aggregation that evaluates expressions.
+
+<CodeGroup>
+```sql Splunk example
+| stats max(req_duration_ms) as max_duration by id, uri
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize arg_max(req_duration_ms, id, uri)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you typically use a subquery to find the maximum value and then join it back to the original table to retrieve additional fields. APL’s `arg_max` provides a more concise and efficient alternative.
+
+<CodeGroup>
+```sql SQL example
+WITH MaxValues AS (
+    SELECT id, MAX(req_duration_ms) as max_duration
+    FROM sample_http_logs
+    GROUP BY id
+)
+SELECT logs.id, logs.uri, MaxValues.max_duration
+FROM sample_http_logs logs
+JOIN MaxValues
+ON logs.id = MaxValues.id;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize arg_max(req_duration_ms, id, uri)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

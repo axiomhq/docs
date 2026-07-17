@@ -7,57 +7,6 @@ Use the `iscc` function to determine whether a given string is a valid credit ca
 
 You can use `iscc` when analyzing logs that may contain sensitive data to detect accidental leakage of credit card information. It’s also useful when filtering or sanitizing input data, monitoring suspicious behavior, or validating form submissions in telemetry data.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk SPL doesn’t provide a built-in function for validating credit card numbers. To perform similar validation, you typically rely on regular expressions and manual checksum implementations using `eval` or custom search commands.
-
-<CodeGroup>
-```sql Splunk example
-... | eval is_cc=if(match(field, "^[0-9]{13,19}$") AND luhn_check(field), "true", "false")
-````
-
-```kusto APL equivalent
-datatable(card:string)
-[
-  '4111111111111111',
-  '1234567890123456'
-]
-| extend is_cc = iscc(card)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL does not define a standard function for credit card validation. You must use a combination of pattern matching with `LIKE` or `REGEXP`, plus a user-defined function to implement checksum validation.
-
-<CodeGroup>
-```sql SQL example
-SELECT card,
-       CASE WHEN is_valid_card(card) THEN 'true' ELSE 'false' END AS is_cc
-FROM transactions
-```
-
-```kusto APL equivalent
-datatable(card:string)
-[
-  '4111111111111111',
-  '1234567890123456'
-]
-| extend is_cc = iscc(card)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -103,3 +52,52 @@ A `bool` value:
 - [isreal](/apl/scalar-functions/type-functions/ismap): Checks whether a value is a real number.
 - [isstring](/apl/scalar-functions/type-functions/isstring): Checks whether a value is a string. Use this for scalar string validation.
 - [isutf8](/apl/scalar-functions/type-functions/isutf8): Checks whether a value is a valid UTF-8 encoded sequence.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn’t provide a built-in function for validating credit card numbers. To perform similar validation, you typically rely on regular expressions and manual checksum implementations using `eval` or custom search commands.
+
+<CodeGroup>
+```sql Splunk example
+... | eval is_cc=if(match(field, "^[0-9]{13,19}$") AND luhn_check(field), "true", "false")
+````
+
+```kusto APL equivalent
+datatable(card:string)
+[
+  '4111111111111111',
+  '1234567890123456'
+]
+| extend is_cc = iscc(card)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not define a standard function for credit card validation. You must use a combination of pattern matching with `LIKE` or `REGEXP`, plus a user-defined function to implement checksum validation.
+
+<CodeGroup>
+```sql SQL example
+SELECT card,
+       CASE WHEN is_valid_card(card) THEN 'true' ELSE 'false' END AS is_cc
+FROM transactions
+```
+
+```kusto APL equivalent
+datatable(card:string)
+[
+  '4111111111111111',
+  '1234567890123456'
+]
+| extend is_cc = iscc(card)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

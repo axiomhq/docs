@@ -11,47 +11,6 @@ You can use `percentileif` to gain insights in various scenarios, such as:
 - Calculating percentiles of span durations for specific service types in OpenTelemetry traces.
 - Analyzing security events by percentile within defined risk categories.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-The `percentileif` aggregation in APL works similarly to `percentile` combined with conditional filtering in SPL. However, APL integrates the condition directly into the aggregation for simplicity.
-
-<CodeGroup>
-```sql Splunk example
-stats perc95(req_duration_ms) as p95 where geo.country="US"
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize percentileif(req_duration_ms, 95, geo.country == 'US')
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In SQL, you typically calculate percentiles using window functions or aggregate functions combined with a `WHERE` clause. APL simplifies this by embedding the condition directly in the `percentileif` aggregation.
-
-<CodeGroup>
-```sql SQL example
-SELECT PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY req_duration_ms)
-FROM sample_http_logs
-WHERE geo_country = 'US'
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize percentileif(req_duration_ms, 95, geo.country == 'US')
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -150,3 +109,42 @@ This query calculates the 75th percentile of request durations for HTTP 404 erro
 - [minif](/apl/aggregation-function/minif): Returns the minimum value of a numeric column where a condition is true. Use `minif` for identifying the lowest values within subsets.
 - [maxif](/apl/aggregation-function/maxif): Returns the maximum value of a numeric column where a condition is true. Use `maxif` for identifying the highest values within subsets.
 - [sumif](/apl/aggregation-function/sumif): Sums a numeric column based on a condition. Use `sumif` for conditional total calculations.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+The `percentileif` aggregation in APL works similarly to `percentile` combined with conditional filtering in SPL. However, APL integrates the condition directly into the aggregation for simplicity.
+
+<CodeGroup>
+```sql Splunk example
+stats perc95(req_duration_ms) as p95 where geo.country="US"
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize percentileif(req_duration_ms, 95, geo.country == 'US')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, you typically calculate percentiles using window functions or aggregate functions combined with a `WHERE` clause. APL simplifies this by embedding the condition directly in the `percentileif` aggregation.
+
+<CodeGroup>
+```sql SQL example
+SELECT PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY req_duration_ms)
+FROM sample_http_logs
+WHERE geo_country = 'US'
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize percentileif(req_duration_ms, 95, geo.country == 'US')
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

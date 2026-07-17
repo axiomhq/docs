@@ -7,47 +7,6 @@ The `ipv4_is_in_any_range` function checks whether a given IPv4 address belongs 
 
 This function is particularly helpful for security monitoring, analyzing log data for specific geolocated traffic, or validating access based on allowed IP ranges.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you use `cidrmatch` to check if an IP belongs to a range. In APL, `ipv4_is_in_any_range` is equivalent, but it supports evaluating against multiple ranges simultaneously.
-
-<CodeGroup>
-```sql Splunk example
-| eval is_in_range = cidrmatch("192.168.0.0/24", ip_address)
-```
-
-```kusto APL equivalent
-['dataset'] 
-| extend is_in_range = ipv4_is_in_any_range(ip_address, dynamic(['192.168.0.0/24', '10.0.0.0/8']))
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL doesn’t have a built-in function for checking IP ranges. Instead, you use custom functions or comparisons. APL’s `ipv4_is_in_any_range` simplifies this by handling multiple CIDR blocks and ranges in a single function.
-
-<CodeGroup>
-```sql SQL example
-SELECT *,
-  CASE WHEN ip_address BETWEEN '192.168.0.0' AND '192.168.0.255' THEN 1 ELSE 0 END AS is_in_range
-FROM dataset;
-```
-
-```kusto APL equivalent
-['dataset'] 
-| extend is_in_range = ipv4_is_in_any_range(ip_address, dynamic(['192.168.0.0/24', '10.0.0.0/8']))
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -76,7 +35,7 @@ Identify log entries from specific subnets, such as local office IP ranges.
 **Query**
 
 ```kusto
-['sample-http-logs'] 
+['sample-http-logs']
 | extend is_in_range = ipv4_is_in_any_range('192.168.0.0', dynamic(['192.168.0.0/24', '10.0.0.0/8']))
 ```
 
@@ -94,3 +53,42 @@ Identify log entries from specific subnets, such as local office IP ranges.
 - [ipv4_is_in_range](/apl/scalar-functions/ip-functions/ipv4-is-in-range): Checks if an IP address is within a specified range.
 - [ipv4_is_private](/apl/scalar-functions/ip-functions/ipv4-is-private): Checks if an IPv4 address is within private IP ranges.
 - [parse_ipv4](/apl/scalar-functions/ip-functions/parse-ipv4): Converts a dotted-decimal IP address into a numeric representation.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you use `cidrmatch` to check if an IP belongs to a range. In APL, `ipv4_is_in_any_range` is equivalent, but it supports evaluating against multiple ranges simultaneously.
+
+<CodeGroup>
+```sql Splunk example
+| eval is_in_range = cidrmatch("192.168.0.0/24", ip_address)
+```
+
+```kusto APL equivalent
+['dataset']
+| extend is_in_range = ipv4_is_in_any_range(ip_address, dynamic(['192.168.0.0/24', '10.0.0.0/8']))
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t have a built-in function for checking IP ranges. Instead, you use custom functions or comparisons. APL’s `ipv4_is_in_any_range` simplifies this by handling multiple CIDR blocks and ranges in a single function.
+
+<CodeGroup>
+```sql SQL example
+SELECT *,
+  CASE WHEN ip_address BETWEEN '192.168.0.0' AND '192.168.0.255' THEN 1 ELSE 0 END AS is_in_range
+FROM dataset;
+```
+
+```kusto APL equivalent
+['dataset']
+| extend is_in_range = ipv4_is_in_any_range(ip_address, dynamic(['192.168.0.0/24', '10.0.0.0/8']))
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

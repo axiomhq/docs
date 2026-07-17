@@ -7,48 +7,6 @@ description: 'This page explains how to use the unixtime_seconds_todatetime func
 
 Use the function whenever you ingest data that stores time as epoch seconds (for example, JSON logs from NGINX or metrics that follow the StatsD line protocol). Converting to `datetime` lets you bin, filter, and visualize events with the rest of your time-series data.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-`unixtime_seconds_todatetime` replaces the combination of `eval strftime` / `strptime` that you normally use in Splunk. Pass the epoch value directly and APL returns a `datetime`.
-
-<CodeGroup>
-
-```sql Splunk example
-eval event_time = strftime(epoch, "%Y-%m-%dT%H:%M:%S")
-````
-
-```kusto APL equivalent
-extend event_time = unixtime_seconds_todatetime(epoch)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-Most ANSI SQL engines call this conversion with `FROM_UNIXTIME` or `TO_TIMESTAMP`. The APL version has the same single-argument signature, returns a full `datetime`, and automatically interprets the input as seconds (not milliseconds).
-
-<CodeGroup>
-
-```sql SQL example
-SELECT TO_TIMESTAMP(epoch_seconds) AS event_time FROM events;
-```
-
-```kusto APL equivalent
-['events']
-| extend event_time = unixtime_seconds_todatetime(epoch_seconds)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -95,3 +53,43 @@ This query converts the timestamp to epoch seconds and then back to datetime for
 - [unixtime_microseconds_todatetime](/apl/scalar-functions/datetime-functions/unixtime-microseconds-todatetime): Converts a Unix timestamp expressed in whole microseconds to an APL `datetime` value.
 - [unixtime_milliseconds_todatetime](/apl/scalar-functions/datetime-functions/unixtime-milliseconds-todatetime): Converts a Unix timestamp expressed in whole milliseconds to an APL `datetime` value.
 - [unixtime_nanoseconds_todatetime](/apl/scalar-functions/datetime-functions/unixtime-nanoseconds-todatetime): Converts a Unix timestamp expressed in whole nanoseconds to an APL `datetime` value.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+`unixtime_seconds_todatetime` replaces the combination of `eval strftime` / `strptime` that you normally use in Splunk. Pass the epoch value directly and APL returns a `datetime`.
+
+<CodeGroup>
+
+```sql Splunk example
+eval event_time = strftime(epoch, "%Y-%m-%dT%H:%M:%S")
+````
+
+```kusto APL equivalent
+extend event_time = unixtime_seconds_todatetime(epoch)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Most ANSI SQL engines call this conversion with `FROM_UNIXTIME` or `TO_TIMESTAMP`. The APL version has the same single-argument signature, returns a full `datetime`, and automatically interprets the input as seconds (not milliseconds).
+
+<CodeGroup>
+
+```sql SQL example
+SELECT TO_TIMESTAMP(epoch_seconds) AS event_time FROM events;
+```
+
+```kusto APL equivalent
+['events']
+| extend event_time = unixtime_seconds_todatetime(epoch_seconds)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

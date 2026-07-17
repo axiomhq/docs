@@ -7,57 +7,6 @@ The `parse-kv` operator parses key-value pairs from a string field into individu
 
 This operator is useful in scenarios where logs, traces, or security events contain metadata encoded as key-value pairs. Instead of manually splitting strings, you can use `parse-kv` to transform the data into a structured format.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk, you often use the `kv` or `extract` commands to parse key-value pairs from raw log data. In APL, you achieve similar functionality with the `parse-kv` operator. The difference is that `parse-kv` explicitly lets you define which keys to extract and what delimiters to use.
-
-<CodeGroup>
-```sql Splunk example
-... | kv pairdelim=";" kvdelim="=" keys="key1,key2,key3"
-````
-
-```kusto APL equivalent
-datatable(data:string)
-[
-  'key1=a;key2=b;key3=c'
-]
-| parse-kv data as (key1, key2, key3) with (pair_delimiter=';', kv_delimiter='=')
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL does not have a direct equivalent of `parse-kv`. Typically, you would use string functions such as `SUBSTRING` or `SPLIT_PART` to manually extract key-value pairs. In APL, `parse-kv` simplifies this process by automatically extracting multiple keys in one step.
-
-<CodeGroup>
-```sql SQL example
-SELECT
-  SUBSTRING_INDEX(SUBSTRING_INDEX(data, ';', 1), '=', -1) as key1,
-  SUBSTRING_INDEX(SUBSTRING_INDEX(data, ';', 2), '=', -1) as key2,
-  SUBSTRING_INDEX(SUBSTRING_INDEX(data, ';', 3), '=', -1) as key3
-FROM logs;
-```
-
-```kusto APL equivalent
-datatable(data:string)
-[
-  'key1=a;key2=b;key3=c'
-]
-| parse-kv data as (key1, key2, key3) with (pair_delimiter=';', kv_delimiter='=')
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -107,3 +56,52 @@ This query extracts status and request duration from a concatenated field and pr
 - [parse](/apl/tabular-operators/parse-operator): Extracts values from a string expression without filtering out non-matching rows. Use when you want to keep all rows, including those that fail to parse.
 - [project](/apl/tabular-operators/project-operator): Selects and computes columns without parsing. Use when you want to transform data rather than extract values.
 - [where](/apl/tabular-operators/where-operator): Filters rows based on conditions. Use alongside parsing functions if you want more control over filtering logic.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk, you often use the `kv` or `extract` commands to parse key-value pairs from raw log data. In APL, you achieve similar functionality with the `parse-kv` operator. The difference is that `parse-kv` explicitly lets you define which keys to extract and what delimiters to use.
+
+<CodeGroup>
+```sql Splunk example
+... | kv pairdelim=";" kvdelim="=" keys="key1,key2,key3"
+````
+
+```kusto APL equivalent
+datatable(data:string)
+[
+  'key1=a;key2=b;key3=c'
+]
+| parse-kv data as (key1, key2, key3) with (pair_delimiter=';', kv_delimiter='=')
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not have a direct equivalent of `parse-kv`. Typically, you would use string functions such as `SUBSTRING` or `SPLIT_PART` to manually extract key-value pairs. In APL, `parse-kv` simplifies this process by automatically extracting multiple keys in one step.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  SUBSTRING_INDEX(SUBSTRING_INDEX(data, ';', 1), '=', -1) as key1,
+  SUBSTRING_INDEX(SUBSTRING_INDEX(data, ';', 2), '=', -1) as key2,
+  SUBSTRING_INDEX(SUBSTRING_INDEX(data, ';', 3), '=', -1) as key3
+FROM logs;
+```
+
+```kusto APL equivalent
+datatable(data:string)
+[
+  'key1=a;key2=b;key3=c'
+]
+| parse-kv data as (key1, key2, key3) with (pair_delimiter=';', kv_delimiter='=')
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

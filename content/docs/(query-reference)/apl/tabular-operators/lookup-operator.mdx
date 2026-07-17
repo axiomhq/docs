@@ -11,47 +11,6 @@ The `lookup` operator is useful when:
 - You want to correlate security logs with threat intelligence feeds.
 - You need to extend OpenTelemetry traces with supplementary details, such as service dependencies.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, the `lookup` command performs a similar function by enriching event data with fields from an external lookup table. However, unlike Splunk, APL’s `lookup` operator only performs an inner join.
-
-<CodeGroup>
-```sql Splunk example
-index=web_logs | lookup port_lookup port AS client_port OUTPUT service_name
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| lookup kind=inner ['port_lookup'] on port
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, `lookup` is similar to an `INNER JOIN`, where records from both tables are matched based on a common key. Unlike SQL, APL doesn’t support other types of joins in `lookup`.
-
-<CodeGroup>
-```sql SQL example
-SELECT logs.*, ports.service_name 
-FROM logs
-INNER JOIN port_lookup ports ON logs.port = ports.port;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| lookup kind=inner ['port_lookup'] on port
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -129,3 +88,42 @@ let LookupTable=datatable(serviceName:string, humanreadableServiceName:string)[
 - [join](/apl/tabular-operators/join-operator): Performs more flexible join operations, including left, right, and outer joins.
 - [project](/apl/tabular-operators/project-operator): Selects specific columns from a dataset, which can be used to refine the output of a lookup operation.
 - [union](/apl/tabular-operators/union-operator): Combines multiple datasets without requiring a key column.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `lookup` command performs a similar function by enriching event data with fields from an external lookup table. However, unlike Splunk, APL’s `lookup` operator only performs an inner join.
+
+<CodeGroup>
+```sql Splunk example
+index=web_logs | lookup port_lookup port AS client_port OUTPUT service_name
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| lookup kind=inner ['port_lookup'] on port
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, `lookup` is similar to an `INNER JOIN`, where records from both tables are matched based on a common key. Unlike SQL, APL doesn’t support other types of joins in `lookup`.
+
+<CodeGroup>
+```sql SQL example
+SELECT logs.*, ports.service_name
+FROM logs
+INNER JOIN port_lookup ports ON logs.port = ports.port;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| lookup kind=inner ['port_lookup'] on port
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

@@ -11,52 +11,6 @@ Use `ismap` to:
 - Validate input types in heterogeneous data.
 - Avoid runtime errors in downstream operations expecting map values.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you typically work with field types implicitly and rarely check if a field is a dictionary. SPL lacks a direct equivalent to APL’s `ismap`, but you might perform similar validations using `typeof` checks or custom functions in `eval`.
-
-<CodeGroup>
-```sql Splunk example
-| eval is_map=if(typeof(field) == "object", true, false)
-````
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend is_map = ismap(dynamic_field)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL doesn’t natively support map types. If you use a platform that supports JSON or semi-structured data (such as PostgreSQL with `jsonb`, BigQuery with `STRUCT`, or Snowflake), you can simulate map checks using type inspection or schema introspection.
-
-<CodeGroup>
-```sql SQL example
-SELECT
-  CASE
-    WHEN json_type(field) = 'object' THEN true
-    ELSE false
-  END AS is_map
-FROM logs
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend is_map = ismap(dynamic_field)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -101,3 +55,47 @@ Use `ismap` to find log entries where a dynamic field contains structured key-va
 - [iscc](/apl/scalar-functions/type-functions/iscc): Checks whether a value is a valid credit card (CC) number.
 - [isstring](/apl/scalar-functions/type-functions/isstring): Checks whether a value is a string. Use this for scalar string validation.
 - [isutf8](/apl/scalar-functions/type-functions/isutf8): Checks whether a value is a valid UTF-8 encoded sequence.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically work with field types implicitly and rarely check if a field is a dictionary. SPL lacks a direct equivalent to APL’s `ismap`, but you might perform similar validations using `typeof` checks or custom functions in `eval`.
+
+<CodeGroup>
+```sql Splunk example
+| eval is_map=if(typeof(field) == "object", true, false)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_map = ismap(dynamic_field)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t natively support map types. If you use a platform that supports JSON or semi-structured data (such as PostgreSQL with `jsonb`, BigQuery with `STRUCT`, or Snowflake), you can simulate map checks using type inspection or schema introspection.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  CASE
+    WHEN json_type(field) = 'object' THEN true
+    ELSE false
+  END AS is_map
+FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_map = ismap(dynamic_field)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

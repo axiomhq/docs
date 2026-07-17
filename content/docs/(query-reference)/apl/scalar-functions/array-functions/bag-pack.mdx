@@ -13,45 +13,6 @@ The `pack` and `bag_pack` functions are equivalent in APL.
 A common use is `bag_pack(*)` that gets all fields of your dataset as a bag. The wildcard `*` is useful to match all fields in the current row, but it increases query complexity and decreases stability and performance.
 </Note>
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk, you can use `mvzip` and `eval` to create key-value mappings, or use `spath` to interpret JSON data. However, packing data into a true key-value structure for export or downstream use requires JSON manipulation. APL’s `bag_pack` provides a native and type-safe way to do this.
-
-<CodeGroup>
-```sql Splunk example
-| eval metadata=tojson({"status": status, "duration": req_duration_ms})
-````
-
-```kusto APL equivalent
-project metadata = bag_pack('status', status, 'duration', req_duration_ms)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-SQL doesn’t have a direct built-in function like `bag_pack`. To achieve similar behavior, you typically construct JSON objects using functions like `JSON_OBJECT` or use user-defined types. In APL, `bag_pack` is the idiomatic way to construct dynamic objects with labeled fields.
-
-<CodeGroup>
-```sql SQL example
-SELECT JSON_OBJECT('status' VALUE status, 'duration' VALUE req_duration_ms) AS metadata FROM logs;
-```
-
-```kusto APL equivalent
-project metadata = bag_pack('status', status, 'duration', req_duration_ms)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -153,3 +114,40 @@ The query helps identify patterns in failed access attempts by summarizing locat
 
 - [bag_keys](/apl/scalar-functions/array-functions/bag-keys): Returns all keys in a dynamic property bag. Use it when you need to enumerate available keys.
 - [bag_has_key](/apl/scalar-functions/array-functions/bag-has-key): Checks whether a dynamic property bag contains a specific key.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk, you can use `mvzip` and `eval` to create key-value mappings, or use `spath` to interpret JSON data. However, packing data into a true key-value structure for export or downstream use requires JSON manipulation. APL’s `bag_pack` provides a native and type-safe way to do this.
+
+<CodeGroup>
+```sql Splunk example
+| eval metadata=tojson({"status": status, "duration": req_duration_ms})
+````
+
+```kusto APL equivalent
+project metadata = bag_pack('status', status, 'duration', req_duration_ms)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+SQL doesn’t have a direct built-in function like `bag_pack`. To achieve similar behavior, you typically construct JSON objects using functions like `JSON_OBJECT` or use user-defined types. In APL, `bag_pack` is the idiomatic way to construct dynamic objects with labeled fields.
+
+<CodeGroup>
+```sql SQL example
+SELECT JSON_OBJECT('status' VALUE status, 'duration' VALUE req_duration_ms) AS metadata FROM logs;
+```
+
+```kusto APL equivalent
+project metadata = bag_pack('status', status, 'duration', req_duration_ms)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

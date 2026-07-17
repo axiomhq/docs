@@ -7,47 +7,6 @@ Use `column_ifexists()` to make your queries resilient to schema changes. The fu
 
 This is especially useful when working with datasets that evolve over time or come from multiple sources with different schemas. Instead of failing when a field is missing, your query continues running by using a default. Use this function to safely handle queries where the presence of a field isn’t guaranteed.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk, field selection is strict—missing fields typically return `null` in results, but conditional logic for fallback fields requires using `eval` or `coalesce`. In APL, `column_ifexists()` directly substitutes the fallback field at query-time based on schema.
-
-<CodeGroup>
-```sql Splunk example
-... | eval field=if(isnull(Capital), State, Capital)
-```
-
-```kusto APL equivalent
-StormEvents | project column_ifexists('Capital', State)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In SQL, you need to check for the existence of a field using system views or error handling. `column_ifexists()` in APL simplifies this by allowing fallback behavior inline without needing procedural code.
-
-<CodeGroup>
-```sql SQL example
-SELECT CASE 
-  WHEN EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS 
-              WHERE TABLE_NAME = 'StormEvents' AND COLUMN_NAME = 'Capital') 
-  THEN Capital ELSE State END AS Result
-FROM StormEvents
-```
-
-```kusto APL equivalent
-StormEvents | project column_ifexists('Capital', State)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -149,3 +108,42 @@ The function avoids breaking the query if `threat_level` doesn’t exist by defa
 - [isnull](/apl/scalar-functions/string-functions#isnull): Checks if a value is null. Useful when combined with other functions for fine-grained control.
 - [case](/apl/scalar-functions/conditional-function#case): Allows multiple conditional branches. Use when fallback logic depends on multiple conditions.
 - [project](/apl/tabular-operators/project-operator): Selects and transforms fields. Use with `column_ifexists()` to build resilient field projections.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk, field selection is strict—missing fields typically return `null` in results, but conditional logic for fallback fields requires using `eval` or `coalesce`. In APL, `column_ifexists()` directly substitutes the fallback field at query-time based on schema.
+
+<CodeGroup>
+```sql Splunk example
+... | eval field=if(isnull(Capital), State, Capital)
+```
+
+```kusto APL equivalent
+StormEvents | project column_ifexists('Capital', State)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, you need to check for the existence of a field using system views or error handling. `column_ifexists()` in APL simplifies this by allowing fallback behavior inline without needing procedural code.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE
+  WHEN EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+              WHERE TABLE_NAME = 'StormEvents' AND COLUMN_NAME = 'Capital')
+  THEN Capital ELSE State END AS Result
+FROM StormEvents
+```
+
+```kusto APL equivalent
+StormEvents | project column_ifexists('Capital', State)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

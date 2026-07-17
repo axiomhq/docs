@@ -7,51 +7,6 @@ The `genai_extract_tool_calls` function extracts tool call requests from GenAI m
 
 You can use this function to monitor tool usage patterns, debug function calling, track API integrations, or analyze which tools are most frequently requested by your AI applications.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would need to filter and extract tool call information from nested message structures manually.
-
-<CodeGroup>
-```sql Splunk example
-| eval tool_calls=mvfilter(match(role, "assistant") AND isnotnull(tool_calls))
-| eval tools=spath(tool_calls, "tool_calls")
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend tools = genai_extract_tool_calls(messages)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would need to unnest arrays and extract JSON fields for tool calls.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  conversation_id,
-  JSON_EXTRACT(content, '$.tool_calls') as tool_calls
-FROM conversations
-CROSS JOIN UNNEST(messages)
-WHERE JSON_EXTRACT(content, '$.tool_calls') IS NOT NULL
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend tool_calls = genai_extract_tool_calls(messages)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -104,3 +59,45 @@ This query shows which tools are most frequently called, helping you understand 
 - [genai_extract_assistant_response](/apl/scalar-functions/genai-functions/genai-extract-assistant-response): Extracts assistant text responses. Use this when you need the text response instead of tool calls.
 - [genai_get_content_by_role](/apl/scalar-functions/genai-functions/genai-get-content-by-role): Gets content by role. Use this for more granular extraction of specific message types.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would need to filter and extract tool call information from nested message structures manually.
+
+<CodeGroup>
+```sql Splunk example
+| eval tool_calls=mvfilter(match(role, "assistant") AND isnotnull(tool_calls))
+| eval tools=spath(tool_calls, "tool_calls")
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend tools = genai_extract_tool_calls(messages)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would need to unnest arrays and extract JSON fields for tool calls.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  conversation_id,
+  JSON_EXTRACT(content, '$.tool_calls') as tool_calls
+FROM conversations
+CROSS JOIN UNNEST(messages)
+WHERE JSON_EXTRACT(content, '$.tool_calls') IS NOT NULL
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend tool_calls = genai_extract_tool_calls(messages)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

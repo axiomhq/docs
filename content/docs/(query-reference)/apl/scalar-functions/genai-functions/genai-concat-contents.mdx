@@ -7,50 +7,6 @@ The `genai_concat_contents` function concatenates all message contents from a Ge
 
 You can use this function to create searchable conversation transcripts, prepare data for analysis, or consolidate conversation history for reporting.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would typically use multiple `eval` commands with `mvjoin` to concatenate array values, but there’s no direct equivalent for extracting and joining message contents from nested structures.
-
-<CodeGroup>
-```sql Splunk example
-| eval all_content=mvjoin(messages, " ")
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend all_content = genai_concat_contents(messages, ' ')
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would need to unnest the array and use `STRING_AGG` or similar functions to concatenate values, which is more verbose.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  conversation_id,
-  STRING_AGG(content, ' ') as all_content
-FROM conversations
-CROSS JOIN UNNEST(messages) as msg
-GROUP BY conversation_id
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend all_content = genai_concat_contents(messages, ' ')
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -99,3 +55,44 @@ This query concatenates the message contents of a GenAI conversation array with 
 - [genai_message_roles](/apl/scalar-functions/genai-functions/genai-message-roles): Extracts all message roles from a conversation. Use this to understand the conversation structure.
 - [strcat_array](/apl/scalar-functions/array-functions/strcat-array): Concatenates a simple string array. Use this for non-GenAI arrays that don't have the message structure.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would typically use multiple `eval` commands with `mvjoin` to concatenate array values, but there’s no direct equivalent for extracting and joining message contents from nested structures.
+
+<CodeGroup>
+```sql Splunk example
+| eval all_content=mvjoin(messages, " ")
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend all_content = genai_concat_contents(messages, ' ')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would need to unnest the array and use `STRING_AGG` or similar functions to concatenate values, which is more verbose.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  conversation_id,
+  STRING_AGG(content, ' ') as all_content
+FROM conversations
+CROSS JOIN UNNEST(messages) as msg
+GROUP BY conversation_id
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend all_content = genai_concat_contents(messages, ' ')
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

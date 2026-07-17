@@ -7,50 +7,6 @@ The `genai_conversation_turns` function counts the number of conversation turns 
 
 You can use this function to analyze conversation complexity, monitor user engagement, identify outlier conversations, or track conversation metrics for billing and usage analysis.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would typically use `eval` with `mvcount` to count array elements, but there’s no built-in function specifically for counting conversation turns.
-
-<CodeGroup>
-```sql Splunk example
-| eval turn_count=mvcount(messages)/2
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend turn_count = genai_conversation_turns(messages)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would need to unnest the array and count rows, then divide by the number of roles, which is more complex.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  conversation_id,
-  COUNT(*) / 2 as turn_count
-FROM conversations
-CROSS JOIN UNNEST(messages)
-GROUP BY conversation_id
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend turn_count = genai_conversation_turns(messages)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -98,3 +54,44 @@ This query calculates the average and maximum number of conversation turns, help
 - [genai_cost](/apl/scalar-functions/genai-functions/genai-cost): Calculates the cost of a conversation. Use this in combination with turn count to understand cost per turn.
 - [genai_estimate_tokens](/apl/scalar-functions/genai-functions/genai-estimate-tokens): Estimates token usage. Use this with turn count to analyze tokens per turn.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would typically use `eval` with `mvcount` to count array elements, but there’s no built-in function specifically for counting conversation turns.
+
+<CodeGroup>
+```sql Splunk example
+| eval turn_count=mvcount(messages)/2
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend turn_count = genai_conversation_turns(messages)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would need to unnest the array and count rows, then divide by the number of roles, which is more complex.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  conversation_id,
+  COUNT(*) / 2 as turn_count
+FROM conversations
+CROSS JOIN UNNEST(messages)
+GROUP BY conversation_id
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend turn_count = genai_conversation_turns(messages)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

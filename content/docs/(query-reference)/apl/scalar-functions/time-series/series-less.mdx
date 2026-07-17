@@ -7,54 +7,6 @@ The `series_less` function compares two numeric arrays element by element and re
 
 You use `series_less` when you want to evaluate trends across sequences of numeric values. It’s especially useful in time series analysis, anomaly detection, or comparing metrics side by side. For example, you can check if response times are decreasing compared to a baseline or if one service consistently performs faster than another.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, comparisons across series typically rely on `eval` with conditional expressions or custom logic in combination with `timechart`. In contrast, APL provides specialized `series_*` functions like `series_less` to directly compare arrays element by element.
-
-<CodeGroup>
-```sql Splunk example
-... | timechart avg(req_duration_ms) as avg_dur 
-| eval faster = if(avg_dur < 200, true, false)
-````
-
-```kusto APL equivalent
-['sample-http-logs']
-| make-series avg(req_duration_ms) on _time step 1m
-| extend is_less = series_less(avg_req_duration_ms, array_concat(dynamic([200])))
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you normally compare scalar values rather than arrays. To compare sequences, you need to join tables with offsets or use window functions. In APL, `series_less` simplifies this by applying the comparison across arrays in a single step.
-
-<CodeGroup>
-```sql SQL example
-SELECT t1._time,
-       CASE WHEN t1.req_duration_ms < t2.req_duration_ms THEN true ELSE false END AS is_less
-FROM logs t1
-JOIN logs t2
-  ON t1._time = t2._time
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| make-series avg(req_duration_ms) on _time step 1m
-| extend compare = series_less(avg_req_duration_ms, avg_req_duration_ms[1:])
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -137,3 +89,49 @@ This query checks whether failures stay consistently lower than successful reque
 - [series_greater](/apl/scalar-functions/time-series/series-greater): Compares two arrays and returns `true` where the first array element is greater than the second.
 - [series_less_equals](/apl/scalar-functions/time-series/series-less-equals): Compares two arrays and returns `true` where the first array element is less than or equal to the second.
 - [series_not_equals](/apl/scalar-functions/time-series/series-not-equals): Compares two arrays and returns `true` where elements aren’t equal.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, comparisons across series typically rely on `eval` with conditional expressions or custom logic in combination with `timechart`. In contrast, APL provides specialized `series_*` functions like `series_less` to directly compare arrays element by element.
+
+<CodeGroup>
+```sql Splunk example
+... | timechart avg(req_duration_ms) as avg_dur
+| eval faster = if(avg_dur < 200, true, false)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| make-series avg(req_duration_ms) on _time step 1m
+| extend is_less = series_less(avg_req_duration_ms, array_concat(dynamic([200])))
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you normally compare scalar values rather than arrays. To compare sequences, you need to join tables with offsets or use window functions. In APL, `series_less` simplifies this by applying the comparison across arrays in a single step.
+
+<CodeGroup>
+```sql SQL example
+SELECT t1._time,
+       CASE WHEN t1.req_duration_ms < t2.req_duration_ms THEN true ELSE false END AS is_less
+FROM logs t1
+JOIN logs t2
+  ON t1._time = t2._time
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| make-series avg(req_duration_ms) on _time step 1m
+| extend compare = series_less(avg_req_duration_ms, avg_req_duration_ms[1:])
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

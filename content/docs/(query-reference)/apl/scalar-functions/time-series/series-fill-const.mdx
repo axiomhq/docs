@@ -7,54 +7,6 @@ The `series_fill_const` function fills missing values (nulls) in a numeric dynam
 
 You can use `series_fill_const` when you have time series data with missing values and want to fill gaps with a specific constant value, such as zero, a default threshold, or a neutral value. This is particularly useful when missing values represent a specific state (like no activity, default configuration, or baseline values). Typical applications include financial data analysis, sensor data processing, and performance monitoring where a specific default value is meaningful.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, filling missing values with constants is typically done with the `fillnull` command or `eval` expressions using conditional logic. To fill arrays with constants, you usually need to expand arrays and apply the transformation row by row. In APL, `series_fill_const` works directly on dynamic arrays, making it efficient for series-wide constant filling.
-
-<CodeGroup>
-```sql Splunk example
-... | fillnull value=0 field_name
-````
-
-```kusto APL equivalent
-datatable(values: dynamic)
-[
-  dynamic([null, 100, null, 200])
-]
-| extend filled_values = series_fill_const(values, 0)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In SQL, filling missing values with constants is typically done with `COALESCE()` or `ISNULL()` functions, but these only work on single values, not arrays. To fill array elements with constants, you usually need to unnest arrays and apply the function row by row. In APL, `series_fill_const` eliminates this complexity by directly replacing null values with a constant in arrays.
-
-<CodeGroup>
-```sql SQL example
-SELECT COALESCE(value, 0) AS filled_value
-FROM measurements;
-```
-
-```kusto APL equivalent
-datatable(values: dynamic)
-[
-  dynamic([null, 100, null, 200])
-]
-| extend filled_values = series_fill_const(values, 0)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -158,3 +110,49 @@ This query fills missing request durations with 0 grouped by status code, useful
 - [series_fill_linear](/apl/scalar-functions/time-series/series-fill-linear): Fills missing values using linear interpolation. Use when you want smooth transitions between known values.
 - [series_equals](/apl/scalar-functions/time-series/series-equals): Compares each element to a specified value. Use for identifying specific values after filling operations.
 - [series_greater](/apl/scalar-functions/time-series/series-greater): Returns elements greater than a specified value. Use for threshold analysis after filling missing data.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, filling missing values with constants is typically done with the `fillnull` command or `eval` expressions using conditional logic. To fill arrays with constants, you usually need to expand arrays and apply the transformation row by row. In APL, `series_fill_const` works directly on dynamic arrays, making it efficient for series-wide constant filling.
+
+<CodeGroup>
+```sql Splunk example
+... | fillnull value=0 field_name
+````
+
+```kusto APL equivalent
+datatable(values: dynamic)
+[
+  dynamic([null, 100, null, 200])
+]
+| extend filled_values = series_fill_const(values, 0)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, filling missing values with constants is typically done with `COALESCE()` or `ISNULL()` functions, but these only work on single values, not arrays. To fill array elements with constants, you usually need to unnest arrays and apply the function row by row. In APL, `series_fill_const` eliminates this complexity by directly replacing null values with a constant in arrays.
+
+<CodeGroup>
+```sql SQL example
+SELECT COALESCE(value, 0) AS filled_value
+FROM measurements;
+```
+
+```kusto APL equivalent
+datatable(values: dynamic)
+[
+  dynamic([null, 100, null, 200])
+]
+| extend filled_values = series_fill_const(values, 0)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

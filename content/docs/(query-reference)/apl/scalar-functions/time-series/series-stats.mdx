@@ -7,56 +7,6 @@ The `series_stats` function computes comprehensive statistical measures for a nu
 
 You can use `series_stats` when you need a complete statistical summary of time-series data in a single operation. This is particularly useful for understanding data distribution, identifying outliers, calculating confidence intervals, or performing comprehensive data quality assessments without running multiple separate aggregations.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you typically use multiple `stats` functions to calculate different statistics. In APL, `series_stats` provides all common statistics in a single operation on array data, returning them as a 7-element array.
-
-<CodeGroup>
-```sql Splunk example
-... | stats min(value) as min_val, max(value) as max_val, 
-    avg(value) as avg_val, stdev(value) as stdev_val by user
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize values = make_list(req_duration_ms) by id
-| extend stats = series_stats(values)
-| extend min_val = stats[0], max_val = stats[2], avg_val = stats[4]
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In SQL, you calculate multiple aggregate functions separately. In APL, `series_stats` provides all these statistics in a single function call on array data, returned as a 7-element array.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-    MIN(value) as min_val,
-    MAX(value) as max_val,
-    AVG(value) as avg_val,
-    STDDEV(value) as std_val
-FROM measurements
-GROUP BY user_id;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize values = make_list(req_duration_ms) by id
-| extend stats = series_stats(values)
-| extend min_val = stats[0], max_val = stats[2], avg_val = stats[4]
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -98,7 +48,7 @@ In log analysis, you can use `series_stats` to get a comprehensive statistical s
 ['sample-http-logs']
 | summarize durations = make_list(req_duration_ms) by id
 | extend stats_array = series_stats(durations)
-| project id, 
+| project id,
     min_duration = stats_array[0],
     max_duration = stats_array[2],
     avg_duration = stats_array[4],
@@ -158,3 +108,51 @@ This query uses statistical analysis to establish normal behavior patterns and c
 - [series_min](/apl/scalar-functions/time-series/series-min): Compares two arrays element-wise and returns the minimum values.
 - [avg](/apl/aggregation-function/avg): Aggregation function for calculating averages across rows.
 - [stdev](/apl/aggregation-function/stdev): Aggregation function for standard deviation across rows.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use multiple `stats` functions to calculate different statistics. In APL, `series_stats` provides all common statistics in a single operation on array data, returning them as a 7-element array.
+
+<CodeGroup>
+```sql Splunk example
+... | stats min(value) as min_val, max(value) as max_val,
+    avg(value) as avg_val, stdev(value) as stdev_val by user
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize values = make_list(req_duration_ms) by id
+| extend stats = series_stats(values)
+| extend min_val = stats[0], max_val = stats[2], avg_val = stats[4]
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, you calculate multiple aggregate functions separately. In APL, `series_stats` provides all these statistics in a single function call on array data, returned as a 7-element array.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+    MIN(value) as min_val,
+    MAX(value) as max_val,
+    AVG(value) as avg_val,
+    STDDEV(value) as std_val
+FROM measurements
+GROUP BY user_id;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize values = make_list(req_duration_ms) by id
+| extend stats = series_stats(values)
+| extend min_val = stats[0], max_val = stats[2], avg_val = stats[4]
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

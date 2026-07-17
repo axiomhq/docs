@@ -4,8 +4,6 @@ import { RootProvider } from 'fumadocs-ui/provider/next';
 import { DocsToaster } from '@/components/docs-toaster';
 import './globals.css';
 
-const themeBootstrap = `(function(){try{var key='axiom-docs-theme';var match=document.cookie.match(/(?:^|; )axiom-docs-theme=(dark|light)(?:;|$)/);if(match){localStorage.setItem(key,match[1]);}else{localStorage.removeItem(key);}}catch(_){}})();`;
-
 const geist = localFont({
   src: './fonts/Geist-Variable.ttf',
   variable: '--font-geist',
@@ -31,7 +29,6 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={`${geist.variable} ${geistMono.variable}`}>
-      <head><script dangerouslySetInnerHTML={{ __html: themeBootstrap }} /></head>
       <body>
         <RootProvider
           theme={{ attribute: ['class', 'data-theme'], defaultTheme: 'system', enableSystem: true, storageKey: 'axiom-docs-theme' }}

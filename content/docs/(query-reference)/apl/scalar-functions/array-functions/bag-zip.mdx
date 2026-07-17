@@ -7,50 +7,6 @@ Use the `bag_zip` function in APL to combine two arrays—one containing keys an
 
 You typically use `bag_zip` when parsing data that arrives as separate lists of keys and values, or when transforming array-based structures into more readable dictionary formats. This function is especially helpful in log analysis, data transformation pipelines, and when preparing data for downstream systems that expect key-value pairs.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you use `mvzip` to combine two multi-value fields into paired elements. APL's `bag_zip` goes further by creating a true dictionary object from separate key and value arrays.
-
-<CodeGroup>
-```sql Splunk example
-| eval zipped=mvzip(keys, values, '=')
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend keys = dynamic(['status', 'method', 'city'])
-| extend values = dynamic(['200', 'GET', 'Seattle'])
-| extend result = bag_zip(keys, values)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL doesn't have native support for combining arrays into key-value dictionaries. You typically need to use JSON functions or complex `CASE` statements to achieve similar results. APL's `bag_zip` provides a direct and type-safe way to perform this operation.
-
-<CodeGroup>
-```sql SQL example
-SELECT JSON_OBJECT('key1', value1, 'key2', value2)
-FROM table_name
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend keys = dynamic(['key1', 'key2'])
-| extend values = dynamic([value1, value2])
-| extend result = bag_zip(keys, values)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -164,3 +120,44 @@ This query creates structured security context for failed requests, making it ea
 - [pack_dictionary](/apl/scalar-functions/array-functions/pack-dictionary): Similar to `bag_zip`, but `pack_dictionary` takes alternating key-value arguments. Use `bag_zip` for array-based inputs.
 - [todynamic](/apl/scalar-functions/conversion-functions/todynamic): Use `todynamic` to parse JSON strings into dynamic objects. Use `bag_zip` to construct dynamic objects programmatically from arrays.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you use `mvzip` to combine two multi-value fields into paired elements. APL's `bag_zip` goes further by creating a true dictionary object from separate key and value arrays.
+
+<CodeGroup>
+```sql Splunk example
+| eval zipped=mvzip(keys, values, '=')
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend keys = dynamic(['status', 'method', 'city'])
+| extend values = dynamic(['200', 'GET', 'Seattle'])
+| extend result = bag_zip(keys, values)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn't have native support for combining arrays into key-value dictionaries. You typically need to use JSON functions or complex `CASE` statements to achieve similar results. APL's `bag_zip` provides a direct and type-safe way to perform this operation.
+
+<CodeGroup>
+```sql SQL example
+SELECT JSON_OBJECT('key1', value1, 'key2', value2)
+FROM table_name
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend keys = dynamic(['key1', 'key2'])
+| extend values = dynamic([value1, value2])
+| extend result = bag_zip(keys, values)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

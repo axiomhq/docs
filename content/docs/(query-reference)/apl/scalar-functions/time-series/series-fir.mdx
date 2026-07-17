@@ -7,54 +7,6 @@ The `series_fir` function applies a Finite Impulse Response (FIR) filter to a nu
 
 You can use `series_fir` when you want to apply signal processing techniques to your time series data, such as smoothing noisy data, removing high-frequency noise, or implementing custom filtering operations. This is particularly useful for preprocessing data before analysis, removing artifacts, or extracting specific frequency components. Typical applications include sensor data processing, financial time series analysis, and performance monitoring where noise reduction is important.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, FIR filtering isn’t natively available and typically requires external tools or complex workarounds using statistical functions like `movingavg` or `streamstats`. Most Splunk users rely on simple moving averages for smoothing. In APL, `series_fir` provides direct access to sophisticated digital signal processing capabilities with custom filter kernels.
-
-<CodeGroup>
-```sql Splunk example
-... | streamstats window=5 current=f avg(field) as smoothed_field
-````
-
-```kusto APL equivalent
-datatable(values: dynamic)
-[
-  dynamic([100, 120, 110, 130, 105])
-]
-| extend filtered_values = series_fir(values, dynamic([0.2, 0.2, 0.2, 0.2, 0.2]))
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL does not provide FIR filtering functionality. Database systems typically require specialized extensions or external libraries for digital signal processing. Most SQL users rely on window functions with simple averages for smoothing. In APL, `series_fir` brings advanced signal processing capabilities directly into the query language.
-
-<CodeGroup>
-```sql SQL example
-SELECT AVG(value) OVER (ORDER BY timestamp ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING) AS smoothed_value
-FROM measurements;
-```
-
-```kusto APL equivalent
-datatable(values: dynamic)
-[
-  dynamic([100, 120, 110, 130, 105])
-]
-| extend filtered_values = series_fir(values, dynamic([0.2, 0.2, 0.2, 0.2, 0.2]))
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -158,3 +110,49 @@ This query applies a high-pass filter to request durations grouped by status cod
 - [series_fill_linear](/apl/scalar-functions/time-series/series-fill-linear): Fills missing values using linear interpolation. Use for data preprocessing before filtering.
 - [series_abs](/apl/scalar-functions/time-series/series-abs): Returns the absolute value of each element in an array. Use for analyzing filter output magnitudes.
 - [series_cos](/apl/scalar-functions/time-series/series-cos): Returns the cosine of each element in an array. Use for generating filter kernels or analyzing periodic components.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, FIR filtering isn’t natively available and typically requires external tools or complex workarounds using statistical functions like `movingavg` or `streamstats`. Most Splunk users rely on simple moving averages for smoothing. In APL, `series_fir` provides direct access to sophisticated digital signal processing capabilities with custom filter kernels.
+
+<CodeGroup>
+```sql Splunk example
+... | streamstats window=5 current=f avg(field) as smoothed_field
+````
+
+```kusto APL equivalent
+datatable(values: dynamic)
+[
+  dynamic([100, 120, 110, 130, 105])
+]
+| extend filtered_values = series_fir(values, dynamic([0.2, 0.2, 0.2, 0.2, 0.2]))
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not provide FIR filtering functionality. Database systems typically require specialized extensions or external libraries for digital signal processing. Most SQL users rely on window functions with simple averages for smoothing. In APL, `series_fir` brings advanced signal processing capabilities directly into the query language.
+
+<CodeGroup>
+```sql SQL example
+SELECT AVG(value) OVER (ORDER BY timestamp ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING) AS smoothed_value
+FROM measurements;
+```
+
+```kusto APL equivalent
+datatable(values: dynamic)
+[
+  dynamic([100, 120, 110, 130, 105])
+]
+| extend filtered_values = series_fir(values, dynamic([0.2, 0.2, 0.2, 0.2, 0.2]))
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

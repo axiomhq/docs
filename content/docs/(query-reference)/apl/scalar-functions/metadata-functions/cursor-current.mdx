@@ -7,48 +7,6 @@ Use the `cursor_current` function in APL to retrieve a cursor string that repres
 
 You use `cursor_current` when implementing incremental data processing, change data capture (CDC) patterns, or any scenario where you need to track the last processed position in your data. This is particularly useful for building efficient data synchronization pipelines, continuous monitoring systems, and incremental analytics workflows.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you typically use time-based bookmarks or the `_indextime` field to track processing positions. APL's `cursor_current` provides a more robust cursor mechanism that works across query executions and handles distributed data more reliably.
-
-<CodeGroup>
-```sql Splunk example
-| stats max(_indextime) as last_processed
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend cursor = cursor_current()
-| summarize max(_time), last_cursor = make_list(cursor)[0]
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you typically use `MAX(timestamp)` or row IDs to track the last processed record. APL's `cursor_current` provides a system-level cursor that captures the exact query execution position, which is more reliable for distributed systems.
-
-<CodeGroup>
-```sql SQL example
-SELECT MAX(timestamp) as last_processed_time
-FROM logs
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend cursor = cursor_current()
-| summarize max(_time), processing_cursor = make_list(cursor)[0]
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -127,3 +85,42 @@ This query tracks the processing position for each service, enabling resumable t
 - [now](/apl/scalar-functions/datetime-functions#now): Use `now` to get the current query execution time. Use `cursor_current` for position tracking in data streams.
 - [bin](/apl/scalar-functions/rounding-functions#bin): Use `bin` to group data into time buckets. Use `cursor_current` alongside `bin` for checkpointed time-series processing.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use time-based bookmarks or the `_indextime` field to track processing positions. APL's `cursor_current` provides a more robust cursor mechanism that works across query executions and handles distributed data more reliably.
+
+<CodeGroup>
+```sql Splunk example
+| stats max(_indextime) as last_processed
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend cursor = cursor_current()
+| summarize max(_time), last_cursor = make_list(cursor)[0]
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you typically use `MAX(timestamp)` or row IDs to track the last processed record. APL's `cursor_current` provides a system-level cursor that captures the exact query execution position, which is more reliable for distributed systems.
+
+<CodeGroup>
+```sql SQL example
+SELECT MAX(timestamp) as last_processed_time
+FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend cursor = cursor_current()
+| summarize max(_time), processing_cursor = make_list(cursor)[0]
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

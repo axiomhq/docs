@@ -7,51 +7,6 @@ The `genai_cost` function calculates the total cost of a GenAI API call based on
 
 You can use this function to track AI spending, analyze cost per conversation, identify expensive queries, or create cost reports and budgets for AI services.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would need to manually calculate costs using eval and lookup tables.
-
-<CodeGroup>
-```sql Splunk example
-| lookup model_pricing model OUTPUT input_price output_price
-| eval total_cost=(input_tokens * input_price / 1000000) + (output_tokens * output_price / 1000000)
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend total_cost = genai_cost(model, input_tokens, output_tokens)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would need to join with a pricing table and calculate costs manually.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  l.*,
-  (l.input_tokens * p.input_price / 1000000) + 
-  (l.output_tokens * p.output_price / 1000000) as total_cost
-FROM ai_logs l
-JOIN model_pricing p ON l.model = p.model_name
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend total_cost = genai_cost(model, input_tokens, output_tokens)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -104,3 +59,45 @@ This query calculates total and average spending on AI API calls, helping you tr
 - [genai_get_pricing](/apl/scalar-functions/genai-functions/genai-get-pricing): Gets the pricing structure for a model. Use this to understand or display pricing information.
 - [genai_estimate_tokens](/apl/scalar-functions/genai-functions/genai-estimate-tokens): Estimates tokens from text. Use this with genai_cost to predict costs before making API calls.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would need to manually calculate costs using eval and lookup tables.
+
+<CodeGroup>
+```sql Splunk example
+| lookup model_pricing model OUTPUT input_price output_price
+| eval total_cost=(input_tokens * input_price / 1000000) + (output_tokens * output_price / 1000000)
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend total_cost = genai_cost(model, input_tokens, output_tokens)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would need to join with a pricing table and calculate costs manually.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  l.*,
+  (l.input_tokens * p.input_price / 1000000) +
+  (l.output_tokens * p.output_price / 1000000) as total_cost
+FROM ai_logs l
+JOIN model_pricing p ON l.model = p.model_name
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend total_cost = genai_cost(model, input_tokens, output_tokens)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

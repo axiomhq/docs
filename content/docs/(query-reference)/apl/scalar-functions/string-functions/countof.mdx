@@ -5,46 +5,6 @@ description: 'This page explains how to use the countof function in APL.'
 
 The `countof` function counts the occurrences of a plain substring within a string. Use this function when you need to find how many times a specific text pattern appears in log messages, user input, or any string field without using regular expressions.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you might use a combination of `rex` and counting operations. APL's `countof` provides a simpler approach for counting plain string occurrences.
-
-<CodeGroup>
-```sql Splunk example
-| rex field=message max_match=0 "error"
-| eval error_count=mvcount(error)
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend error_count = countof('GET', method)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you typically calculate string occurrences using length differences. APL's `countof` provides a more direct approach.
-
-<CodeGroup>
-```sql SQL example
-SELECT (LENGTH(field) - LENGTH(REPLACE(field, 'search', ''))) / LENGTH('search') AS count FROM logs;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend count = countof('search', field)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -154,3 +114,40 @@ This query identifies URIs with unusually high slash counts, which can help dete
 - [indexof](/apl/scalar-functions/string-functions/indexof): Finds the position of the first occurrence of a substring. Use this when you need to know where a substring appears, not how many times.
 - [extract](/apl/scalar-functions/string-functions/extract): Extracts substrings using regular expressions. Use this when you need to capture matched text rather than count occurrences.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you might use a combination of `rex` and counting operations. APL's `countof` provides a simpler approach for counting plain string occurrences.
+
+<CodeGroup>
+```sql Splunk example
+| rex field=message max_match=0 "error"
+| eval error_count=mvcount(error)
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend error_count = countof('GET', method)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you typically calculate string occurrences using length differences. APL's `countof` provides a more direct approach.
+
+<CodeGroup>
+```sql SQL example
+SELECT (LENGTH(field) - LENGTH(REPLACE(field, 'search', ''))) / LENGTH('search') AS count FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend count = countof('search', field)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

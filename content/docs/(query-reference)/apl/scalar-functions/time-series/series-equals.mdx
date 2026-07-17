@@ -7,54 +7,6 @@ The `series_equals` function compares each element in a numeric dynamic array (s
 
 You can use `series_equals` when you want to identify occurrences of specific values in your data, such as finding exact matches for thresholds, status codes, or target values. Typical applications include anomaly detection, data validation, and conditional processing of time series data.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, equality comparisons are typically done with the `eval` function and comparison operators like `==`. To compare multiple values, you usually need to expand arrays and apply comparisons row by row. In APL, `series_equals` works directly on dynamic arrays, making it efficient for series-wide comparisons.
-
-<CodeGroup>
-```sql Splunk example
-... | eval is_target=(duration==200)
-````
-
-```kusto APL equivalent
-datatable(values: dynamic)
-[
-  dynamic([150, 200, 250, 200])
-]
-| extend equals_200 = series_equals(values, 200)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In SQL, equality comparisons use the `=` operator, but this only works on single values, not arrays. To compare array elements, you typically need to unnest arrays and apply comparisons row by row. In APL, `series_equals` eliminates this complexity by directly comparing each element in an array to a target value.
-
-<CodeGroup>
-```sql SQL example
-SELECT CASE WHEN duration = 200 THEN 1 ELSE 0 END AS is_target
-FROM requests;
-```
-
-```kusto APL equivalent
-datatable(values: dynamic)
-[
-  dynamic([150, 200, 250, 200])
-]
-| extend equals_200 = series_equals(values, 200)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -158,3 +110,49 @@ This query identifies requests with exactly 500ms duration grouped by status cod
 - [series_less](/apl/scalar-functions/time-series/series-less): Returns elements less than a specified value. Use for lower-bound filtering.
 - [series_less_equals](/apl/scalar-functions/time-series/series-less-equals): Returns elements less than or equal to a specified value. Use for inclusive lower-bound comparisons.
 - [series_not_equals](/apl/scalar-functions/time-series/series-not-equals): Returns elements not equal to a specified value. Use for exclusion-based filtering.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, equality comparisons are typically done with the `eval` function and comparison operators like `==`. To compare multiple values, you usually need to expand arrays and apply comparisons row by row. In APL, `series_equals` works directly on dynamic arrays, making it efficient for series-wide comparisons.
+
+<CodeGroup>
+```sql Splunk example
+... | eval is_target=(duration==200)
+````
+
+```kusto APL equivalent
+datatable(values: dynamic)
+[
+  dynamic([150, 200, 250, 200])
+]
+| extend equals_200 = series_equals(values, 200)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, equality comparisons use the `=` operator, but this only works on single values, not arrays. To compare array elements, you typically need to unnest arrays and apply comparisons row by row. In APL, `series_equals` eliminates this complexity by directly comparing each element in an array to a target value.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE WHEN duration = 200 THEN 1 ELSE 0 END AS is_target
+FROM requests;
+```
+
+```kusto APL equivalent
+datatable(values: dynamic)
+[
+  dynamic([150, 200, 250, 200])
+]
+| extend equals_200 = series_equals(values, 200)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

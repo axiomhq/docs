@@ -5,49 +5,6 @@ description: 'This page explains how to use the format_bytes function in APL.'
 
 The `format_bytes` function formats a numeric value as a human-readable string representing data size in bytes with appropriate units (KB, MB, GB, etc.). Use this function to make byte values more readable in reports, dashboards, and log analysis.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you typically need custom eval expressions or lookup tables to format bytes. APL's `format_bytes` provides this functionality natively.
-
-<CodeGroup>
-```sql Splunk example
-| eval size_str=if(resp_header_size_bytes<1024, resp_header_size_bytes." B", if(resp_header_size_bytes<1048576, round(resp_header_size_bytes/1024,2)." KB", round(resp_header_size_bytes/1048576,2)." MB"))
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend size_str = format_bytes(resp_header_size_bytes)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, formatting bytes requires complex CASE statements. APL's `format_bytes` simplifies this operation.
-
-<CodeGroup>
-```sql SQL example
-SELECT CASE 
-  WHEN resp_header_size_bytes < 1024 THEN CONCAT(resp_header_size_bytes, ' B')
-  WHEN resp_header_size_bytes < 1048576 THEN CONCAT(ROUND(resp_header_size_bytes/1024, 2), ' KB')
-  ELSE CONCAT(ROUND(resp_header_size_bytes/1048576, 2), ' MB')
-END AS size_str FROM logs;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend size_str = format_bytes(resp_header_size_bytes)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -133,3 +90,43 @@ This query formats average response header sizes, helping identify unusual paylo
 - [parse_bytes](/apl/scalar-functions/string-functions/parse-bytes): Parses a formatted byte string back to a numeric value. Use this to reverse the formatting operation.
 - [strlen](/apl/scalar-functions/string-functions/strlen): Returns the length of a string in characters. Use this when you need character count rather than byte formatting.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically need custom eval expressions or lookup tables to format bytes. APL's `format_bytes` provides this functionality natively.
+
+<CodeGroup>
+```sql Splunk example
+| eval size_str=if(resp_header_size_bytes<1024, resp_header_size_bytes." B", if(resp_header_size_bytes<1048576, round(resp_header_size_bytes/1024,2)." KB", round(resp_header_size_bytes/1048576,2)." MB"))
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend size_str = format_bytes(resp_header_size_bytes)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, formatting bytes requires complex CASE statements. APL's `format_bytes` simplifies this operation.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE
+  WHEN resp_header_size_bytes < 1024 THEN CONCAT(resp_header_size_bytes, ' B')
+  WHEN resp_header_size_bytes < 1048576 THEN CONCAT(ROUND(resp_header_size_bytes/1024, 2), ' KB')
+  ELSE CONCAT(ROUND(resp_header_size_bytes/1048576, 2), ' MB')
+END AS size_str FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend size_str = format_bytes(resp_header_size_bytes)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

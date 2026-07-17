@@ -7,50 +7,6 @@ The `genai_output_cost` function calculates the cost of output tokens (completio
 
 You can use this function to analyze generation costs, optimize response length for cost efficiency, track output spending separately, or create detailed cost breakdowns.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would need to lookup pricing and calculate costs manually.
-
-<CodeGroup>
-```sql Splunk example
-| lookup model_pricing model OUTPUT output_price
-| eval output_cost=(output_tokens * output_price / 1000000)
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend output_cost = genai_output_cost(model, output_tokens)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would join with a pricing table and calculate output costs.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  l.*,
-  (l.output_tokens * p.output_price / 1000000) as output_cost
-FROM ai_logs l
-JOIN model_pricing p ON l.model = p.model_name
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend output_cost = genai_output_cost(model, output_tokens)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -102,3 +58,44 @@ This query calculates the total and average cost of output tokens, helping you u
 - [genai_extract_assistant_response](/apl/scalar-functions/genai-functions/genai-extract-assistant-response): Extracts the response text. Combine with output costs to analyze cost per response.
 - [genai_is_truncated](/apl/scalar-functions/genai-functions/genai-is-truncated): Checks if responses were truncated. Use this to understand if token limits affected output costs.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would need to lookup pricing and calculate costs manually.
+
+<CodeGroup>
+```sql Splunk example
+| lookup model_pricing model OUTPUT output_price
+| eval output_cost=(output_tokens * output_price / 1000000)
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend output_cost = genai_output_cost(model, output_tokens)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would join with a pricing table and calculate output costs.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  l.*,
+  (l.output_tokens * p.output_price / 1000000) as output_cost
+FROM ai_logs l
+JOIN model_pricing p ON l.model = p.model_name
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend output_cost = genai_output_cost(model, output_tokens)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

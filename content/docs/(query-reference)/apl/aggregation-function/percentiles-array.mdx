@@ -11,51 +11,6 @@ You can use `percentiles_array` to:
 - Identify performance outliers.
 - Visualize percentile distributions in dashboards.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk, you typically calculate percentiles one at a time using the `perc` function. To get multiple percentiles, you repeat the function with different percentile values. In APL, `percentiles_array` lets you specify multiple percentiles in a single function call and returns them as an array.
-
-<CodeGroup>
-```sql Splunk example
-... | stats perc95(duration), perc50(duration), perc25(duration) by service
-```
-
-```kusto APL equivalent
-['otel-demo-traces']
-| summarize percentiles_array(duration, 25, 50, 95) by ['service.name']
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-Standard SQL typically lacks a built-in function to calculate multiple percentiles in a single operation. Instead, you use `PERCENTILE_CONT` or `PERCENTILE_DISC` with `WITHIN GROUP`, repeated for each desired percentile. In APL, `percentiles_array` simplifies this with a single function call that returns all requested percentiles as an array.
-
-<CodeGroup>
-```sql SQL example
-SELECT
-  service,
-  PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY duration) AS p25,
-  PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) AS p50,
-  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) AS p95
-FROM traces
-GROUP BY service
-```
-
-```kusto APL equivalent
-['otel-demo-traces']
-| summarize percentiles_array(duration, 25, 50, 95) by ['service.name']
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -160,3 +115,46 @@ This query helps identify whether requests resulting in errors (like 500) are si
 - [percentile_if](/apl/aggregation-function/percentileif): Returns a single percentile value for the records that satisfy a condition.
 - [percentiles_arrayif](/apl/aggregation-function/percentiles-arrayif): Returns an array of percentile values for the records that satisfy a condition.
 - [sum](/apl/aggregation-function/sum): Returns the sum of a numeric column.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk, you typically calculate percentiles one at a time using the `perc` function. To get multiple percentiles, you repeat the function with different percentile values. In APL, `percentiles_array` lets you specify multiple percentiles in a single function call and returns them as an array.
+
+<CodeGroup>
+```sql Splunk example
+... | stats perc95(duration), perc50(duration), perc25(duration) by service
+```
+
+```kusto APL equivalent
+['otel-demo-traces']
+| summarize percentiles_array(duration, 25, 50, 95) by ['service.name']
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Standard SQL typically lacks a built-in function to calculate multiple percentiles in a single operation. Instead, you use `PERCENTILE_CONT` or `PERCENTILE_DISC` with `WITHIN GROUP`, repeated for each desired percentile. In APL, `percentiles_array` simplifies this with a single function call that returns all requested percentiles as an array.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  service,
+  PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY duration) AS p25,
+  PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) AS p50,
+  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) AS p95
+FROM traces
+GROUP BY service
+```
+
+```kusto APL equivalent
+['otel-demo-traces']
+| summarize percentiles_array(duration, 25, 50, 95) by ['service.name']
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

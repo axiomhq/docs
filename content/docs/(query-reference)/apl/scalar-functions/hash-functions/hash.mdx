@@ -16,53 +16,6 @@ Use the `hash` function to:
 Don’t use `hash` to generate values for long term usage. `hash` is generic and the underlying hashing algorithm may change. For long term stability, use the [other hash functions](/apl/scalar-functions/hash-functions) with specific algorithm like `hash_sha1`.
 </Note>
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk’s `hash` (or `md5`, `sha1`, etc.) returns a hexadecimal string and lets you pick an algorithm. In APL `hash` always returns a 64-bit integer that trades cryptographic strength for speed and compactness. Use `hash_sha256` if you need a cryptographically secure digest.
-
-<CodeGroup>
-
-```sql Splunk example
-... | eval anon_id = md5(id) | stats count by anon_id
-````
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend anon_id = hash(id)
-| summarize count() by anon_id
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-Standard SQL often exposes vendor-specific functions such as `HASH` (BigQuery), `HASH_BYTES` (SQL Server), or `MD5`. These return either bytes or hex strings. In APL `hash` always yields an `int64`. To emulate SQL’s modulo bucketing, pipe the result into the arithmetic operator that you need.
-
-<CodeGroup>
-
-```sql SQL example
-SELECT HASH(id) % 10 AS bucket, COUNT(*) AS requests
-FROM sample_http_logs
-GROUP BY bucket
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend bucket = abs(hash(id) % 10)
-| summarize requests = count() by bucket
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -168,3 +121,48 @@ The query hides sensitive path information yet still lets you see which hashed e
 
 </Tab>
 </Tabs>
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk’s `hash` (or `md5`, `sha1`, etc.) returns a hexadecimal string and lets you pick an algorithm. In APL `hash` always returns a 64-bit integer that trades cryptographic strength for speed and compactness. Use `hash_sha256` if you need a cryptographically secure digest.
+
+<CodeGroup>
+
+```sql Splunk example
+... | eval anon_id = md5(id) | stats count by anon_id
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend anon_id = hash(id)
+| summarize count() by anon_id
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Standard SQL often exposes vendor-specific functions such as `HASH` (BigQuery), `HASH_BYTES` (SQL Server), or `MD5`. These return either bytes or hex strings. In APL `hash` always yields an `int64`. To emulate SQL’s modulo bucketing, pipe the result into the arithmetic operator that you need.
+
+<CodeGroup>
+
+```sql SQL example
+SELECT HASH(id) % 10 AS bucket, COUNT(*) AS requests
+FROM sample_http_logs
+GROUP BY bucket
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend bucket = abs(hash(id) % 10)
+| summarize requests = count() by bucket
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

@@ -3,52 +3,9 @@ title: mv-expand
 description: 'This page explains how to use the mv-expand operator in APL.'
 ---
 
-The `mv-expand` operator expands dynamic arrays and property bags into multiple rows. Each element of the array or each property of the bag becomes its own row, while other columns are duplicated.  
+The `mv-expand` operator expands dynamic arrays and property bags into multiple rows. Each element of the array or each property of the bag becomes its own row, while other columns are duplicated.
 
 You use `mv-expand` when you want to analyze or filter individual values inside arrays or objects. This is especially useful when working with logs that include lists of values, OpenTelemetry traces that contain arrays of spans, or security events that group multiple attributes into one field.
-
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, the `mvexpand` command expands multi-value fields into separate events. The APL `mv-expand` operator works in a very similar way, splitting array values into individual rows. The main difference is that APL explicitly works with dynamic arrays or property bags, while Splunk handles multi-value fields implicitly.
-
-<CodeGroup>
-```sql Splunk example
-... | mvexpand request_uri
-````
-
-```kusto APL equivalent
-['sample-http-logs']
-| mv-expand uri
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you use `CROSS JOIN UNNEST` or `CROSS APPLY` to flatten arrays into rows. In APL, `mv-expand` provides a simpler and more direct way to achieve the same result.
-
-<CodeGroup>
-```sql SQL example
-SELECT id, value
-FROM logs
-CROSS JOIN UNNEST(request_uris) AS t(value)
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| mv-expand uri
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
 
 ## Usage
 
@@ -102,3 +59,44 @@ This query expands the `territories` array into rows and counts the most frequen
 - [project](/apl/tabular-operators/project-operator): Selects or computes columns. Use it when you want to reshape data, not expand arrays.
 - [summarize](/apl/tabular-operators/summarize-operator): Aggregates data across rows. Use it after expanding arrays to compute statistics.
 - [top](/apl/tabular-operators/top-operator): Returns the top N rows by expression. Use it after expansion to find the most frequent values.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `mvexpand` command expands multi-value fields into separate events. The APL `mv-expand` operator works in a very similar way, splitting array values into individual rows. The main difference is that APL explicitly works with dynamic arrays or property bags, while Splunk handles multi-value fields implicitly.
+
+<CodeGroup>
+```sql Splunk example
+... | mvexpand request_uri
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| mv-expand uri
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you use `CROSS JOIN UNNEST` or `CROSS APPLY` to flatten arrays into rows. In APL, `mv-expand` provides a simpler and more direct way to achieve the same result.
+
+<CodeGroup>
+```sql SQL example
+SELECT id, value
+FROM logs
+CROSS JOIN UNNEST(request_uris) AS t(value)
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| mv-expand uri
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

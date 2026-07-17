@@ -15,54 +15,6 @@ You find this operator useful when you want to:
 
 Unlike `summarize`, which produces row-based aggregations, `make-series` is designed specifically for creating and manipulating array-based time series.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, the `timechart` command creates row-based time series, with one row per time bucket. In APL, the `make-series` operator instead encodes the series into arrays, which you can later manipulate or expand. This is a key difference from SPL’s row-based approach.
-
-<CodeGroup>
-```sql Splunk example
-index=sample-http-logs
-| timechart span=1m avg(req_duration_ms)
-````
-
-```kusto APL equivalent
-['sample-http-logs']
-| make-series avg(req_duration_ms) default=0 on _time from ago(1h) to now() step 1m
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you typically use `GROUP BY` with a generated series or calendar table to create row-based time buckets. In APL, `make-series` creates arrays of values and timestamps in a single row. This lets you perform array-based computations on the time series before optionally expanding back into rows.
-
-<CodeGroup>
-```sql SQL example
-SELECT
-  time_bucket('1 minute', _time) AS minute,
-  AVG(req_duration_ms) AS avg_duration
-FROM sample_http_logs
-WHERE _time > NOW() - interval '1 hour'
-GROUP BY minute
-ORDER BY minute
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| make-series avg(req_duration_ms) default=0 on _time from ago(1h) to now() step 1m
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -176,3 +128,49 @@ The query generates a time series of HTTP 500 error counts as an array-based tim
 - [mv-expand](/apl/tabular-operators/mv-expand): Expands arrays into multiple rows. Use `mv-expand` to work with the arrays returned by `make-series`.
 - [summarize](/apl/tabular-operators/summarize-operator): Aggregates rows into groups but does not generate continuous time bins. Use `summarize` when you want flexible grouping without forcing evenly spaced intervals.
 - [top](/apl/tabular-operators/top-operator): Returns the top rows by a specified expression, not time series. Use `top` when you want to focus on the most significant values instead of trends over time.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `timechart` command creates row-based time series, with one row per time bucket. In APL, the `make-series` operator instead encodes the series into arrays, which you can later manipulate or expand. This is a key difference from SPL’s row-based approach.
+
+<CodeGroup>
+```sql Splunk example
+index=sample-http-logs
+| timechart span=1m avg(req_duration_ms)
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| make-series avg(req_duration_ms) default=0 on _time from ago(1h) to now() step 1m
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you typically use `GROUP BY` with a generated series or calendar table to create row-based time buckets. In APL, `make-series` creates arrays of values and timestamps in a single row. This lets you perform array-based computations on the time series before optionally expanding back into rows.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  time_bucket('1 minute', _time) AS minute,
+  AVG(req_duration_ms) AS avg_duration
+FROM sample_http_logs
+WHERE _time > NOW() - interval '1 hour'
+GROUP BY minute
+ORDER BY minute
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| make-series avg(req_duration_ms) default=0 on _time from ago(1h) to now() step 1m
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

@@ -7,50 +7,6 @@ The `genai_message_roles` function extracts an array of all message roles from a
 
 You can use this function to analyze conversation patterns, validate conversation structure, detect role sequences, or understand conversation flow and complexity.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would extract the role field from all messages in an array.
-
-<CodeGroup>
-```sql Splunk example
-| eval roles=mvindex(role, 0, mvcount(role))
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend roles = genai_message_roles(messages)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would unnest the array and collect roles into an array.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  conversation_id,
-  ARRAY_AGG(role ORDER BY msg_index) as roles
-FROM conversations
-CROSS JOIN UNNEST(messages) WITH OFFSET AS msg_index
-GROUP BY conversation_id
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend roles = genai_message_roles(messages)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -103,3 +59,44 @@ This query identifies the most common conversation patterns, helping you underst
 - [array_length](/apl/scalar-functions/array-functions/array-length): Returns the number of messages. Apply this to the roles array to count messages.
 - [array_index_of](/apl/scalar-functions/array-functions/array-index-of): Finds the position of a role. Use this to detect if specific roles exist in the conversation.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would extract the role field from all messages in an array.
+
+<CodeGroup>
+```sql Splunk example
+| eval roles=mvindex(role, 0, mvcount(role))
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend roles = genai_message_roles(messages)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would unnest the array and collect roles into an array.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  conversation_id,
+  ARRAY_AGG(role ORDER BY msg_index) as roles
+FROM conversations
+CROSS JOIN UNNEST(messages) WITH OFFSET AS msg_index
+GROUP BY conversation_id
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend roles = genai_message_roles(messages)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

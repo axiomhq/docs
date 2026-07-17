@@ -7,47 +7,6 @@ The `make_set` aggregation in APL (Axiom Processing Language) is used to collect
 
 You can use `make_set` when you need to collect non-repeating values across rows within a group, such as finding all the unique HTTP methods in web server logs or unique trace IDs in telemetry data.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, the `values` function is similar to `make_set` in APL. The main difference is that while `values` returns all non-null values, `make_set` specifically returns only unique values and stores them in an array.
-
-<CodeGroup>
-```sql Splunk example
-| stats values(method) by id
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize make_set(method) by id
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, the `GROUP_CONCAT` or `ARRAY_AGG(DISTINCT)` functions are commonly used to aggregate unique values in a column. `make_set` in APL works similarly by aggregating distinct values from a specific column into an array, but it offers better performance for large datasets.
-
-<CodeGroup>
-```sql SQL example
-SELECT id, ARRAY_AGG(DISTINCT method) 
-FROM sample_http_logs 
-GROUP BY id;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize make_set(method) by id
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -145,3 +104,42 @@ This query collects all unique HTTP status codes returned for each country from 
 - [**count**](/apl/aggregation-function/count): Counts the number of records in each group. Use `count` when you need the total count rather than the unique values.
 - [**dcount**](/apl/aggregation-function/dcount): Returns the distinct count of values in a column. Use `dcount` when you need the number of unique values, rather than an array of them.
 - [**max**](/apl/aggregation-function/max): Finds the maximum value in a group. Use `max` when you are interested in the largest value rather than collecting values.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `values` function is similar to `make_set` in APL. The main difference is that while `values` returns all non-null values, `make_set` specifically returns only unique values and stores them in an array.
+
+<CodeGroup>
+```sql Splunk example
+| stats values(method) by id
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize make_set(method) by id
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the `GROUP_CONCAT` or `ARRAY_AGG(DISTINCT)` functions are commonly used to aggregate unique values in a column. `make_set` in APL works similarly by aggregating distinct values from a specific column into an array, but it offers better performance for large datasets.
+
+<CodeGroup>
+```sql SQL example
+SELECT id, ARRAY_AGG(DISTINCT method)
+FROM sample_http_logs
+GROUP BY id;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize make_set(method) by id
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

@@ -13,46 +13,6 @@ Use it when you want to:
 - Measure how long ago a request or trace occurred relative to the current time.
 - Compare event timestamps to detect delays or gaps in processing.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you typically calculate time differences using arithmetic on epoch timestamps, such as `eval diff=round((_time - relative_time(now(), "-1d@d")) / 3600)`. In APL, the `datetime_diff` function directly computes the difference between two datetime values in a specified unit.
-
-<CodeGroup>
-```sql Splunk example
-... | eval hours_diff=round((_time - relative_time(now(), "-1d@d")) / 3600)
-````
-
-```kusto APL equivalent
-... | extend hours_diff = datetime_diff('hour', now(), _time)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you typically use `DATEDIFF(hour, start_time, end_time)` or `TIMESTAMPDIFF(HOUR, start_time, end_time)` to compute the difference between timestamps. In APL, `datetime_diff` follows a similar pattern with the unit as the first argument.
-
-<CodeGroup>
-```sql SQL example
-SELECT DATEDIFF(hour, start_time, end_time) AS hours_diff FROM events;
-```
-
-```kusto APL equivalent
-['dataset']
-| extend hours_diff = datetime_diff('hour', end_time, start_time)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -163,3 +123,41 @@ This query groups error responses by how many days ago they occurred, making it 
 - [ago](/apl/scalar-functions/datetime-functions/ago): Subtracts a timespan from the current UTC time. Use for simple relative time filters.
 - [now](/apl/scalar-functions/datetime-functions/now): Returns the current UTC time.
 - [todatetime](/apl/scalar-functions/conversion-functions/todatetime): Converts a value to a datetime. Use to parse strings into datetime values before computing differences.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically calculate time differences using arithmetic on epoch timestamps, such as `eval diff=round((_time - relative_time(now(), "-1d@d")) / 3600)`. In APL, the `datetime_diff` function directly computes the difference between two datetime values in a specified unit.
+
+<CodeGroup>
+```sql Splunk example
+... | eval hours_diff=round((_time - relative_time(now(), "-1d@d")) / 3600)
+````
+
+```kusto APL equivalent
+... | extend hours_diff = datetime_diff('hour', now(), _time)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you typically use `DATEDIFF(hour, start_time, end_time)` or `TIMESTAMPDIFF(HOUR, start_time, end_time)` to compute the difference between timestamps. In APL, `datetime_diff` follows a similar pattern with the unit as the first argument.
+
+<CodeGroup>
+```sql SQL example
+SELECT DATEDIFF(hour, start_time, end_time) AS hours_diff FROM events;
+```
+
+```kusto APL equivalent
+['dataset']
+| extend hours_diff = datetime_diff('hour', end_time, start_time)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

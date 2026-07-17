@@ -13,46 +13,6 @@ Use it when you want to:
 - Aggregate events to weekly intervals for trend analysis.
 - Build weekly summaries across log, trace, or security datasets.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, there is no direct equivalent to `endofweek`. You typically use manual date arithmetic with `eval` and `relative_time` to calculate the end of the week. In APL, the `endofweek` function handles this directly and supports an optional week offset.
-
-<CodeGroup>
-```sql Splunk example
-... | eval week_end=relative_time(now(), "@w7+6d@d+86399")
-````
-
-```kusto APL equivalent
-... | extend week_end = endofweek(_time)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you typically combine `DATE_TRUNC` with interval arithmetic to calculate the end of the week. The exact behavior depends on how each platform defines the start of the week. In APL, `endofweek` returns the end of the week as Saturday 23:59:59.9999999.
-
-<CodeGroup>
-```sql SQL example
-SELECT DATE_TRUNC('week', timestamp_column) + INTERVAL '7 days' - INTERVAL '1 second' AS week_end FROM events;
-```
-
-```kusto APL equivalent
-['dataset']
-| extend week_end = endofweek(_time)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -163,3 +123,41 @@ This query counts server errors by week to help you identify weeks with elevated
 - [endofmonth](/apl/scalar-functions/datetime-functions/endofmonth): Returns the end of the month for a datetime.
 - [endofyear](/apl/scalar-functions/datetime-functions/endofyear): Returns the end of the year for a datetime.
 - [week_of_year](/apl/scalar-functions/datetime-functions/week-of-year): Returns the ISO 8601 week number, useful for week-based grouping.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, there is no direct equivalent to `endofweek`. You typically use manual date arithmetic with `eval` and `relative_time` to calculate the end of the week. In APL, the `endofweek` function handles this directly and supports an optional week offset.
+
+<CodeGroup>
+```sql Splunk example
+... | eval week_end=relative_time(now(), "@w7+6d@d+86399")
+````
+
+```kusto APL equivalent
+... | extend week_end = endofweek(_time)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you typically combine `DATE_TRUNC` with interval arithmetic to calculate the end of the week. The exact behavior depends on how each platform defines the start of the week. In APL, `endofweek` returns the end of the week as Saturday 23:59:59.9999999.
+
+<CodeGroup>
+```sql SQL example
+SELECT DATE_TRUNC('week', timestamp_column) + INTERVAL '7 days' - INTERVAL '1 second' AS week_end FROM events;
+```
+
+```kusto APL equivalent
+['dataset']
+| extend week_end = endofweek(_time)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

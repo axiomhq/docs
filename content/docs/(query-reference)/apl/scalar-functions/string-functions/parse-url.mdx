@@ -5,47 +5,6 @@ description: 'This page explains how to use the parse_url function in APL.'
 
 The `parse_url` function parses an absolute URL string into a dynamic object containing all URL components (scheme, host, port, path, query parameters, etc.). Use this function to extract and analyze specific parts of URLs from logs, web traffic data, or API requests.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you use `rex` or URL-specific extractions. APL's `parse_url` provides structured URL parsing in one function.
-
-<CodeGroup>
-```sql Splunk example
-| rex field=url "(?<scheme>https?)://(?<host>[^/]+)(?<path>.*)"
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend parsed = parse_url(url)
-| extend scheme = parsed.scheme, host = parsed.host, path = parsed.path
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, URL parsing requires complex string manipulation. APL's `parse_url` provides structured parsing natively.
-
-<CodeGroup>
-```sql SQL example
-SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(url, '://', -1), '/', 1) AS host FROM logs;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend parsed = parse_url(url)
-| extend host = parsed.host
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -165,3 +124,41 @@ This query parses URLs from failed access attempts and checks for path traversal
 - [url_decode](/apl/scalar-functions/string-functions/url-decode): Decodes URL-encoded strings. Use this to decode individual URL components.
 - [split](/apl/scalar-functions/string-functions/split): Splits strings by delimiters. Use this for simpler URL tokenization without full parsing.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you use `rex` or URL-specific extractions. APL's `parse_url` provides structured URL parsing in one function.
+
+<CodeGroup>
+```sql Splunk example
+| rex field=url "(?<scheme>https?)://(?<host>[^/]+)(?<path>.*)"
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend parsed = parse_url(url)
+| extend scheme = parsed.scheme, host = parsed.host, path = parsed.path
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, URL parsing requires complex string manipulation. APL's `parse_url` provides structured parsing natively.
+
+<CodeGroup>
+```sql SQL example
+SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(url, '://', -1), '/', 1) AS host FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend parsed = parse_url(url)
+| extend host = parsed.host
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

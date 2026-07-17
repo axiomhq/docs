@@ -7,55 +7,6 @@ The `phrases` aggregation extracts and counts common phrases or word sequences f
 
 You can use this aggregation to identify common user queries, discover trending topics, extract key phrases from logs, or analyze conversation patterns in AI applications.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, there’s no built-in phrases function, but you might use the `rare` or `top` commands on tokenized text.
-
-<CodeGroup>
-```sql Splunk example
-| rex field=message "(?<words>\w+)"
-| top words
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize phrases(uri, 10)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would need complex string manipulation and grouping to extract common phrases.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  phrase,
-  COUNT(*) as frequency
-FROM (
-  SELECT UNNEST(SPLIT(message, ' ')) as phrase
-  FROM logs
-)
-GROUP BY phrase
-ORDER BY frequency DESC
-LIMIT 10
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize phrases(uri, 10)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -106,3 +57,49 @@ This query identifies the most common phrases in GenAI conversations, helping yo
 - [count](/apl/aggregation-function/count): Counts occurrences. Combine with group by for manual phrase counting if you need more control.
 - [dcount](/apl/aggregation-function/dcount): Counts distinct values. Use this to understand the variety of phrases before extracting top ones.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, there’s no built-in phrases function, but you might use the `rare` or `top` commands on tokenized text.
+
+<CodeGroup>
+```sql Splunk example
+| rex field=message "(?<words>\w+)"
+| top words
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize phrases(uri, 10)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would need complex string manipulation and grouping to extract common phrases.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  phrase,
+  COUNT(*) as frequency
+FROM (
+  SELECT UNNEST(SPLIT(message, ' ')) as phrase
+  FROM logs
+)
+GROUP BY phrase
+ORDER BY frequency DESC
+LIMIT 10
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize phrases(uri, 10)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

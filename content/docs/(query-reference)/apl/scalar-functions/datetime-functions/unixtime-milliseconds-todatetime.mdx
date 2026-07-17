@@ -7,48 +7,6 @@ description: 'This page explains how to use the unixtime_milliseconds_todatetime
 
 Use the function whenever you ingest data that stores time as epoch milliseconds (for example, JSON logs from NGINX or metrics that follow the StatsD line protocol). Converting to `datetime` lets you bin, filter, and visualize events with the rest of your time-series data.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-`unixtime_milliseconds_todatetime()` corresponds to an `eval` expression that divides the epoch value by 1000 and formats the result. You skip both steps in APL because the function takes milliseconds directly.
-
-<CodeGroup>
-
-```sql Splunk example
-| eval timestamp=strftime(epoch_ms/1000,"%Y-%m-%dT%H:%M:%SZ")
-````
-
-```kusto APL equivalent
-| extend timestamp=unixtime_milliseconds_todatetime(epoch_ms)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-The function plays the same role as `FROM_UNIXTIME()` or `TO_TIMESTAMP()` in SQL dialects. In APL, you don’t divide by 1,000 because the function expects milliseconds.
-
-<CodeGroup>
-
-```sql SQL example
-SELECT FROM_UNIXTIME(epoch_ms/1000) AS timestamp FROM requests;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend timestamp=unixtime_milliseconds_todatetime(epoch_ms)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -95,3 +53,43 @@ This query converts the timestamp to epoch milliseconds and then back to datetim
 - [unixtime_microseconds_todatetime](/apl/scalar-functions/datetime-functions/unixtime-microseconds-todatetime): Converts a Unix timestamp expressed in whole microseconds to an APL `datetime` value.
 - [unixtime_nanoseconds_todatetime](/apl/scalar-functions/datetime-functions/unixtime-nanoseconds-todatetime): Converts a Unix timestamp expressed in whole nanoseconds to an APL `datetime` value.
 - [unixtime_seconds_todatetime](/apl/scalar-functions/datetime-functions/unixtime-seconds-todatetime): Converts a Unix timestamp expressed in whole seconds to an APL `datetime` value.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+`unixtime_milliseconds_todatetime()` corresponds to an `eval` expression that divides the epoch value by 1000 and formats the result. You skip both steps in APL because the function takes milliseconds directly.
+
+<CodeGroup>
+
+```sql Splunk example
+| eval timestamp=strftime(epoch_ms/1000,"%Y-%m-%dT%H:%M:%SZ")
+````
+
+```kusto APL equivalent
+| extend timestamp=unixtime_milliseconds_todatetime(epoch_ms)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+The function plays the same role as `FROM_UNIXTIME()` or `TO_TIMESTAMP()` in SQL dialects. In APL, you don’t divide by 1,000 because the function expects milliseconds.
+
+<CodeGroup>
+
+```sql SQL example
+SELECT FROM_UNIXTIME(epoch_ms/1000) AS timestamp FROM requests;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend timestamp=unixtime_milliseconds_todatetime(epoch_ms)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

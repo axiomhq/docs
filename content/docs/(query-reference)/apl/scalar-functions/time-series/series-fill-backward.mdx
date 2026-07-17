@@ -7,54 +7,6 @@ The `series_fill_backward` function fills missing values (nulls) in a numeric dy
 
 You can use `series_fill_backward` when you have time series data with missing values and want to fill gaps using the last observed value. This is particularly useful for forward-looking analysis, forecasting scenarios, or when the most recent data point is the best estimate for missing earlier values. Typical applications include financial data analysis, sensor data processing, and performance monitoring where recent values are more relevant.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, filling missing values typically requires complex `eval` expressions with `fillnull` or custom logic using `streamstats` and `filldown`. The backward filling approach is less common and usually requires manual implementation. In APL, `series_fill_backward` provides a direct, efficient way to perform backward filling on dynamic arrays.
-
-<CodeGroup>
-```sql Splunk example
-... | fillnull value=0 | streamstats window=5 current=f last(field) as filled_field
-````
-
-```kusto APL equivalent
-datatable(values: dynamic)
-[
-  dynamic([null, null, 100, null, 200])
-]
-| extend filled_values = series_fill_backward(values)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In SQL, filling missing values backward requires complex window functions with `LAG()` or custom logic using `LAST_VALUE()` with specific window specifications. Most SQL implementations focus on forward filling rather than backward filling. In APL, `series_fill_backward` simplifies this operation by directly handling backward propagation of values in arrays.
-
-<CodeGroup>
-```sql SQL example
-SELECT LAST_VALUE(value) OVER (ORDER BY timestamp ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS filled_value
-FROM measurements;
-```
-
-```kusto APL equivalent
-datatable(values: dynamic)
-[
-  dynamic([null, null, 100, null, 200])
-]
-| extend filled_values = series_fill_backward(values)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -157,3 +109,49 @@ This query fills missing request durations with the most recent available values
 - [series_fill_linear](/apl/scalar-functions/time-series/series-fill-linear): Fills missing values using linear interpolation. Use when you want smooth transitions between known values.
 - [series_equals](/apl/scalar-functions/time-series/series-equals): Compares each element to a specified value. Use for identifying specific values after filling operations.
 - [series_greater](/apl/scalar-functions/time-series/series-greater): Returns elements greater than a specified value. Use for threshold analysis after filling missing data.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, filling missing values typically requires complex `eval` expressions with `fillnull` or custom logic using `streamstats` and `filldown`. The backward filling approach is less common and usually requires manual implementation. In APL, `series_fill_backward` provides a direct, efficient way to perform backward filling on dynamic arrays.
+
+<CodeGroup>
+```sql Splunk example
+... | fillnull value=0 | streamstats window=5 current=f last(field) as filled_field
+````
+
+```kusto APL equivalent
+datatable(values: dynamic)
+[
+  dynamic([null, null, 100, null, 200])
+]
+| extend filled_values = series_fill_backward(values)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, filling missing values backward requires complex window functions with `LAG()` or custom logic using `LAST_VALUE()` with specific window specifications. Most SQL implementations focus on forward filling rather than backward filling. In APL, `series_fill_backward` simplifies this operation by directly handling backward propagation of values in arrays.
+
+<CodeGroup>
+```sql SQL example
+SELECT LAST_VALUE(value) OVER (ORDER BY timestamp ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS filled_value
+FROM measurements;
+```
+
+```kusto APL equivalent
+datatable(values: dynamic)
+[
+  dynamic([null, null, 100, null, 200])
+]
+| extend filled_values = series_fill_backward(values)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

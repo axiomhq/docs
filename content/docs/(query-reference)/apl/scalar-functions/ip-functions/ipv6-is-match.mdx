@@ -7,51 +7,6 @@ Use the `ipv6_is_match` function to determine whether an IPv6 address belongs to
 
 You can use `ipv6_is_match` in scenarios such as identifying traffic from a known address range, enforcing access control policies, or correlating logs to specific networks. It supports CIDR notation for subnet specification and returns a boolean value for each row in your dataset.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk SPL doesn’t have a dedicated function for matching IPv6 addresses against CIDR blocks. You typically use regular expressions or custom lookups to perform similar checks. In contrast, APL provides a built-in function that directly evaluates IPv6 CIDR membership.
-
-<CodeGroup>
-```sql Splunk example
-| eval is_in_subnet=if(match(ipv6_field, "^2001:db8::/32"), "true", "false")
-````
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend is_in_subnet = ipv6_is_match('2001:db8:abcd:0012::0', '2001:db8::/32')
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL doesn’t have a standard function to check if an IPv6 address belongs to a subnet. You often implement this logic with string manipulation or rely on database-specific functions. APL simplifies this with `ipv6_is_match`, which accepts a full IPv6 address and a subnet in CIDR notation.
-
-<CodeGroup>
-```sql SQL example
-SELECT CASE 
-  WHEN ip_address LIKE '2001:db8:%' THEN TRUE 
-  ELSE FALSE 
-END AS is_in_subnet
-FROM logs
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend is_in_subnet = ipv6_is_match('2001:db8:abcd:0012::0', '2001:db8::/32')
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -99,3 +54,46 @@ Identify requests that originate from a known IPv6 subnet.
 
 - [ipv4_is_match](/apl/scalar-functions/ip-functions/ipv4-is-match): Checks whether an IPv4 address belongs to a specified IPv4 subnet. Use it when working with IPv4 addresses.
 - [parse_ipv4](/apl/scalar-functions/ip-functions/parse-ipv4): Parses a string into an IPv4 address. Use it when working with raw IPv4 strings.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn’t have a dedicated function for matching IPv6 addresses against CIDR blocks. You typically use regular expressions or custom lookups to perform similar checks. In contrast, APL provides a built-in function that directly evaluates IPv6 CIDR membership.
+
+<CodeGroup>
+```sql Splunk example
+| eval is_in_subnet=if(match(ipv6_field, "^2001:db8::/32"), "true", "false")
+````
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_in_subnet = ipv6_is_match('2001:db8:abcd:0012::0', '2001:db8::/32')
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t have a standard function to check if an IPv6 address belongs to a subnet. You often implement this logic with string manipulation or rely on database-specific functions. APL simplifies this with `ipv6_is_match`, which accepts a full IPv6 address and a subnet in CIDR notation.
+
+<CodeGroup>
+```sql SQL example
+SELECT CASE
+  WHEN ip_address LIKE '2001:db8:%' THEN TRUE
+  ELSE FALSE
+END AS is_in_subnet
+FROM logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend is_in_subnet = ipv6_is_match('2001:db8:abcd:0012::0', '2001:db8::/32')
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

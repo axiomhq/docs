@@ -11,52 +11,6 @@ The `histogram` aggregation is ideal for identifying peaks, valleys, and outlier
 The `histogram` aggregation in APL is a statistical aggregation that returns estimated results. The estimation comes with the benefit of speed at the expense of accuracy. This means that `histogram` is fast and light on resources even on a large or high-cardinality dataset, but it doesn’t provide precise results.
 </Note>
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, a similar operation to APL's `histogram` is the `timechart` or `histogram` command, which groups events into time buckets. However, in APL, the `histogram` function focuses on numeric values, allowing you to control the number of bins precisely.
-
-<CodeGroup>
-
-```splunk Splunk example
-| stats count by duration | timechart span=10 count
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize count() by histogram(req_duration_ms, 10)
-```
-
-</CodeGroup>
-
-</Accordion>
-
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you can use the `GROUP BY` clause combined with range calculations to achieve a similar result to APL’s `histogram`. However, APL’s `histogram` function simplifies the process by automatically calculating bin intervals.
-
-<CodeGroup>
-
-```sql SQL example
-SELECT COUNT(*), FLOOR(req_duration_ms/10)*10 as duration_bin
-FROM sample_http_logs
-GROUP BY duration_bin
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize count() by histogram(req_duration_ms, 10)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -158,3 +112,47 @@ This query analyzes the request durations for HTTP 200 (Success) responses, help
 - [**avg**](/apl/aggregation-function/avg): Use `avg` for calculating the average value of a numeric field, useful when you are more interested in the central tendency rather than distribution.
 - [**sum**](/apl/aggregation-function/sum): The `sum` function adds up the total values in a numeric field, helpful for determining overall totals.
 - [**count**](/apl/aggregation-function/count): Use `count` when you need a simple tally of rows or events, often in conjunction with `histogram` for more basic summarization.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, a similar operation to APL's `histogram` is the `timechart` or `histogram` command, which groups events into time buckets. However, in APL, the `histogram` function focuses on numeric values, allowing you to control the number of bins precisely.
+
+<CodeGroup>
+
+```splunk Splunk example
+| stats count by duration | timechart span=10 count
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize count() by histogram(req_duration_ms, 10)
+```
+
+</CodeGroup>
+
+</Accordion>
+
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you can use the `GROUP BY` clause combined with range calculations to achieve a similar result to APL’s `histogram`. However, APL’s `histogram` function simplifies the process by automatically calculating bin intervals.
+
+<CodeGroup>
+
+```sql SQL example
+SELECT COUNT(*), FLOOR(req_duration_ms/10)*10 as duration_bin
+FROM sample_http_logs
+GROUP BY duration_bin
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize count() by histogram(req_duration_ms, 10)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

@@ -5,46 +5,6 @@ description: 'This page explains how to use the extract_all function in APL.'
 
 The `extract_all` function retrieves all substrings that match a regular expression from a source string. Use this function when you need to capture multiple matches of a pattern, such as extracting all email addresses, URLs, or repeated patterns from log entries.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you use `rex` with `max_match=0` to extract all matches. APL's `extract_all` provides a more direct approach.
-
-<CodeGroup>
-```sql Splunk example
-| rex field=message max_match=0 "error_(?<code>\d+)"
-| mvexpand code
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend codes = extract_all('error_(\\d+)', dynamic([1]), uri)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, extracting all regex matches typically requires recursive queries or database-specific functions. APL's `extract_all` simplifies this operation.
-
-<CodeGroup>
-```sql SQL example
-SELECT REGEXP_EXTRACT_ALL(field, 'pattern') AS matches FROM logs;
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend matches = extract_all('pattern', dynamic([1]), field)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -159,3 +119,41 @@ This query extracts all SQL and XSS-related keywords from URIs, helping identify
 - [split](/apl/scalar-functions/string-functions/split): Splits strings by a delimiter into an array. Use this for simpler tokenization without regex complexity.
 - [parse_json](/apl/scalar-functions/string-functions/parse-json): Parses JSON strings into dynamic objects. Use this when working with structured JSON data rather than regex patterns.
 - [countof_regex](/apl/scalar-functions/string-functions/countof-regex): Counts regex pattern occurrences. Use this when you only need the count of matches, not the actual matched text.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you use `rex` with `max_match=0` to extract all matches. APL's `extract_all` provides a more direct approach.
+
+<CodeGroup>
+```sql Splunk example
+| rex field=message max_match=0 "error_(?<code>\d+)"
+| mvexpand code
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend codes = extract_all('error_(\\d+)', dynamic([1]), uri)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, extracting all regex matches typically requires recursive queries or database-specific functions. APL's `extract_all` simplifies this operation.
+
+<CodeGroup>
+```sql SQL example
+SELECT REGEXP_EXTRACT_ALL(field, 'pattern') AS matches FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend matches = extract_all('pattern', dynamic([1]), field)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

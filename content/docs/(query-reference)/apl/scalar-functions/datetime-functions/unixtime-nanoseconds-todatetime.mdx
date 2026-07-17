@@ -7,49 +7,6 @@ description: 'This page explains how to use the unixtime_nanoseconds_todatetime 
 
 Use the function whenever you ingest data that stores time as epoch nanoseconds (for example, JSON logs from NGINX or metrics that follow the StatsD line protocol). Converting to `datetime` lets you bin, filter, and visualize events with the rest of your time-series data.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-    Splunk SPL usually stores `_time` in seconds and uses functions such as `strftime` or `strptime` for conversion. In APL, you pass the nanosecond integer directly to `unixtime_nanoseconds_todatetime`, so you don’t divide by 1,000,000,000 first.
-
-<CodeGroup>
-
-```sql Splunk example
-| eval event_time = strftime(epoch_ns/1000000000, "%Y-%m-%dT%H:%M:%S.%N%z")
-````
-
-```kusto APL equivalent
-| extend event_time = unixtime_nanoseconds_todatetime(epoch_ns)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-Many SQL engines use `TO_TIMESTAMP_LTZ()` or similar functions that expect seconds or microseconds. In APL, you pass the nanosecond value directly, and the function returns a `datetime` (UTC).
-
-<CodeGroup>
-
-```sql SQL example
-SELECT TO_TIMESTAMP_LTZ(epoch_ns/1e9) AS event_time
-FROM   events;
-```
-
-```kusto APL equivalent
-events
-| extend event_time = unixtime_nanoseconds_todatetime(epoch_ns)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -96,3 +53,44 @@ This query converts the timestamp to epoch nanoseconds and then back to datetime
 - [unixtime_microseconds_todatetime](/apl/scalar-functions/datetime-functions/unixtime-microseconds-todatetime): Converts a Unix timestamp expressed in whole microseconds to an APL `datetime` value.
 - [unixtime_milliseconds_todatetime](/apl/scalar-functions/datetime-functions/unixtime-milliseconds-todatetime): Converts a Unix timestamp expressed in whole milliseconds to an APL `datetime` value.
 - [unixtime_seconds_todatetime](/apl/scalar-functions/datetime-functions/unixtime-seconds-todatetime): Converts a Unix timestamp expressed in whole seconds to an APL `datetime` value.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+    Splunk SPL usually stores `_time` in seconds and uses functions such as `strftime` or `strptime` for conversion. In APL, you pass the nanosecond integer directly to `unixtime_nanoseconds_todatetime`, so you don’t divide by 1,000,000,000 first.
+
+<CodeGroup>
+
+```sql Splunk example
+| eval event_time = strftime(epoch_ns/1000000000, "%Y-%m-%dT%H:%M:%S.%N%z")
+````
+
+```kusto APL equivalent
+| extend event_time = unixtime_nanoseconds_todatetime(epoch_ns)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+Many SQL engines use `TO_TIMESTAMP_LTZ()` or similar functions that expect seconds or microseconds. In APL, you pass the nanosecond value directly, and the function returns a `datetime` (UTC).
+
+<CodeGroup>
+
+```sql SQL example
+SELECT TO_TIMESTAMP_LTZ(epoch_ns/1e9) AS event_time
+FROM   events;
+```
+
+```kusto APL equivalent
+events
+| extend event_time = unixtime_nanoseconds_todatetime(epoch_ns)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

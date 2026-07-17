@@ -7,54 +7,6 @@ The `genai_extract_assistant_response` function extracts the assistant’s respo
 
 You can use this function to analyze AI responses, evaluate response quality, perform sentiment analysis on AI outputs, or track specific response patterns for monitoring and debugging.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would need to use complex eval statements with mvfilter and mvindex to extract assistant messages.
-
-<CodeGroup>
-```sql Splunk example
-| eval assistant_msgs=mvfilter(match(role, "assistant"))
-| eval response=mvindex(assistant_msgs, -1)
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend response = genai_extract_assistant_response(messages)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would need to unnest arrays, filter by role, and select the last message, which is more verbose.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  conversation_id,
-  content as assistant_response
-FROM (
-  SELECT *, ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY msg_index DESC) as rn
-  FROM conversations
-  CROSS JOIN UNNEST(messages) WITH OFFSET AS msg_index
-  WHERE role = 'assistant'
-) WHERE rn = 1
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend assistant_response = genai_extract_assistant_response(messages)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -106,3 +58,48 @@ This query extracts AI responses, helping you analyze response quality and patte
 - [genai_concat_contents](/apl/scalar-functions/genai-functions/genai-concat-contents): Concatenates all message contents. Use this when you need the full conversation instead of just the assistant's response.
 - [genai_has_tool_calls](/apl/scalar-functions/genai-functions/genai-has-tool-calls): Checks for tool calls in messages. Use this to detect when the assistant made function calls.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would need to use complex eval statements with mvfilter and mvindex to extract assistant messages.
+
+<CodeGroup>
+```sql Splunk example
+| eval assistant_msgs=mvfilter(match(role, "assistant"))
+| eval response=mvindex(assistant_msgs, -1)
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend response = genai_extract_assistant_response(messages)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would need to unnest arrays, filter by role, and select the last message, which is more verbose.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  conversation_id,
+  content as assistant_response
+FROM (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY msg_index DESC) as rn
+  FROM conversations
+  CROSS JOIN UNNEST(messages) WITH OFFSET AS msg_index
+  WHERE role = 'assistant'
+) WHERE rn = 1
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend assistant_response = genai_extract_assistant_response(messages)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

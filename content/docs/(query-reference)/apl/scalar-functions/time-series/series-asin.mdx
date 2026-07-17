@@ -7,54 +7,6 @@ The `series_asin` function computes the arc sine (inverse sine) of each numeric 
 
 You use `series_asin` when you need to invert sine transformations stored in array form, for example, to reconstruct angular information from periodic signals or normalize log and trace metrics for statistical or geometric analysis.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk SPL doesn’t provide a direct equivalent of `series_asin` that operates over arrays. Instead, SPL typically requires you to apply `asin()` to individual fields or use `mvmap` to apply the function to multivalue fields. In APL, `series_asin` simplifies this by applying the operation to each element of a dynamic array in one step.
-
-<CodeGroup>
-```sql Splunk example
-... | eval angle=mvmap(values, asin(x))
-````
-
-```kusto APL equivalent
-datatable(values: dynamic)
-[
-    dynamic([0.0, 0.5, 1.0])
-]
-| extend angle = series_asin(values)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL databases generally provide `ASIN()` for scalar values but do not include native array-processing functions. You would need to unnest an array into rows, apply `ASIN()`, and then aggregate the results back into an array. APL’s `series_asin` eliminates this boilerplate by letting you compute the arc sine across the entire array at once.
-
-<CodeGroup>
-```sql SQL example
-SELECT array_agg(ASIN(x))
-FROM UNNEST(ARRAY[0.0, 0.5, 1.0]) AS t(x);
-```
-
-```kusto APL equivalent
-datatable(values: dynamic)
-[
-    dynamic([0.0, 0.5, 1.0])
-]
-| extend angle = series_asin(values)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -155,3 +107,49 @@ The query groups requests by country and converts normalized durations into angu
 
 - [series_acos](/apl/scalar-functions/time-series/series-acos): Returns the arc cosine of each element in an array. Use when you need to invert cosine transformations instead of sine.
 - [series_atan](/apl/scalar-functions/time-series/series-atan): Returns the arc tangent of each element in an array. Useful for handling tangent-derived data.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn’t provide a direct equivalent of `series_asin` that operates over arrays. Instead, SPL typically requires you to apply `asin()` to individual fields or use `mvmap` to apply the function to multivalue fields. In APL, `series_asin` simplifies this by applying the operation to each element of a dynamic array in one step.
+
+<CodeGroup>
+```sql Splunk example
+... | eval angle=mvmap(values, asin(x))
+````
+
+```kusto APL equivalent
+datatable(values: dynamic)
+[
+    dynamic([0.0, 0.5, 1.0])
+]
+| extend angle = series_asin(values)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL databases generally provide `ASIN()` for scalar values but do not include native array-processing functions. You would need to unnest an array into rows, apply `ASIN()`, and then aggregate the results back into an array. APL’s `series_asin` eliminates this boilerplate by letting you compute the arc sine across the entire array at once.
+
+<CodeGroup>
+```sql SQL example
+SELECT array_agg(ASIN(x))
+FROM UNNEST(ARRAY[0.0, 0.5, 1.0]) AS t(x);
+```
+
+```kusto APL equivalent
+datatable(values: dynamic)
+[
+    dynamic([0.0, 0.5, 1.0])
+]
+| extend angle = series_asin(values)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

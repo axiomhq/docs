@@ -7,46 +7,6 @@ Use the `todynamic` function to parse a string as a dynamic value, such as a JSO
 
 You often find `todynamic` helpful when working with logs, telemetry, or security events that encode rich metadata or nested attributes in stringified JSON. By converting these strings into dynamic values, you can query, filter, and transform the nested fields using APL’s built-in support for dynamic types.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk automatically interprets structured JSON data and allows you to use dot notation directly on fields, without explicit conversion. In APL, you need to explicitly cast a JSON string into a dynamic value using `todynamic`.
-
-<CodeGroup>
-```sql Splunk example
-... | eval json_field = json_extract(raw_field, "$.key")
-````
-
-```kusto APL equivalent
-... | extend json_field = todynamic(raw_field).key
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In standard SQL, you typically use `JSON_VALUE`, `JSON_QUERY`, or `CAST(... AS JSON)` to access structured content in string format. In APL, use `todynamic` to convert a string to a dynamic value that supports dot notation and further manipulation.
-
-<CodeGroup>
-```sql SQL example
-SELECT JSON_VALUE(raw_column, '$.key') AS value FROM logs;
-```
-
-```kusto APL equivalent
-['sample-http-logs'] 
-| extend value = todynamic(raw_column).key
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -94,3 +54,41 @@ You want to find events that match certain criteria such as URI and status code.
 - [pack_array](/apl/scalar-functions/array-functions/pack-array): Use this to combine scalar values into an array. Use `pack_array` when you don’t need named keys and want positional data instead.
 - [bag_keys](/apl/scalar-functions/array-functions/bag-keys): Returns the list of keys in a dynamic dictionary. Use this to inspect or filter contents created by `pack_dictionary`.
 - [bag_pack](/apl/scalar-functions/array-functions/bag-pack): Expands a dictionary into multiple columns. Use it to revert the packing performed by `pack_dictionary`.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk automatically interprets structured JSON data and allows you to use dot notation directly on fields, without explicit conversion. In APL, you need to explicitly cast a JSON string into a dynamic value using `todynamic`.
+
+<CodeGroup>
+```sql Splunk example
+... | eval json_field = json_extract(raw_field, "$.key")
+````
+
+```kusto APL equivalent
+... | extend json_field = todynamic(raw_field).key
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In standard SQL, you typically use `JSON_VALUE`, `JSON_QUERY`, or `CAST(... AS JSON)` to access structured content in string format. In APL, use `todynamic` to convert a string to a dynamic value that supports dot notation and further manipulation.
+
+<CodeGroup>
+```sql SQL example
+SELECT JSON_VALUE(raw_column, '$.key') AS value FROM logs;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend value = todynamic(raw_column).key
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

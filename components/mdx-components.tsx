@@ -11,6 +11,7 @@ import { Tab as FumaTab, Tabs as FumaTabs } from 'fumadocs-ui/components/tabs';
 import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
 import { PlaceholderPre as InteractivePlaceholderPre } from './placeholder-code';
 import { HeadingAnchor } from './heading-anchor';
+import { LanguageComparisons } from './language-comparisons';
 
 function DocsLink({ href = '', children, className, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
   const target = href.startsWith('/') && !href.startsWith('/docs/') && !href.startsWith('/doc-assets/') && !href.startsWith('/llms') ? `/docs${href}` : href;
@@ -55,6 +56,11 @@ function Accordion({ children, title }: { children: ReactNode; title: ReactNode 
 function AccordionGroup({ children }: { children: ReactNode }) {
   const items = Children.toArray(children).filter(isValidElement) as ReactElement<{ children?: ReactNode; title?: ReactNode }>[];
   return <div className="accordion-group"><Accordions type="single">{items.map((item, index) => <FumaAccordion key={index} title={item.props.title}>{item.props.children}</FumaAccordion>)}</Accordions></div>;
+}
+
+function QueryLanguageComparisons({ children }: { children: ReactNode }) {
+  const items = Children.toArray(children).filter(isValidElement) as ReactElement<{ children?: ReactNode; title?: ReactNode }>[];
+  return <LanguageComparisons titles={items.map((item) => textOf(item.props.title))}>{items.map((item, index) => <div key={index}>{item.props.children}</div>)}</LanguageComparisons>;
 }
 
 function Tabs({ children }: { children: ReactNode }) {
@@ -112,6 +118,7 @@ export const mdxComponents: MDXComponents = {
   h6: (props) => <HeadingAnchor as="h6" {...props} />,
   Accordion,
   AccordionGroup,
+  LanguageComparisons: QueryLanguageComparisons,
   CodeGroup,
   Tabs,
   Tab,

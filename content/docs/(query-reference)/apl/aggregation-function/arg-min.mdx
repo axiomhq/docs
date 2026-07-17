@@ -11,51 +11,6 @@ This aggregation is particularly useful in scenarios like the following:
 - Identify the fastest span durations in OpenTelemetry traces with additional context (like span name, trace ID, and attributes) for the same row.
 - Highlight the lowest severity security alerts in logs along with relevant metadata (such as alert type, source, and timestamp) for the same row.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk SPL doesn’t have an equivalent to `arg_min`. You can use `stats` with a combination of `values` and `first` clauses to evaluate the minimum value of a single numberic field. APL provides a dedicated `arg_min` aggregation that evaluates expressions.
-
-<CodeGroup>
-```sql Splunk example
-| stats min(req_duration_ms) as minDuration by id
-| where req_duration_ms=minDuration
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize arg_min(req_duration_ms, id, uri)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, achieving similar functionality often requires a combination of `MIN`, `GROUP BY`, and `JOIN` to retrieve the associated fields. APL's `arg_min` eliminates the need for multiple steps by directly returning the row with the minimum value.
-
-<CodeGroup>
-```sql SQL example
-SELECT id, uri
-FROM sample_http_logs
-WHERE req_duration_ms = (
-    SELECT MIN(req_duration_ms)
-    FROM sample_http_logs
-);
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize arg_min(req_duration_ms, id, uri)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -173,3 +128,46 @@ This query identifies the URI with the lowest status code for each country.
 - [arg_max](/apl/aggregation-function/arg-max): Returns the row with the maximum value for a numeric field, useful for finding peak metrics.
 - [min](/apl/aggregation-function/min): Returns only the minimum value of a numeric field without additional fields.
 - [percentile](/apl/aggregation-function/percentile): Provides the value at a specific percentile of a numeric field.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn’t have an equivalent to `arg_min`. You can use `stats` with a combination of `values` and `first` clauses to evaluate the minimum value of a single numberic field. APL provides a dedicated `arg_min` aggregation that evaluates expressions.
+
+<CodeGroup>
+```sql Splunk example
+| stats min(req_duration_ms) as minDuration by id
+| where req_duration_ms=minDuration
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize arg_min(req_duration_ms, id, uri)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, achieving similar functionality often requires a combination of `MIN`, `GROUP BY`, and `JOIN` to retrieve the associated fields. APL's `arg_min` eliminates the need for multiple steps by directly returning the row with the minimum value.
+
+<CodeGroup>
+```sql SQL example
+SELECT id, uri
+FROM sample_http_logs
+WHERE req_duration_ms = (
+    SELECT MIN(req_duration_ms)
+    FROM sample_http_logs
+);
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize arg_min(req_duration_ms, id, uri)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

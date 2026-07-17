@@ -7,57 +7,6 @@ The `series_cosine_similarity` function calculates the cosine similarity between
 
 You can use `series_cosine_similarity` when you need to identify similar patterns in different datasets, compare user behaviors, detect anomalies by measuring deviation from normal patterns, or find correlations between different metrics. Common applications include recommendation systems, anomaly detection, pattern matching in performance metrics, and behavioral analysis.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, calculating cosine similarity requires complex mathematical operations using `eval` commands with square roots and dot products. In APL, `series_cosine_similarity` provides this calculation directly for dynamic arrays.
-
-<CodeGroup>
-```sql Splunk example
-... | eval dot_product = mvzip(array1, array2) | eval similarity = dot_product / (sqrt(sum1) * sqrt(sum2))
-```
-
-```kusto APL equivalent
-datatable(x: dynamic, y: dynamic)
-[
-  dynamic([0.5*pi(), 1.0*pi(), 1.5*pi()]),
-  dynamic([2.0*pi(), 2.5*pi(), 3.0*pi()])
-]
-| extend similarity = series_cosine_similarity(x, y)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In SQL, calculating cosine similarity requires complex operations involving dot products, magnitudes, and square roots across multiple rows. You would typically need window functions and mathematical operations. In APL, `series_cosine_similarity` handles this calculation directly on dynamic arrays.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  SUM(a.value * b.value) / 
-  (SQRT(SUM(a.value * a.value)) * SQRT(SUM(b.value * b.value))) AS similarity
-FROM array_a a, array_b b
-WHERE a.index = b.index;
-```
-
-```kusto APL equivalent
-datatable(x: dynamic, y: dynamic)
-[
-  dynamic([0.5*pi(), 1.0*pi(), 1.5*pi()]),
-  dynamic([2.0*pi(), 2.5*pi(), 3.0*pi()])
-]
-| extend similarity = series_cosine_similarity(x, y)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -157,3 +106,52 @@ This query compares request duration patterns between successful and error respo
 - [series_divide](/apl/scalar-functions/time-series/series-divide): Performs element-wise division between two arrays. Use when you need to calculate ratios or normalize values.
 - [series_dot_product](/apl/scalar-functions/time-series/series-dot-product): Calculates the dot product between two arrays. Use when you need the raw dot product value rather than normalized similarity.
 - [series_sum](/apl/scalar-functions/time-series/series-sum): Calculates the sum of all elements in a single array. Use when you need to sum elements within one array rather than computing dot products.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, calculating cosine similarity requires complex mathematical operations using `eval` commands with square roots and dot products. In APL, `series_cosine_similarity` provides this calculation directly for dynamic arrays.
+
+<CodeGroup>
+```sql Splunk example
+... | eval dot_product = mvzip(array1, array2) | eval similarity = dot_product / (sqrt(sum1) * sqrt(sum2))
+```
+
+```kusto APL equivalent
+datatable(x: dynamic, y: dynamic)
+[
+  dynamic([0.5*pi(), 1.0*pi(), 1.5*pi()]),
+  dynamic([2.0*pi(), 2.5*pi(), 3.0*pi()])
+]
+| extend similarity = series_cosine_similarity(x, y)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In SQL, calculating cosine similarity requires complex operations involving dot products, magnitudes, and square roots across multiple rows. You would typically need window functions and mathematical operations. In APL, `series_cosine_similarity` handles this calculation directly on dynamic arrays.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  SUM(a.value * b.value) /
+  (SQRT(SUM(a.value * a.value)) * SQRT(SUM(b.value * b.value))) AS similarity
+FROM array_a a, array_b b
+WHERE a.index = b.index;
+```
+
+```kusto APL equivalent
+datatable(x: dynamic, y: dynamic)
+[
+  dynamic([0.5*pi(), 1.0*pi(), 1.5*pi()]),
+  dynamic([2.0*pi(), 2.5*pi(), 3.0*pi()])
+]
+| extend similarity = series_cosine_similarity(x, y)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

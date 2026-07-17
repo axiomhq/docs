@@ -9,51 +9,6 @@ The `case` function evaluates a sequence of condition-result pairs and returns t
 
 `case` is particularly useful when you need to classify log events into categories, route spans into latency buckets, or assign risk scores to requests based on several attributes at once.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, the `case()` function inside `eval` takes alternating condition-value pairs. APL's `case` works the same way: provide pairs of `(condition, value)` followed by a fallback value.
-
-<CodeGroup>
-```sql Splunk example
-... | eval severity = case(status==200, "success", status==404, "not found", "other")
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend severity = case(status == '200', 'success', status == '404', 'not found', 'other')
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-SQL uses `CASE WHEN condition THEN value ... ELSE fallback END`. APL's `case` is functionally equivalent but uses a compact function-call syntax. The last argument serves as the `ELSE` value.
-
-<CodeGroup>
-```sql SQL example
-SELECT
-  CASE
-    WHEN status = '200' THEN 'success'
-    WHEN status = '404' THEN 'not found'
-    ELSE 'other'
-  END AS severity
-FROM sample_http_logs
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| extend severity = case(status == '200', 'success', status == '404', 'not found', 'other')
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -179,3 +134,46 @@ The query flags requests that may indicate security issues and summarizes them b
 
 - [iff](/apl/scalar-functions/conditional-function/iff): Returns one of two values based on a single Boolean predicate. Use `iff` for binary decisions and `case` when you have three or more outcomes.
 - [coalesce](/apl/scalar-functions/string-functions/coalesce): Returns the first non-null value from a list of expressions. Use `coalesce` to handle missing values rather than branching on conditions.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, the `case()` function inside `eval` takes alternating condition-value pairs. APL's `case` works the same way: provide pairs of `(condition, value)` followed by a fallback value.
+
+<CodeGroup>
+```sql Splunk example
+... | eval severity = case(status==200, "success", status==404, "not found", "other")
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend severity = case(status == '200', 'success', status == '404', 'not found', 'other')
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+SQL uses `CASE WHEN condition THEN value ... ELSE fallback END`. APL's `case` is functionally equivalent but uses a compact function-call syntax. The last argument serves as the `ELSE` value.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  CASE
+    WHEN status = '200' THEN 'success'
+    WHEN status = '404' THEN 'not found'
+    ELSE 'other'
+  END AS severity
+FROM sample_http_logs
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| extend severity = case(status == '200', 'success', status == '404', 'not found', 'other')
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

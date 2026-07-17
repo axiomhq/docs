@@ -13,53 +13,6 @@ Use `bag_keys` when you’re working with semi-structured data and want to:
 
 This function is especially helpful in log analytics, observability pipelines, and security auditing, where dynamic properties are often collected from various services or devices.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you typically interact with JSON-like fields using the `spath` command or use `keys(_raw)` to retrieve field names. In APL, `bag_keys` serves a similar purpose by returning an array of keys from a dynamic object.
-
-<CodeGroup>
-```sql Splunk example
-| eval key_list=keys(data_field)
-````
-
-```kusto APL equivalent
-datatable(data: dynamic)
-[
-    dynamic({ "ip": "127.0.0.1", "status": "200", "method": "GET" })
-]
-| extend keys = bag_keys(data)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL doesn’t have native support for dynamic objects or JSON key introspection in the same way. However, some SQL dialects (like PostgreSQL or BigQuery) provide JSON-specific functions for extracting keys. `bag_keys` is the APL equivalent for dynamically introspecting JSON objects.
-
-<CodeGroup>
-```sql SQL example
-SELECT JSON_OBJECT_KEYS(data) FROM logs;
-```
-
-```kusto APL equivalent
-datatable(data: dynamic)
-[
-    dynamic({ "ip": "127.0.0.1", "status": "200", "method": "GET" })
-]
-| extend keys = bag_keys(data)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -159,3 +112,48 @@ This helps you audit security metadata in requests and ensure key fields are pre
 
 - [bag_pack](/apl/scalar-functions/array-functions/bag-pack): Converts a list of key-value pairs to a dynamic property bag. Use when you need to build a bag.
 - [bag_has_key](/apl/scalar-functions/array-functions/bag-has-key): Checks whether a dynamic property bag contains a specific key.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically interact with JSON-like fields using the `spath` command or use `keys(_raw)` to retrieve field names. In APL, `bag_keys` serves a similar purpose by returning an array of keys from a dynamic object.
+
+<CodeGroup>
+```sql Splunk example
+| eval key_list=keys(data_field)
+````
+
+```kusto APL equivalent
+datatable(data: dynamic)
+[
+    dynamic({ "ip": "127.0.0.1", "status": "200", "method": "GET" })
+]
+| extend keys = bag_keys(data)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t have native support for dynamic objects or JSON key introspection in the same way. However, some SQL dialects (like PostgreSQL or BigQuery) provide JSON-specific functions for extracting keys. `bag_keys` is the APL equivalent for dynamically introspecting JSON objects.
+
+<CodeGroup>
+```sql SQL example
+SELECT JSON_OBJECT_KEYS(data) FROM logs;
+```
+
+```kusto APL equivalent
+datatable(data: dynamic)
+[
+    dynamic({ "ip": "127.0.0.1", "status": "200", "method": "GET" })
+]
+| extend keys = bag_keys(data)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

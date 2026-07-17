@@ -7,50 +7,6 @@ The `genai_input_cost` function calculates the cost of input tokens (prompt toke
 
 You can use this function to analyze prompt costs, optimize prompt engineering for cost efficiency, track input spending separately, or create detailed cost breakdowns.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, you would need to lookup pricing and calculate costs manually.
-
-<CodeGroup>
-```sql Splunk example
-| lookup model_pricing model OUTPUT input_price
-| eval input_cost=(input_tokens * input_price / 1000000)
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend input_cost = genai_input_cost(model, input_tokens)
-```
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-In ANSI SQL, you would join with a pricing table and calculate input costs.
-
-<CodeGroup>
-```sql SQL example
-SELECT 
-  l.*,
-  (l.input_tokens * p.input_price / 1000000) as input_cost
-FROM ai_logs l
-JOIN model_pricing p ON l.model = p.model_name
-```
-
-```kusto APL equivalent
-['ai-logs']
-| extend input_cost = genai_input_cost(model, input_tokens)
-```
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -101,3 +57,44 @@ This query calculates the total and average cost of input tokens, helping you un
 - [genai_get_pricing](/apl/scalar-functions/genai-functions/genai-get-pricing): Gets pricing information. Use this to understand the pricing structure behind cost calculations.
 - [genai_estimate_tokens](/apl/scalar-functions/genai-functions/genai-estimate-tokens): Estimates token count from text. Combine with input cost to predict prompt costs before API calls.
 
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you would need to lookup pricing and calculate costs manually.
+
+<CodeGroup>
+```sql Splunk example
+| lookup model_pricing model OUTPUT input_price
+| eval input_cost=(input_tokens * input_price / 1000000)
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend input_cost = genai_input_cost(model, input_tokens)
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you would join with a pricing table and calculate input costs.
+
+<CodeGroup>
+```sql SQL example
+SELECT
+  l.*,
+  (l.input_tokens * p.input_price / 1000000) as input_cost
+FROM ai_logs l
+JOIN model_pricing p ON l.model = p.model_name
+```
+
+```kusto APL equivalent
+['ai-logs']
+| extend input_cost = genai_input_cost(model, input_tokens)
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

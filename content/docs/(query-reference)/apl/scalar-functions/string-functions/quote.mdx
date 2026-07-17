@@ -13,55 +13,6 @@ You can use `quote` to:
 
 Use this function when you need to serialize a string value exactly as it would appear in an APL query.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk doesn’t provide a direct equivalent to `quote`. However, you can use `tostring()` or `replace()` combinations to prepare literal-safe outputs, although escaping and quoting must often be handled manually.
-
-<CodeGroup>
-```sql Splunk example
-| eval quoted_value="'" . replace(myfield,"'","\\'") . "'"
-````
-
-```kusto APL equivalent
-datatable(s:string) 
-[
-  'O\'Reilly', 
-  'simple'
-]
-| extend quoted = quote(s)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL does not have a direct `quote()` function. You typically handle quoting and escaping manually using `REPLACE()` or `CONCAT()` to build quoted strings, which can be error-prone for nested or dynamic queries.
-
-<CodeGroup>
-```sql SQL example
-SELECT CONCAT('''', REPLACE(name, '''', ''''''), '''') AS quoted_name FROM authors;
-```
-
-```kusto APL equivalent
-datatable(name:string)
-[
-  'O\'Reilly', 
-  'simple'
-]
-| extend quoted_name = quote(name)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -133,3 +84,50 @@ The query quotes service names for safe export or logging.
 
 </Tab>
 </Tabs>
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk doesn’t provide a direct equivalent to `quote`. However, you can use `tostring()` or `replace()` combinations to prepare literal-safe outputs, although escaping and quoting must often be handled manually.
+
+<CodeGroup>
+```sql Splunk example
+| eval quoted_value="'" . replace(myfield,"'","\\'") . "'"
+````
+
+```kusto APL equivalent
+datatable(s:string)
+[
+  'O\'Reilly',
+  'simple'
+]
+| extend quoted = quote(s)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL does not have a direct `quote()` function. You typically handle quoting and escaping manually using `REPLACE()` or `CONCAT()` to build quoted strings, which can be error-prone for nested or dynamic queries.
+
+<CodeGroup>
+```sql SQL example
+SELECT CONCAT('''', REPLACE(name, '''', ''''''), '''') AS quoted_name FROM authors;
+```
+
+```kusto APL equivalent
+datatable(name:string)
+[
+  'O\'Reilly',
+  'simple'
+]
+| extend quoted_name = quote(name)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

@@ -7,57 +7,6 @@ Use the `isascii` function to check whether a string contains only ASCII charact
 
 The function is useful in scenarios where you want to detect non-ASCII text in logs, validate inputs for encoding compliance, or identify potential anomalies introduced by copy-pasted foreign characters or malformed input in user-submitted data.
 
-## For users of other query languages
-
-If you come from other query languages, this section explains how to adjust your existing queries to achieve the same results in APL.
-
-<AccordionGroup>
-<Accordion title="Splunk SPL users">
-
-Splunk SPL doesn’t have a direct equivalent to `isascii`. To achieve similar functionality, you typically need to use `match()` or custom regular expressions. In contrast, APL provides `isascii` as a simple built-in function, making the check much more concise and performant.
-
-<CodeGroup>
-```sql Splunk example
-... | eval is_ascii=if(match(field, "^[\x00-\x7F]+$"), "true", "false")
-````
-
-```kusto APL equivalent
-datatable(input:string)
-[
-  'hello',
-  'こんにちは'
-]
-| extend is_ascii = isascii(input)
-```
-
-</CodeGroup>
-
-</Accordion>
-<Accordion title="ANSI SQL users">
-
-ANSI SQL doesn’t provide a built-in `isascii` function. You often need to simulate it using regular expressions or character code checks. APL simplifies this with the dedicated `isascii` function.
-
-<CodeGroup>
-```sql SQL example
-SELECT input,
-       CASE WHEN input ~ '^[\x00-\x7F]+$' THEN true ELSE false END AS is_ascii
-FROM my_table;
-```
-
-```kusto APL equivalent
-datatable(input:string)
-[
-  'hello',
-  'こんにちは'
-]
-| extend is_ascii = isascii(input)
-```
-
-</CodeGroup>
-
-</Accordion>
-</AccordionGroup>
-
 ## Usage
 
 ### Syntax
@@ -155,3 +104,52 @@ This query detects potentially malicious or malformed user IDs by filtering for 
 
 </Tab>
 </Tabs>
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+Splunk SPL doesn’t have a direct equivalent to `isascii`. To achieve similar functionality, you typically need to use `match()` or custom regular expressions. In contrast, APL provides `isascii` as a simple built-in function, making the check much more concise and performant.
+
+<CodeGroup>
+```sql Splunk example
+... | eval is_ascii=if(match(field, "^[\x00-\x7F]+$"), "true", "false")
+````
+
+```kusto APL equivalent
+datatable(input:string)
+[
+  'hello',
+  'こんにちは'
+]
+| extend is_ascii = isascii(input)
+```
+
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+ANSI SQL doesn’t provide a built-in `isascii` function. You often need to simulate it using regular expressions or character code checks. APL simplifies this with the dedicated `isascii` function.
+
+<CodeGroup>
+```sql SQL example
+SELECT input,
+       CASE WHEN input ~ '^[\x00-\x7F]+$' THEN true ELSE false END AS is_ascii
+FROM my_table;
+```
+
+```kusto APL equivalent
+datatable(input:string)
+[
+  'hello',
+  'こんにちは'
+]
+| extend is_ascii = isascii(input)
+```
+
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>
