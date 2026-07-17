@@ -63,8 +63,24 @@ function Tabs({ children }: { children: ReactNode }) {
   return <div className="docs-tabs"><FumaTabs items={items}>{tabs.map((tab, index) => cloneElement(tab, { ...tab.props, value: items[index] }))}</FumaTabs></div>;
 }
 
+function containsPlaygroundLink(node: ReactNode): boolean {
+  if (!isValidElement(node)) return false;
+  const props = node.props as { children?: ReactNode; href?: string };
+  if (props.href?.startsWith('https://play.axiom.co/')) return true;
+  return Children.toArray(props.children).some(containsPlaygroundLink);
+}
+
 function Tab({ children, value }: { children: ReactNode; title?: string; value?: string }) {
-  return <FumaTab value={value}>{children}</FumaTab>;
+  const content: ReactNode[] = [];
+  Children.toArray(children).forEach((child, index) => {
+    if (containsPlaygroundLink(child) && content.length > 0) {
+      const query = content.pop();
+      content.push(<div className="query-example" key={`query-${index}`}>{query}{child}</div>);
+      return;
+    }
+    content.push(child);
+  });
+  return <FumaTab value={value}>{content}</FumaTab>;
 }
 
 function Field({ children, path, type, required }: { children: ReactNode; path?: string; type?: string; required?: boolean }) {

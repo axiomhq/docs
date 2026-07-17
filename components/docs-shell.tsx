@@ -11,6 +11,10 @@ function containsActive(item: NavigationItem, activeHref: string): boolean {
   return item.children?.some((child) => containsActive(child, activeHref)) ?? false;
 }
 
+function isSyntaxReference(href?: string): boolean {
+  return Boolean(href && /\/(?:scalar-functions|aggregation-functions|operators)\//.test(href));
+}
+
 function NavItem({ item, activeHref, depth = 0 }: { item: NavigationItem; activeHref: string; depth?: number }) {
   if (item.children) {
     const open = containsActive(item, activeHref);
@@ -23,7 +27,7 @@ function NavItem({ item, activeHref, depth = 0 }: { item: NavigationItem; active
   }
 
   return (
-    <Link href={item.href!} className={item.href === activeHref ? 'sidebar-link active' : 'sidebar-link'} style={{ paddingLeft: 10 + depth * 10 }}>
+    <Link href={item.href!} className={['sidebar-link', item.href === activeHref && 'active', isSyntaxReference(item.href) && 'syntax-reference-link'].filter(Boolean).join(' ')} style={{ paddingLeft: 10 + depth * 10 }}>
       <span className="sidebar-link-label">{item.title}</span>
       {item.method && <span className={`method method-${item.method.toLowerCase()}`}>{item.method}</span>}
     </Link>

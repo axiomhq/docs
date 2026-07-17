@@ -31,7 +31,7 @@ export default async function DocumentationPage({ params }: PageProps) {
   return (
     <DocsShell navigation={getNavigation(section)} activeHref={href}>
       <div className="article-layout">
-        <article className="doc-article">
+        <article className={querySyntaxTitle ? 'doc-article query-syntax-article' : 'doc-article'}>
           <div className="doc-breadcrumbs"><span>{section === 'query' ? 'Query reference' : section === 'api' ? 'API reference' : section === 'changelog' ? 'Updates' : 'Documentation'}</span><b>/</b><span>{page.data.title}</span></div>
           <DocsTitle className={querySyntaxTitle ? 'query-syntax-title' : undefined}>{page.data.title}</DocsTitle>
           <DocsDescription>{page.data.description}</DocsDescription>

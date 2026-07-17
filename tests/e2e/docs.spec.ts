@@ -181,22 +181,42 @@ test('query reference navigation and MDX components follow the compact interacti
 
   const accordionGroup = page.locator('.accordion-group > div');
   await expect(accordionGroup).toHaveCSS('border-radius', '4px');
-  await expect(page.getByText('Splunk SPL users', { exact: true })).toHaveCSS('min-height', '40px');
+  await expect(page.getByText('Splunk SPL users', { exact: true })).toHaveCSS('min-height', '34px');
+  expect((await accordionGroup.boundingBox())!.height).toBeLessThan(75);
 
   const tabs = page.locator('.docs-tabs > div');
   await expect(tabs).toHaveCSS('border-radius', '4px');
   await expect(tabs.getByRole('tablist')).toHaveCSS('height', '38px');
   await expect(tabs.locator('figure.shiki').first()).toHaveCSS('border-radius', '4px');
+  const tabSurfaces = await tabs.evaluate((element) => {
+    const tablist = element.querySelector('[role="tablist"]')!;
+    const panel = element.querySelector('[role="tabpanel"]')!;
+    const activeTab = element.querySelector('[role="tab"][aria-selected="true"]')!;
+    return {
+      bar: getComputedStyle(tablist).backgroundColor,
+      panel: getComputedStyle(panel).backgroundColor,
+      accent: getComputedStyle(activeTab, '::after').backgroundColor,
+    };
+  });
+  expect(tabSurfaces.panel).not.toBe(tabSurfaces.bar);
+  expect(tabSurfaces.accent).toBe('rgb(218, 92, 43)');
 
   const playground = tabs.getByRole('link', { name: /Run in Playground/ }).first();
   await expect(playground).toHaveAttribute('target', '_blank');
   await expect(playground.locator('svg').last()).toHaveAttribute('aria-label', 'Opens in a new tab');
+  const queryFigure = tabs.locator('.query-example figure').first();
+  const playgroundBox = (await playground.boundingBox())!;
+  const queryBox = (await queryFigure.boundingBox())!;
+  expect(playgroundBox.y).toBeGreaterThanOrEqual(queryBox.y);
+  expect(playgroundBox.y + playgroundBox.height).toBeLessThan(queryBox.y + queryBox.height);
 
   const outputTable = tabs.getByRole('table').first();
   await expect(outputTable.locator('xpath=..')).toHaveCSS('border-radius', '4px');
   await expect(outputTable.getByRole('columnheader').first()).toHaveCSS('padding', '7px 10px');
 
-  await expect(page.getByRole('link', { name: 'iff', exact: true }).last()).toHaveAttribute('href', '/docs/apl/scalar-functions/conditional-function/iff');
+  const relatedFunction = page.getByRole('link', { name: 'iff', exact: true }).last();
+  await expect(relatedFunction).toHaveAttribute('href', '/docs/apl/scalar-functions/conditional-function/iff');
+  await expect(relatedFunction).toHaveCSS('font-family', /Mono/);
   await page.locator('.sidebar').getByRole('link', { name: 'iff', exact: true }).click();
   await expect(page).toHaveURL(/\/conditional-function\/iff$/);
   await expect(page.locator('.nav-nested[open] > summary span')).toHaveText(['Functions', 'Scalar functions', 'Conditional functions']);
