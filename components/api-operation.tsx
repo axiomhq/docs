@@ -13,7 +13,8 @@ function schemaType(document: JsonObject, input: JsonObject | undefined): string
   const schema = resolveSchema(document, input);
   if (!schema) return 'unknown';
   if (schema.type === 'array') return `${schemaType(document, schema.items)}[]`;
-  return schema.type ?? (schema.properties ? 'object' : 'unknown');
+  const type = schema.type ?? (schema.properties ? 'object' : 'unknown');
+  return schema.format ? `${type}<${schema.format}>` : type;
 }
 
 function PlainMarkdown({ value }: { value?: string }) {
@@ -45,6 +46,10 @@ function nestedSchema(document: JsonObject, field: JsonObject) {
 function schemaRows(document: JsonObject, input: JsonObject | undefined, required: string[] = [], depth = 0, parent = ''): SchemaRow[] {
   const schema = resolveSchema(document, input);
   if (!schema || depth > 5) return [];
+  if (schema.type === 'array') {
+    const items = resolveSchema(document, schema.items);
+    return schemaRows(document, items, items?.required ?? [], depth, parent);
+  }
   return Object.entries<JsonObject>(schema.properties ?? {}).flatMap(([name, field]) => {
     const resolved = resolveSchema(document, field);
     const children = nestedSchema(document, field);

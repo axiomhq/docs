@@ -15,4 +15,15 @@ describe('OpenAPI migration', () => {
     expect(resolveSchema(endpoint.document, schema)?.properties).toBeDefined();
     expect(schemaExample(endpoint.document, schema)).toMatchObject({ ingested: 2, failed: 0 });
   });
+
+  it('unwraps array responses and chained schema references', () => {
+    const endpoint = getApiOperation('v2 get /dashboards')!;
+    const responseSchema = endpoint.operation.responses['200'].content['application/json'].schema;
+    const resource = resolveSchema(endpoint.document, responseSchema.items)!;
+    const dashboard = resolveSchema(endpoint.document, resource.properties.dashboard)!;
+
+    expect(responseSchema.type).toBe('array');
+    expect(dashboard.properties.name.type).toBe('string');
+    expect(dashboard.required).toContain('name');
+  });
 });

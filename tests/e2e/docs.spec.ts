@@ -90,6 +90,13 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await expect(requestCode.getByRole('tabpanel', { name: 'Python code example' })).toContainText('import requests');
   await page.goto('/docs/restapi/endpoints/createToken');
   await expect(page.locator('#example').getByRole('tab', { name: 'Python' })).toHaveAttribute('aria-selected', 'true');
+
+  await page.goto('/docs/restapi/endpoints/getDashboards');
+  const listResponseSchema = page.getByRole('table', { name: 'Response schema' });
+  await expect(listResponseSchema).toBeVisible();
+  await expect(listResponseSchema.getByRole('row').filter({ hasText: /^createdAtstring<date-time>/ })).toBeVisible();
+  await expect(listResponseSchema.getByRole('row').filter({ hasText: /^dashboardobject/ })).toHaveAttribute('data-depth', '0');
+  await expect(listResponseSchema.getByRole('row').filter({ hasText: /^└name/ }).first()).toHaveAttribute('data-depth', '1');
 });
 
 test('theme defaults to the system and persists an explicit preference cookie', async ({ page, context }) => {

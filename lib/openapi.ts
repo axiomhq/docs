@@ -25,10 +25,16 @@ export type ApiOperationData = {
   operation: JsonObject;
 };
 
-export function resolveSchema(document: JsonObject, schema: JsonObject | undefined): JsonObject | undefined {
-  if (!schema?.$ref) return schema;
+export function resolveSchema(document: JsonObject, schema: JsonObject | undefined, depth = 0): JsonObject | undefined {
+  if (!schema?.$ref || depth > 12) return schema;
   const parts = String(schema.$ref).replace(/^#\//, '').split('/');
-  return parts.reduce((value: JsonObject | undefined, part: string) => value?.[part], document as JsonObject | undefined);
+  const target = parts.reduce((value: JsonObject | undefined, part: string) => value?.[part], document as JsonObject | undefined);
+  if (!target) return schema;
+  const resolved = resolveSchema(document, target, depth + 1);
+  if (!resolved) return schema;
+  const overrides = { ...schema };
+  delete overrides.$ref;
+  return { ...resolved, ...overrides };
 }
 
 export function getApiOperation(value: string): ApiOperationData | undefined {
