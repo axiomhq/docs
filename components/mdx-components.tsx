@@ -4,12 +4,12 @@ import type { MDXComponents } from 'mdx/types';
 import Link from 'next/link';
 import defaultComponents from 'fumadocs-ui/mdx';
 import { Accordion as FumaAccordion, Accordions } from 'fumadocs-ui/components/accordion';
-import { Callout } from 'fumadocs-ui/components/callout';
 import { Card, Cards } from 'fumadocs-ui/components/card';
 import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Tab as FumaTab, Tabs as FumaTabs } from 'fumadocs-ui/components/tabs';
 import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
 import { PlaceholderPre } from './placeholder-code';
+import { HeadingAnchor } from './heading-anchor';
 
 function DocsLink({ href = '', ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
   const target = href.startsWith('/') && !href.startsWith('/docs/') && !href.startsWith('/doc-assets/') && !href.startsWith('/llms') ? `/docs${href}` : href;
@@ -22,7 +22,7 @@ function DocsImage(props: ImgHTMLAttributes<HTMLImageElement>) {
 }
 
 function Notice({ children, title, type = 'info' }: { children: ReactNode; title?: ReactNode; type?: 'info' | 'warn' | 'error' | 'success' | 'idea' }) {
-  return <Callout title={title} type={type}>{children}</Callout>;
+  return <aside className={`doc-notice doc-notice-${type}`}>{title && <strong>{title}</strong>}<div>{children}</div></aside>;
 }
 
 function Frame({ children, caption }: { children: ReactNode; caption?: ReactNode }) {
@@ -72,6 +72,12 @@ export const mdxComponents: MDXComponents = {
   pre: PlaceholderPre,
   a: DocsLink,
   img: DocsImage,
+  h1: (props) => <HeadingAnchor as="h1" {...props} />,
+  h2: (props) => <HeadingAnchor as="h2" {...props} />,
+  h3: (props) => <HeadingAnchor as="h3" {...props} />,
+  h4: (props) => <HeadingAnchor as="h4" {...props} />,
+  h5: (props) => <HeadingAnchor as="h5" {...props} />,
+  h6: (props) => <HeadingAnchor as="h6" {...props} />,
   Accordion,
   AccordionGroup,
   CodeGroup,

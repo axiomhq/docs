@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('landing, guide, query, and API routes render', async ({ page }) => {
   await page.goto('/docs');
   await expect(page.getByRole('heading', { name: 'From first event to petabyte scale.' })).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', /^(dark|light)$/);
 
   await page.goto('/docs/getting-started');
   await expect(page.getByRole('heading', { name: 'Quickstart', level: 1 })).toBeVisible();
@@ -14,14 +14,26 @@ test('landing, guide, query, and API routes render', async ({ page }) => {
 
   await page.goto('/docs/restapi/endpoints/ingestIntoDataset');
   await expect(page.getByText('/v1/datasets/{dataset_name}/ingest', { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Parameters #' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Response #' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Parameters' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Response' })).toBeVisible();
 });
 
-test('theme, search, and mobile navigation are keyboard and touch accessible', async ({ page }) => {
+test('theme defaults to the system and persists an explicit preference cookie', async ({ page, context }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/docs');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect((await context.cookies()).find((cookie) => cookie.name === 'axiom-docs-theme')).toBeUndefined();
+
   await page.getByRole('button', { name: 'Toggle color theme' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect.poll(async () => (await context.cookies()).find((cookie) => cookie.name === 'axiom-docs-theme')?.value).toBe('light');
+
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+});
+
+test('search and mobile navigation are keyboard and touch accessible', async ({ page }) => {
+  await page.goto('/docs');
 
   await page.keyboard.press('ControlOrMeta+KeyK');
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -75,6 +87,62 @@ test('table of contents tracks the active heading and keeps a transparent surfac
   expect(label).not.toBeNull();
   expect(chevron).not.toBeNull();
   expect(chevron!.x).toBeGreaterThan(label!.x + label!.width);
+});
+
+test('Axiom article chrome, callouts, and heading links follow the docs interaction model', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/docs/platform-overview/architecture');
+
+  const sidebarHeading = page.locator('.sidebar-group h2').first();
+  const breadcrumbs = page.locator('.doc-breadcrumbs');
+  const sidebarBox = await sidebarHeading.boundingBox();
+  const breadcrumbBox = await breadcrumbs.boundingBox();
+  expect(sidebarBox).not.toBeNull();
+  expect(breadcrumbBox).not.toBeNull();
+  expect(Math.abs(sidebarBox!.y - breadcrumbBox!.y)).toBeLessThanOrEqual(1);
+
+  const brand = page.getByRole('link', { name: 'Axiom documentation home' });
+  await expect(brand.locator('.brand-logo:visible')).toHaveCount(1);
+  await expect(brand.locator('svg')).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Documentation sections' }).getByRole('link', { name: 'Changelog' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Open console →' })).toBeVisible();
+
+  const notice = page.locator('.doc-notice').first();
+  await expect(notice).toBeVisible();
+  await expect(notice.locator('svg')).toHaveCount(0);
+  const noticeStyles = await notice.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      background: styles.backgroundColor,
+      canvas: getComputedStyle(document.body).backgroundColor,
+      borderLeft: styles.borderLeftWidth,
+      font: styles.fontFamily,
+      bodyFont: getComputedStyle(document.body).fontFamily,
+      shadow: styles.boxShadow,
+    };
+  });
+  expect(noticeStyles.background).not.toBe(noticeStyles.canvas);
+  expect(noticeStyles.borderLeft).toBe('3px');
+  expect(noticeStyles.font).not.toBe(noticeStyles.bodyFont);
+  expect(noticeStyles.shadow).toBe('none');
+
+  const heading = page.getByRole('heading', { name: 'Ingestion architecture', level: 2 });
+  const headingLink = heading.getByRole('link', { name: 'Ingestion architecture' });
+  await heading.hover();
+  await expect(heading.locator('.anchor-hash')).toHaveCSS('opacity', '1');
+  await headingLink.click();
+  await expect(page).toHaveURL(/#ingestion-architecture$/);
+  await expect(heading).toBeInViewport();
+  expect((await heading.boundingBox())!.y).toBeGreaterThanOrEqual(56);
+  await expect(page.getByText('Link copied', { exact: true })).toBeVisible();
+
+  const tocLink = page.getByRole('complementary', { name: 'On this page' }).getByRole('link', { name: 'Ingestion architecture' });
+  const indicator = await tocLink.evaluate((element) => {
+    const styles = getComputedStyle(element, '::before');
+    return { width: styles.width, height: styles.height, radius: styles.borderRadius };
+  });
+  expect(indicator).toEqual({ width: '5px', height: '9px', radius: '0px' });
 });
 
 test('client navigation and configurable code examples hydrate without errors', async ({ page }) => {
