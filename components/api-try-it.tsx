@@ -86,7 +86,7 @@ export function ApiTryIt({
         method: 'POST',
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ operation, token, orgId, parameters: values, serverVariables: variables, body: bodyType ? body : undefined }),
+        body: JSON.stringify({ operation, token, orgId: personalToken ? orgId : '', parameters: values, serverVariables: variables, body: bodyType ? body : undefined }),
       });
       const payload = await response.json() as TryResult & { error?: string };
       if (!response.ok && payload.error) throw new Error(payload.error);
@@ -105,7 +105,7 @@ export function ApiTryIt({
         <p>Credentials stay in this browser tab and are only sent to Axiom when you run the request.</p>
         <div className="api-try-fields">
           <label><span>API token <b>Required</b></span><input data-ph-no-capture type="password" autoComplete="off" value={token} onChange={(event) => persistCredential(tokenKey, event.target.value, setToken)} placeholder="xaat-…" /></label>
-          <label><span>Organization ID {personalToken ? <b>Required for PAT</b> : <em>Optional for API token</em>}</span><input data-ph-no-capture type="text" autoComplete="off" value={orgId} onChange={(event) => persistCredential(orgKey, event.target.value, setOrgId)} placeholder="Your organization ID" /></label>
+          {personalToken && <label><span>Organization ID <b>Required for PAT</b></span><input data-ph-no-capture type="text" autoComplete="off" value={orgId} onChange={(event) => persistCredential(orgKey, event.target.value, setOrgId)} placeholder="Your organization ID" /></label>}
           {serverVariables.map((item) => <label key={item.name}><span>{item.name} {item.required && <b>Required</b>}</span><input value={variables[item.name] ?? ''} onChange={(event) => setVariables((current) => ({ ...current, [item.name]: event.target.value }))} placeholder={item.description} /></label>)}
           {visibleParameters.map((item) => <label key={`${item.location}-${item.name}`}><span>{item.name} <code>{item.location}</code>{item.required && <b>Required</b>}</span><input value={values[item.name] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [item.name]: event.target.value }))} placeholder={item.description} /></label>)}
           {bodyType && <label className="api-try-body"><span>Request body <code>{bodyType}</code></span><textarea value={body} onChange={(event) => setBody(event.target.value)} spellCheck={false} /></label>}

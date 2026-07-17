@@ -53,9 +53,10 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await tryIt.getByText('Try it', { exact: true }).click();
   await expect(tryIt.getByLabel('API token Required')).toHaveAttribute('data-ph-no-capture', 'true');
   const orgIdInput = tryIt.getByPlaceholder('Your organization ID');
-  await expect(orgIdInput).toHaveAttribute('data-ph-no-capture', 'true');
+  await expect(orgIdInput).toHaveCount(0);
   await expect(tryIt.getByRole('button', { name: 'Run GET request' })).toBeDisabled();
   await tryIt.getByLabel('API token Required').fill('xaapt-test');
+  await expect(orgIdInput).toHaveAttribute('data-ph-no-capture', 'true');
   await expect(tryIt.getByText('Personal access tokens require an organization ID.', { exact: false })).toBeVisible();
   await expect(tryIt.getByRole('button', { name: 'Run GET request' })).toBeDisabled();
   await expect(tryIt.getByLabel('Organization ID Required for PAT')).toBeVisible();
@@ -63,6 +64,7 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await expect(tryIt.getByRole('button', { name: 'Run GET request' })).toBeEnabled();
   await orgIdInput.fill('');
   await tryIt.getByLabel('API token Required').fill('test-token');
+  await expect(orgIdInput).toHaveCount(0);
   await tryIt.getByRole('button', { name: 'Run GET request' }).click();
   await expect(tryIt.getByRole('alert')).toHaveText('Enter a value for id.');
   await expect(page.locator('#response .api-code')).toHaveCount(0);

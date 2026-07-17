@@ -45,7 +45,7 @@ describe('API try proxy', () => {
     }));
     const response = await POST(request({
       operation: 'v2 get /tokens/{id}',
-      token: 'secret',
+      token: 'xapt-secret',
       orgId: 'org-id',
       parameters: { id: 'token id' },
     }));
@@ -54,8 +54,21 @@ describe('API try proxy', () => {
     const [target, init] = fetchSpy.mock.calls[0];
     expect(String(target)).toBe('https://api.axiom.co/v2/tokens/token%20id');
     expect(init?.method).toBe('GET');
-    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer secret');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer xapt-secret');
     expect(new Headers(init?.headers).get('X-Axiom-Org-Id')).toBe('org-id');
     await expect(response.json()).resolves.toMatchObject({ status: 200, contentType: 'application/json', body: '{"id":"token-id"}' });
+  });
+
+  it('never forwards an organization ID with an API token', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
+    await POST(request({
+      operation: 'v2 get /tokens/{id}',
+      token: 'xaat-secret',
+      orgId: 'stored-org-id',
+      parameters: { id: 'token-id' },
+    }));
+
+    const [, init] = fetchSpy.mock.calls[0];
+    expect(new Headers(init?.headers).has('X-Axiom-Org-Id')).toBe(false);
   });
 });

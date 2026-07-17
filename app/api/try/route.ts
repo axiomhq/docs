@@ -57,7 +57,8 @@ export async function POST(request: Request) {
   if (typeof input.operation !== 'string') return error('A documented API operation is required.');
   if (typeof input.token !== 'string' || !input.token.trim()) return error('Enter an API token before running the request.');
   if (input.token.length > 4096) return error('The API token is too long.');
-  if (isPersonalAccessToken(input.token) && (typeof input.orgId !== 'string' || !input.orgId.trim())) {
+  const personalToken = isPersonalAccessToken(input.token);
+  if (personalToken && (typeof input.orgId !== 'string' || !input.orgId.trim())) {
     return error('Enter your organization ID when using a personal access token.');
   }
   const data = getApiOperation(input.operation);
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
 
   const headers = new Headers({ Authorization: `Bearer ${input.token.trim()}`, Accept: '*/*' });
   if (contentType && body !== undefined) headers.set('Content-Type', contentType);
-  if (typeof input.orgId === 'string' && input.orgId.trim()) headers.set('X-Axiom-Org-Id', input.orgId.trim());
+  if (personalToken && typeof input.orgId === 'string' && input.orgId.trim()) headers.set('X-Axiom-Org-Id', input.orgId.trim());
 
   try {
     const upstream = await fetch(target, {
