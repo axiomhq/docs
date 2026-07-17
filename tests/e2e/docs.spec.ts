@@ -145,6 +145,24 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
   expect(indicator).toEqual({ width: '5px', height: '9px', radius: '0px' });
 });
 
+test('article copy keeps a distinct contrast hierarchy in both themes', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/docs/platform-overview/architecture');
+
+  const bodyCopy = page.locator('.doc-article .prose > p').first();
+  const heading = page.getByRole('heading', { name: 'Ingestion architecture', level: 2 });
+  const boldLabel = page.locator('.doc-article .prose strong').first();
+
+  await expect(bodyCopy).toHaveCSS('color', 'rgb(212, 212, 212)');
+  await expect(heading).toHaveCSS('color', 'rgb(250, 250, 250)');
+  await expect(boldLabel).toHaveCSS('color', 'rgb(250, 250, 250)');
+
+  await page.getByRole('button', { name: 'Toggle color theme' }).click();
+  await expect(bodyCopy).toHaveCSS('color', 'rgb(82, 82, 82)');
+  await expect(heading).toHaveCSS('color', 'rgb(10, 10, 10)');
+  await expect(boldLabel).toHaveCSS('color', 'rgb(10, 10, 10)');
+});
+
 test('client navigation and configurable code examples hydrate without errors', async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (message) => {

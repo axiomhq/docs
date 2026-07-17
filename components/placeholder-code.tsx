@@ -1,6 +1,6 @@
 'use client';
 
-import { cloneElement, isValidElement, useMemo, useSyncExternalStore } from 'react';
+import { cloneElement, isValidElement, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import { CodeBlock, Pre } from 'fumadocs-ui/components/codeblock';
 
@@ -51,11 +51,6 @@ function subscribeValues(callback: () => void) {
   return () => window.removeEventListener('axiom-placeholder-change', callback);
 }
 
-function subscribeToHydration(callback: () => void) {
-  const timeout = window.setTimeout(callback, 0);
-  return () => window.clearTimeout(timeout);
-}
-
 function parseValues(snapshot: string): Values {
   try { return JSON.parse(snapshot) as Values; } catch { return {}; }
 }
@@ -65,7 +60,12 @@ export function PlaceholderPre(props: ComponentProps<'pre'>) {
   const usedFields = useMemo(() => (Object.keys(fields) as FieldKey[]).filter((key) => source.includes(key)), [source]);
   const valuesSnapshot = useSyncExternalStore(subscribeValues, getValuesSnapshot, getServerValuesSnapshot);
   const values = useMemo(() => parseValues(valuesSnapshot), [valuesSnapshot]);
-  const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setHydrated(true), 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   function update(key: FieldKey, value: string) {
     const next = { ...values, [key]: value || undefined };
