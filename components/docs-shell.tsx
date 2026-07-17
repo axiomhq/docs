@@ -19,8 +19,8 @@ function NavItem({ item, activeHref, depth = 0 }: { item: NavigationItem; active
 
   return (
     <Link href={item.href!} className={item.href === activeHref ? 'sidebar-link active' : 'sidebar-link'} style={{ paddingLeft: 10 + depth * 10 }}>
+      <span className="sidebar-link-label">{item.title}</span>
       {item.method && <span className={`method method-${item.method.toLowerCase()}`}>{item.method}</span>}
-      <span>{item.title}</span>
     </Link>
   );
 }

@@ -55,8 +55,8 @@ function parseValues(snapshot: string): Values {
   try { return JSON.parse(snapshot) as Values; } catch { return {}; }
 }
 
-export function PlaceholderPre(props: ComponentProps<'pre'>) {
-  const source = useMemo(() => textOf(props.children), [props.children]);
+export function PlaceholderPre({ source: sourceProp, ...props }: ComponentProps<'pre'> & { source?: string }) {
+  const source = useMemo(() => sourceProp ?? textOf(props.children), [props.children, sourceProp]);
   const usedFields = useMemo(() => (Object.keys(fields) as FieldKey[]).filter((key) => source.includes(key)), [source]);
   const valuesSnapshot = useSyncExternalStore(subscribeValues, getValuesSnapshot, getServerValuesSnapshot);
   const values = useMemo(() => parseValues(valuesSnapshot), [valuesSnapshot]);

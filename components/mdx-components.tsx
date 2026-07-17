@@ -8,7 +8,7 @@ import { Card, Cards } from 'fumadocs-ui/components/card';
 import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Tab as FumaTab, Tabs as FumaTabs } from 'fumadocs-ui/components/tabs';
 import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
-import { PlaceholderPre } from './placeholder-code';
+import { PlaceholderPre as InteractivePlaceholderPre } from './placeholder-code';
 import { HeadingAnchor } from './heading-anchor';
 
 function DocsLink({ href = '', ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
@@ -19,6 +19,17 @@ function DocsLink({ href = '', ...props }: AnchorHTMLAttributes<HTMLAnchorElemen
 
 function DocsImage(props: ImgHTMLAttributes<HTMLImageElement>) {
   return <ImageZoom {...(props as ComponentProps<typeof ImageZoom>)} />;
+}
+
+function textOf(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join('');
+  if (isValidElement<{ children?: ReactNode }>(node)) return textOf(node.props.children);
+  return '';
+}
+
+function PlaceholderPre(props: ComponentProps<'pre'>) {
+  return <InteractivePlaceholderPre {...props} source={textOf(props.children)} />;
 }
 
 function Notice({ children, title, type = 'info' }: { children: ReactNode; title?: ReactNode; type?: 'info' | 'warn' | 'error' | 'success' | 'idea' }) {

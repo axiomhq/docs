@@ -18,6 +18,50 @@ test('landing, guide, query, and API routes render', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Response' })).toBeVisible();
 });
 
+test('API reference uses highlighted code, compact schemas, and persistent language tabs', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/docs/restapi/endpoints/getToken');
+
+  const requestCode = page.locator('#example .api-code');
+  await expect(requestCode.getByRole('tab', { name: 'cURL' })).toHaveAttribute('aria-selected', 'true');
+  await expect(requestCode.getByRole('tab', { name: 'JavaScript' })).toBeVisible();
+  await expect(requestCode.getByRole('tab', { name: 'Python' })).toBeVisible();
+  await expect(requestCode.getByRole('tab', { name: 'Go' })).toBeVisible();
+  await expect(requestCode.locator('pre.shiki')).toBeVisible();
+
+  const tokenColors = await requestCode.locator('pre.shiki span').evaluateAll((elements) => (
+    [...new Set(elements.map((element) => getComputedStyle(element).color))]
+  ));
+  expect(tokenColors.length).toBeGreaterThan(1);
+  await expect(requestCode.locator('pre code')).toHaveCSS('border-top-width', '0px');
+
+  const parametersHeading = page.getByRole('heading', { name: 'Parameters', level: 2 });
+  await expect(parametersHeading).toHaveCSS('border-bottom-width', '0px');
+  await expect(page.getByRole('table', { name: 'Request parameters' })).toBeVisible();
+
+  const responseSchema = page.getByRole('table', { name: 'Response schema' });
+  const expiresRow = responseSchema.getByRole('row').filter({ hasText: 'expiresAt' });
+  expect((await expiresRow.boundingBox())!.height).toBeLessThanOrEqual(40);
+
+  const objectRow = responseSchema.getByRole('row').filter({ hasText: /^orgCapabilities/ });
+  const childRow = responseSchema.getByRole('row').filter({ hasText: /^└annotations/ });
+  await expect(objectRow).toHaveAttribute('data-depth', '0');
+  await expect(childRow).toHaveAttribute('data-depth', '1');
+  const objectPadding = await objectRow.locator('.api-schema-name').evaluate((element) => parseFloat(getComputedStyle(element).paddingLeft));
+  const childPadding = await childRow.locator('.api-schema-name').evaluate((element) => parseFloat(getComputedStyle(element).paddingLeft));
+  expect(childPadding).toBeGreaterThan(objectPadding);
+
+  const activeSidebarLink = page.locator('.sidebar-link.active');
+  const sidebarLabel = await activeSidebarLink.locator('.sidebar-link-label').boundingBox();
+  const sidebarMethod = await activeSidebarLink.locator('.method').boundingBox();
+  expect(sidebarMethod!.x).toBeGreaterThan(sidebarLabel!.x + sidebarLabel!.width);
+
+  await requestCode.getByRole('tab', { name: 'Python' }).click();
+  await expect(requestCode.getByRole('tabpanel', { name: 'Python code example' })).toContainText('import requests');
+  await page.goto('/docs/restapi/endpoints/createToken');
+  await expect(page.locator('#example').getByRole('tab', { name: 'Python' })).toHaveAttribute('aria-selected', 'true');
+});
+
 test('theme defaults to the system and persists an explicit preference cookie', async ({ page, context }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/docs');
@@ -35,8 +79,10 @@ test('theme defaults to the system and persists an explicit preference cookie', 
 test('search and mobile navigation are keyboard and touch accessible', async ({ page }) => {
   await page.goto('/docs');
 
-  await page.keyboard.press('ControlOrMeta+KeyK');
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect.poll(async () => {
+    await page.keyboard.press('ControlOrMeta+KeyK');
+    return page.getByRole('dialog').isVisible();
+  }, { timeout: 15_000 }).toBe(true);
   await page.keyboard.press('Escape');
 
   await page.setViewportSize({ width: 390, height: 844 });
