@@ -9,6 +9,7 @@ export type NavigationItem = {
 };
 
 export type NavigationGroup = { title: string; items: NavigationItem[] };
+export type AdjacentNavigationItem = { title: string; href: string };
 
 type LegacyNested = { group: string; pages: LegacyPage[] };
 type LegacyPage = string | LegacyNested;
@@ -66,6 +67,26 @@ export function getNavigation(section: 'documentation' | 'query' | 'api' | 'chan
     title: section === 'api' ? (apiGroupNames[group.group] ?? group.group) : group.group,
     items: (group.pages as LegacyPage[]).map(nestedItem),
   }));
+}
+
+function flattenNavigation(items: NavigationItem[]): NavigationItem[] {
+  return items.flatMap((item) => item.href ? [item] : flattenNavigation(item.children ?? []));
+}
+
+export function getAdjacentNavigation(navigation: NavigationGroup[], activeHref: string) {
+  const pages = navigation.flatMap((group) => flattenNavigation(group.items));
+  const index = pages.findIndex((item) => item.href === activeHref);
+
+  function adjacentItem(item?: NavigationItem): AdjacentNavigationItem | undefined {
+    if (!item?.href) return undefined;
+    const page = source.getPage(item.href.replace(/^\/docs\//, '').split('/'));
+    return { title: page?.data.title ?? item.title, href: item.href };
+  }
+
+  return {
+    previous: index > 0 ? adjacentItem(pages[index - 1]) : undefined,
+    next: index >= 0 ? adjacentItem(pages[index + 1]) : undefined,
+  };
 }
 
 export function getSection(pathname: string): 'documentation' | 'query' | 'api' | 'changelog' {

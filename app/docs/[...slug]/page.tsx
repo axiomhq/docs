@@ -5,7 +5,8 @@ import { DocsShell } from '@/components/docs-shell';
 import { ApiOperation } from '@/components/api-operation';
 import { mdxComponents } from '@/components/mdx-components';
 import { TableOfContents, type TocItem } from '@/components/table-of-contents';
-import { getNavigation, getSection } from '@/lib/navigation';
+import { ArticleFooter } from '@/components/article-footer';
+import { getAdjacentNavigation, getNavigation, getSection } from '@/lib/navigation';
 import { source } from '@/lib/source';
 
 type PageProps = { params: Promise<{ slug?: string[] }> };
@@ -17,6 +18,8 @@ export default async function DocumentationPage({ params }: PageProps) {
 
   const href = page.url;
   const section = getSection(href);
+  const navigation = getNavigation(section);
+  const adjacentNavigation = getAdjacentNavigation(navigation, href);
   const querySyntaxTitle = section === 'query' && slug?.at(-1) !== 'overview' && slug?.some((segment) => /(?:function|operator)s?$/.test(segment));
   const Body = page.data.body;
   const tocItems: TocItem[] = page.data.openapi
@@ -29,7 +32,7 @@ export default async function DocumentationPage({ params }: PageProps) {
     : page.data.toc.map((item) => ({ title: item.title, url: item.url, depth: item.depth }));
 
   return (
-    <DocsShell navigation={getNavigation(section)} activeHref={href}>
+    <DocsShell navigation={navigation} activeHref={href}>
       <div className="article-layout">
         <article className={querySyntaxTitle ? 'doc-article query-syntax-article' : 'doc-article'}>
           <div className="doc-breadcrumbs"><span>{section === 'query' ? 'Query reference' : section === 'api' ? 'API reference' : section === 'changelog' ? 'Updates' : 'Documentation'}</span><b>/</b><span>{page.data.title}</span></div>
@@ -38,9 +41,13 @@ export default async function DocumentationPage({ params }: PageProps) {
           <DocsBody>
             {page.data.openapi ? <ApiOperation value={page.data.openapi}><Body components={mdxComponents} /></ApiOperation> : <Body components={mdxComponents} />}
           </DocsBody>
-          <div className="article-footer">
-            <a href={`https://github.com/axiomhq/docs/edit/main/content/docs/${page.path}`} target="_blank" rel="noreferrer">Edit this page on GitHub</a>
-          </div>
+          <ArticleFooter
+            pageHref={href}
+            pageTitle={page.data.title}
+            editHref={`https://github.com/axiomhq/docs/edit/main/content/docs/${page.path}`}
+            previous={adjacentNavigation.previous}
+            next={adjacentNavigation.next}
+          />
         </article>
         {tocItems.length > 0 && <TableOfContents items={tocItems} />}
       </div>
