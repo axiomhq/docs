@@ -63,7 +63,7 @@ NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=phc_...
 NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
-PostHog is initialized through Next.js `instrumentation-client.ts` using the current SDK defaults and identified-only person profiles. There is no Fathom or do11y integration.
+PostHog is initialized through Next.js `instrumentation-client.ts`. Configured deployments capture the initial page view, client-side route changes, page leaves, and standard autocapture events. Person profiles are created only for identified users. There is no Fathom or do11y integration.
 
 ## AI-readable routes
 
