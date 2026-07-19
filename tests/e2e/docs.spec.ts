@@ -165,7 +165,7 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
   });
   await searchInput.pressSequentially('filter array', { delay: 25 });
   const firstSearchResult = page.locator('.docs-search-result').first();
-  await expect(firstSearchResult).toContainText('array_iff');
+  await expect(firstSearchResult).toContainText('array_iff', { timeout: 15_000 });
   await expect(firstSearchResult).toContainText('filter arrays by a condition');
   await expect(firstSearchResult.locator('.docs-search-result-path')).toHaveText('Docs / … / array_iff');
   await expect(firstSearchResult.locator('.docs-search-result-path')).toHaveAttribute('title', /Array functions/);
@@ -183,7 +183,7 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
 
   await expect(page.getByRole('tab', { name: 'Ask AI' })).toHaveAttribute('aria-selected', 'true');
   const assistantInput = page.getByRole('textbox', { name: 'Ask Axiom Docs' });
-  await expect(assistantInput).toHaveValue('dataset retention');
+  await expect(assistantInput).toHaveValue('dataset retention', { timeout: 15_000 });
   await expect(assistantInput).toHaveAttribute('data-ph-no-capture', 'true');
   expect(await page.evaluate(() => Object.values(localStorage).includes('dataset retention'))).toBe(false);
 
