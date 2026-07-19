@@ -51,13 +51,13 @@ export function ArticleFooter({
       {(previous || next) && (
         <nav className="article-pagination" aria-label="Adjacent documentation pages">
           {previous && (
-            <Link href={previous.href} className="article-previous">
+            <Link href={previous.href} prefetch={false} className="article-previous">
               <ArrowLeft size={15} aria-hidden="true" />
               <span><small>Previous</small><strong>{previous.title}</strong></span>
             </Link>
           )}
           {next && (
-            <Link href={next.href} className="article-next">
+            <Link href={next.href} prefetch={false} className="article-next">
               <span><small>Next</small><strong>{next.title}</strong></span>
               <ArrowRight size={15} aria-hidden="true" />
             </Link>

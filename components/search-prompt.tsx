@@ -1,7 +1,7 @@
 'use client';
 
 import { Search } from 'lucide-react';
-import { useDocsSearchController } from '@/components/docs-search';
+import { useDocsSearchController } from '@/components/docs-search-provider';
 
 export function SearchPrompt() {
   const { openSearch } = useDocsSearchController();

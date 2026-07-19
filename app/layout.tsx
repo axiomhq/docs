@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import { DocsToaster } from '@/components/docs-toaster';
-import { DocsSearchProvider } from '@/components/docs-search';
+import { DocsSearchProvider } from '@/components/docs-search-provider';
 import './globals.css';
 
 const geist = localFont({

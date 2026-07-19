@@ -27,7 +27,7 @@ function NavItem({ item, activeHref, onNavigate, depth = 0 }: { item: Navigation
   }
 
   return (
-    <Link href={item.href!} className={['sidebar-link', item.href === activeHref && 'active', isSyntaxReference(item.href) && 'syntax-reference-link'].filter(Boolean).join(' ')} style={{ paddingLeft: 10 + depth * 10 }} onClick={onNavigate}>
+    <Link href={item.href!} prefetch={false} className={['sidebar-link', item.href === activeHref && 'active', isSyntaxReference(item.href) && 'syntax-reference-link'].filter(Boolean).join(' ')} style={{ paddingLeft: 10 + depth * 10 }} onClick={onNavigate}>
       <span className="sidebar-link-label">{item.title}</span>
       {item.method && <span className={`method method-${item.method.toLowerCase()}`}>{item.method}</span>}
     </Link>

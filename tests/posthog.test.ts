@@ -25,6 +25,10 @@ describe('PostHog client instrumentation', () => {
       capture_pageview: 'history_change',
       capture_pageleave: true,
       person_profiles: 'identified_only',
+      disable_surveys: true,
+      disable_session_recording: true,
+      disable_product_tours: true,
+      advanced_disable_feature_flags: true,
     });
   });
 

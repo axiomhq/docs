@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { Check, Menu, Monitor, Moon, Search, Sun, X } from 'lucide-react';
 import { useRef, useSyncExternalStore } from 'react';
-import { useDocsSearchController } from '@/components/docs-search';
+import { useDocsSearchController } from '@/components/docs-search-provider';
 
 const tabs = [
   { label: 'Documentation', href: '/docs', match: (path: string) => !path.startsWith('/docs/apl/') && !path.startsWith('/docs/mpl/') && !path.startsWith('/docs/restapi/') },
@@ -26,7 +26,7 @@ export function DocumentationSections({ className = 'header-tabs', onNavigate }:
 
   return (
     <nav className={className} aria-label="Documentation sections">
-      {tabs.map((tab) => <Link key={tab.href} href={tab.href} className={tab.match(pathname) ? 'active' : ''} onClick={onNavigate}>{tab.label}</Link>)}
+      {tabs.map((tab) => <Link key={tab.href} href={tab.href} prefetch={false} className={tab.match(pathname) ? 'active' : ''} onClick={onNavigate}>{tab.label}</Link>)}
     </nav>
   );
 }
@@ -50,7 +50,7 @@ export function SiteHeader({ drawerOpen, onMenu }: { drawerOpen: boolean; onMenu
       <button id="docs-navigation-trigger" className="header-icon mobile-menu-trigger" aria-label={drawerOpen ? 'Close navigation' : 'Open navigation'} aria-controls="docs-navigation-drawer" aria-expanded={drawerOpen} onClick={onMenu}>
         {drawerOpen ? <X size={18} /> : <Menu size={18} />}
       </button>
-      <Link href="/docs" className="brand" aria-label="Axiom documentation home">
+      <Link href="/docs" prefetch={false} className="brand" aria-label="Axiom documentation home">
         <AxiomMark />
         <span className="brand-badge">Docs</span>
       </Link>

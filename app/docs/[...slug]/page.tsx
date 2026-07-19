@@ -43,7 +43,7 @@ export default async function DocumentationPage({ params }: PageProps) {
               const current = index === breadcrumbs.length - 1;
               return (
                 <span className="doc-breadcrumb" key={`${item.title}-${index}`}>
-                  {item.href && !current ? <Link href={item.href}>{item.title}</Link> : <span aria-current={current ? 'page' : undefined}>{item.title}</span>}
+                  {item.href && !current ? <Link href={item.href} prefetch={false}>{item.title}</Link> : <span aria-current={current ? 'page' : undefined}>{item.title}</span>}
                   {!current && <b aria-hidden="true">/</b>}
                 </span>
               );
