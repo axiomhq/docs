@@ -127,10 +127,80 @@ test('search and mobile navigation are keyboard and touch accessible', async ({ 
   }, { timeout: 15_000 }).toBe(true);
   await page.keyboard.press('Escape');
 
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(page.getByRole('button', { name: 'Toggle sections' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Open navigation' }).click();
+  const drawer = page.locator('#docs-navigation-drawer');
+  await expect(drawer.getByRole('navigation', { name: 'Documentation sections' })).toBeVisible();
+  await expect(drawer.getByRole('navigation', { name: 'Page navigation' })).toBeVisible();
+  await drawer.getByRole('link', { name: 'Query reference' }).click();
+  await expect(page).toHaveURL(/\/docs\/apl\/overview$/);
+  await expect(page.getByRole('button', { name: 'Open navigation' })).toBeVisible();
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Open navigation' }).click();
-  await expect(page.getByRole('navigation', { name: 'Page navigation' })).toBeVisible();
-  await page.getByRole('complementary').getByRole('button', { name: 'Close navigation' }).click();
+  await expect(page.getByRole('button', { name: 'Close navigation' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Open navigation' })).toBeFocused();
+  await expect(drawer).not.toBeVisible();
+});
+
+test('search and the docs assistant share one private, keyboard-accessible dialog', async ({ page }) => {
+  await page.goto('/docs');
+
+  const dialog = page.getByRole('dialog', { name: 'Search and ask Axiom Docs' });
+  await expect.poll(async () => {
+    await page.keyboard.press('ControlOrMeta+KeyK');
+    return dialog.isVisible();
+  }, { timeout: 15_000 }).toBe(true);
+  await expect(page.getByRole('tab', { name: 'Search' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Search' })).toHaveCSS('padding-left', '9px');
+  const searchInput = page.getByRole('combobox', { name: 'Search documentation' });
+  await expect(searchInput).toBeFocused();
+  await expect(searchInput).toHaveAttribute('placeholder', 'Search pages, APIs, APL, and MPL…');
+  await expect(page.locator('.docs-search-input-row')).toHaveCSS('box-shadow', 'none');
+  const searchRequests: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/search') searchRequests.push(request.url());
+  });
+  await searchInput.pressSequentially('filter array', { delay: 25 });
+  const firstSearchResult = page.locator('.docs-search-result').first();
+  await expect(firstSearchResult).toContainText('array_iff');
+  await expect(firstSearchResult).toContainText('filter arrays by a condition');
+  await expect(firstSearchResult.locator('.docs-search-result-path')).toHaveText('Docs / … / array_iff');
+  await expect(firstSearchResult.locator('.docs-search-result-path')).toHaveAttribute('title', /Array functions/);
+  expect(searchRequests).toHaveLength(1);
+
+  await searchInput.fill('splunk');
+  const contextualResult = page.locator('.docs-search-result-content').filter({ hasText: /^Splunk:/ }).first();
+  await expect(contextualResult).toContainText('Splunk uses a search command');
+  await expect(contextualResult).not.toContainText('**');
+  await expect(contextualResult).toContainText(/…$/);
+
+  await searchInput.fill('dataset retention');
+  await expect(page.getByRole('button', { name: /Ask AI about “dataset retention”/ })).toBeVisible();
+  await page.getByRole('button', { name: /Ask AI about “dataset retention”/ }).click();
+
+  await expect(page.getByRole('tab', { name: 'Ask AI' })).toHaveAttribute('aria-selected', 'true');
+  const assistantInput = page.getByRole('textbox', { name: 'Ask Axiom Docs' });
+  await expect(assistantInput).toHaveValue('dataset retention');
+  await expect(assistantInput).toHaveAttribute('data-ph-no-capture', 'true');
+  expect(await page.evaluate(() => Object.values(localStorage).includes('dataset retention'))).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect.poll(async () => {
+    await page.keyboard.press('ControlOrMeta+KeyI');
+    return dialog.isVisible();
+  }, { timeout: 15_000 }).toBe(true);
+  await expect(page.getByRole('tab', { name: 'Ask AI' })).toHaveAttribute('aria-selected', 'true');
+  await expect(assistantInput).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const box = await dialog.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.width).toBeLessThanOrEqual(390);
+  expect(box!.height).toBeLessThanOrEqual(844);
 });
 
 test('analytics is silent without a PostHog project token', async ({ page }) => {
@@ -155,6 +225,18 @@ test('article remains viewport-centered across desktop and tablet widths', async
   }
 });
 
+test('landing content reserves the desktop table-of-contents rail', async ({ page }) => {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/docs');
+
+    const hero = (await page.locator('.landing-hero').boundingBox())!;
+    const search = (await page.locator('.hero-search').boundingBox())!;
+    expect(Math.abs(hero.x + hero.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
+    expect(search.width).toBe(hero.width);
+  }
+});
+
 test('table of contents tracks the active heading and keeps a transparent surface', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/docs/platform-overview/architecture');
@@ -175,6 +257,13 @@ test('table of contents tracks the active heading and keeps a transparent surfac
   expect(label).not.toBeNull();
   expect(chevron).not.toBeNull();
   expect(chevron!.x).toBeGreaterThan(label!.x + label!.width);
+
+  await page.goto('/docs/reference/performance');
+  const codedTocLink = page.locator('.floating-toc a').filter({ has: page.locator('code') }).first();
+  const tocCode = codedTocLink.locator('code').first();
+  await expect(tocCode).toHaveCSS('color', await codedTocLink.evaluate((element) => getComputedStyle(element).color));
+  await expect(tocCode).toHaveCSS('font-size', await codedTocLink.evaluate((element) => getComputedStyle(element).fontSize));
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /\/doc-assets\/logo\/favicon\.svg\?v=2$/);
 });
 
 test('query reference navigation and MDX components follow the compact interaction model', async ({ page }) => {
@@ -253,8 +342,13 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
   expect(Math.abs(sidebarBox!.y - breadcrumbBox!.y)).toBeLessThanOrEqual(1);
 
   const brand = page.getByRole('link', { name: 'Axiom documentation home' });
-  await expect(brand.locator('.brand-logo:visible')).toHaveCount(1);
-  await expect(brand.locator('svg')).toHaveCount(0);
+  await expect(brand.locator('.brand-mark')).toBeVisible();
+  await expect(brand.locator('.brand-logo')).toHaveCount(0);
+  const badge = brand.locator('.brand-badge');
+  await expect(badge).toHaveCSS('font-size', '12px');
+  await expect(badge).toHaveCSS('border-left-color', 'rgb(218, 92, 43)');
+  await expect(badge).toHaveCSS('border-radius', '0px');
+  await expect(badge).toHaveCSS('font-weight', '600');
   await expect(page.getByRole('navigation', { name: 'Documentation sections' }).getByRole('link', { name: 'Changelog' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Open console →' })).toBeVisible();
 
@@ -314,6 +408,60 @@ test('article hierarchy and footer navigation follow the compact docs pattern', 
   await expect(helpful).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('status')).toHaveText('Thanks for the feedback.');
   await expect(page.getByRole('link', { name: 'Suggest edits on GitHub' })).toBeVisible();
+});
+
+test('deep documentation pages show their complete navigation ancestry', async ({ page }) => {
+  await page.goto('/docs/dashboard-elements/pie-chart');
+
+  const breadcrumbs = page.getByRole('navigation', { name: 'Breadcrumb' });
+  await expect(breadcrumbs).toHaveText(/Understand data\s*\/\s*Console\s*\/\s*Dashboard\s*\/\s*Elements\s*\/\s*Element types\s*\/\s*Pie chart/);
+  await expect(breadcrumbs.getByRole('link', { name: 'Dashboard', exact: true })).toHaveAttribute('href', '/docs/dashboards/create');
+  await expect(breadcrumbs.getByText('Pie chart', { exact: true })).toHaveAttribute('aria-current', 'page');
+});
+
+test('placeholder forms update and copy every matching code example', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/docs/restapi/query');
+
+  const form = page.locator('.placeholder-config').first();
+  const codeBlock = form.locator('xpath=preceding-sibling::figure[1]');
+  await form.locator('select').selectOption('us-east-1.aws.edge.axiom.co');
+  await form.getByPlaceholder('xaat-api-token').fill('xaat-example-token');
+  await form.getByPlaceholder('dataset-name').fill('example-dataset');
+
+  await expect(codeBlock.locator('pre')).toContainText('https://us-east-1.aws.edge.axiom.co/v1/query/_apl');
+  await expect(codeBlock.locator('pre')).toContainText('Authorization: Bearer xaat-example-token');
+  await expect(codeBlock.locator('pre')).toContainText('"apl": "example-dataset | limit 10"');
+  await expect(codeBlock.locator('pre')).not.toContainText(/AXIOM_DOMAIN|API_TOKEN|DATASET_NAME/);
+
+  await codeBlock.getByRole('button', { name: 'Copy Text' }).click();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain('https://us-east-1.aws.edge.axiom.co/v1/query/_apl');
+  expect(copied).toContain('Authorization: Bearer xaat-example-token');
+  expect(copied).toContain('"apl": "example-dataset | limit 10"');
+  expect(copied).not.toMatch(/AXIOM_DOMAIN|API_TOKEN|DATASET_NAME/);
+
+  const otherDatasetForms = page.locator('.placeholder-config').filter({ has: page.getByPlaceholder('dataset-name') });
+  await expect(otherDatasetForms).toHaveCount(3);
+  for (const otherForm of await otherDatasetForms.all()) {
+    await expect(otherForm.getByPlaceholder('dataset-name')).toHaveValue('example-dataset');
+    await expect(otherForm.locator('xpath=preceding-sibling::figure[1]').locator('pre')).toContainText('example-dataset');
+  }
+
+  await page.goto('/docs/getting-started');
+  const persistedForm = page.locator('.placeholder-config').first();
+  await expect(persistedForm.getByPlaceholder('xaat-api-token')).toHaveValue('xaat-example-token');
+  await expect(persistedForm.getByPlaceholder('dataset-name')).toHaveValue('example-dataset');
+  const persistedCodeBlock = persistedForm.locator('xpath=preceding-sibling::figure[1]');
+  await expect(persistedCodeBlock.locator('pre')).toContainText('xaat-example-token');
+  await expect(persistedCodeBlock.locator('pre')).toContainText('example-dataset');
+
+  await page.goto('/docs/guides/opentelemetry-claude-code');
+  const compositeNameBlock = page.locator('figure').filter({ hasText: 'AXIOM_METRICS_DATASET' }).first();
+  const compositeNameForm = compositeNameBlock.locator('xpath=following-sibling::div[contains(@class,"placeholder-config")][1]');
+  await expect(compositeNameBlock.locator('pre')).toContainText('AXIOM_API_TOKEN="xaat-example-token"');
+  await expect(compositeNameBlock.locator('pre')).toContainText('AXIOM_METRICS_DATASET="METRICS_DATASET_NAME"');
+  await expect(compositeNameForm.getByPlaceholder('dataset-name')).toHaveCount(0);
 });
 
 test('article copy keeps a distinct contrast hierarchy in both themes', async ({ page }) => {

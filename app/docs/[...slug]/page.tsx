@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { DocsBody, DocsDescription, DocsTitle } from 'fumadocs-ui/page';
 import { DocsShell } from '@/components/docs-shell';
@@ -6,7 +7,7 @@ import { ApiOperation } from '@/components/api-operation';
 import { mdxComponents } from '@/components/mdx-components';
 import { TableOfContents, type TocItem } from '@/components/table-of-contents';
 import { ArticleFooter } from '@/components/article-footer';
-import { getAdjacentNavigation, getNavigation, getSection } from '@/lib/navigation';
+import { getAdjacentNavigation, getBreadcrumbs, getNavigation, getSection } from '@/lib/navigation';
 import { source } from '@/lib/source';
 
 type PageProps = { params: Promise<{ slug?: string[] }> };
@@ -20,6 +21,8 @@ export default async function DocumentationPage({ params }: PageProps) {
   const section = getSection(href);
   const navigation = getNavigation(section);
   const adjacentNavigation = getAdjacentNavigation(navigation, href);
+  const breadcrumbs = getBreadcrumbs(navigation, href);
+  if (breadcrumbs.length > 0) breadcrumbs[breadcrumbs.length - 1] = { title: page.data.title };
   const querySyntaxTitle = section === 'query' && slug?.at(-1) !== 'overview' && slug?.some((segment) => /(?:function|operator)s?$/.test(segment));
   const Body = page.data.body;
   const tocItems: TocItem[] = page.data.openapi
@@ -35,7 +38,17 @@ export default async function DocumentationPage({ params }: PageProps) {
     <DocsShell navigation={navigation} activeHref={href}>
       <div className="article-layout">
         <article className={querySyntaxTitle ? 'doc-article query-syntax-article' : 'doc-article'}>
-          <div className="doc-breadcrumbs"><span>{section === 'query' ? 'Query reference' : section === 'api' ? 'API reference' : section === 'changelog' ? 'Updates' : 'Documentation'}</span><b>/</b><span>{page.data.title}</span></div>
+          <nav className="doc-breadcrumbs" aria-label="Breadcrumb">
+            {breadcrumbs.map((item, index) => {
+              const current = index === breadcrumbs.length - 1;
+              return (
+                <span className="doc-breadcrumb" key={`${item.title}-${index}`}>
+                  {item.href && !current ? <Link href={item.href}>{item.title}</Link> : <span aria-current={current ? 'page' : undefined}>{item.title}</span>}
+                  {!current && <b aria-hidden="true">/</b>}
+                </span>
+              );
+            })}
+          </nav>
           <DocsTitle className={querySyntaxTitle ? 'query-syntax-title' : undefined}>{page.data.title}</DocsTitle>
           <DocsDescription>{page.data.description}</DocsDescription>
           <DocsBody>

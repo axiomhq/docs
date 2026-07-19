@@ -54,6 +54,16 @@ The build emits a Next.js standalone server and automatically copies its public 
 
 Set `NEXT_PUBLIC_SITE_URL` to the canonical origin used for metadata and the sitemap. It defaults to `https://axiom.co`.
 
+## Documentation assistant
+
+The search dialog includes an optional documentation-grounded assistant. It uses OpenRouter with `z-ai/glm-5.2`, retrieves context from the checked-in Fumadocs search index, and reads processed Markdown only for documentation pages returned by that search.
+
+```bash
+OPENROUTER_API_KEY=sk-or-v1-...
+```
+
+The key is server-only. Without it, regular documentation search continues to work and assistant requests return an unavailable response. Questions and generated answers are not persisted or sent to PostHog.
+
 ## PostHog
 
 Analytics is disabled unless a public project token is present. Local development, tests, and unconfigured previews send no analytics requests.

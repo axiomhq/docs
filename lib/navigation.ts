@@ -10,6 +10,7 @@ export type NavigationItem = {
 
 export type NavigationGroup = { title: string; items: NavigationItem[] };
 export type AdjacentNavigationItem = { title: string; href: string };
+export type BreadcrumbNavigationItem = { title: string; href?: string };
 
 type LegacyNested = { group: string; pages: LegacyPage[] };
 type LegacyPage = string | LegacyNested;
@@ -71,6 +72,31 @@ export function getNavigation(section: 'documentation' | 'query' | 'api' | 'chan
 
 function flattenNavigation(items: NavigationItem[]): NavigationItem[] {
   return items.flatMap((item) => item.href ? [item] : flattenNavigation(item.children ?? []));
+}
+
+function firstNavigationHref(items: NavigationItem[]): string | undefined {
+  for (const item of items) {
+    if (item.href) return item.href;
+    const href = firstNavigationHref(item.children ?? []);
+    if (href) return href;
+  }
+}
+
+function findNavigationTrail(items: NavigationItem[], activeHref: string): BreadcrumbNavigationItem[] | undefined {
+  for (const item of items) {
+    if (item.href === activeHref) return [{ title: item.title, href: item.href }];
+    const children = item.children ?? [];
+    const childTrail = findNavigationTrail(children, activeHref);
+    if (childTrail) return [{ title: item.title, href: firstNavigationHref(children) }, ...childTrail];
+  }
+}
+
+export function getBreadcrumbs(navigation: NavigationGroup[], activeHref: string): BreadcrumbNavigationItem[] {
+  for (const group of navigation) {
+    const trail = findNavigationTrail(group.items, activeHref);
+    if (trail) return [{ title: group.title, href: firstNavigationHref(group.items) }, ...trail];
+  }
+  return [];
 }
 
 export function getAdjacentNavigation(navigation: NavigationGroup[], activeHref: string) {

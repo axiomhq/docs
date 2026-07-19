@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import { DocsToaster } from '@/components/docs-toaster';
+import { DocsSearchProvider } from '@/components/docs-search';
 import './globals.css';
 
 const geist = localFont({
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
     template: '%s | Axiom Docs',
   },
   description: 'Learn how to send, store, and query logs, traces, metrics, and events with Axiom.',
-  icons: { icon: '/doc-assets/logo/favicon.svg' },
+  icons: { icon: { url: '/doc-assets/logo/favicon.svg?v=2', type: 'image/svg+xml' } },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -32,10 +33,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <RootProvider
           theme={{ attribute: ['class', 'data-theme'], defaultTheme: 'system', enableSystem: true, storageKey: 'axiom-docs-theme' }}
-          search={{ options: { api: '/api/search' } }}
+          search={{ enabled: false }}
         >
-          {children}
-          <DocsToaster />
+          <DocsSearchProvider>
+            {children}
+            <DocsToaster />
+          </DocsSearchProvider>
         </RootProvider>
       </body>
     </html>

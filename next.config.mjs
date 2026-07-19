@@ -3,7 +3,7 @@ import { createMDX } from 'fumadocs-mdx/next';
 /** @type {import('next').NextConfig} */
 const config = {
   reactStrictMode: true,
-  allowedDevOrigins: ['127.0.0.1'],
+  allowedDevOrigins: ['127.0.0.1', 'adipurush', 'adipurush.tail9166b.ts.net'],
   output: 'standalone',
   images: {
     unoptimized: true,

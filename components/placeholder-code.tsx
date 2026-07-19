@@ -1,7 +1,7 @@
 'use client';
 
-import { cloneElement, isValidElement, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import type { ComponentProps, ReactElement, ReactNode } from 'react';
+import { isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { CodeBlock, Pre } from 'fumadocs-ui/components/codeblock';
 
 const storageKey = 'axiom-docs-placeholders';
@@ -15,27 +15,25 @@ const fields = {
 type FieldKey = keyof typeof fields;
 type Values = Partial<Record<FieldKey, string>>;
 
+const fieldKeys = Object.keys(fields) as FieldKey[];
+
+function placeholderPattern() {
+  return new RegExp(`\\b(${fieldKeys.join('|')})\\b`, 'g');
+}
+
+function fieldValue(key: FieldKey, values: Values) {
+  return values[key] || key;
+}
+
+function replaceSourceText(source: string, values: Values) {
+  return source.replace(placeholderPattern(), (key) => fieldValue(key as FieldKey, values));
+}
+
 function textOf(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(textOf).join('');
   if (isValidElement<{ children?: ReactNode }>(node)) return textOf(node.props.children);
   return '';
-}
-
-function replaceText(node: ReactNode, values: Values): ReactNode {
-  if (typeof node === 'string') {
-    const keys = Object.keys(fields) as FieldKey[];
-    const pattern = new RegExp(`(${keys.join('|')})`, 'g');
-    return node.split(pattern).map((part, index) => keys.includes(part as FieldKey) ? <span className="axiom-placeholder-highlight" key={`${part}-${index}`}>{values[part as FieldKey] || part}</span> : part);
-  }
-  if (Array.isArray(node)) return node.map((child, index) => {
-    const replaced = replaceText(child, values);
-    return isValidElement(replaced) && replaced.key == null
-      ? cloneElement(replaced, { key: `code-node-${index}` })
-      : replaced;
-  });
-  if (isValidElement<{ children?: ReactNode }>(node)) return cloneElement(node as ReactElement<{ children?: ReactNode }>, { ...node.props, children: replaceText(node.props.children, values) });
-  return node;
 }
 
 function getValuesSnapshot() {
@@ -57,15 +55,33 @@ function parseValues(snapshot: string): Values {
 
 export function PlaceholderPre({ source: sourceProp, ...props }: ComponentProps<'pre'> & { source?: string }) {
   const source = useMemo(() => sourceProp ?? textOf(props.children), [props.children, sourceProp]);
-  const usedFields = useMemo(() => (Object.keys(fields) as FieldKey[]).filter((key) => source.includes(key)), [source]);
+  const usedFields = useMemo(() => fieldKeys.filter((key) => new RegExp(`\\b${key}\\b`).test(source)), [source]);
   const valuesSnapshot = useSyncExternalStore(subscribeValues, getValuesSnapshot, getServerValuesSnapshot);
   const values = useMemo(() => parseValues(valuesSnapshot), [valuesSnapshot]);
   const [hydrated, setHydrated] = useState(false);
+  const codeBlockRef = useRef<HTMLElement>(null);
+  const originalText = useRef(new WeakMap<Text, string>());
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setHydrated(true), 0);
     return () => window.clearTimeout(timeout);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!hydrated) return;
+    const pre = codeBlockRef.current?.querySelector('pre');
+    if (!pre) return;
+
+    const walker = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT);
+    let current = walker.nextNode();
+    while (current) {
+      const text = current as Text;
+      const original = originalText.current.get(text) ?? text.data;
+      originalText.current.set(text, original);
+      text.data = replaceSourceText(original, values);
+      current = walker.nextNode();
+    }
+  }, [hydrated, values]);
 
   function update(key: FieldKey, value: string) {
     const next = { ...values, [key]: value || undefined };
@@ -74,11 +90,11 @@ export function PlaceholderPre({ source: sourceProp, ...props }: ComponentProps<
   }
 
   return <>
-    <CodeBlock {...props}><Pre>{hydrated ? replaceText(props.children, values) : props.children}</Pre></CodeBlock>
-    {hydrated && usedFields.length > 0 && <div className="placeholder-config" aria-label="Customize this example">
+    <CodeBlock ref={codeBlockRef} {...props}><Pre>{props.children}</Pre></CodeBlock>
+    {hydrated && usedFields.length > 0 && <div className="placeholder-config" aria-label="Customize this example" data-ph-no-capture>
       {usedFields.map((key) => {
         const field = fields[key];
-        return <label key={key}><span>{field.label}</span>{'options' in field ? <select value={values[key] ?? ''} onChange={(event) => update(key, event.target.value)}>{field.options.map((option) => <option value={option} key={option}>{option || 'Select edge deployment'}</option>)}</select> : <input value={values[key] ?? ''} placeholder={field.placeholder} autoComplete="off" data-1p-ignore onChange={(event) => update(key, event.target.value)} />}</label>;
+        return <label key={key}><span>{field.label}</span>{'options' in field ? <select value={values[key] ?? ''} onChange={(event) => update(key, event.target.value)}>{field.options.map((option) => <option value={option} key={option}>{option || 'Select edge deployment'}</option>)}</select> : <input value={values[key] ?? ''} placeholder={field.placeholder} autoComplete="off" data-1p-ignore data-ph-no-capture onChange={(event) => update(key, event.target.value)} />}</label>;
       })}
     </div>}
   </>;
