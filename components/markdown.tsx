@@ -15,7 +15,7 @@ import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 
-export interface Processor {
+interface Processor {
   process: (content: string) => Promise<ReactNode>;
 }
 

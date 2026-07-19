@@ -24,7 +24,7 @@ At the time this file was created, active redesign work is on `feat/fumadocs-red
 - Node.js: `24.18.0`, pinned in `.node-version`.
 - Package manager: `pnpm 11.9.0`, pinned in `package.json`.
 - Framework: Next.js App Router, currently Next 16.
-- Documentation framework: Fumadocs with `fumadocs-mdx` and `fumadocs-openapi`.
+- Documentation framework: Fumadocs with `fumadocs-mdx`; API operations use the custom renderer backed by checked-in OpenAPI documents.
 - Styling: Tailwind v4 is available, but most application styling is deliberate custom CSS in `app/globals.css` backed by `styles/tokens.css`.
 - Unit tests: Vitest + jsdom.
 - Browser tests: Playwright, desktop Chromium and Pixel 7 profiles.
@@ -47,6 +47,7 @@ The README mentions port 3000 for general contributors. Port 3100 is the establi
 - `app/docs/[...slug]/page.tsx` — shared documentation page renderer, metadata, breadcrumbs, TOC, query-title treatment, article footer, and OpenAPI dispatch.
 - `app/docs/page.tsx` — documentation landing page.
 - `app/api/search/route.ts` — Fumadocs/Orama search endpoint.
+- `app/api/chat/route.ts` — grounded OpenRouter assistant with constrained documentation search/read tools.
 - `app/api/md/[...slug]/route.ts` — processed Markdown output for individual pages.
 - `app/api/try/route.ts` — constrained server-side proxy used by API reference “Try it”. Treat this as security-sensitive.
 - `app/globals.css` — layout and component styling. This file encodes many reviewed product decisions; do not broadly replace it with stock theme CSS.
@@ -56,6 +57,9 @@ The README mentions port 3000 for general contributors. Port 3100 is the establi
 ### Shared UI
 
 - `components/docs-shell.tsx` — header/sidebar shell and recursive navigation.
+- `components/docs-search.tsx` — unified, debounced Search/Ask AI dialog and ranked search results.
+- `components/docs-assistant.tsx` — lazily loaded assistant conversation UI and source presentation.
+- `components/markdown.tsx` — bounded streaming Markdown renderer for assistant answers.
 - `components/site-header.tsx` — top-level section tabs, unified search/AI entry point, theme menu, and console link.
 - `components/table-of-contents.tsx` — transparent floating TOC and scroll tracking.
 - `components/heading-anchor.tsx` — hover hash, smooth navigation, clipboard copy, and Sonner feedback.
@@ -256,7 +260,7 @@ Do not add credentials, request/response bodies, search text, free-form document
 ## Search, theme, and browser persistence
 
 - Search is generated from the Fumadocs source and exposed at `/api/search`.
-- Search and AI prompting intentionally open the same Fumadocs dialog.
+- Search and AI prompting intentionally share the same custom dialog; the assistant bundle loads only when Ask AI is opened.
 - Theme preference uses local storage through `next-themes`.
 - API language preference uses local storage.
 - Interactive code placeholders may use browser storage.
