@@ -170,6 +170,9 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
   await expect(firstSearchResult.locator('.docs-search-result-path')).toHaveText('Docs / … / array_iff');
   await expect(firstSearchResult.locator('.docs-search-result-path')).toHaveAttribute('title', /Array functions/);
   expect(searchRequests).toHaveLength(1);
+  for (let index = 0; index < 8; index += 1) await searchInput.press('ArrowDown');
+  await expect(page.locator('.docs-search-result').nth(8)).toHaveAttribute('aria-selected', 'true');
+  expect(await page.locator('.docs-search-results').evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 
   await searchInput.fill('splunk');
   const contextualResult = page.locator('.docs-search-result-content').filter({ hasText: /^Splunk:/ }).first();
@@ -178,13 +181,20 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
   await expect(contextualResult).toContainText(/…$/);
 
   await searchInput.fill('dataset retention');
-  await expect(page.getByRole('button', { name: /Ask AI about “dataset retention”/ })).toBeVisible();
-  await page.getByRole('button', { name: /Ask AI about “dataset retention”/ }).click();
+  const askFromSearch = page.getByRole('button', { name: /Ask AI about “dataset retention”/ });
+  await expect(askFromSearch).toBeVisible();
+  expect(await askFromSearch.evaluate((element) => element.closest('[role="listbox"]') === null)).toBe(true);
+  await expect(firstSearchResult).toHaveAttribute('tabindex', '-1');
+  await searchInput.press('Tab');
+  await expect(askFromSearch).toBeFocused();
+  await askFromSearch.click();
 
   await expect(page.getByRole('tab', { name: 'Ask AI' })).toHaveAttribute('aria-selected', 'true');
   const assistantInput = page.getByRole('textbox', { name: 'Ask Axiom Docs' });
   await expect(assistantInput).toHaveValue('dataset retention', { timeout: 15_000 });
   await expect(assistantInput).toHaveAttribute('data-ph-no-capture', 'true');
+  await expect(page.locator('.docs-assistant-composer')).toHaveCSS('box-shadow', 'none');
+  await expect(page.locator('.docs-assistant-input-wrap')).toHaveCSS('border-color', 'rgb(218, 92, 43)');
   expect(await page.evaluate(() => Object.values(localStorage).includes('dataset retention'))).toBe(false);
 
   await page.keyboard.press('Escape');
@@ -201,6 +211,19 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
   expect(box).not.toBeNull();
   expect(box!.width).toBeLessThanOrEqual(390);
   expect(box!.height).toBeLessThanOrEqual(844);
+});
+
+test('table links and notice blocks retain clear affordance and rhythm', async ({ page }) => {
+  await page.goto('/docs/send-data/methods#popular-methods');
+
+  const firstTableLink = page.locator('.doc-article table tbody td a').first();
+  await expect(firstTableLink).toHaveText('Rest API');
+  await expect(firstTableLink).toHaveCSS('text-decoration-line', 'underline');
+
+  const noticeParagraphs = page.locator('.doc-notice').first().locator('p');
+  await expect(noticeParagraphs).toHaveCount(3);
+  await expect(noticeParagraphs.nth(1)).toHaveCSS('margin-top', '10px');
+  await expect(noticeParagraphs.nth(2)).toHaveCSS('margin-top', '10px');
 });
 
 test('analytics is silent without a PostHog project token', async ({ page }) => {

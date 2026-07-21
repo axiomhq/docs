@@ -117,6 +117,10 @@ function SearchPanel() {
     const timeout = window.setTimeout(() => inputRef.current?.focus(), 0);
     return () => window.clearTimeout(timeout);
   }, [open]);
+  useEffect(() => {
+    if (!open || results.length === 0) return;
+    document.getElementById(`docs-search-result-${activeIndex}`)?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, open, query.data, results.length]);
   const navigate = (url: string) => {
     close();
     router.push(url);
@@ -159,7 +163,7 @@ function SearchPanel() {
         />
         <kbd>ESC</kbd>
       </div>
-      <div id="docs-search-results" className="docs-search-results" role="listbox" aria-label="Search results">
+      <div className="docs-search-results" aria-busy={query.isLoading}>
         {search.trim() && (
           <button type="button" className="docs-search-ask-row" onClick={() => openAssistant(search.trim())}>
             <span><BookOpen size={15} /> Ask AI about “{search.trim()}”</span>
@@ -179,23 +183,26 @@ function SearchPanel() {
           <div className="docs-search-status" role="status">Searching documentation…</div>
         )}
         {search.trim() && !query.isLoading && results.length === 0 && query.data === 'empty' && (
-          <div className="docs-search-status">No matching documentation found.</div>
+          <div className="docs-search-status" role="status">No matching documentation found.</div>
         )}
-        {results.map((result, index) => (
-          <button
-            id={`docs-search-result-${index}`}
-            type="button"
-            role="option"
-            aria-selected={activeIndex === index}
-            className="docs-search-result"
-            key={result.id}
-            onMouseEnter={() => setSelectedIndex(index)}
-            onClick={() => navigate(result.url)}
-          >
-            <SearchBreadcrumbs items={result.breadcrumbs} />
-            <span className="docs-search-result-content"><HighlightedText value={result.content} /></span>
-          </button>
-        ))}
+        <div id="docs-search-results" className="docs-search-result-list" role="listbox" aria-label="Search results">
+          {results.map((result, index) => (
+            <button
+              id={`docs-search-result-${index}`}
+              type="button"
+              role="option"
+              tabIndex={-1}
+              aria-selected={activeIndex === index}
+              className="docs-search-result"
+              key={result.id}
+              onMouseEnter={() => setSelectedIndex(index)}
+              onClick={() => navigate(result.url)}
+            >
+              <SearchBreadcrumbs items={result.breadcrumbs} />
+              <span className="docs-search-result-content"><HighlightedText value={result.content} /></span>
+            </button>
+          ))}
+        </div>
       </div>
       <footer className="docs-search-footer">
         <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>

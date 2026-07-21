@@ -96,25 +96,27 @@ export function DocsAssistantPanel({
         )}
       </div>
       <form className="docs-assistant-composer" onSubmit={submit}>
-        <textarea
-          id="docs-assistant-input"
-          value={draft}
-          rows={2}
-          maxLength={4_000}
-          aria-label="Ask Axiom Docs"
-          placeholder={isBusy ? 'Answering from the documentation…' : 'Ask a question about Axiom…'}
-          disabled={isBusy}
-          data-ph-no-capture
-          onChange={(event) => onDraftChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) submit(event);
-          }}
-        />
-        {isBusy ? (
-          <button type="button" aria-label="Stop answer" onClick={() => chat.stop()}><Square size={13} fill="currentColor" /></button>
-        ) : (
-          <button type="submit" aria-label="Send question" disabled={!draft.trim()}><Send size={15} /></button>
-        )}
+        <div className="docs-assistant-input-wrap">
+          <textarea
+            id="docs-assistant-input"
+            value={draft}
+            rows={2}
+            maxLength={4_000}
+            aria-label="Ask Axiom Docs"
+            placeholder={isBusy ? 'Answering from the documentation…' : 'Ask a question about Axiom…'}
+            disabled={isBusy}
+            data-ph-no-capture
+            onChange={(event) => onDraftChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) submit(event);
+            }}
+          />
+          {isBusy ? (
+            <button type="button" aria-label="Stop answer" onClick={() => chat.stop()}><Square size={13} fill="currentColor" /></button>
+          ) : (
+            <button type="submit" aria-label="Send question" disabled={!draft.trim()}><Send size={15} /></button>
+          )}
+        </div>
         <small>Generated from Axiom documentation. Verify critical details.</small>
       </form>
     </section>
