@@ -63,5 +63,5 @@ const results = {
 
 console.log(JSON.stringify(results, null, 2));
 
-const expected = results.routablePages === 625 && results.snippets === 21 && results.mdxTotal === 646 && results.assets === 127 && results.redirects === 115 && results.openapiPages === 89;
+const expected = results.routablePages === 626 && results.snippets === 21 && results.mdxTotal === 647 && results.assets === 129 && results.redirects === 115 && results.openapiPages === 89;
 if (!expected || unresolved.length > 0 || missingAssets.length > 0 || staleText.length > 0) process.exitCode = 1;
