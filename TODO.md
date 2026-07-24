@@ -479,7 +479,20 @@ for p in /docs/usage/getting-started /docs/introducing-axiom /docs/install/cloud
 done   # all 200
 ```
 
-### [ ] T1.7 Meter `/api/chat` and `/api/try` — net-new public attack surface
+### [ ] T1.7 Meter `/api/chat` and `/api/try` — ⛔ **BLOCKED, awaiting team decision** `[HUMAN]`
+
+> **Do not start this task.** Paused 2026-07-25 pending two answers from the team. It is the only
+> remaining Phase 1 blocker; everything else in Phase 1 is done.
+>
+> **Q1 — Who owns the OpenRouter key?** Setting a hard daily spend cap is the single highest-value
+> step (~10 minutes, dashboard only, no code) and it bounds the worst case regardless of what else
+> ships. If the key is not ours to cap, this becomes a handoff.
+>
+> **Q2 — Which shared store for the rate limiter?** Vercel KV, Upstash Redis, or something already
+> in the stack. Needed to make the limit global instead of per-instance. If adding a dependency is
+> unwanted, the fallback is: spend cap + a tightened in-memory window, documented as per-instance.
+>
+> Nothing here blocks T2.x or Phase 3 — skip past it and come back once answered.
 
 Two unauthenticated public endpoints that Mintlify never had.
 
