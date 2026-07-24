@@ -89,7 +89,9 @@ never to quiet a red build** — the exact-equality snapshots they replaced trai
 | T2.4 | `/docs` landing page metadata — canonical, OG, Twitter (closed by T2.1) | see below |
 | T2.2 | JSON-LD: Organization + WebSite site-wide, TechArticle + BreadcrumbList per page | `next` |
 | T2.5 | Legacy `.md` redirects — every non-wildcard redirect mirrored at its `.md` twin | `next` |
-| T2.6 | `url:` frontmatter now 307s like production, and is excluded from the sitemap | `next` |
+| T2.6 | `url:` frontmatter now 307s like production, and is excluded from the sitemap | `fca6c5e` |
+| T1.6 | Redirect-layer chaining verified in the full sweep — 226/228 land on 200 | `6e8b827` |
+| T2.7 | Nav orphans measured: 63, inherited from production, all reachable — no action | — |
 
 ---
 
@@ -147,75 +149,6 @@ curl -s <staging>/docs/introduction | grep -o '<link rel="canonical"[^>]*>'
 
 ## Phase 1 — Blockers (must land before the rewrite swap)
 
-### [ ] T1.6 Verify the two redirect layers still chain — `www` wins `[verified]` `[HANDOFF]`
-
-There are **two** `/docs` redirect tables, and until now only one of them was in view.
-
-`www/src/lib/config/redirects.ts` holds 53 `/docs` redirects that run in `next.config.ts`
-`async redirects()` — and in Next.js **redirects execute before `beforeFiles` rewrites**. So `www`
-resolves the redirect *first*, and only the survivor is proxied to the docs app. `www` always wins.
-The docs app's own 115 redirects (from `docs.json`) only ever see what `www` did not already rewrite.
-
-Measured overlap:
-
-| | count |
-|---|---|
-| `/docs` redirects in `www` | 53 |
-| redirects in the docs app (`docs.json`) | 115 |
-| same source in **both** | 52 |
-| same source, **conflicting destination** | **4** |
-| sources only in `www` | 1 |
-
-The four conflicts, where `www`'s destination silently overrides the docs app's:
-
-```
-/docs/usage/getting-started      www → /docs/getting-started-guide/getting-started
-                                docs → /docs/getting-started
-/docs/introducing-axiom          www → /docs/introduction
-                                docs → /docs
-/docs/install/introducing-axiom  www → /docs/getting-started-guide/getting-started
-                                docs → /docs/getting-started
-/docs/install/cloud              www → /docs/getting-started-guide/getting-started
-                                docs → /docs/getting-started
-```
-
-**✅ Verified safe — this does NOT block release, and needs no `www` change.**
-
-Every conflict chain lands correctly. `www` redirects to its destination, the docs app re-redirects,
-and the result is a 200 on the new site:
-
-```
-/docs/usage/getting-started  →www→ /docs/getting-started-guide/getting-started
-                             →docs→ /docs/getting-started                       200 ✓
-/docs/introducing-axiom      →www→ /docs/introduction                           200 ✓
-/docs/install/cloud          →www→ /docs/getting-started-guide/getting-started
-                             →docs→ /docs/getting-started                       200 ✓
-```
-
-The same chains already resolve identically on production today, so this is **existing behaviour, not
-a migration regression**. Cost is one extra hop on 4 legacy paths — negligible traffic, no SEO harm
-(both hops are permanent redirects).
-
-**So the task here is verification only:** confirm the 4 chains still land after the Phase 1 changes, and record
-in `AGENTS.md` that `www` shadows `docs.json` for these sources so the next person does not spend an
-afternoon on it.
-
-Leave the shadowed `docs.json` entries in place. They are inert while `www` holds them, and they keep
-this repo correct standalone if the proxy layer ever changes.
-
-*Optional `www` cleanup, neither blocking, both carried as **W3 in Phase 4**: the 52 duplicated entries
-could be dropped so one table is authoritative; and three `www` redirects point at pages that do not
-exist (`/docs/data-shippers/axiom-honeycomb-proxy`, `/docs/integrations/datadog-migration`,
-`/docs/usage/run-queries-on-aws`) — all three **already 404 on production today**, pre-existing rot
-unchanged by this migration.*
-
-**Verify:**
-```bash
-for p in /docs/usage/getting-started /docs/introducing-axiom /docs/install/cloud \
-         /docs/install/introducing-axiom; do
-  curl -sSL -o /dev/null -w "$p → %{http_code} %{url_effective}\n" https://axiom.co$p
-done   # all 200
-```
 ### [ ] T1.7 Meter `/api/chat` and `/api/try` — ⛔ **BLOCKED, awaiting team decision** `[HUMAN]`
 
 > **Do not start this task.** Paused 2026-07-25 pending two answers from the team. It is the only
@@ -292,13 +225,20 @@ edited after the migration, once git history carries real signal again. Worth do
 guessing.
 
 
-### [ ] T2.7 `[unverified]` Navigation orphans
+### [x] ~~T2.7 Navigation orphans~~ — **measured: not a regression, no action** `[verified]`
 
-Audit reported 60 of 626 pages with no sidebar entry, no breadcrumbs and no prev/next. **One verifier
-contested this — confirm the count yourself before acting.** `lib/navigation.ts` has zero unit coverage
-either way.
+63 of 629 pages have no sidebar entry. That number is real, but it is **inherited from production, not
+introduced by the migration**: `docs.json` *is* Mintlify's nav config, and it lists only two pages
+under "Send data" (`reference-architectures`, `methods`). Production's sidebar omits exactly the same
+pages.
 
-**Verify:** diff generated routes against nav-linked routes, both directions.
+They are also reachable — via hub pages (`send-data/methods` links all 31 shippers), via search, and
+via the sitemap, which lists all 625 indexable URLs. Nothing is stranded.
+
+Concentrated in `send-data` (31) and `guides` (25). The only visible cost is that their social cards
+render title-only, since there is no breadcrumb group to use as an eyebrow.
+
+Worth revisiting as an IA improvement; not a release blocker, and not something the cutover changes.
 
 ### [ ] T2.8 Rotate the Axiom ingest token
 
