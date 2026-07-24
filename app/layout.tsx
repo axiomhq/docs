@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import { DocsToaster } from '@/components/docs-toaster';
 import { DocsSearchProvider } from '@/components/docs-search-provider';
+import { siteGraph, structuredDataProps } from '@/lib/structured-data';
 import './globals.css';
 
 const geist = localFont({
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={`${geist.variable} ${geistMono.variable}`}>
       <body>
+        <script type="application/ld+json" dangerouslySetInnerHTML={structuredDataProps(siteGraph())} />
         <RootProvider
           theme={{ attribute: ['class', 'data-theme'], defaultTheme: 'system', enableSystem: true, storageKey: 'axiom-docs-theme' }}
           search={{ enabled: false }}

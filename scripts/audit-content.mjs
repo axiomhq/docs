@@ -21,6 +21,19 @@ function routeFor(file) {
   return `/${relative.replace(/\/index$/, '')}`;
 }
 
+// Route handlers under app/docs (llms.txt, llms-full.txt, llms-apl.md) serve real URLs but have no
+// MDX file, so links to them are accepted here. Read from disk rather than hard-coded so the list
+// cannot drift when a handler is renamed or moved.
+//
+// This is not a link check for those URLs: `.md` is stripped below before matching, so a link to a
+// deleted handler can still resolve through a redirect. Whether these paths are reachable is a
+// question for `next build` and the release gate, not this script.
+const handlerRoutes = new Set(
+  readdirSync(path.join(root, 'app/docs'), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(path.join(root, 'app/docs', entry.name, 'route.ts')))
+    .map((entry) => `/${entry.name}`),
+);
+
 const routes = new Set(['/', ...docs.map(routeFor)]);
 const redirectSources = new Set(config.redirects.map((item) => item.source.replace(/\/\*$/, '')));
 const unresolved = [];
@@ -37,7 +50,7 @@ for (const file of [...docs, ...snippets]) {
       if (!existsSync(path.join(root, 'public', pathname))) missingAssets.push({ file: path.relative(root, file), target: original });
       continue;
     }
-    if (pathname === '/llms.txt' || pathname === '/llms-full.txt' || pathname === '/llms-apl.md') continue;
+    if (handlerRoutes.has(pathname)) continue;
     const normalized = pathname.replace(/\.md$/, '').replace(/\/$/, '') || '/';
     if (!routes.has(normalized) && !redirectSources.has(normalized)) unresolved.push({ file: path.relative(root, file), target: original });
   }

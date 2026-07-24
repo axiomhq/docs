@@ -29,3 +29,18 @@ describe('legacy redirects', () => {
     expect(wildcard?.source.endsWith('/:path*')).toBe(true);
   });
 });
+
+describe('legacy .md redirects', () => {
+  it('mirrors every non-wildcard redirect at its .md twin', () => {
+    const pages = redirects.filter((redirect) => !redirect.source.endsWith('.md') && !redirect.source.includes(':path*'));
+    const markdown = new Set(redirects.filter((redirect) => redirect.source.endsWith('.md')).map((redirect) => redirect.source));
+    const missing = pages.filter((redirect) => !markdown.has(`${redirect.source}.md`));
+    expect(missing).toEqual([]);
+  });
+
+  it('points .md sources at .md destinations', () => {
+    const markdown = redirects.filter((redirect) => redirect.source.endsWith('.md'));
+    expect(markdown.length).toBeGreaterThan(0);
+    expect(markdown.every((redirect) => redirect.destination.endsWith('.md'))).toBe(true);
+  });
+});

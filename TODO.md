@@ -87,6 +87,9 @@ never to quiet a red build** — the exact-equality snapshots they replaced trai
 | T1.5 | Redirects for legacy `/docs/llms` and `/docs/llms-apl`; redirect tests hardened | `e1eed9d` |
 | T2.1 | Per-page Open Graph + Twitter cards via the marketing `/og` route | see below |
 | T2.4 | `/docs` landing page metadata — canonical, OG, Twitter (closed by T2.1) | see below |
+| T2.2 | JSON-LD: Organization + WebSite site-wide, TechArticle + BreadcrumbList per page | `next` |
+| T2.5 | Legacy `.md` redirects — every non-wildcard redirect mirrored at its `.md` twin | `next` |
+| T2.6 | `url:` frontmatter now 307s like production, and is excluded from the sitemap | `next` |
 
 ---
 
@@ -266,40 +269,28 @@ and `clientId()` (`route.ts:66-69`) holds. The defect is instance fan-out only.*
 > so they have no breadcrumb to read a group from — the card still renders, just title-only. Fixing
 > T2.7 raises this automatically.
 
-### [ ] T2.2 JSON-LD structured data
+### [x] ~~T2.3 Sitemap `lastmod`~~ — **`<priority>` dropped; `lastmod` deliberately NOT added**
 
-`application/ld+json` count on the new site: **0**. Production emits `Organization`, `WebSite`,
-`WebPage`, `BreadcrumbList` and `Article`/`TechArticle` per page.
+`<priority>` is gone: Google has stated it ignores the field, and a uniform `0.7` carried no signal.
 
-The data already exists — `getBreadcrumbs` (`app/docs/[...slug]/page.tsx:24`) and `keywords`
-(`source.config.ts:11`). Restores breadcrumb rich results and freshness signals across the corpus.
+**`lastmod` was not added, and the plan's premise was wrong.** It assumed an accurate date was
+available. There is none:
 
-### [ ] T2.3 Sitemap `lastmod`
+| Source | Result |
+|---|---|
+| Frontmatter | no date field on any page |
+| `git log` per file | **all 635 files report 2026-07** — the migration rewrote everything |
+| Production sitemap | genuinely varied: 384 in 2026-01, 79 in 2026-04, 41 in 2026-03, … across 7 months |
 
-`app/docs/sitemap.ts:6-7` emits `<priority>` (Google ignores it) and no `<lastmod>` (Google uses it).
-Production's sitemap is the exact inverse: 623 `<lastmod>`, 0 `<priority>`.
+Deriving from git would stamp all 625 URLs with one timestamp, replacing production's real per-page
+history with a claim that the entire corpus changed at once. A uniform `lastmod` is a weak signal at
+best and a trust-eroding one at worst, so omitting it beats fabricating it.
 
-An accurate one-time `lastmod` at cutover is the single strongest recrawl signal available — ship it
-**with** the cutover if at all possible.
+**If `lastmod` is wanted later**, the honest route is to seed from production's sitemap before
+cutover — snapshot the 623 real dates into a committed map — and let git dates take over for pages
+edited after the migration, once git history carries real signal again. Worth doing; not worth
+guessing.
 
-### [ ] T2.5 Legacy `.md` redirects
-
-`lib/redirects.mjs:16-18` emits literal sources with no `.md` variant, so `/docs/<legacy>.md` matches
-no redirect and the rewrite at `next.config.mjs:16` sends it to `/api/md/<legacy>`, which has no page.
-Production 307s all 115.
-
-Confirmed 404 on new vs 307 on prod: `/docs/usage/analyze.md`, `/docs/apl.md`, `/docs/index.md`,
-`/docs/usage/datasets.md`, `/docs/monitor-data/alerts.md`. Narrow (legacy ∩ `.md` only) — hence
-Phase 2, not Phase 1.
-
-### [ ] T2.6 Three `llms` stub pages became indexable
-
-Production 307s `/docs/llms/llms`, `/llms-full`, `/llms-apl` away and lists none in its sitemap. The
-new site serves all three as 200 HTML **and** declares them in the sitemap.
-
-Root cause worth fixing generally: `source.config.ts:16` ends with `.catchall(z.unknown())`, so
-Mintlify's `url:` link-out frontmatter parses cleanly and is then read by nobody. Grep the corpus for
-other `url:` frontmatter and decide explicitly what it should do.
 
 ### [ ] T2.7 `[unverified]` Navigation orphans
 

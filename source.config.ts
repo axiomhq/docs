@@ -9,6 +9,8 @@ export const docs = defineDocs({
       .extend({
         sidebarTitle: z.string().optional(),
         keywords: z.array(z.string()).optional(),
+        // Mintlify link-out: the page is a redirect to this target rather than a document.
+        url: z.string().optional(),
         openapi: z.string().optional(),
         noindex: z.boolean().optional(),
         mode: z.string().optional(),

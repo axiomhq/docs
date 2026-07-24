@@ -13,8 +13,12 @@ import { PlaceholderPre as InteractivePlaceholderPre } from './placeholder-code'
 import { HeadingAnchor } from './heading-anchor';
 import { LanguageComparisons } from './language-comparisons';
 
+// Content is written with root-relative links from the Mintlify layout ("/send-data/methods"),
+// so everything below /docs is rewritten to sit under the deployment root. Only /doc-assets is
+// exempt: it is served from public/ at the origin root. The llms routes used to be exempt too,
+// until they moved under /docs — leaving them out sent readers to a 404.
 function DocsLink({ href = '', children, className, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
-  const target = href.startsWith('/') && !href.startsWith('/docs/') && !href.startsWith('/doc-assets/') && !href.startsWith('/llms') ? `/docs${href}` : href;
+  const target = href.startsWith('/') && !href.startsWith('/docs/') && !href.startsWith('/doc-assets/') ? `/docs${href}` : href;
   if (target.startsWith('/') || target.startsWith('#')) return <Link href={target} prefetch={false} className={className} {...props}>{children}</Link>;
   if (target.startsWith('https://play.axiom.co/')) {
     return <a href={target} className={['playground-link', className].filter(Boolean).join(' ')} target="_blank" rel="noreferrer" {...props}><Play size={12} /><span>{children}</span><ExternalLink size={11} aria-label="Opens in a new tab" /></a>;

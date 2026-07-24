@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { DocsBody, DocsDescription, DocsTitle } from 'fumadocs-ui/page';
 import { DocsShell } from '@/components/docs-shell';
 import { ApiOperation } from '@/components/api-operation';
@@ -9,6 +9,7 @@ import { TableOfContents, type TocItem } from '@/components/table-of-contents';
 import { ArticleFooter } from '@/components/article-footer';
 import { getAdjacentNavigation, getBreadcrumbs, getNavigation, getSection } from '@/lib/navigation';
 import { ogImage } from '@/lib/og';
+import { pageGraph, structuredDataProps } from '@/lib/structured-data';
 import { source } from '@/lib/source';
 
 type PageProps = { params: Promise<{ slug?: string[] }> };
@@ -17,6 +18,9 @@ export default async function DocumentationPage({ params }: PageProps) {
   const { slug } = await params;
   const page = source.getPage(slug);
   if (!page) notFound();
+  // Mintlify link-out pages carry a `url` and are redirects, not documents. Production 307s all of
+  // them; rendering the stub instead would publish a near-empty page at an indexable URL.
+  if (page.data.url) redirect(page.data.url);
 
   const href = page.url;
   const section = getSection(href);
@@ -37,6 +41,18 @@ export default async function DocumentationPage({ params }: PageProps) {
 
   return (
     <DocsShell navigation={navigation} activeHref={href}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={structuredDataProps(
+          pageGraph({
+            url: href,
+            title: page.data.title,
+            description: page.data.description,
+            keywords: page.data.keywords,
+            breadcrumbs,
+          }),
+        )}
+      />
       <div className="article-layout">
         <article className={querySyntaxTitle ? 'doc-article query-syntax-article' : 'doc-article'}>
           <nav className="doc-breadcrumbs" aria-label="Breadcrumb">
