@@ -65,9 +65,11 @@ And three consequences for this repo:
   at `/docs/docs/getting-started`. The proxy passes the full path through, so content routing already
   works as-is.
 - **The actual defect is narrower than it first looked:** only the *root-mounted* routes are wrong.
-  `app/sitemap.ts`, `app/robots.ts`, `app/llms.txt/`, `app/llms-full.txt/`, `app/llms-apl.md/` sit at
-  the origin root, which under an `axiom.co/docs` proxy is territory owned by the marketing app and
-  never forwarded to us. Those five must move under `app/docs/`. That is T1.3 and T1.4 — nothing else.
+  `app/sitemap.ts`, `app/llms.txt/`, `app/llms-full.txt/`, `app/llms-apl.md/` sat at the origin root,
+  which under an `axiom.co/docs` proxy is territory owned by the marketing app and never forwarded to
+  us. They must move under `app/docs/` — T1.3 (sitemap, ✅ done) and T1.4 (the three `llms*` routes).
+  `app/robots.ts` is the exception: it stays at the root and is simply inert in production, because
+  `robots.txt` is only honoured at an origin root and that file belongs to `www`.
 
 **Verify:** `rg 'basePath' next.config.mjs` → no matches (confirming we did not add one).
 
@@ -77,7 +79,7 @@ And three consequences for this repo:
 
 ```
 app/layout.tsx:21          metadataBase        ← drives every canonical and og:url
-app/sitemap.ts:5           sitemap <loc> origin
+app/docs/sitemap.ts:5      sitemap <loc> origin
 app/robots.ts:4            sitemap declaration  (inert on production — www serves robots.txt)
 app/api/chat/route.ts:134  OpenRouter attribution header
 ```
@@ -224,15 +226,15 @@ Destructive cases were run in a scratch copy, never in the repo. Suite after: au
 ⚠️ **Raise a floor only when content is deliberately retired — never to quiet a red build.** That
 reflex is what this task existed to remove.
 
-### [ ] T1.3 Serve `/docs/sitemap.xml`; robots is a `www` handoff `[verified]` `[HANDOFF]`
+### [x] T1.3 ~~Serve `/docs/sitemap.xml`~~ — **repo side DONE; robots deferred to W2** `[verified]` `[HANDOFF]`
 
 Sitemap discovery is broken end to end:
 
 ```
 axiom.co/docs/sitemap.xml         200, 624 locs   ← the URL registered in Search Console
-docs.axiom.dev/docs/sitemap.xml   404
-docs.axiom.dev/sitemap.xml        200, 624 locs   ← the only place it exists
-docs.axiom.dev/docs/robots.txt    404
+docs.axiom.dev/docs/sitemap.xml   404             ← FIXED, now 200 locally
+docs.axiom.dev/sitemap.xml        200, 624 locs   ← FIXED, now 404
+docs.axiom.dev/docs/robots.txt    404             ← stays 404 by design, see part 2
 ```
 
 And `app/robots.ts:5` advertises `${origin}/sitemap.xml` → `https://axiom.co/sitemap.xml`, which is the
@@ -242,9 +244,30 @@ At cutover, Google's registered sitemap URL 404s and the sitemap robots does poi
 626 pages — at exactly the moment every page's markup and internal links change. Recrawl stalls for
 weeks instead of days.
 
-**Fix, part 1 — in this repo.** Move `app/sitemap.ts` → `app/docs/sitemap.xml/route.ts` so the sitemap
-serves at `axiom.co/docs/sitemap.xml`, the URL already registered in Search Console. Do **not** add
-`basePath` (see T0.1).
+#### ✅ Part 1 DONE — in this repo
+
+Moved `app/sitemap.ts` → **`app/docs/sitemap.ts`**, and updated `app/robots.ts` to advertise
+`${origin}/docs/sitemap.xml`.
+
+Not `app/docs/sitemap.xml/route.ts` as originally planned: Next's `sitemap` metadata convention
+works in nested segments, so `app/docs/sitemap.ts` maps to `/docs/sitemap.xml` on its own
+(`is-metadata-route.js:118` matches any path ending in `/sitemap.xml`, not just root). Verified by
+build, not assumed — a hand-rolled route handler would have been redundant.
+
+`app/robots.ts` stays at the root and keeps a comment explaining it serves staging only; production
+`/robots.txt` is outside the proxied prefix and belongs to `www`. Its sitemap line was pointing at a
+URL that now exists nowhere, so it was corrected regardless.
+
+**Verified from the standalone server:**
+
+| Route | Before | After |
+|---|---|---|
+| `/docs/sitemap.xml` | 404 | **200**, 629 `<loc>`, origin `https://axiom.co` |
+| `/sitemap.xml` | 200 | **404** (correctly gone) |
+| `/robots.txt` | `Sitemap: …/sitemap.xml` | `Sitemap: …/docs/sitemap.xml` |
+
+`next build` ✓ 639 pages · audit ✓ · lint ✓ · typecheck ✓ · 18 tests ✓. Do **not** add `basePath`
+(see T0.1).
 
 **Fix, part 2 — `[HANDOFF]` to the `www` owners. Recommended, not mandatory.** ⚠️
 
@@ -467,7 +490,7 @@ The data already exists — `getBreadcrumbs` (`app/docs/[...slug]/page.tsx:24`) 
 
 ### [ ] T2.3 Sitemap `lastmod`
 
-`app/sitemap.ts:6-7` emits `<priority>` (Google ignores it) and no `<lastmod>` (Google uses it).
+`app/docs/sitemap.ts:6-7` emits `<priority>` (Google ignores it) and no `<lastmod>` (Google uses it).
 Production's sitemap is the exact inverse: 623 `<lastmod>`, 0 `<priority>`.
 
 An accurate one-time `lastmod` at cutover is the single strongest recrawl signal available — ship it
