@@ -3,23 +3,20 @@
 Working checklist for shipping `feat/fumadocs-redesign` to `axiom.co/docs`.
 Tasks are in **dependency order**. Work top to bottom; do not skip ahead.
 
-**Status of the branch as audited (2026-07-24):** `eslint`, `tsc --noEmit`, `vitest` (18 tests),
-`audit:content`, and `next build` (636 static pages) all pass. `.next/standalone/server.js` boots and
-serves correctly. The app is sound — everything below is routing, content drift, or launch hygiene.
+Completed tasks are removed from this file — see **Done so far** for the one-line record and
+`git log` for detail. Anything a later task still depends on is distilled into **Deployment context**
+and **Conventions** below, so nothing load-bearing is lost with the task that established it.
 
 ## How to use this file
 
-- Do one task per commit. Tick the box only after its **Verify** command passes.
+- Do one task per commit. Tick the box only after its **Verify** command passes, then delete the task
+  body and add a line to **Done so far**.
 - 🚫 **NEVER edit `~/Desktop/Axiom/www`.** It is read-only for this work — read it to understand
   behaviour, never modify it. Everything it needs is collected in **Phase 4**, to be filed as a single
-  request at the very end, after all `docs`-side work is done and verified. Items tagged `[HANDOFF]`
-  point there; they are never tasks to do inline.
-- So: all *work* happens in this repo (`~/Desktop/Axiom/docs`). The front door — the `/docs` proxy,
-  `robots.txt`, and a second redirect table — lives in `www` and is observed only.
+  request at the very end. Items tagged `[HANDOFF]` point there; they are never tasks to do inline.
 - **Nothing in Phases 0–3 depends on a `www` change.** You can complete the entire checklist, run the
   release gate against staging, and be fully ready to ship without touching it.
-- Tasks marked `[HUMAN]` need a decision from the team — stop and ask, do not guess. (None remain
-  open: T0.1 was the only one and it is now decided.)
+- Tasks marked `[HUMAN]` need a decision from the team — stop and ask, do not guess.
 - Findings are labelled `[verified]` (reproduced directly against live URLs / git) or
   `[unverified]` (reported by audit, needs confirmation before acting).
 - Node ≥24 is required. Local default is 22.16.0 — use `/opt/homebrew/opt/node/bin/node` or `nvm use 24`.
@@ -27,15 +24,12 @@ serves correctly. The app is sound — everything below is routing, content drif
 
 ---
 
-## Phase 0 — Prerequisites
-
-### [x] T0.1 ~~Decide the deployment topology~~ — **DECIDED: `axiom.co/docs`**
+## Deployment context
 
 **The site ships at `axiom.co`, serving docs under `/docs`.** `docs.axiom.dev` is staging only.
-Everything below assumes this. No further decision needed.
 
-**How it actually works — the marketing repo owns the front door.** `~/Desktop/Axiom/www`
-(branch `main`) proxies docs via a Next.js rewrite, `www/next.config.ts:65-78`:
+`~/Desktop/Axiom/www` (branch `main`) owns the front door and proxies docs via a Next.js rewrite,
+`www/next.config.ts:65-78`:
 
 ```ts
 async rewrites() {
@@ -45,33 +39,56 @@ async rewrites() {
 }
 ```
 
-Three consequences that shape this entire file:
+1. **Cutover is a one-line rewrite swap in `www`, not a DNS change.** Rollback is reverting that
+   line — minutes, not a TTL. See Phase 4 / W1.
+2. **It is a rewrite, not a redirect** — the URL bar stays on `axiom.co` and this app receives the
+   full `/docs/...` path.
+3. **`/docs/:path*` is the only thing proxied.** Everything else on `axiom.co`, including
+   `/robots.txt` and `/sitemap.xml`, is served by `www` and never reaches this app.
 
-1. **Cutover is a one-line rewrite swap in `www`, not a DNS change.** Point `destination` at the new
-   deployment and redeploy `www`. Rollback is reverting that line — minutes, not a DNS TTL.
-2. **It is a rewrite, not a redirect** — the URL bar stays on `axiom.co` and the docs app receives the
-   full `/docs/...` path. This is why `basePath` must not be added (see below) and why the docs app's
-   own routes are already correct.
-3. **`/docs/:path*` is the only thing proxied.** Everything else on `axiom.co` — including
-   `/robots.txt` and `/sitemap.xml` — is served by `www` and never reaches the docs app.
+Consequences that constrain the work:
 
-And three consequences for this repo:
-
+- ⚠️ **Do NOT set `basePath: '/docs'`.** Content routes already live at `app/docs/[...slug]`, so the
+  app serves `/docs/getting-started` at its own origin root. Adding `basePath` would produce
+  `/docs/docs/getting-started`. The proxy passes the full path through; routing is already correct.
 - **Canonicals are already correct.** Every `[...slug]` page emits
   `<link rel="canonical" href="https://axiom.co/docs/..."/>` and the sitemap uses the same origin.
-  Nothing to change — this was only a risk under the rejected subdomain option.
-- **Do NOT set `basePath: '/docs'`.** ⚠️ Content routes already live at `app/docs/[...slug]`, so the
-  app serves `/docs/getting-started` at its own origin root today. Adding `basePath` would serve them
-  at `/docs/docs/getting-started`. The proxy passes the full path through, so content routing already
-  works as-is.
-- **The actual defect is narrower than it first looked:** only the *root-mounted* routes are wrong.
-  `app/sitemap.ts`, `app/llms.txt/`, `app/llms-full.txt/`, `app/llms-apl.md/` sat at the origin root,
-  which under an `axiom.co/docs` proxy is territory owned by the marketing app and never forwarded to
-  us. They must move under `app/docs/` — T1.3 (sitemap, ✅ done) and T1.4 (the three `llms*` routes).
-  `app/robots.ts` is the exception: it stays at the root and is simply inert in production, because
-  `robots.txt` is only honoured at an origin root and that file belongs to `www`.
+- **`app/robots.ts` is inert in production** and stays at the app root. `robots.txt` is only honoured
+  at an origin root, and `axiom.co/robots.txt` belongs to `www`. This file serves staging only;
+  production robots changes are Phase 4 / W2.
+- **Two redirect layers exist.** `www` resolves its own `/docs` redirects *before* the rewrite, so it
+  wins over `docs.json`. See T1.6.
 
-**Verify:** `rg 'basePath' next.config.mjs` → no matches (confirming we did not add one).
+## Conventions
+
+**Porting content from `main`.** `main` is still the Mintlify tree (flat `send-data/*.mdx`); this
+branch uses `content/docs/(documentation)/…`. **Never `git merge origin/main`** — port by content and
+apply both transformations:
+
+1. Snippet imports: `from "/snippets/x.mdx"` → `from "@/content/snippets/x.mdx"`
+2. Code fences: ` ```mpl ` → ` ```kusto `. Shiki has no `mpl` grammar and `next build` fails outright.
+   The branch uses `kusto` for APL/MPL everywhere.
+
+Neither is caught by `audit:content`; only `next build` catches the fence one.
+
+**Floors, not freezes.** `scripts/audit-content.mjs` and `tests/redirects.test.ts` assert *floors* on
+counts plus zero-tolerance invariants. ⚠️ **Raise a floor only when content is deliberately retired,
+never to quiet a red build** — the exact-equality snapshots they replaced trained exactly that reflex.
+
+## Done so far
+
+| | Task | Commit |
+|---|---|---|
+| T0.1 | Deployment topology decided → `axiom.co/docs` (distilled above) | — |
+| T1.1 | Ported StatsD/Traefik/PgBouncer + 2 edits from `main`, no merge | `6fd391e` |
+| T1.2 | Unfroze `audit-content.mjs` → floors + invariants | `6fd391e` |
+| T1.3 | Sitemap served at `/docs/sitemap.xml` | `cf7b669` |
+| T1.4 | `llms.txt` / `llms-full.txt` / `llms-apl.md` served under `/docs` | `3667f9c` |
+| T1.5 | Redirects for legacy `/docs/llms` and `/docs/llms-apl`; redirect tests hardened | `e1eed9d` |
+
+---
+
+## Phase 0 — Prerequisites
 
 ### [ ] T0.2 Set `NEXT_PUBLIC_SITE_URL=https://axiom.co` in the **production build env only**
 
@@ -121,293 +138,9 @@ curl -s <staging>/docs/introduction | grep -o '<link rel="canonical"[^>]*>'
 
 ---
 
+---
+
 ## Phase 1 — Blockers (must land before the rewrite swap)
-
-### [x] T1.1 ~~Merge `main`~~ — **DONE: ported 3 pages + 2 edits, no merge** `[verified]`
-
-`origin/main` is **not** an ancestor of HEAD. Commit `b5cab9e` (PR #679) shipped three guides that do
-not exist on this branch at all:
-
-| URL | prod | new site |
-|---|---|---|
-| `/docs/send-data/statsd` | 200 | **404** |
-| `/docs/send-data/traefik` | 200 | **404** |
-| `/docs/send-data/pgbouncer` | 200 | **404** |
-
-All three are in production's live sitemap. Cutting over today deletes three indexed pages.
-
-Same commit also carries edits this branch lacks:
-- `content/docs/(documentation)/send-data/methods.mdx` — 0 mentions of the three shippers on this
-  branch; the production page has table rows for all three.
-- `content/docs/(documentation)/send-data/opentelemetry.mdx` — this branch still ships the **pre-fix,
-  invalid** metrics pipeline (`processors:` as a map). `main` corrected it to a list plus a top-level
-  `processors:` block. We would hand users a collector config production already fixed.
-
-#### ✅ DONE — ported, deliberately NOT merged
-
-`git merge origin/main` was **rejected on purpose.** `main` is still the Mintlify tree, where content
-lives flat at `send-data/*.mdx`; here it lives at `content/docs/(documentation)/send-data/*.mdx`. A
-merge would have added the files at the old paths (unroutable), and fought over `docs.json`,
-`README.md` and every other file the redesign rewrote.
-
-Instead the single missing commit `b5cab9e` — 5 files, no `docs.json` change — was ported by content:
-
-| File | Action |
-|---|---|
-| `send-data/statsd.mdx` | new → `content/docs/(documentation)/send-data/` |
-| `send-data/traefik.mdx` | new → same |
-| `send-data/pgbouncer.mdx` | new → same |
-| `send-data/methods.mdx` | 3 table rows added, alphabetical position preserved |
-| `send-data/opentelemetry.mdx` | metrics `processors:` block corrected to match `main` |
-
-Two transformations were required — **the reason a merge would have shipped broken**:
-
-1. **Snippet imports.** Mintlify absolute `from "/snippets/x.mdx"` → `from "@/content/snippets/x.mdx"`.
-2. **Code fences.** The new pages used ` ```mpl `, which Mintlify tolerated and **Shiki rejects** —
-   `next build` failed with `ShikiError: Language 'mpl' not found`. This branch standardizes on
-   ` ```kusto ` for APL/MPL (1,884 uses in `(query-reference)`, zero uses of `mpl`). Rewrote both.
-
-⚠️ **Apply both transformations to any future port from `main`.** Neither is caught by
-`audit:content`; only `next build` catches the fence one.
-
-**Verified:** files byte-identical to `main` apart from the import rewrite · `next build` ✓ 639 pages
-(636 → +3) · all 3 pages serve 200 from the standalone server · snippets render (not empty) · `methods`
-links all 3 · lint ✓ · 18 tests ✓ · `audit:content` ✓.
-
-**Note:** the audit baseline was bumped 626→629 / 647→650 to keep the gate green. That is a patch, not
-T1.2 — the exact-equality freeze is still there and still needs replacing.
-
-### [x] T1.2 ~~Unfreeze `scripts/audit-content.mjs`~~ — **DONE: floors + invariants** `[verified]`
-
-Baseline was bumped to 629/650 during T1.1 so the gate would pass, but the underlying problem is
-untouched: `scripts/audit-content.mjs:66` is still exact-equality against a frozen snapshot:
-
-```js
-const expected = results.routablePages === 626 && results.snippets === 21 && results.mdxTotal === 647
-  && results.assets === 129 && results.redirects === 115 && results.openapiPages === 89;
-```
-
-`package.json:19` wires it into `pnpm check`; `.github/workflows/ci.yml` runs `pnpm check` on
-`push: [main]`. Merging T1.1 changes these counts and **fails CI immediately**. Worse, once this lands
-on `main`, every future content PR fails on arrival — it is a freeze, not a check.
-
-Change to lower-bound assertions (counts must not *drop*) and keep the genuinely valuable parts —
-`unresolvedLinks`, `missingAssets`, `retiredAnalyticsReferences` — as exact-zero checks.
-
-Note `README.md:44` documents a **third**, stale baseline (645 mdx / 624 pages / 126 assets). Fix it
-to match reality while you are here.
-
-#### ✅ DONE
-
-Split into the two jobs it was conflating:
-
-- **Invariants — zero tolerance, forever.** `unresolvedLinks`, `missingAssets`,
-  `retiredAnalyticsReferences`. These are defects at any corpus size.
-- **Floors — the corpus may grow, never silently shrink.** Replaces the exact-equality snapshot.
-  Failures now name the offending metric instead of exiting 1 silently.
-
-`README.md` corrected: it documented a third baseline (645/624/126) matching neither the code nor
-reality, and described the counts as a frozen "migration baseline" rather than floors.
-
-**Tested all six paths:**
-
-| Case | Expected | Result |
-|---|---|---|
-| current tree | pass | ✓ exit 0 |
-| add a page (630/651) | pass | ✓ exit 0 |
-| delete 2 pages | fail | ✓ `routablePages fell to 627, floor is 629` |
-| broken internal link, counts unchanged | fail | ✓ `1 unresolved links` |
-| `fathom` reference reintroduced | fail | ✓ `1 retired analytics references` |
-| restored | pass | ✓ exit 0 |
-
-Destructive cases were run in a scratch copy, never in the repo. Suite after: audit ✓ · lint ✓ ·
-18 tests ✓.
-
-⚠️ **Raise a floor only when content is deliberately retired — never to quiet a red build.** That
-reflex is what this task existed to remove.
-
-### [x] T1.3 ~~Serve `/docs/sitemap.xml`~~ — **repo side DONE; robots deferred to W2** `[verified]` `[HANDOFF]`
-
-Sitemap discovery is broken end to end:
-
-```
-axiom.co/docs/sitemap.xml         200, 624 locs   ← the URL registered in Search Console
-docs.axiom.dev/docs/sitemap.xml   404             ← FIXED, now 200 locally
-docs.axiom.dev/sitemap.xml        200, 624 locs   ← FIXED, now 404
-docs.axiom.dev/docs/robots.txt    404             ← stays 404 by design, see part 2
-```
-
-And `app/robots.ts:5` advertises `${origin}/sitemap.xml` → `https://axiom.co/sitemap.xml`, which is the
-**marketing** sitemap containing **zero** docs URLs.
-
-At cutover, Google's registered sitemap URL 404s and the sitemap robots does point to has none of our
-626 pages — at exactly the moment every page's markup and internal links change. Recrawl stalls for
-weeks instead of days.
-
-#### ✅ Part 1 DONE — in this repo
-
-Moved `app/sitemap.ts` → **`app/docs/sitemap.ts`**, and updated `app/robots.ts` to advertise
-`${origin}/docs/sitemap.xml`.
-
-Not `app/docs/sitemap.xml/route.ts` as originally planned: Next's `sitemap` metadata convention
-works in nested segments, so `app/docs/sitemap.ts` maps to `/docs/sitemap.xml` on its own
-(`is-metadata-route.js:118` matches any path ending in `/sitemap.xml`, not just root). Verified by
-build, not assumed — a hand-rolled route handler would have been redundant.
-
-`app/robots.ts` stays at the root and keeps a comment explaining it serves staging only; production
-`/robots.txt` is outside the proxied prefix and belongs to `www`. Its sitemap line was pointing at a
-URL that now exists nowhere, so it was corrected regardless.
-
-**Verified from the standalone server:**
-
-| Route | Before | After |
-|---|---|---|
-| `/docs/sitemap.xml` | 404 | **200**, 629 `<loc>`, origin `https://axiom.co` |
-| `/sitemap.xml` | 200 | **404** (correctly gone) |
-| `/robots.txt` | `Sitemap: …/sitemap.xml` | `Sitemap: …/docs/sitemap.xml` |
-
-`next build` ✓ 639 pages · audit ✓ · lint ✓ · typecheck ✓ · 18 tests ✓. Do **not** add `basePath`
-(see T0.1).
-
-**Fix, part 2 — `[HANDOFF]` to the `www` owners. Recommended, not mandatory.** ⚠️
-
-`robots.txt` is only honoured at an **origin root**, and `/robots.txt` is not inside the proxied
-`/docs/:path*` prefix — so it is served by `www/src/app/robots.ts` and this repo's `app/robots.ts`
-never runs on production at all. Moving it under `app/docs/` fixes nothing; a file at
-`axiom.co/docs/robots.txt` is ignored by every crawler.
-
-`www/src/app/robots.ts:64` currently emits one sitemap:
-
-```ts
-sitemap: `${siteConfig.url}/sitemap.xml`,     // → https://axiom.co/sitemap.xml, 284 locs, 0 of them /docs
-```
-
-Change to declare both (multiple `Sitemap:` lines are valid and standard):
-
-```ts
-sitemap: [`${siteConfig.url}/sitemap.xml`, `${siteConfig.url}/docs/sitemap.xml`],
-```
-
-**Why it is only *recommended*:** Google's primary sitemap source is the Search Console submission,
-not robots.txt. If `axiom.co/docs/sitemap.xml` is already registered there — it returns 200 with 624
-locs today — then serving that URL from this repo (part 1) is sufficient on its own, and the robots
-line is redundancy rather than a requirement.
-
-⚠️ **Verify the Search Console registration before deciding to skip it.** Nobody has confirmed what is
-actually registered; that requires console access. If it is *not* registered, this handoff becomes
-mandatory and the sitemap is otherwise undiscoverable.
-
-Either way, do not edit `www`. This is **W2 in Phase 4** — filed at the end, not now.
-
-Keep this repo's `app/robots.ts` only to give staging hosts crawl directives, and add a comment saying
-it is inert on production. Note it currently emits `Allow: /docs/` with no `Disallow`, so staging is
-fully crawlable — see T2.9.
-
-**Verify:**
-```bash
-curl -s https://axiom.co/docs/sitemap.xml | grep -c '<loc>'      # >= 624
-curl -s https://axiom.co/robots.txt | grep -c 'docs/sitemap.xml' # must be 1 — the marketing-side fix
-```
-
-### [x] T1.4 ~~Serve the `/docs/llms*` surface~~ — **DONE** `[verified]`
-
-The entire machine-readable surface 404s at the URLs Axiom advertises:
-
-| URL | prod | new site |
-|---|---|---|
-| `/docs/llms.txt` | 200 | **404** |
-| `/docs/llms-full.txt` | 200 | **404** |
-| `/docs/llms-apl.md` | 200 | **404** |
-| `/docs/llms-apl` | 200, **in prod sitemap** | **404, no redirect** |
-
-They are served only at origin root — `/llms.txt`, `/llms-full.txt`, `/llms-apl.md` all return 200.
-`/docs/llms.txt` is the ecosystem-standard URL AI crawlers fetch.
-
-Move all three route directories under `app/docs/` — they are self-contained `route.ts` handlers with
-`export const dynamic = 'force-static'`, so the move is purely a path change:
-
-```
-app/llms.txt/route.ts       → app/docs/llms.txt/route.ts
-app/llms-full.txt/route.ts  → app/docs/llms-full.txt/route.ts
-app/llms-apl.md/route.ts    → app/docs/llms-apl.md/route.ts
-```
-
-Serving 200s at the historic URLs is better than redirecting here — these are fetched by machines that
-often do not follow redirects.
-
-#### ✅ DONE
-
-All three directories moved; `dynamic = 'force-static'` meant the move was purely a path change.
-
-Also fixed `app/docs/llms.txt/route.ts:8`, which emitted a body link to `/llms-full.txt` — a URL that
-no longer exists after the move. Now `/docs/llms-full.txt`.
-
-`content/llms-apl.md` (read via `process.cwd()`) was confirmed present in `.next/standalone/content/`,
-so the handler resolves in the standalone server. It is also `force-static`, so the read happens at
-build time regardless.
-
-**Verified from the standalone server:**
-
-| Route | Before | After |
-|---|---|---|
-| `/docs/llms.txt` | 404 | **200** `text/plain`, 86 KB |
-| `/docs/llms-full.txt` | 404 | **200** `text/plain`, 3.5 MB |
-| `/docs/llms-apl.md` | 404 | **200** `text/markdown`, 55 KB |
-| `/llms.txt`, `/llms-full.txt`, `/llms-apl.md` | 200 | **404** (correctly gone) |
-
-Generated content is internally consistent — every URL inside carries the `/docs` prefix:
-`llms.txt` indexes `(/docs/restapi/ingest)`, `llms-full.txt` emits `Source: /docs/introduction`, and
-the corpus link resolves to `/docs/llms-full.txt`.
-
-build ✓ 639 pages · audit ✓ · lint ✓ · typecheck ✓ · 18 tests ✓
-
-⚠️ Content still links to these URLs **absolutely** (`https://axiom.co/docs/llms.txt`). Absolute URLs
-are not matched by the audit's link pattern, which only checks root-relative paths — so nothing here
-validates them. That is T1.5, and it needs manual verification.
-
-### [x] T1.5 ~~Add the `/llms-apl` redirect~~ — **DONE: 2 redirects; links needed no change** `[verified]`
-
-`/docs/llms-apl` is a live, indexed, sitemap-listed page whose content moved to `/docs/llms/llms-apl`
-with no redirect — its ranking signal is discarded rather than passed on.
-
-Add `{"source": "/llms-apl", "destination": "/llms/llms-apl"}` to `docs.json`. It flows through
-`lib/redirects.mjs` automatically (already `permanent: true`, so 308 — correct).
-
-Then fix the shipped content that links to URLs we ourselves 404:
-```
-content/docs/(documentation)/llms/llms.mdx:3,:6
-content/docs/(documentation)/llms/llms-full.mdx:3,:6
-content/docs/(documentation)/llms/llms-overview.mdx:23,:24
-```
-
-#### ✅ DONE
-
-**Two** redirects were needed, not one. Both old URLs are in production's live sitemap and both would
-have 404'd:
-
-| Source | Destination | Prod today |
-|---|---|---|
-| `/llms-apl` | `/llms/llms-apl` | 200, a real page |
-| `/llms` | `/llms/llms-overview` | 200 via redirect |
-
-`/docs/llms` was not in the original plan — found by sweeping every `/docs/llms*` URL against
-production rather than trusting the one the audit named. `/docs/llms-full` and `/docs/llms-overview`
-are already 404 on production, so they need nothing.
-
-**The six absolute links needed no change.** The task assumed they pointed at URLs the new site 404s;
-T1.4 removed that. Verified by extracting every absolute `https://axiom.co/docs/…` link in the corpus
-(~340 of them) and probing each against the local build — all 200, including `/docs/llms.txt` and
-`/docs/llms-full.txt`. They stay absolute deliberately: the surrounding copy says "pass it to your
-LLM", so a copy-pasteable absolute URL is the point.
-
-**Also fixed a second frozen baseline that T1.2 missed.** `tests/redirects.test.ts:8` asserted
-`toHaveLength(115)` and failed the moment a redirect was added — the same freeze pattern, in a file
-T1.2 never looked at. Converted to a floor and added the assertions the audit flagged as absent:
-permanence, no duplicate sources, no self-redirects.
-
-**Verified from the standalone server:** both redirects return **308**, single hop, landing on 200.
-
-audit ✓ (redirects 115 → 117, floor held) · lint ✓ · **21 tests ✓** (was 18)
 
 ### [ ] T1.6 Verify the two redirect layers still chain — `www` wins `[verified]` `[HANDOFF]`
 
@@ -458,7 +191,7 @@ The same chains already resolve identically on production today, so this is **ex
 a migration regression**. Cost is one extra hop on 4 legacy paths — negligible traffic, no SEO harm
 (both hops are permanent redirects).
 
-**So the task here is verification only:** confirm the 4 chains still land after T1.1–T1.5, and record
+**So the task here is verification only:** confirm the 4 chains still land after the Phase 1 changes, and record
 in `AGENTS.md` that `www` shadows `docs.json` for these sources so the next person does not spend an
 afternoon on it.
 
@@ -478,7 +211,6 @@ for p in /docs/usage/getting-started /docs/introducing-axiom /docs/install/cloud
   curl -sSL -o /dev/null -w "$p → %{http_code} %{url_effective}\n" https://axiom.co$p
 done   # all 200
 ```
-
 ### [ ] T1.7 Meter `/api/chat` and `/api/try` — ⛔ **BLOCKED, awaiting team decision** `[HUMAN]`
 
 > **Do not start this task.** Paused 2026-07-25 pending two answers from the team. It is the only
@@ -515,7 +247,6 @@ and `clientId()` (`route.ts:66-69`) holds. The defect is instance fan-out only.*
 **Verify:** spend cap visible in the OpenRouter dashboard; limiter state survives across instances.
 
 ---
-
 ## Phase 2 — Fix at cutover or in week one
 
 ### [ ] T2.1 Open Graph images, site-wide `[verified]`
@@ -613,7 +344,6 @@ Make the intent explicit rather than emergent. Pick one:
 Not a blocker: staging has been live and crawlable for some time with canonicals intact.
 
 ---
-
 ## Phase 3 — Post-launch backlog
 
 - [ ] **CI validates the dev server, never the production build.** Redirects, sitemap, robots and the
@@ -643,10 +373,9 @@ Not a blocker: staging has been live and crawlable for some time with canonicals
 - [ ] Establish a **content freeze / sync policy**. `main` averages ~3 `.mdx` commits per week and there
   is no documented sync mechanism — grep for `cutover|content freeze|sync from main` across
   `README.md`, `AGENTS.md`, `DESIGN.md`, `PRODUCT.md`, `.github/CONTRIBUTING.md` returns zero hits.
-  Drift is what caused T1.1.
+  Drift is what stranded the three send-data guides that had to be ported by hand.
 
 ---
-
 ## Phase 4 — `www` handoffs (LAST, after everything above is done)
 
 🚫 **Do not do these. Do not edit `www`.** This section exists so the handoffs are collected in one
@@ -677,7 +406,6 @@ crawlers next read it, so shipping it in the same PR is fine and shipping it sli
 survivable. W1 is the only one with a hard moment attached to it.
 
 ---
-
 ## Release gate
 
 Run before cutover and again immediately after. **Zero 404s or do not proceed.**
@@ -698,7 +426,6 @@ curl -s https://axiom.co/docs/sitemap.xml \
 Save the output as the pre-cutover baseline.
 
 ---
-
 ## Cutover checklist
 
 **The switch is Phase 4 / W1** — one line in `www`, filed as a handoff at the very end. It is what
@@ -711,7 +438,7 @@ back.
 Everything under **Before** is `docs`-side and must be finished *before* W1 is filed.
 
 **Before**
-1. [ ] T0.2–T1.7 all ticked (T0.1 is decided).
+1. [ ] Every open task in Phases 0–2 ticked; **Done so far** reflects them.
 2. [ ] Redeploy staging from branch HEAD — the deploy audited on 2026-07-24 was ~5 days stale
    (`age: 420440`), so `gauge` and `sections` 404'd there while rendering fine locally. **Every
    measurement taken against `docs.axiom.dev` before that redeploy is suspect and must be re-taken.**
@@ -719,7 +446,7 @@ Everything under **Before** is `docs`-side and must be finished *before* W1 is f
 4. [ ] Sample 20 legacy redirects end-to-end; each must terminate on a 200. Include all four T1.6
    conflict paths.
 5. [ ] `[HANDOFF]` Search Console registration for `axiom.co/docs/sitemap.xml` confirmed. If it is not
-   registered, the `www` robots.txt request (T1.3 part 2) becomes mandatory and must ship with the
+   registered, the `www` robots.txt request (Phase 4 / W2) becomes mandatory and must ship with the
    swap.
 6. [ ] Confirm the new deployment is reachable from `www`'s edge and does not require auth
    (Vercel preview deployments are protected by default — a protected URL in the rewrite yields a
@@ -733,7 +460,7 @@ Everything under **Before** is `docs`-side and must be finished *before* W1 is f
 
 **First hour**
 9. [ ] `curl -sI https://axiom.co/docs/introduction` → 200, canonical → `https://axiom.co/docs/introduction`.
-10. [ ] `curl -s https://axiom.co/docs/sitemap.xml | grep -c '<loc>'` → ≥624. (If the T1.3 handoff
+10. [ ] `curl -s https://axiom.co/docs/sitemap.xml | grep -c '<loc>'` → ≥624. (If W2
    shipped, also: `curl -s https://axiom.co/robots.txt | grep -c docs/sitemap` → 1.)
 11. [ ] Release gate against **production**. Zero 404s.
 12. [ ] `/docs/llms.txt`, `/docs/llms-full.txt`, `/docs/llms-apl.md` → 200; `/docs/llms-apl` → 3xx → 200.
