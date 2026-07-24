@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { DocsShell } from '@/components/docs-shell';
 import { AskAiPrompt, SearchPrompt } from '@/components/search-prompt';
 import { getNavigation } from '@/lib/navigation';
+import { ogImage } from '@/lib/og';
 
 const quickCards = [
   { title: 'Quickstart', description: 'Send your first events in five minutes. No schema, no credit card.', action: 'Start here →', href: '/docs/getting-started' },
@@ -24,6 +26,17 @@ const platformRows = [
   ['Create monitors', 'Detect thresholds, matches, and anomalies before users do.', '/docs/monitor-data/monitors'],
   ['Manage datasets', 'Control schemas, retention, access, and usage at scale.', '/docs/reference/datasets'],
 ];
+
+const title = 'Axiom Docs';
+const description = 'Learn how to send, store, and query logs, traces, metrics, and events with Axiom.';
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: { canonical: '/docs' },
+  openGraph: { title, description, siteName: 'Axiom', type: 'website', url: '/docs', images: [ogImage(title)] },
+  twitter: { card: 'summary_large_image', title, description, images: [ogImage(title)] },
+};
 
 export default function DocsLandingPage() {
   return (

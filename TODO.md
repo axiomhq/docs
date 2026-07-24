@@ -85,6 +85,8 @@ never to quiet a red build** — the exact-equality snapshots they replaced trai
 | T1.3 | Sitemap served at `/docs/sitemap.xml` | `cf7b669` |
 | T1.4 | `llms.txt` / `llms-full.txt` / `llms-apl.md` served under `/docs` | `3667f9c` |
 | T1.5 | Redirects for legacy `/docs/llms` and `/docs/llms-apl`; redirect tests hardened | `e1eed9d` |
+| T2.1 | Per-page Open Graph + Twitter cards via the marketing `/og` route | see below |
+| T2.4 | `/docs` landing page metadata — canonical, OG, Twitter (closed by T2.1) | see below |
 
 ---
 
@@ -249,18 +251,20 @@ and `clientId()` (`route.ts:66-69`) holds. The defect is instance fan-out only.*
 ---
 ## Phase 2 — Fix at cutover or in week one
 
-### [ ] T2.1 Open Graph images, site-wide `[verified]`
-
-`og:image` count on the new site: **0**. Confirmed on both the live staging site and a local
-production build. `twitter:card` is downgraded to `summary`; `og:site_name` is gone. No OG asset or
-generator exists anywhere in `app/` or `public/`.
-
-Every one of 626 URLs shared in Slack, Discord, X, LinkedIn or an LLM chat renders as a bare text link.
-
-Add `app/docs/[...slug]/opengraph-image.tsx` using `next/og`, plus `openGraph.siteName` and
-`twitter.card` in `app/layout.tsx:20-28`.
-
-**Verify:** `curl -s <staging>/docs/getting-started | grep -c 'og:image'` → ≥1
+> **Social cards (T2.1) are done.** `lib/og.ts` builds `https://axiom.co/og?title=…&eyebrow=…`,
+> rendered by `www/src/app/og/route.tsx` — the same card the marketing site uses. We call that route
+> rather than shipping an `opengraph-image`, because the docs route is a catch-all
+> (`app/docs/[...slug]`) and Next forbids a child segment after a catch-all; the `www` team hit the
+> same wall and built `/og` for exactly this reason. The origin is hard-coded, not derived from
+> `NEXT_PUBLIC_SITE_URL`, since `/og` is served from production wherever this app runs.
+>
+> ⚠️ Next replaces a parent's `openGraph`/`twitter` object wholesale rather than merging, so
+> `siteName` and `card` are repeated in each page's metadata. Removing them from a page silently
+> drops the tags.
+>
+> **567 of 629 pages get a section eyebrow.** The other 62 are pages missing from the sidebar tree,
+> so they have no breadcrumb to read a group from — the card still renders, just title-only. Fixing
+> T2.7 raises this automatically.
 
 ### [ ] T2.2 JSON-LD structured data
 
@@ -277,15 +281,6 @@ Production's sitemap is the exact inverse: 623 `<lastmod>`, 0 `<priority>`.
 
 An accurate one-time `lastmod` at cutover is the single strongest recrawl signal available — ship it
 **with** the cutover if at all possible.
-
-### [ ] T2.4 `/docs` landing page metadata `[verified]`
-
-`app/docs/page.tsx` exports neither `metadata` nor `generateMetadata`. Its live `<head>` has only
-`<title>` and `<meta name="description">` — no canonical, no `og:*`, no `twitter:*`.
-
-It is the `priority: 1` URL in the sitemap and the target of `/` → `/docs` (`app/page.tsx:4`), so it is
-the one page that can be indexed as a duplicate. Every `[...slug]` page gets these correctly via
-`generateMetadata`; only the landing page is missing them.
 
 ### [ ] T2.5 Legacy `.md` redirects
 

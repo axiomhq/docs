@@ -8,6 +8,7 @@ import { mdxComponents } from '@/components/mdx-components';
 import { TableOfContents, type TocItem } from '@/components/table-of-contents';
 import { ArticleFooter } from '@/components/article-footer';
 import { getAdjacentNavigation, getBreadcrumbs, getNavigation, getSection } from '@/lib/navigation';
+import { ogImage } from '@/lib/og';
 import { source } from '@/lib/source';
 
 type PageProps = { params: Promise<{ slug?: string[] }> };
@@ -76,11 +77,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const page = source.getPage(slug);
   if (!page) notFound();
+  // The first breadcrumb is the sidebar group — "Send data", "Dashboards" — which
+  // reads far better on a card than the four coarse values getSection returns.
+  const [group] = getBreadcrumbs(getNavigation(getSection(page.url)), page.url);
+  const images = [ogImage(page.data.title, group?.title)];
   return {
     title: page.data.title,
     description: page.data.description,
     robots: page.data.noindex ? { index: false, follow: false } : undefined,
     alternates: { canonical: page.url },
-    openGraph: { title: page.data.title, description: page.data.description, type: 'article', url: page.url },
+    // siteName is repeated here because Next replaces the layout's openGraph
+    // object wholesale rather than merging into it.
+    openGraph: { title: page.data.title, description: page.data.description, siteName: 'Axiom', type: 'article', url: page.url, images },
+    twitter: { card: 'summary_large_image', title: page.data.title, description: page.data.description, images },
   };
 }
