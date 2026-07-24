@@ -309,7 +309,7 @@ curl -s https://axiom.co/docs/sitemap.xml | grep -c '<loc>'      # >= 624
 curl -s https://axiom.co/robots.txt | grep -c 'docs/sitemap.xml' # must be 1 — the marketing-side fix
 ```
 
-### [ ] T1.4 Serve the `/docs/llms*` surface `[verified]`
+### [x] T1.4 ~~Serve the `/docs/llms*` surface~~ — **DONE** `[verified]`
 
 The entire machine-readable surface 404s at the URLs Axiom advertises:
 
@@ -335,20 +335,35 @@ app/llms-apl.md/route.ts    → app/docs/llms-apl.md/route.ts
 Serving 200s at the historic URLs is better than redirecting here — these are fetched by machines that
 often do not follow redirects.
 
-Two things to fix inside the handlers while moving them:
-- `app/llms.txt/route.ts:8` emits a body link to `/llms-full.txt`; update to `/docs/llms-full.txt`.
-- `app/llms-apl.md/route.ts:7` reads `content/llms-apl.md` via `process.cwd()`. Confirm that file is in
-  the standalone output — `scripts/prepare-standalone.mjs` copies only `public` and `.next/static`.
-  The build does include a `content/` directory in `.next/standalone/`, but verify this specific file
-  survives rather than assuming it.
+#### ✅ DONE
 
-**Verify:**
-```bash
-for p in /docs/llms.txt /docs/llms-full.txt /docs/llms-apl.md; do
-  echo "$p $(curl -s -o /dev/null -w '%{http_code}' https://axiom.co$p)"
-done   # all 200
-curl -s https://axiom.co/docs/llms.txt | grep -c '/docs/llms-full.txt'  # 1, not the root-relative form
-```
+All three directories moved; `dynamic = 'force-static'` meant the move was purely a path change.
+
+Also fixed `app/docs/llms.txt/route.ts:8`, which emitted a body link to `/llms-full.txt` — a URL that
+no longer exists after the move. Now `/docs/llms-full.txt`.
+
+`content/llms-apl.md` (read via `process.cwd()`) was confirmed present in `.next/standalone/content/`,
+so the handler resolves in the standalone server. It is also `force-static`, so the read happens at
+build time regardless.
+
+**Verified from the standalone server:**
+
+| Route | Before | After |
+|---|---|---|
+| `/docs/llms.txt` | 404 | **200** `text/plain`, 86 KB |
+| `/docs/llms-full.txt` | 404 | **200** `text/plain`, 3.5 MB |
+| `/docs/llms-apl.md` | 404 | **200** `text/markdown`, 55 KB |
+| `/llms.txt`, `/llms-full.txt`, `/llms-apl.md` | 200 | **404** (correctly gone) |
+
+Generated content is internally consistent — every URL inside carries the `/docs` prefix:
+`llms.txt` indexes `(/docs/restapi/ingest)`, `llms-full.txt` emits `Source: /docs/introduction`, and
+the corpus link resolves to `/docs/llms-full.txt`.
+
+build ✓ 639 pages · audit ✓ · lint ✓ · typecheck ✓ · 18 tests ✓
+
+⚠️ Content still links to these URLs **absolutely** (`https://axiom.co/docs/llms.txt`). Absolute URLs
+are not matched by the audit's link pattern, which only checks root-relative paths — so nothing here
+validates them. That is T1.5, and it needs manual verification.
 
 ### [ ] T1.5 Add the `/llms-apl` redirect and fix six absolute links `[verified]`
 
