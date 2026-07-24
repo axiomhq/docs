@@ -30,17 +30,42 @@ describe('legacy redirects', () => {
   });
 });
 
+// Route handlers under app/docs serve real URLs; a redirect at one of those paths would shadow it,
+// because redirects run before routes. Kept here so both suites below describe the same rule.
+const HANDLER_ROUTES = ['/docs/llms.txt', '/docs/llms-full.txt', '/docs/llms-apl.md'];
+
 describe('legacy .md redirects', () => {
   it('mirrors every non-wildcard redirect at its .md twin', () => {
-    const pages = redirects.filter((redirect) => !redirect.source.endsWith('.md') && !redirect.source.includes(':path*'));
+    // Two deliberate exclusions: the docs root, where /docs.md matches no rewrite and so has no
+    // twin, and any source whose twin would land on a route handler.
+    const docsRoot = (path: string) => path === '/docs' || path === '/docs/';
+    const pages = redirects.filter(
+      (redirect) =>
+        !redirect.source.endsWith('.md') &&
+        !redirect.source.includes(':path*') &&
+        !docsRoot(redirect.destination) &&
+        !HANDLER_ROUTES.includes(`${redirect.source}.md`),
+    );
     const markdown = new Set(redirects.filter((redirect) => redirect.source.endsWith('.md')).map((redirect) => redirect.source));
     const missing = pages.filter((redirect) => !markdown.has(`${redirect.source}.md`));
     expect(missing).toEqual([]);
+  });
+
+  it('never produces a .md twin for the docs root', () => {
+    expect(redirects.filter((redirect) => redirect.destination === '/docs.md' || redirect.destination === '/docs/.md')).toEqual([]);
   });
 
   it('points .md sources at .md destinations', () => {
     const markdown = redirects.filter((redirect) => redirect.source.endsWith('.md'));
     expect(markdown.length).toBeGreaterThan(0);
     expect(markdown.every((redirect) => redirect.destination.endsWith('.md'))).toBe(true);
+  });
+});
+
+describe('route handlers are not shadowed', () => {
+  // Redirects run before routes, so a redirect at a handler's own URL makes the handler
+  // unreachable. /docs/llms-apl.md once served a 136-byte stub instead of the 55 KB APL reference.
+  it('never registers a redirect at a route handler path', () => {
+    expect(redirects.filter((redirect) => HANDLER_ROUTES.includes(redirect.source))).toEqual([]);
   });
 });
