@@ -118,15 +118,15 @@ For more information on React client side helpers, see [React](/send-data/react)
 
 ### Capture traffic requests
 
-To capture traffic requests, create a `middleware.ts` file in the root folder of your Next.js app with the following content:
+To capture traffic requests, create a `proxy.ts` file in the root folder of your Next.js app with the following content:
 
-```ts middleware.ts [expandable]
+```ts proxy.ts [expandable]
 import { logger } from "@/lib/axiom/server";
 import { transformMiddlewareRequest } from "@axiomhq/nextjs";
 import { NextResponse } from "next/server";
 import type { NextFetchEvent, NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest, event: NextFetchEvent) {
+export async function proxy(request: NextRequest, event: NextFetchEvent) {
   logger.info(...transformMiddlewareRequest(request));
 
   event.waitUntil(logger.flush());
@@ -146,6 +146,10 @@ export const config = {
   ],
 };
 ```
+
+<Note>
+Next.js 16 renamed middleware to proxy. If your app uses Next.js 15 or earlier, name the file `middleware.ts` and the exported function `middleware` instead. The file contents are otherwise identical. `middleware.ts` still works in Next.js 16, but it's deprecated and will be removed in a future version.
+</Note>
 
 ### Web Vitals
 
@@ -628,35 +632,38 @@ export const withAxiom = createAxiomRouteHandler(logger, {
 });
 ```
 
-#### Sever context on arbitrary functions
+#### Server context on arbitrary functions
 
-You can also add the server context to any function that runs in the server. For example, server actions, middleware, and server components.
+You can also add the server context to any function that runs in the server. For example, server actions, proxy (formerly middleware), and server components.
 
 ```ts [expandable]
 "use server";
 import { runWithServerContext } from "@axiomhq/nextjs";
 
 export const serverAction = () =>
-  runWithServerContext({ request_id: crypto.randomUUID() }, () => {
+  runWithServerContext(() => {
     return "Hello World";
-  });
+  }, { request_id: crypto.randomUUID() });
 
 ```
 
-```ts middleware.ts [expandable]
-import { runWithServerContext } from '@axiomhq/nextjs';
+```ts proxy.ts [expandable]
+import { logger } from "@/lib/axiom/server";
+import { runWithServerContext, transformMiddlewareRequest } from "@axiomhq/nextjs";
+import { NextResponse } from "next/server";
+import type { NextFetchEvent, NextRequest } from "next/server";
 
-export const middleware = (req: NextRequest) => 
-  runWithServerContext({ trace_id: req.headers.get('x-trace-id') }, () => {
+export const proxy = (request: NextRequest, event: NextFetchEvent) =>
+  runWithServerContext(() => {
     // trace_id will be added to the log fields
     logger.info(...transformMiddlewareRequest(request));
 
     // trace_id will also be added to the log fields
-    log.info("Hello from middleware");
+    logger.info("Hello from proxy");
 
     event.waitUntil(logger.flush());
     return NextResponse.next();
-  });
+  }, { trace_id: request.headers.get("x-trace-id") });
 ```
 
 ## Use next-axiom library
@@ -707,6 +714,10 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 export const config = {
 }
 ```
+
+<Note>
+Next.js 16 renamed middleware to proxy. If your app uses Next.js 16 or later, name the file `proxy.ts` and the exported function `proxy` instead. `middleware.ts` still works in Next.js 16, but it's deprecated.
+</Note>
 
 ### Web Vitals
 
