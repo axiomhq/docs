@@ -365,7 +365,7 @@ build ✓ 639 pages · audit ✓ · lint ✓ · typecheck ✓ · 18 tests ✓
 are not matched by the audit's link pattern, which only checks root-relative paths — so nothing here
 validates them. That is T1.5, and it needs manual verification.
 
-### [ ] T1.5 Add the `/llms-apl` redirect and fix six absolute links `[verified]`
+### [x] T1.5 ~~Add the `/llms-apl` redirect~~ — **DONE: 2 redirects; links needed no change** `[verified]`
 
 `/docs/llms-apl` is a live, indexed, sitemap-listed page whose content moved to `/docs/llms/llms-apl`
 with no redirect — its ranking signal is discarded rather than passed on.
@@ -380,11 +380,34 @@ content/docs/(documentation)/llms/llms-full.mdx:3,:6
 content/docs/(documentation)/llms/llms-overview.mdx:23,:24
 ```
 
-**Verify:**
-```bash
-curl -s -o /dev/null -w '%{http_code}\n' <staging>/docs/llms-apl       # 308
-grep -rn "axiom.co/docs/llms" content/docs/                            # no hits
-```
+#### ✅ DONE
+
+**Two** redirects were needed, not one. Both old URLs are in production's live sitemap and both would
+have 404'd:
+
+| Source | Destination | Prod today |
+|---|---|---|
+| `/llms-apl` | `/llms/llms-apl` | 200, a real page |
+| `/llms` | `/llms/llms-overview` | 200 via redirect |
+
+`/docs/llms` was not in the original plan — found by sweeping every `/docs/llms*` URL against
+production rather than trusting the one the audit named. `/docs/llms-full` and `/docs/llms-overview`
+are already 404 on production, so they need nothing.
+
+**The six absolute links needed no change.** The task assumed they pointed at URLs the new site 404s;
+T1.4 removed that. Verified by extracting every absolute `https://axiom.co/docs/…` link in the corpus
+(~340 of them) and probing each against the local build — all 200, including `/docs/llms.txt` and
+`/docs/llms-full.txt`. They stay absolute deliberately: the surrounding copy says "pass it to your
+LLM", so a copy-pasteable absolute URL is the point.
+
+**Also fixed a second frozen baseline that T1.2 missed.** `tests/redirects.test.ts:8` asserted
+`toHaveLength(115)` and failed the moment a redirect was added — the same freeze pattern, in a file
+T1.2 never looked at. Converted to a floor and added the assertions the audit flagged as absent:
+permanence, no duplicate sources, no self-redirects.
+
+**Verified from the standalone server:** both redirects return **308**, single hop, landing on 200.
+
+audit ✓ (redirects 115 → 117, floor held) · lint ✓ · **21 tests ✓** (was 18)
 
 ### [ ] T1.6 Verify the two redirect layers still chain — `www` wins `[verified]` `[HANDOFF]`
 
