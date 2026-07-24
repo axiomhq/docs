@@ -41,7 +41,11 @@ pnpm build
 pnpm test:e2e
 ```
 
-`pnpm check` runs every non-browser check and the production build. The content audit protects the migration baseline: 645 MDX files, 624 routable pages, 21 snippets, 126 assets, 89 OpenAPI endpoint pages, and 115 redirects. It also fails on broken internal links, missing local assets, or retired Fathom/do11y references.
+`pnpm check` runs every non-browser check and the production build.
+
+The content audit fails on broken internal links, missing local assets, or retired Fathom/do11y references — these are defects at any size, so the tolerance is zero.
+
+It also enforces floors on the corpus, currently 650 MDX files, 629 routable pages, 21 snippets, 129 assets, 89 OpenAPI endpoint pages, and 115 redirects. Adding content passes; losing it fails. Raise a floor in `scripts/audit-content.mjs` only when content is deliberately retired, never to quiet a red build.
 
 ## Production
 

@@ -63,5 +63,19 @@ const results = {
 
 console.log(JSON.stringify(results, null, 2));
 
-const expected = results.routablePages === 626 && results.snippets === 21 && results.mdxTotal === 647 && results.assets === 129 && results.redirects === 115 && results.openapiPages === 89;
-if (!expected || unresolved.length > 0 || missingAssets.length > 0 || staleText.length > 0) process.exitCode = 1;
+// Invariants: these are defects at any corpus size, so zero is the only passing value.
+const defects = [
+  ['unresolved links', unresolved],
+  ['missing assets', missingAssets],
+  ['retired analytics references', staleText],
+].filter(([, found]) => found.length > 0);
+
+// Floors: the corpus is expected to grow. Adding pages must pass; losing them must not.
+// Raise a floor deliberately when content is intentionally retired — never to silence a red build.
+const floors = { routablePages: 629, snippets: 21, mdxTotal: 650, assets: 129, redirects: 115, openapiPages: 89 };
+const shrunk = Object.entries(floors).filter(([key, min]) => results[key] < min);
+
+for (const [label, found] of defects) console.error(`✗ ${found.length} ${label}`);
+for (const [key, min] of shrunk) console.error(`✗ ${key} fell to ${results[key]}, floor is ${min}`);
+
+if (defects.length > 0 || shrunk.length > 0) process.exitCode = 1;
