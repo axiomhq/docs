@@ -1,8 +1,9 @@
 'use client';
 
 import { ChevronRight, LoaderCircle, Play } from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { ZoneLink as Link } from '@/components/zone-link';
+import { docsApiPath } from '@/lib/docs-paths';
 import { isPersonalAccessToken } from '@/lib/token';
 
 export type ApiTryItParameter = {
@@ -82,7 +83,7 @@ export function ApiTryIt({
     setError('');
     setResult(undefined);
     try {
-      const response = await fetch('/api/try', {
+      const response = await fetch(docsApiPath('/try'), {
         method: 'POST',
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },

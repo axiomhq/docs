@@ -5,10 +5,10 @@ import { redirects } from '@/lib/redirects.mjs';
 
 describe('legacy redirects', () => {
   // A floor, not a fixed count: adding redirects is routine, losing them breaks inbound links.
-  it('keeps every configured redirect under the /docs deployment root', () => {
+  it('keeps redirects app-relative so Next can apply the /docs base path', () => {
     expect(redirects.length).toBeGreaterThanOrEqual(117);
-    expect(redirects.every((redirect) => redirect.source.startsWith('/docs'))).toBe(true);
-    expect(redirects.every((redirect) => redirect.destination.startsWith('/docs') || redirect.destination.startsWith('http'))).toBe(true);
+    expect(redirects.every((redirect) => redirect.source.startsWith('/') && !redirect.source.startsWith('/docs/'))).toBe(true);
+    expect(redirects.every((redirect) => (redirect.destination.startsWith('/') && !redirect.destination.startsWith('/docs/')) || redirect.destination.startsWith('http'))).toBe(true);
   });
 
   it('is permanent, so inbound ranking signal is passed on', () => {
@@ -30,20 +30,20 @@ describe('legacy redirects', () => {
   });
 });
 
-// Route handlers under app/docs serve real URLs; a redirect at one of those paths would shadow it,
+// Route handlers under app serve real URLs; a redirect at one of those paths would shadow it,
 // because redirects run before routes. Kept here so both suites below describe the same rule.
-const HANDLER_ROUTES = ['/docs/llms.txt', '/docs/llms-full.txt', '/docs/llms-apl.md'];
+const HANDLER_ROUTES = ['/llms.txt', '/llms-full.txt', '/llms-apl.md'];
 
 describe('legacy .md redirects', () => {
   it('mirrors every non-wildcard redirect at its .md twin', () => {
-    // Two deliberate exclusions: the docs root, where /docs.md matches no rewrite and so has no
-    // twin, and any source whose twin would land on a route handler.
-    const docsRoot = (path: string) => path === '/docs' || path === '/docs/';
+    // Two deliberate exclusions: the app root, which has no markdown twin, and any source whose
+    // twin would land on a route handler.
+    const appRoot = (path: string) => path === '/';
     const pages = redirects.filter(
       (redirect) =>
         !redirect.source.endsWith('.md') &&
         !redirect.source.includes(':path*') &&
-        !docsRoot(redirect.destination) &&
+        !appRoot(redirect.destination) &&
         !HANDLER_ROUTES.includes(`${redirect.source}.md`),
     );
     const markdown = new Set(redirects.filter((redirect) => redirect.source.endsWith('.md')).map((redirect) => redirect.source));
@@ -52,7 +52,7 @@ describe('legacy .md redirects', () => {
   });
 
   it('never produces a .md twin for the docs root', () => {
-    expect(redirects.filter((redirect) => redirect.destination === '/docs.md' || redirect.destination === '/docs/.md')).toEqual([]);
+    expect(redirects.filter((redirect) => redirect.destination === '/.md')).toEqual([]);
   });
 
   it('points .md sources at .md destinations', () => {

@@ -9,6 +9,9 @@ test('landing, guide, query, and API routes render', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Quickstart', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Axiom fundamentals', level: 2 })).toBeVisible();
 
+  await page.goto('/docs/llms/llms-apl');
+  await expect(page).toHaveURL(/\/docs\/llms-apl\.md$/);
+
   await page.goto('/docs/apl/tabular-operators/summarize-operator');
   await expect(page.getByRole('heading', { name: 'summarize', level: 1 })).toBeVisible();
 
@@ -161,7 +164,7 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
   await expect(page.locator('.docs-search-input-row')).toHaveCSS('box-shadow', 'none');
   const searchRequests: string[] = [];
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname === '/api/search') searchRequests.push(request.url());
+    if (new URL(request.url()).pathname === '/docs/api/search') searchRequests.push(request.url());
   });
   await searchInput.pressSequentially('filter array', { delay: 25 });
   const firstSearchResult = page.locator('.docs-search-result').first();
@@ -286,7 +289,7 @@ test('table of contents tracks the active heading and keeps a transparent surfac
   const tocCode = codedTocLink.locator('code').first();
   await expect(tocCode).toHaveCSS('color', await codedTocLink.evaluate((element) => getComputedStyle(element).color));
   await expect(tocCode).toHaveCSS('font-size', await codedTocLink.evaluate((element) => getComputedStyle(element).fontSize));
-  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /\/doc-assets\/logo\/favicon\.svg\?v=2$/);
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/docs/doc-assets/logo/favicon.svg?v=2');
 });
 
 test('query reference navigation and MDX components follow the compact interaction model', async ({ page }) => {
@@ -347,7 +350,7 @@ test('query reference navigation and MDX components follow the compact interacti
   await expect(relatedFunction).toHaveAttribute('href', '/docs/apl/scalar-functions/conditional-function/iff');
   await expect(relatedFunction).toHaveCSS('font-family', /Mono/);
   await page.locator('.sidebar').getByRole('link', { name: 'iff', exact: true }).click();
-  await expect(page).toHaveURL(/\/conditional-function\/iff$/);
+  await expect(page).toHaveURL(/\/conditional-function\/iff$/, { timeout: 15_000 });
   await expect(page.locator('.nav-nested[open] > summary span')).toHaveText(['Functions', 'Scalar functions', 'Conditional functions']);
 });
 

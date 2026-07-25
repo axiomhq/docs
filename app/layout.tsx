@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     template: '%s | Axiom Docs',
   },
   description: 'Learn how to send, store, and query logs, traces, metrics, and events with Axiom.',
-  icons: { icon: { url: '/doc-assets/logo/favicon.svg?v=2', type: 'image/svg+xml' } },
+  icons: { icon: { url: '/docs/doc-assets/logo/favicon.svg?v=2', type: 'image/svg+xml' } },
   openGraph: { siteName: 'Axiom', type: 'website', locale: 'en_US' },
   twitter: { card: 'summary_large_image' },
 };

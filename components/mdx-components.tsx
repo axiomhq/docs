@@ -1,7 +1,6 @@
 import { Children, cloneElement, isValidElement } from 'react';
 import type { AnchorHTMLAttributes, ComponentProps, ImgHTMLAttributes, ReactElement, ReactNode } from 'react';
 import type { MDXComponents } from 'mdx/types';
-import Link from 'next/link';
 import { ExternalLink, Play } from 'lucide-react';
 import defaultComponents from 'fumadocs-ui/mdx';
 import { Accordion as FumaAccordion, Accordions } from 'fumadocs-ui/components/accordion';
@@ -9,17 +8,17 @@ import { Card, Cards } from 'fumadocs-ui/components/card';
 import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Tab as FumaTab, Tabs as FumaTabs } from 'fumadocs-ui/components/tabs';
 import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+import { ZoneLink } from '@/components/zone-link';
+import { withDocsBasePath, withoutDocsBasePath } from '@/lib/docs-paths';
 import { PlaceholderPre as InteractivePlaceholderPre } from './placeholder-code';
 import { HeadingAnchor } from './heading-anchor';
 import { LanguageComparisons } from './language-comparisons';
 
-// Content is written with root-relative links from the Mintlify layout ("/send-data/methods"),
-// so everything below /docs is rewritten to sit under the deployment root. Only /doc-assets is
-// exempt: it is served from public/ at the origin root. The llms routes used to be exempt too,
-// until they moved under /docs — leaving them out sent readers to a 404.
+// Content retains root-relative paths from the Mintlify layout. Pages and public assets both live
+// in this app's /docs zone, so normalize them before handing navigation to Next.js.
 function DocsLink({ href = '', children, className, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
-  const target = href.startsWith('/') && !href.startsWith('/docs/') && !href.startsWith('/doc-assets/') ? `/docs${href}` : href;
-  if (target.startsWith('/') || target.startsWith('#')) return <Link href={target} prefetch={false} className={className} {...props}>{children}</Link>;
+  const target = withoutDocsBasePath(href);
+  if (target.startsWith('/') || target.startsWith('#')) return <ZoneLink href={target} prefetch={false} className={className} {...props}>{children}</ZoneLink>;
   if (target.startsWith('https://play.axiom.co/')) {
     return <a href={target} className={['playground-link', className].filter(Boolean).join(' ')} target="_blank" rel="noreferrer" {...props}><Play size={12} /><span>{children}</span><ExternalLink size={11} aria-label="Opens in a new tab" /></a>;
   }
@@ -27,7 +26,17 @@ function DocsLink({ href = '', children, className, ...props }: AnchorHTMLAttrib
 }
 
 function DocsImage(props: ImgHTMLAttributes<HTMLImageElement>) {
-  return <ImageZoom {...(props as ComponentProps<typeof ImageZoom>)} />;
+  const imageProps = props as ComponentProps<typeof ImageZoom>;
+  const src = typeof imageProps.src === 'string' ? withDocsBasePath(imageProps.src) : imageProps.src;
+  return <ImageZoom {...imageProps} src={src} />;
+}
+
+function DocsVideo({ src, ...props }: ComponentProps<'video'>) {
+  return <video {...props} src={typeof src === 'string' ? withDocsBasePath(src) : src} />;
+}
+
+function DocsSource({ src, ...props }: ComponentProps<'source'>) {
+  return <source {...props} src={typeof src === 'string' ? withDocsBasePath(src) : src} />;
 }
 
 function textOf(node: ReactNode): string {
@@ -114,6 +123,8 @@ export const mdxComponents: MDXComponents = {
   pre: PlaceholderPre,
   a: DocsLink,
   img: DocsImage,
+  video: DocsVideo,
+  source: DocsSource,
   h1: (props) => <HeadingAnchor as="h1" {...props} />,
   h2: (props) => <HeadingAnchor as="h2" {...props} />,
   h3: (props) => <HeadingAnchor as="h3" {...props} />,

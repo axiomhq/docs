@@ -43,14 +43,17 @@ async rewrites() {
    line — minutes, not a TTL. See Phase 4 / W1.
 2. **It is a rewrite, not a redirect** — the URL bar stays on `axiom.co` and this app receives the
    full `/docs/...` path.
-3. **`/docs/:path*` is the only thing proxied.** Everything else on `axiom.co`, including
-   `/robots.txt` and `/sitemap.xml`, is served by `www` and never reaches this app.
+3. **`/docs/:path*` is the only thing proxied.** This app uses `basePath: '/docs'`, so its pages,
+   APIs, Next.js bundles, machine-readable routes, and public media all stay inside that namespace.
+   Everything else on `axiom.co`, including `/api/*`, `/robots.txt`, and `/sitemap.xml`, remains
+   owned by `www` or another apex service and never reaches this app.
 
 Consequences that constrain the work:
 
-- ⚠️ **Do NOT set `basePath: '/docs'`.** Content routes already live at `app/docs/[...slug]`, so the
-  app serves `/docs/getting-started` at its own origin root. Adding `basePath` would produce
-  `/docs/docs/getting-started`. The proxy passes the full path through; routing is already correct.
+- **Keep routes app-relative and let `basePath` own the public prefix.** The landing page lives at
+  `app/page.tsx`, articles at `app/[...slug]`, APIs at `app/api/*`, and machine-readable routes at
+  `app/llms*`. Their public URLs are `/docs`, `/docs/<slug>`, `/docs/api/*`, and `/docs/llms*`.
+  Do not add a second literal `/docs` route segment.
 - **Canonicals are already correct.** Every `[...slug]` page emits
   `<link rel="canonical" href="https://axiom.co/docs/..."/>` and the sitemap uses the same origin.
 - **`app/robots.ts` is inert in production** and stays at the app root. `robots.txt` is only honoured
@@ -92,6 +95,7 @@ never to quiet a red build** — the exact-equality snapshots they replaced trai
 | T2.6 | `url:` frontmatter now 307s like production, and is excluded from the sitemap | `fca6c5e` |
 | T1.6 | Redirect-layer chaining verified in the full sweep — 226/228 land on 200 | `6e8b827` |
 | T2.7 | Nav orphans measured: 63, inherited from production, all reachable — no action | — |
+| T1.7 | Shared Upstash limits added to `/docs/api/chat` and `/docs/api/try`; identifiers are hashed | `next` |
 
 ---
 
@@ -103,7 +107,7 @@ never to quiet a red build** — the exact-equality snapshots they replaced trai
 
 ```
 app/layout.tsx:21          metadataBase        ← drives every canonical and og:url
-app/docs/sitemap.ts:5      sitemap <loc> origin
+app/sitemap.ts:5           sitemap <loc> origin
 app/robots.ts:4            sitemap declaration  (inert on production — www serves robots.txt)
 app/api/chat/route.ts:134  OpenRouter attribution header
 ```
@@ -113,7 +117,7 @@ rebuild, not a restart.
 
 #### ⚠️ Set it on production only. Leave staging and preview UNSET.
 
-`app/docs/[...slug]/page.tsx:83` sets `canonical: page.url` — a **relative** path. Next resolves it
+`app/[...slug]/page.tsx` sets `canonical: page.url` — a **relative** path. Next resolves it
 against `metadataBase`, so this one var decides the canonical origin for all 626 pages:
 
 | Build env | `metadataBase` | canonical emitted | Effect |
@@ -149,40 +153,18 @@ curl -s <staging>/docs/introduction | grep -o '<link rel="canonical"[^>]*>'
 
 ## Phase 1 — Blockers (must land before the rewrite swap)
 
-### [ ] T1.7 Meter `/api/chat` and `/api/try` — ⛔ **BLOCKED, awaiting team decision** `[HUMAN]`
+### [ ] T1.8 Set a hard daily OpenRouter spend cap — `[HUMAN]`
 
-> **Do not start this task.** Paused 2026-07-25 pending two answers from the team. It is the only
-> remaining Phase 1 blocker; everything else in Phase 1 is done.
->
-> **Q1 — Who owns the OpenRouter key?** Setting a hard daily spend cap is the single highest-value
-> step (~10 minutes, dashboard only, no code) and it bounds the worst case regardless of what else
-> ships. If the key is not ours to cap, this becomes a handoff.
->
-> **Q2 — Which shared store for the rate limiter?** Vercel KV, Upstash Redis, or something already
-> in the stack. Needed to make the limit global instead of per-instance. If adding a dependency is
-> unwanted, the fallback is: spend cap + a tightened in-memory window, documented as per-instance.
->
-> Nothing here blocks T2.x or Phase 3 — skip past it and come back once answered.
+Shared code-side metering is complete. `/docs/api/chat` allows 12 requests per minute per hashed
+client identifier, and `/docs/api/try` allows 8. Both use the `docs` project’s Vercel KV/Upstash
+variables in development, preview, and production; production fails closed if Redis is unavailable.
 
-Two unauthenticated public endpoints that Mintlify never had.
+The remaining dashboard-only task is to set a hard daily spend cap on the OpenRouter key. This bounds
+worst-case model spend independently of application availability. Confirm the owner of the key, set
+the cap in OpenRouter, and record the chosen amount here.
 
-`lib/ai-rate-limit.ts` is a plain in-memory `Map` (12 req/min). On Vercel each serverless instance
-holds its own map, so the limit fans out under concurrency. `/api/try` has **no limiter at all**.
-
-Per `/api/chat` request the model can consume 24,000 chars of history (`app/api/chat/route.ts:24`)
-× 6 tool steps (`:146`) × 18,000 chars each (`lib/docs-search.ts:55`). No auth, no CAPTCHA, no spend cap.
-
-Minimum to unblock, in order:
-1. **Hard daily spend cap on the OpenRouter key** — ~10 minutes, and it makes everything else non-fatal.
-2. Move the counter to a shared durable store (Vercel KV / Upstash) so it is global across instances.
-3. Apply a limiter to `/api/try`, keyed on IP, tighter than chat.
-
-A Turnstile gate on first assistant use is follow-up, not a blocker.
-
-*Useful negative result: the limiter is **not** header-spoofable — Vercel overwrites `X-Forwarded-For`
-and `clientId()` (`route.ts:66-69`) holds. The defect is instance fan-out only.*
-
-**Verify:** spend cap visible in the OpenRouter dashboard; limiter state survives across instances.
+**Verify:** the cap is visible in the OpenRouter dashboard and a synthetic client is rate-limited
+across separate Vercel function instances.
 
 ---
 ## Phase 2 — Fix at cutover or in week one
@@ -190,7 +172,7 @@ and `clientId()` (`route.ts:66-69`) holds. The defect is instance fan-out only.*
 > **Social cards (T2.1) are done.** `lib/og.ts` builds `https://axiom.co/og?title=…&eyebrow=…`,
 > rendered by `www/src/app/og/route.tsx` — the same card the marketing site uses. We call that route
 > rather than shipping an `opengraph-image`, because the docs route is a catch-all
-> (`app/docs/[...slug]`) and Next forbids a child segment after a catch-all; the `www` team hit the
+> (`app/[...slug]`) and Next forbids a child segment after a catch-all; the `www` team hit the
 > same wall and built `/og` for exactly this reason. The origin is hard-coded, not derived from
 > `NEXT_PUBLIC_SITE_URL`, since `/og` is served from production wherever this app runs.
 >
@@ -261,7 +243,7 @@ competing with `axiom.co` in the index.
 Make the intent explicit rather than emergent. Pick one:
 
 - **Vercel Deployment Protection** on the staging project — strongest, and it also removes the
-  unauthenticated `/api/chat` and `/api/try` exposure on staging (relates to T1.7).
+  unauthenticated `/docs/api/chat` and `/docs/api/try` exposure on staging (relates to T1.7).
 - **`X-Robots-Tag: noindex`** on staging responses, via `headers()` in `next.config.mjs` gated on an
   env var.
 - **Deliberately keep the cross-domain canonical** — valid, but then document it in `AGENTS.md` as
@@ -390,11 +372,11 @@ Everything under **Before** is `docs`-side and must be finished *before* W1 is f
    shipped, also: `curl -s https://axiom.co/robots.txt | grep -c docs/sitemap` → 1.)
 11. [ ] Release gate against **production**. Zero 404s.
 12. [ ] `/docs/llms.txt`, `/docs/llms-full.txt`, `/docs/llms-apl.md` → 200; `/docs/llms-apl` → 3xx → 200.
-13. [ ] `/doc-assets/*` images load on a rendered page (view it, don't just `curl`).
+13. [ ] `/docs/doc-assets/*` images load on a rendered page (view it, don't just `curl`).
 14. [ ] Search returns results; one OpenAPI page renders a populated operation, not an empty shell.
 15. [ ] Confirm the URL bar stays on `axiom.co` — a rewrite that degrades to a redirect leaks the
    origin host and moves SEO authority off the apex, which is the whole point of the proxy.
-16. [ ] Watch OpenRouter spend and `/api/chat` + `/api/try` volume for the full hour.
+16. [ ] Watch OpenRouter spend and `/docs/api/chat` + `/docs/api/try` volume for the full hour.
 17. [ ] Watch CDN 404 rate against the pre-cutover baseline.
 
 **Rollback triggers** — revert the rewrite line and redeploy `www` if any is true:

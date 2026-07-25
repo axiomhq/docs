@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ZoneLink as Link } from '@/components/zone-link';
 import posthog from 'posthog-js';
 import { ArrowLeft, ArrowRight, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';

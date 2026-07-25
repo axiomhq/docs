@@ -28,6 +28,8 @@ Open `http://localhost:3000/docs`. The site defaults to dark mode and stores the
 
 Parenthesized folders are Fumadocs route groups and do not appear in URLs. Public documentation routes remain under `/docs`, for example `/docs/getting-started` and `/docs/apl/overview`.
 
+The application uses Next.js `basePath: '/docs'` as a child zone behind the `axiom.co` marketing application. App Router files are therefore app-relative (`app/page.tsx`, `app/[...slug]`, and `app/api/*`), while Next.js exposes their public URLs as `/docs`, `/docs/<path>`, and `/docs/api/*`. This keeps the apex `/api/*` namespace available to other Axiom services.
+
 The old navigation and 115 redirects remain in `docs.json` as a migration manifest. Application code reads only its navigation tabs and redirects; Mintlify is not a runtime or build dependency.
 
 ## Checks
@@ -68,6 +70,8 @@ OPENROUTER_API_KEY=sk-or-v1-...
 
 The key is server-only. Without it, regular documentation search continues to work and assistant requests return an unavailable response. Questions and generated answers are not persisted or sent to PostHog.
 
+The assistant and API request runner use shared Upstash rate limits. Vercel supplies `KV_REST_API_URL` and `KV_REST_API_TOKEN`; client identifiers are hashed before they are used as Redis keys.
+
 ## PostHog
 
 Analytics is disabled unless a public project token is present. Local development, tests, and unconfigured previews send no analytics requests.
@@ -81,10 +85,10 @@ PostHog is initialized through Next.js `instrumentation-client.ts`. Configured d
 
 ## AI-readable routes
 
-- `/llms.txt` — structured index of the documentation
-- `/llms-full.txt` — complete processed Markdown corpus
+- `/docs/llms.txt` — structured index of the documentation
+- `/docs/llms-full.txt` — complete processed Markdown corpus
 - `/docs/<path>.md` — processed Markdown for one page
-- `/llms-apl.md` — compact APL page index retained for compatibility
+- `/docs/llms-apl.md` — compact APL page index retained for compatibility
 
 ## Contributing
 

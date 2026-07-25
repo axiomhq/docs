@@ -21,7 +21,7 @@ function routeFor(file) {
   return `/${relative.replace(/\/index$/, '')}`;
 }
 
-// Route handlers under app/docs (llms.txt, llms-full.txt, llms-apl.md) serve real URLs but have no
+// Route handlers under app (llms.txt, llms-full.txt, llms-apl.md) serve real URLs but have no
 // MDX file, so links to them are accepted here. Read from disk rather than hard-coded so the list
 // cannot drift when a handler is renamed or moved.
 //
@@ -29,8 +29,8 @@ function routeFor(file) {
 // deleted handler can still resolve through a redirect. Whether these paths are reachable is a
 // question for `next build` and the release gate, not this script.
 const handlerRoutes = new Set(
-  readdirSync(path.join(root, 'app/docs'), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && existsSync(path.join(root, 'app/docs', entry.name, 'route.ts')))
+  readdirSync(path.join(root, 'app'), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(path.join(root, 'app', entry.name, 'route.ts')))
     .map((entry) => `/${entry.name}`),
 );
 

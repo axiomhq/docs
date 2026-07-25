@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '@/app/api/try/route';
+import { takeLocalRateLimit } from '@/lib/request-rate-limit';
 
 function request(body: unknown) {
   return new Request('http://localhost/api/try', {
@@ -12,6 +13,17 @@ function request(body: unknown) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('API try proxy', () => {
+  it('uses a tighter shared quota than the documentation assistant', () => {
+    const id = `try-${crypto.randomUUID()}`;
+    for (let index = 0; index < 8; index += 1) {
+      expect(takeLocalRateLimit('try', id, 1_000).allowed).toBe(true);
+    }
+    expect(takeLocalRateLimit('try', id, 1_000)).toMatchObject({
+      allowed: false,
+      retryAfterSeconds: 60,
+    });
+  });
+
   it('rejects missing credentials and undocumented operations', async () => {
     const missingToken = await POST(request({ operation: 'v2 get /tokens/{id}' }));
     expect(missingToken.status).toBe(400);

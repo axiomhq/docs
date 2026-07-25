@@ -10,8 +10,8 @@ import {
   type UIMessage,
 } from 'ai';
 import { z } from 'zod';
-import { takeAiRequest } from '@/lib/ai-rate-limit';
 import { readDocsPage, searchDocs } from '@/lib/docs-search';
+import { limitRequest } from '@/lib/request-rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -63,11 +63,6 @@ function jsonError(message: string, status: number, headers?: HeadersInit) {
   );
 }
 
-function clientId(request: Request) {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  return (forwarded || request.headers.get('x-real-ip') || 'local').slice(0, 128);
-}
-
 function messageText(message: UIMessage) {
   return message.parts
     .filter((part) => part.type === 'text')
@@ -81,8 +76,11 @@ export async function POST(request: Request) {
     return jsonError('The documentation assistant is not configured.', 503);
   }
 
-  const rateLimit = takeAiRequest(clientId(request));
+  const rateLimit = await limitRequest('chat', request);
   if (!rateLimit.allowed) {
+    if (rateLimit.unavailable) {
+      return jsonError('The documentation assistant is temporarily unavailable.', 503);
+    }
     return jsonError('Too many assistant requests. Try again shortly.', 429, {
       'Retry-After': String(rateLimit.retryAfterSeconds),
     });

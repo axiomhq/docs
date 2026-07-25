@@ -3,6 +3,7 @@ import { createMDX } from 'fumadocs-mdx/next';
 /** @type {import('next').NextConfig} */
 const config = {
   reactStrictMode: true,
+  basePath: '/docs',
   allowedDevOrigins: ['127.0.0.1', 'adipurush', 'adipurush.tail9166b.ts.net'],
   output: 'standalone',
   images: {
@@ -13,7 +14,7 @@ const config = {
     return redirects;
   },
   async rewrites() {
-    return [{ source: '/docs/:path*.md', destination: '/api/md/:path*' }];
+    return [{ source: '/:path*.md', destination: '/api/md/:path*' }];
   },
 };
 

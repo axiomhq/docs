@@ -18,6 +18,7 @@ import {
 import { useDocsSearch as useFumadocsSearch } from 'fumadocs-core/search/client';
 import { fetchClient } from 'fumadocs-core/search/client/fetch';
 import { useDocsSearchController } from '@/components/docs-search-provider';
+import { docsApiPath, withoutDocsBasePath } from '@/lib/docs-paths';
 import { sanitizeSearchSnippet } from '@/lib/docs-search-rank';
 
 const LazyAssistantPanel = dynamic(
@@ -105,7 +106,7 @@ export function DocsSearchDialog() {
 function SearchPanel() {
   const router = useRouter();
   const { close, open, openAssistant } = useDocsSearchController();
-  const client = useMemo(() => fetchClient({ api: '/api/search?v=2' }), []);
+  const client = useMemo(() => fetchClient({ api: `${docsApiPath('/search')}?v=2` }), []);
   const { search, setSearch, query } = useFumadocsSearch({ client, delayMs: 300 });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -123,7 +124,7 @@ function SearchPanel() {
   }, [activeIndex, open, query.data, results.length]);
   const navigate = (url: string) => {
     close();
-    router.push(url);
+    router.push(withoutDocsBasePath(url));
   };
   const handleKeys = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown' && results.length > 0) {

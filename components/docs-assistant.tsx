@@ -5,6 +5,7 @@ import { ArrowUpRight, RefreshCw, Search, Send, Square } from 'lucide-react';
 import { type FormEvent, useEffect, useRef } from 'react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { Markdown } from '@/components/markdown';
+import { docsApiPath } from '@/lib/docs-paths';
 
 type AssistantSource = {
   title: string;
@@ -19,7 +20,7 @@ type DocsAssistantPanelProps = {
 };
 
 const chatTransport = new DefaultChatTransport<UIMessage>({
-  api: '/api/chat',
+  api: docsApiPath('/chat'),
   prepareSendMessagesRequest({ messages }) {
     return {
       body: {

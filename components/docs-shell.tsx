@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ZoneLink as Link } from '@/components/zone-link';
 import { ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { NavigationGroup, NavigationItem } from '@/lib/navigation';

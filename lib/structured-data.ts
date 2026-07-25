@@ -18,7 +18,7 @@ export function siteGraph() {
         '@id': ORGANIZATION_ID,
         name: 'Axiom',
         url: SITE_ORIGIN,
-        logo: { '@type': 'ImageObject', url: `${SITE_ORIGIN}/doc-assets/logo/light.svg` },
+        logo: { '@type': 'ImageObject', url: `${DOCS_URL}/doc-assets/logo/light.svg` },
       },
       {
         '@type': 'WebSite',

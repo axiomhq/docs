@@ -1,12 +1,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '@/app/api/chat/route';
-import { takeAiRequest } from '@/lib/ai-rate-limit';
+import { docsApiPath, withDocsBasePath, withoutDocsBasePath } from '@/lib/docs-paths';
 import { rankDocsSearchResults, sanitizeSearchSnippet } from '@/lib/docs-search-rank';
+import { hashRateLimitIdentifier, takeLocalRateLimit } from '@/lib/request-rate-limit';
 
 vi.mock('@/lib/docs-search', () => ({
   searchDocs: vi.fn(async () => []),
   readDocsPage: vi.fn(async () => null),
 }));
+
+describe('documentation zone paths', () => {
+  it('keeps public routes under /docs without double-prefixing them', () => {
+    expect(withDocsBasePath('/getting-started')).toBe('/docs/getting-started');
+    expect(withDocsBasePath('/docs/getting-started')).toBe('/docs/getting-started');
+    expect(withoutDocsBasePath('/docs/getting-started')).toBe('/getting-started');
+    expect(docsApiPath('/search')).toBe('/docs/api/search');
+  });
+});
 
 function chatRequest(body: string, client = crypto.randomUUID()) {
   return new Request('http://localhost/api/chat', {
@@ -73,11 +83,18 @@ describe('documentation AI request controls', () => {
   it('rate limits repeated assistant requests without storing message content', () => {
     const id = `test-${crypto.randomUUID()}`;
     for (let index = 0; index < 12; index += 1) {
-      expect(takeAiRequest(id, 1_000).allowed).toBe(true);
+      expect(takeLocalRateLimit('chat', id, 1_000).allowed).toBe(true);
     }
-    const blocked = takeAiRequest(id, 1_000);
+    const blocked = takeLocalRateLimit('chat', id, 1_000);
     expect(blocked.allowed).toBe(false);
     expect(blocked.retryAfterSeconds).toBe(60);
-    expect(takeAiRequest(id, 61_001).allowed).toBe(true);
+    expect(takeLocalRateLimit('chat', id, 61_001).allowed).toBe(true);
+  });
+
+  it('hashes client identifiers before they can be used as Redis keys', () => {
+    const identifier = '203.0.113.42';
+    const hashed = hashRateLimitIdentifier(identifier);
+    expect(hashed).toMatch(/^[a-f0-9]{64}$/);
+    expect(hashed).not.toContain(identifier);
   });
 });

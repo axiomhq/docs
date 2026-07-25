@@ -44,8 +44,8 @@ The README mentions port 3000 for general contributors. Port 3100 is the establi
 ### Application
 
 - `app/layout.tsx` — root providers, local Geist fonts, theme configuration, and global metadata.
-- `app/docs/[...slug]/page.tsx` — shared documentation page renderer, metadata, breadcrumbs, TOC, query-title treatment, article footer, and OpenAPI dispatch.
-- `app/docs/page.tsx` — documentation landing page.
+- `app/[...slug]/page.tsx` — shared documentation page renderer, metadata, breadcrumbs, TOC, query-title treatment, article footer, and OpenAPI dispatch. Next.js exposes it under `/docs` through `basePath`.
+- `app/page.tsx` — documentation landing page, publicly served at `/docs`.
 - `app/api/search/route.ts` — Fumadocs/Orama search endpoint.
 - `app/api/chat/route.ts` — grounded OpenRouter assistant with constrained documentation search/read tools.
 - `app/api/md/[...slug]/route.ts` — processed Markdown output for individual pages.
@@ -109,24 +109,24 @@ Unknown legacy fields are currently accepted to keep the migration compatible. D
 
 Application code reads the first three navigation tabs and redirects from `docs.json`. Keep navigation ordering there in sync with page additions, removals, and moves. Previous/next article links are derived from that same ordering, so a navigation edit also changes pagination.
 
-The current content audit intentionally locks the migration baseline:
+The content audit enforces corpus floors rather than freezing growth:
 
-- 624 routable MDX pages
+- 629 routable MDX pages
 - 21 snippets
-- 645 total MDX files
-- 126 documentation assets
+- 650 total MDX files
+- 129 documentation assets
 - 89 OpenAPI endpoint pages
-- 115 redirects
+- 117 redirects
 
-If a legitimate task changes one of these counts, update `scripts/audit-content.mjs` in the same commit and explain why. Never relax the audit only to make a failing check pass.
+Adding content passes without changing these floors. Raise a floor only when content is deliberately retired; never lower it merely to make a failing check pass.
 
-Internal MDX links frequently retain pre-migration root paths such as `/apl/...`. `DocsLink` in `components/mdx-components.tsx` prefixes eligible internal paths with `/docs`. Preserve this behavior unless content is migrated atomically. Links to `/doc-assets`, `/llms*`, hashes, and external URLs have distinct handling.
+Internal MDX links frequently retain pre-migration root paths such as `/apl/...`. `DocsLink` and `ZoneLink` keep navigation app-relative so Next.js can apply `basePath: '/docs'` exactly once. Public media paths are explicitly rooted at `/docs/doc-assets`. Preserve this boundary unless content is migrated atomically.
 
 The AI-readable surfaces are product features and must continue to work:
 
-- `/llms.txt`
-- `/llms-full.txt`
-- `/llms-apl.md`
+- `/docs/llms.txt`
+- `/docs/llms-full.txt`
+- `/docs/llms-apl.md`
 - `/docs/<path>.md`
 
 ## MDX compatibility layer
@@ -259,7 +259,7 @@ Do not add credentials, request/response bodies, search text, free-form document
 
 ## Search, theme, and browser persistence
 
-- Search is generated from the Fumadocs source and exposed at `/api/search`.
+- Search is generated from the Fumadocs source and exposed at `/docs/api/search`.
 - Search and AI prompting intentionally share the same custom dialog; the assistant bundle loads only when Ask AI is opened.
 - Theme preference uses local storage through `next-themes`.
 - API language preference uses local storage.

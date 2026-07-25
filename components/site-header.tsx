@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ZoneLink as Link } from '@/components/zone-link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { Check, Menu, Monitor, Moon, Search, Sun, X } from 'lucide-react';

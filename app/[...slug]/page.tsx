@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { DocsBody, DocsDescription, DocsTitle } from 'fumadocs-ui/page';
 import { DocsShell } from '@/components/docs-shell';
@@ -7,6 +6,8 @@ import { ApiOperation } from '@/components/api-operation';
 import { mdxComponents } from '@/components/mdx-components';
 import { TableOfContents, type TocItem } from '@/components/table-of-contents';
 import { ArticleFooter } from '@/components/article-footer';
+import { ZoneLink as Link } from '@/components/zone-link';
+import { withoutDocsBasePath } from '@/lib/docs-paths';
 import { getAdjacentNavigation, getBreadcrumbs, getNavigation, getSection } from '@/lib/navigation';
 import { ogImage } from '@/lib/og';
 import { pageGraph, structuredDataProps } from '@/lib/structured-data';
@@ -20,7 +21,7 @@ export default async function DocumentationPage({ params }: PageProps) {
   if (!page) notFound();
   // Mintlify link-out pages carry a `url` and are redirects, not documents. Production 307s all of
   // them; rendering the stub instead would publish a near-empty page at an indexable URL.
-  if (page.data.url) redirect(page.data.url);
+  if (page.data.url) redirect(withoutDocsBasePath(page.data.url));
 
   const href = page.url;
   const section = getSection(href);

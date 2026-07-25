@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getApiOperation, resolveSchema } from '@/lib/openapi';
+import { limitRequest } from '@/lib/request-rate-limit';
 import { isPersonalAccessToken } from '@/lib/token';
 
 export const runtime = 'nodejs';
@@ -23,8 +24,8 @@ function allowedHost(hostname: string) {
   return hostname === 'api.axiom.co' || hostname.endsWith('.edge.axiom.co');
 }
 
-function error(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status, headers: { 'Cache-Control': 'no-store' } });
+function error(message: string, status = 400, headers?: HeadersInit) {
+  return NextResponse.json({ error: message }, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
 }
 
 async function readPreview(response: Response) {
@@ -47,6 +48,14 @@ async function readPreview(response: Response) {
 }
 
 export async function POST(request: Request) {
+  const rateLimit = await limitRequest('try', request);
+  if (!rateLimit.allowed) {
+    if (rateLimit.unavailable) return error('The API request runner is temporarily unavailable.', 503);
+    return error('Too many API requests. Try again shortly.', 429, {
+      'Retry-After': String(rateLimit.retryAfterSeconds),
+    });
+  }
+
   let input: TryRequest;
   try {
     input = await request.json() as TryRequest;
