@@ -1,4 +1,4 @@
-import { Children, cloneElement, isValidElement } from 'react';
+import { Children, cloneElement, createElement, isValidElement } from 'react';
 import type { AnchorHTMLAttributes, ComponentProps, ImgHTMLAttributes, ReactElement, ReactNode } from 'react';
 import type { MDXComponents } from 'mdx/types';
 import defaultComponents from 'fumadocs-ui/mdx';
@@ -7,6 +7,7 @@ import { Card, Cards } from 'fumadocs-ui/components/card';
 import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Tab as FumaTab, Tabs as FumaTabs } from 'fumadocs-ui/components/tabs';
 import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
+import { docIconStrokeWidth, resolveDocIcon } from '@/lib/doc-icons';
 import { ZoneLink } from '@/components/zone-link';
 import { PlaygroundLink } from '@/components/playground-link';
 import { withDocsBasePath, withoutDocsBasePath } from '@/lib/docs-paths';
@@ -25,6 +26,10 @@ function DocsLink({ href = '', children, className, ...props }: AnchorHTMLAttrib
   return <a href={target} className={className} {...props}>{children}</a>;
 }
 
+// NOTE: content authors write raw JSX <img> tags (118 of them), which MDX renders
+// directly and does NOT route through this override — so this only handles the single
+// file using markdown ![](…) syntax. Inline icons are sized by the .inline-icon rule
+// in globals.css, not here.
 function DocsImage(props: ImgHTMLAttributes<HTMLImageElement>) {
   const imageProps = props as ComponentProps<typeof ImageZoom>;
   const src = typeof imageProps.src === 'string' ? withDocsBasePath(imageProps.src) : imageProps.src;
@@ -106,8 +111,24 @@ function Field({ children, path, type, required }: { children: ReactNode; path?:
   return <div className="api-field"><div className="api-field-heading"><code>{path}</code>{type && <span>{type}</span>}{required && <strong>required</strong>}</div>{children}</div>;
 }
 
-export function Icon({ icon }: { icon?: string }) {
-  return <span className="doc-icon" aria-hidden="true">{icon?.slice(0, 1).toUpperCase() ?? '◆'}</span>;
+export function Icon({ icon, iconType }: { icon?: string; iconType?: string }) {
+  // Looked up from a static map rather than constructed, so createElement is used
+  // instead of JSX — assigning it to a capitalised local trips react-hooks/static-components.
+  const glyph = resolveDocIcon(icon);
+
+  if (!glyph) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`[docs] <Icon icon="${icon ?? ''}"> has no lucide mapping; nothing rendered.`);
+    }
+    return null;
+  }
+
+  return createElement(glyph, {
+    className: 'doc-icon',
+    strokeWidth: docIconStrokeWidth(iconType),
+    'aria-hidden': true,
+    focusable: 'false',
+  });
 }
 
 export function Info(props: { children: ReactNode; title?: ReactNode }) {

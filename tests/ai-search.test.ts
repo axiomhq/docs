@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { POST } from '@/app/api/chat/route';
+import { normalizeDocsUrl, POST } from '@/app/api/chat/route';
 import { docsApiPath, withDocsBasePath, withoutDocsBasePath } from '@/lib/docs-paths';
 import { rankDocsSearchResults, sanitizeSearchSnippet } from '@/lib/docs-search-rank';
 import { hashRateLimitIdentifier, takeLocalRateLimit } from '@/lib/request-rate-limit';
@@ -59,6 +59,77 @@ describe('documentation AI retrieval', () => {
     expect(sanitizeSearchSnippet('**<mark>Splunk</mark>:** Use `search` with [APL](/docs/apl).')).toBe(
       '<mark>Splunk</mark>: Use search with APL.',
     );
+  });
+});
+
+describe('documentation icon mapping', () => {
+  it('maps every <Icon> name used in content to a real lucide glyph', async () => {
+    const { readdirSync, readFileSync, statSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { FA_TO_LUCIDE, resolveDocIcon } = await import('@/lib/doc-icons');
+
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (full.endsWith('.mdx')) files.push(full);
+      }
+    };
+    walk('content');
+
+    const used = new Set<string>();
+    for (const file of files) {
+      for (const match of readFileSync(file, 'utf8').matchAll(/<Icon[^>]*\bicon="([^"]+)"/g)) {
+        used.add(match[1]);
+      }
+    }
+
+    expect(used.size).toBeGreaterThan(20);
+    // A name with no mapping renders nothing at all, silently dropping the glyph the
+    // surrounding sentence refers to — so an unmapped name must fail CI, not ship.
+    expect([...used].filter((name) => !resolveDocIcon(name))).toEqual([]);
+    // And no mapping should point at a lucide export that does not exist.
+    expect(Object.keys(FA_TO_LUCIDE).filter((name) => !resolveDocIcon(name))).toEqual([]);
+  });
+});
+
+describe('documentation page tool input', () => {
+  it('accepts the URL shapes a model actually produces', () => {
+    expect(normalizeDocsUrl('/docs/query-data/datasets')).toBe('/docs/query-data/datasets');
+    expect(normalizeDocsUrl('https://axiom.co/docs/apps/grafana')).toBe('/docs/apps/grafana');
+    expect(normalizeDocsUrl('/apps/grafana')).toBe('/docs/apps/grafana');
+    expect(normalizeDocsUrl('apps/grafana')).toBe('/docs/apps/grafana');
+    expect(normalizeDocsUrl('  /docs/getting-started  ')).toBe('/docs/getting-started');
+  });
+
+  it('never resolves outside /docs, whatever it is handed', () => {
+    const hostile = [
+      '../../etc/passwd',
+      '/../../etc/passwd',
+      'https://evil.example.com/../../etc/passwd',
+      'https://evil.example.com/steal',
+      'javascript:alert(1)',
+      'file:///etc/passwd',
+      '//evil.example.com/steal',
+      'data:text/html,<script>alert(1)</script>',
+      '',
+    ];
+
+    for (const input of hostile) {
+      const result = normalizeDocsUrl(input);
+      // Containment is the invariant the removed schema regex used to provide:
+      // every accepted path stays under /docs, and readDocsPage then exact-matches
+      // it against source.getPages() before reading anything.
+      expect(result === null || result.startsWith('/docs')).toBe(true);
+      expect(result === null || !result.split('/').includes('..')).toBe(true);
+    }
+  });
+
+  it('rejects traversal instead of leaning on the page lookup to miss', () => {
+    expect(normalizeDocsUrl('../../etc/passwd')).toBeNull();
+    expect(normalizeDocsUrl('/docs/../../../etc/passwd')).toBeNull();
+    expect(normalizeDocsUrl('/docs/query-data/../query-data/datasets')).toBeNull();
   });
 });
 

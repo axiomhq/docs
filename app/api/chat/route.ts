@@ -15,7 +15,7 @@ import { limitRequest } from '@/lib/request-rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const MODEL = 'z-ai/glm-5.2';
 const MAX_REQUEST_BYTES = 64 * 1024;
@@ -37,14 +37,38 @@ const searchDocsTool = tool({
   execute: ({ query, limit }) => searchDocs(query, limit),
 });
 
+// Models routinely hand back an absolute URL or drop the /docs prefix. Rejecting
+// those in the input schema turns a recoverable miss into a hard tool error, so
+// normalise here instead and let readDocsPage do the real validation — it only
+// resolves against source.getPages(), which is an allowlist by construction.
+export function normalizeDocsUrl(url: string) {
+  let path = url.trim();
+  if (/^https?:\/\//i.test(path)) {
+    try {
+      path = new URL(path).pathname;
+    } catch {
+      return null;
+    }
+  }
+  if (!path.startsWith('/')) path = `/${path}`;
+  if (!path.startsWith('/docs')) path = `/docs${path}`;
+  // Reject traversal outright rather than relying on the page lookup to miss.
+  // Containment is then self-evident here instead of an emergent property of
+  // readDocsPage's allowlist.
+  if (path.split('/').includes('..')) return null;
+  return path.startsWith('/docs') ? path : null;
+}
+
 const readDocsPageTool = tool({
   description: 'Read the processed Markdown for an Axiom documentation page returned by search_docs.',
   inputSchema: z.object({
-    url: z.string().max(500).regex(/^\/docs(?:\/|$)/),
+    url: z.string().max(500),
   }),
   execute: async ({ url }) => {
-    const page = await readDocsPage(url);
-    return page ?? { error: 'The documentation page was not found.' };
+    const path = normalizeDocsUrl(url);
+    if (!path) return { error: `“${url}” is not an Axiom documentation path. Use a /docs URL returned by search_docs.` };
+    const page = await readDocsPage(path);
+    return page ?? { error: `The documentation page ${path} was not found. Try search_docs for a valid URL.` };
   },
 });
 
@@ -54,7 +78,9 @@ Answer questions using only information retrieved from the Axiom documentation t
 
 Give direct, concise, technically accurate answers. Preserve exact field names, APL syntax, API paths, and commands. Cite supporting documentation as Markdown links using only URLs returned by the tools. Never invent a URL, product behavior, limit, or configuration value. If the documentation does not support an answer, say that clearly and suggest relevant search terms or support.
 
-Do not request, repeat, or infer API tokens, credentials, request bodies, response bodies, or other secrets. Do not use general web knowledge to fill documentation gaps.`;
+Do not request, repeat, or infer API tokens, credentials, request bodies, response bodies, or other secrets. Do not use general web knowledge to fill documentation gaps.
+
+Only ever invoke a tool through the tool-calling interface. Never write tool calls, tool names, or tags such as <tool_call> into your reply. When tools are unavailable to you, answer from what you have already retrieved.`;
 
 function jsonError(message: string, status: number, headers?: HeadersInit) {
   return Response.json(
@@ -141,14 +167,22 @@ export async function POST(request: Request) {
       read_docs_page: readDocsPageTool,
     },
     toolChoice: 'auto',
-    stopWhen: stepCountIs(6),
+    // Measured against z-ai/glm-5.2 on the query "explain me logging and setup
+    // guide", 3-4 runs per configuration:
+    //   toolChoice 'none' from step 3  -> 3/3 emitted tool calls as prose, no answer
+    //   tools kept, 6-step cap         -> 2/3 spent every step retrieving, no answer
+    //   tools kept, 8-step cap + nudge -> 4/4 complete answers
+    // Withdrawing the tools is what triggers the prose tool calls, so the budget
+    // is bounded by stopWhen and the model is nudged to conclude instead.
+    stopWhen: stepCountIs(8),
     prepareStep: ({ stepNumber }) => stepNumber >= 3 ? {
-      toolChoice: 'none',
-      instructions: `${systemPrompt}${currentPage}\n\nYou have enough retrieved context. Answer the user now without calling another tool.`,
+      instructions: `${systemPrompt}${currentPage}\n\nYou have already retrieved substantial documentation. Write the final answer now from the excerpts you have. Only call another tool if a specific fact is still genuinely missing.`,
     } : {},
     temperature: 0.2,
     maxOutputTokens: 1_200,
-    timeout: 25_000,
+    // Retrieval-heavy answers measured at 28-33s end to end; the previous 25s
+    // cut them off mid-sentence. Must stay under maxDuration.
+    timeout: 50_000,
   });
 
   return createUIMessageStreamResponse({
@@ -157,7 +191,19 @@ export async function POST(request: Request) {
       stream: result.stream,
       tools: { search_docs: searchDocsTool, read_docs_page: readDocsPageTool },
       sendReasoning: false,
-      onError: () => 'The documentation assistant could not complete this answer.',
+      onError: (error) => {
+        // Without this the real cause never reaches the server console and the
+        // client only ever sees the generic string below.
+        console.error('[docs-assistant] stream error', error);
+        // Running out of time mid-answer is by far the most common failure here
+        // (multi-step tool use against the 25s budget), and it is recoverable by
+        // asking something narrower — so say that rather than a flat failure.
+        const name = error instanceof Error ? error.name : '';
+        if (name === 'TimeoutError' || name === 'AbortError') {
+          return 'The assistant ran out of time putting this answer together. Try a more specific question.';
+        }
+        return 'The documentation assistant could not complete this answer.';
+      },
     }),
   });
 }

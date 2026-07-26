@@ -10,5 +10,9 @@ export default defineConfig([
     '.source/**',
     'node_modules/**',
     'out/**',
+    // Vendored shadcn/ui + AI Elements registry components. Owned upstream and
+    // re-pulled by the CLI, so they are not held to this project's lint rules.
+    'components/ui/**',
+    'components/ai-elements/**',
   ]),
 ]);
