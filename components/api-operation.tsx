@@ -203,7 +203,7 @@ export async function ApiOperation({ value, children }: { value: string; childre
   }));
 
   return <div className="api-operation">
-    <div className="endpoint-bar"><span className={`endpoint-method method-${method}`}>{method.toUpperCase()}</span><code>{displayPath}</code><CopyButton value={displayPath} label="" /></div>
+    <div className="endpoint-bar"><span className={`endpoint-method method-${method}`}>{method.toUpperCase()}</span><code>{displayPath}</code><CopyButton value={displayPath} label="" analytics={{ codeKind: 'endpoint_path' }} /></div>
     {operation.description && <p className="endpoint-description"><PlainMarkdown value={operation.description} /></p>}
     {children}
     {parameters.length > 0 && <section className="api-section" id="parameters"><h2>Parameters <a href="#parameters">#</a></h2><SchemaTable document={document} rows={parameterRows} label="Request parameters" /></section>}

@@ -5,6 +5,12 @@ import { ArrowUpRight, RefreshCw, Search, Send, Square } from 'lucide-react';
 import { type FormEvent, useEffect, useRef } from 'react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { Markdown } from '@/components/markdown';
+import {
+  analyticsTimestamp,
+  captureDocsEvent,
+  durationBucket,
+  safeDocsPath,
+} from '@/lib/docs-analytics';
 import { docsApiPath } from '@/lib/docs-paths';
 
 type AssistantSource = {
@@ -41,6 +47,7 @@ export function DocsAssistantPanel({
 }: DocsAssistantPanelProps) {
   const chat = useChat<UIMessage>({ id: 'axiom-docs-assistant', transport: chatTransport });
   const listRef = useRef<HTMLDivElement>(null);
+  const requestStartedAt = useRef<number | null>(null);
   const isBusy = chat.status === 'submitted' || chat.status === 'streaming';
   const messages = chat.messages.filter((message) => message.role !== 'system');
 
@@ -53,16 +60,65 @@ export function DocsAssistantPanel({
     const list = listRef.current;
     if (list) list.scrollTop = list.scrollHeight;
   }, [chat.status, messages]);
+  useEffect(() => {
+    const startedAt = requestStartedAt.current;
+    if (startedAt === null) return;
+
+    if (chat.status === 'error') {
+      requestStartedAt.current = null;
+      captureDocsEvent('docs_ai_answer_completed', {
+        duration_bucket: durationBucket(analyticsTimestamp() - startedAt),
+        outcome: 'error',
+        source_count: 0,
+      });
+      return;
+    }
+
+    if (chat.status !== 'ready') return;
+    const answer = [...chat.messages].reverse().find((message) => message.role === 'assistant');
+    if (!answer) return;
+    requestStartedAt.current = null;
+    captureDocsEvent('docs_ai_answer_completed', {
+      duration_bucket: durationBucket(analyticsTimestamp() - startedAt),
+      outcome: 'answered',
+      source_count: assistantSources(answer).length,
+    });
+  }, [chat.messages, chat.status]);
 
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
     const question = draft.trim();
     if (!question || isBusy) return;
+    requestStartedAt.current = analyticsTimestamp();
+    captureDocsEvent('docs_ai_question_submitted', {
+      submission_type: 'question',
+      turn_number: messages.filter((message) => message.role === 'user').length + 1,
+    });
     onDraftChange('');
     void chat.sendMessage({
       role: 'user',
       parts: [{ type: 'text', text: question }],
     });
+  };
+  const retry = () => {
+    requestStartedAt.current = analyticsTimestamp();
+    captureDocsEvent('docs_ai_question_submitted', {
+      submission_type: 'retry',
+      turn_number: messages.filter((message) => message.role === 'user').length,
+    });
+    void chat.regenerate();
+  };
+  const stop = () => {
+    const startedAt = requestStartedAt.current;
+    requestStartedAt.current = null;
+    if (startedAt !== null) {
+      captureDocsEvent('docs_ai_answer_completed', {
+        duration_bucket: durationBucket(analyticsTimestamp() - startedAt),
+        outcome: 'stopped',
+        source_count: 0,
+      });
+    }
+    void chat.stop();
   };
 
   return (
@@ -90,7 +146,7 @@ export function DocsAssistantPanel({
             <strong>The assistant couldn’t answer.</strong>
             <span>You can retry or continue with regular search.</span>
             <div>
-              <button type="button" onClick={() => chat.regenerate()}><RefreshCw size={13} /> Retry</button>
+              <button type="button" onClick={retry}><RefreshCw size={13} /> Retry</button>
               <button type="button" onClick={onUseSearch}>Use search</button>
             </div>
           </div>
@@ -113,7 +169,7 @@ export function DocsAssistantPanel({
             }}
           />
           {isBusy ? (
-            <button type="button" aria-label="Stop answer" onClick={() => chat.stop()}><Square size={13} fill="currentColor" /></button>
+            <button type="button" aria-label="Stop answer" onClick={stop}><Square size={13} fill="currentColor" /></button>
           ) : (
             <button type="submit" aria-label="Send question" disabled={!draft.trim()}><Send size={15} /></button>
           )}
@@ -154,8 +210,15 @@ function AssistantMessage({ message }: { message: UIMessage }) {
       {sources.length > 0 && (
         <div className="docs-assistant-sources">
           <strong>Sources</strong>
-          {sources.map((source) => (
-            <a href={source.url} key={source.url}>
+          {sources.map((source, index) => (
+            <a
+              href={source.url}
+              key={source.url}
+              onClick={() => captureDocsEvent('docs_ai_source_opened', {
+                destination_path: safeDocsPath(source.url),
+                source_rank: index + 1,
+              })}
+            >
               <span>{source.title}</span><ArrowUpRight size={12} />
             </a>
           ))}

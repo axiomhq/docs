@@ -18,6 +18,12 @@ import {
 import { useDocsSearch as useFumadocsSearch } from 'fumadocs-core/search/client';
 import { fetchClient } from 'fumadocs-core/search/client/fetch';
 import { useDocsSearchController } from '@/components/docs-search-provider';
+import {
+  analyticsTimestamp,
+  captureDocsEvent,
+  durationBucket,
+  safeDocsPath,
+} from '@/lib/docs-analytics';
 import { docsApiPath, withoutDocsBasePath } from '@/lib/docs-paths';
 import { sanitizeSearchSnippet } from '@/lib/docs-search-rank';
 
@@ -58,7 +64,7 @@ export function DocsSearchDialog() {
   return (
     <dialog
       ref={dialogRef}
-      className="docs-search-dialog"
+      className="docs-search-dialog ph-no-capture"
       aria-label="Search and ask Axiom Docs"
       data-ph-no-capture
       onCancel={(event) => {
@@ -78,7 +84,10 @@ export function DocsSearchDialog() {
               role="tab"
               aria-selected={mode === 'search'}
               aria-controls="docs-search-panel"
-              onClick={() => setMode('search')}
+              onClick={() => {
+                captureDocsEvent('docs_search_opened', { entry_point: 'mode_tab' });
+                setMode('search');
+              }}
             >
               <Search size={14} /> Search
             </button>
@@ -88,7 +97,10 @@ export function DocsSearchDialog() {
               role="tab"
               aria-selected={mode === 'assistant'}
               aria-controls="docs-assistant-panel"
-              onClick={() => setMode('assistant')}
+              onClick={() => {
+                captureDocsEvent('docs_ai_opened', { entry_point: 'mode_tab' });
+                setMode('assistant');
+              }}
             >
               <BookOpen size={14} /> Ask AI
             </button>
@@ -110,6 +122,8 @@ function SearchPanel() {
   const { search, setSearch, query } = useFumadocsSearch({ client, delayMs: 300 });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchStartedAt = useRef(0);
+  const searchWasLoading = useRef(false);
   const results = Array.isArray(query.data) ? query.data : [];
   const activeIndex = results.length > 0 ? Math.min(selectedIndex, results.length - 1) : 0;
 
@@ -122,9 +136,39 @@ function SearchPanel() {
     if (!open || results.length === 0) return;
     document.getElementById(`docs-search-result-${activeIndex}`)?.scrollIntoView({ block: 'nearest' });
   }, [activeIndex, open, query.data, results.length]);
-  const navigate = (url: string) => {
+  useEffect(() => {
+    if (query.isLoading) {
+      searchWasLoading.current = true;
+      return;
+    }
+    if (!search.trim() || !searchWasLoading.current) return;
+
+    searchWasLoading.current = false;
+    captureDocsEvent('docs_search_completed', {
+      duration_bucket: durationBucket(analyticsTimestamp() - searchStartedAt.current),
+      outcome: results.length > 0 ? 'results' : 'empty',
+      result_count: results.length,
+    });
+  }, [query.data, query.isLoading, results.length, search]);
+
+  const navigate = (url: string, resultRank: number, inputMethod: 'keyboard' | 'pointer') => {
+    captureDocsEvent('docs_search_result_opened', {
+      destination_path: safeDocsPath(url),
+      input_method: inputMethod,
+      result_rank: resultRank,
+    });
     close();
     router.push(withoutDocsBasePath(url));
+  };
+  const handoff = (
+    entryPoint: 'search_handoff' | 'search_empty_state' | 'search_footer',
+    draft = '',
+  ) => {
+    captureDocsEvent('docs_search_ai_handoff', {
+      entry_point: entryPoint,
+      result_count: results.length,
+    });
+    openAssistant(draft, entryPoint);
   };
   const handleKeys = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown' && results.length > 0) {
@@ -137,7 +181,7 @@ function SearchPanel() {
     }
     if (event.key === 'Enter' && results[activeIndex]) {
       event.preventDefault();
-      navigate(results[activeIndex].url);
+      navigate(results[activeIndex].url, activeIndex + 1, 'keyboard');
     }
   };
 
@@ -158,6 +202,7 @@ function SearchPanel() {
           data-ph-no-capture
           onChange={(event) => {
             setSelectedIndex(0);
+            searchStartedAt.current = analyticsTimestamp();
             setSearch(event.target.value);
           }}
           onKeyDown={handleKeys}
@@ -166,7 +211,7 @@ function SearchPanel() {
       </div>
       <div className="docs-search-results" aria-busy={query.isLoading}>
         {search.trim() && (
-          <button type="button" className="docs-search-ask-row" onClick={() => openAssistant(search.trim())}>
+          <button type="button" className="docs-search-ask-row" onClick={() => handoff('search_handoff', search.trim())}>
             <span><BookOpen size={15} /> Ask AI about “{search.trim()}”</span>
             <ArrowUpRight size={14} />
           </button>
@@ -175,7 +220,7 @@ function SearchPanel() {
           <div className="docs-search-empty">
             <strong>Find anything in Axiom Docs</strong>
             <p>Search exact fields, API paths, APL and MPL functions, concepts, and guides.</p>
-            <button type="button" onClick={() => openAssistant()}>
+            <button type="button" onClick={() => handoff('search_empty_state')}>
               Ask a question instead <kbd>⌘I</kbd>
             </button>
           </div>
@@ -197,7 +242,7 @@ function SearchPanel() {
               className="docs-search-result"
               key={result.id}
               onMouseEnter={() => setSelectedIndex(index)}
-              onClick={() => navigate(result.url)}
+              onClick={() => navigate(result.url, index + 1, 'pointer')}
             >
               <SearchBreadcrumbs items={result.breadcrumbs} />
               <span className="docs-search-result-content"><HighlightedText value={result.content} /></span>
@@ -208,7 +253,7 @@ function SearchPanel() {
       <footer className="docs-search-footer">
         <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
         <span><kbd>↵</kbd> Open</span>
-        <button type="button" onClick={() => openAssistant(search.trim())}>Ask AI <kbd>⌘I</kbd></button>
+        <button type="button" onClick={() => handoff('search_footer', search.trim())}>Ask AI <kbd>⌘I</kbd></button>
       </footer>
     </section>
   );

@@ -1,9 +1,9 @@
 'use client';
 
 import { ZoneLink as Link } from '@/components/zone-link';
-import posthog from 'posthog-js';
 import { ArrowLeft, ArrowRight, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';
+import { captureDocsEvent } from '@/lib/docs-analytics';
 import type { AdjacentNavigationItem } from '@/lib/navigation';
 
 type Feedback = 'yes' | 'no';
@@ -26,7 +26,7 @@ export function ArticleFooter({
   function submitFeedback(value: Feedback) {
     if (feedback) return;
     setFeedback(value);
-    posthog.capture('docs_page_feedback_submitted', {
+    captureDocsEvent('docs_page_feedback_submitted', {
       helpful: value === 'yes',
       page_path: pageHref,
       page_title: pageTitle,
@@ -66,7 +66,14 @@ export function ArticleFooter({
       )}
 
       <div className="article-footer-links">
-        <a href={editHref} target="_blank" rel="noreferrer">Suggest edits on GitHub</a>
+        <a
+          href={editHref}
+          target="_blank"
+          rel="noreferrer"
+          onClick={() => captureDocsEvent('docs_edit_opened', { page_path: pageHref })}
+        >
+          Suggest edits on GitHub
+        </a>
       </div>
     </footer>
   );

@@ -242,14 +242,15 @@ Any change to `app/api/try/route.ts`, token detection, credential storage, or Po
 
 ## Analytics and privacy
 
-PostHog is optional and initialized only when `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` is present. Production values are supplied through Vercel:
+PostHog is optional and initialized only when `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` is present. The browser ingestion host is fixed to `https://m.axiom.co`. Production supplies one public value through Vercel:
 
 - `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`
-- `NEXT_PUBLIC_POSTHOG_HOST`
 
-The root `instrumentation-client.ts` explicitly enables initial/history-change pageviews, page leaves, and autocapture with identified-only person profiles. Local development, tests, and unconfigured preview deployments must send no PostHog traffic.
+The project token is intentionally public because the browser sends events with it. PostHog personal API keys, OpenRouter keys, and Upstash credentials are server-only and must never use a `NEXT_PUBLIC_` prefix.
 
-The page-feedback event is `docs_page_feedback_submitted` and currently includes only:
+The root `instrumentation-client.ts` explicitly enables initial/history-change pageviews, page leaves, and autocapture with identified-only person profiles. Search, assistant, placeholder, Playground, and Try It surfaces have privacy-safe custom events and are excluded from autocapture. Local development, tests, and unconfigured preview deployments must send no PostHog traffic.
+
+Custom event properties are defined in `lib/docs-analytics.ts`. The page-feedback event is `docs_page_feedback_submitted` and includes only:
 
 - `helpful`
 - `page_path`

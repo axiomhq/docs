@@ -3,6 +3,12 @@
 import { ChevronRight, LoaderCircle, Play } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { ZoneLink as Link } from '@/components/zone-link';
+import {
+  analyticsTimestamp,
+  captureDocsEvent,
+  durationBucket,
+  statusClass,
+} from '@/lib/docs-analytics';
 import { docsApiPath } from '@/lib/docs-paths';
 import { isPersonalAccessToken } from '@/lib/token';
 
@@ -79,6 +85,9 @@ export function ApiTryIt({
   }
 
   async function runRequest() {
+    const startedAt = analyticsTimestamp();
+    const analyticsMethod = method.toUpperCase();
+    let completionCaptured = false;
     setPending(true);
     setError('');
     setResult(undefined);
@@ -90,17 +99,59 @@ export function ApiTryIt({
         body: JSON.stringify({ operation, token, orgId: personalToken ? orgId : '', parameters: values, serverVariables: variables, body: bodyType ? body : undefined }),
       });
       const payload = await response.json() as TryResult & { error?: string };
-      if (!response.ok && payload.error) throw new Error(payload.error);
+      if (!response.ok && payload.error) {
+        completionCaptured = true;
+        captureDocsEvent('docs_api_try_completed', {
+          duration_bucket: durationBucket(analyticsTimestamp() - startedAt),
+          method: analyticsMethod,
+          operation,
+          outcome: response.status === 429
+            ? 'rate_limited'
+            : response.status === 400
+              ? 'validation_error'
+              : 'proxy_error',
+          status_class: statusClass(response.status),
+        });
+        throw new Error(payload.error);
+      }
       setResult(payload);
+      completionCaptured = true;
+      captureDocsEvent('docs_api_try_completed', {
+        duration_bucket: durationBucket(analyticsTimestamp() - startedAt),
+        method: analyticsMethod,
+        operation,
+        outcome: payload.status >= 200 && payload.status < 300 ? 'success' : 'upstream_error',
+        status_class: statusClass(payload.status),
+      });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'The request could not be completed.');
+      if (!completionCaptured) {
+        captureDocsEvent('docs_api_try_completed', {
+          duration_bucket: durationBucket(analyticsTimestamp() - startedAt),
+          method: analyticsMethod,
+          operation,
+          outcome: 'proxy_error',
+          status_class: 'unknown',
+        });
+      }
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <details className="api-try">
+    <details
+      className="api-try ph-no-capture"
+      data-ph-no-capture
+      onToggle={(event) => {
+        if (event.currentTarget.open) {
+          captureDocsEvent('docs_api_try_opened', {
+            method: method.toUpperCase(),
+            operation,
+          });
+        }
+      }}
+    >
       <summary><span className="api-try-chevron"><ChevronRight size={14} /></span><span><strong>Try it</strong><small>Run this request against your Axiom organization</small></span></summary>
       <div className="api-try-panel">
         <p>Credentials stay in this browser tab and are only sent to Axiom when you run the request.</p>

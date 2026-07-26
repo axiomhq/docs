@@ -3,6 +3,7 @@
 import { isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { CodeBlock, Pre } from 'fumadocs-ui/components/codeblock';
+import { captureDocsEvent } from '@/lib/docs-analytics';
 
 const storageKey = 'axiom-docs-placeholders';
 const fields = {
@@ -16,6 +17,7 @@ type FieldKey = keyof typeof fields;
 type Values = Partial<Record<FieldKey, string>>;
 
 const fieldKeys = Object.keys(fields) as FieldKey[];
+const trackedFields = new Set<FieldKey>();
 
 function placeholderPattern() {
   return new RegExp(`\\b(${fieldKeys.join('|')})\\b`, 'g');
@@ -87,11 +89,15 @@ export function PlaceholderPre({ source: sourceProp, ...props }: ComponentProps<
     const next = { ...values, [key]: value || undefined };
     sessionStorage.setItem(storageKey, JSON.stringify(next));
     window.dispatchEvent(new Event('axiom-placeholder-change'));
+    if (!trackedFields.has(key)) {
+      trackedFields.add(key);
+      captureDocsEvent('docs_example_customized', { field_name: key });
+    }
   }
 
   return <>
     <CodeBlock ref={codeBlockRef} {...props}><Pre>{props.children}</Pre></CodeBlock>
-    {hydrated && usedFields.length > 0 && <div className="placeholder-config" aria-label="Customize this example" data-ph-no-capture>
+    {hydrated && usedFields.length > 0 && <div className="placeholder-config ph-no-capture" aria-label="Customize this example" data-ph-no-capture>
       {usedFields.map((key) => {
         const field = fields[key];
         return <label key={key}><span>{field.label}</span>{'options' in field ? <select value={values[key] ?? ''} onChange={(event) => update(key, event.target.value)}>{field.options.map((option) => <option value={option} key={option}>{option || 'Select edge deployment'}</option>)}</select> : <input value={values[key] ?? ''} placeholder={field.placeholder} autoComplete="off" data-1p-ignore data-ph-no-capture onChange={(event) => update(key, event.target.value)} />}</label>;

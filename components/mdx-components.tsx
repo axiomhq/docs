@@ -1,7 +1,6 @@
 import { Children, cloneElement, isValidElement } from 'react';
 import type { AnchorHTMLAttributes, ComponentProps, ImgHTMLAttributes, ReactElement, ReactNode } from 'react';
 import type { MDXComponents } from 'mdx/types';
-import { ExternalLink, Play } from 'lucide-react';
 import defaultComponents from 'fumadocs-ui/mdx';
 import { Accordion as FumaAccordion, Accordions } from 'fumadocs-ui/components/accordion';
 import { Card, Cards } from 'fumadocs-ui/components/card';
@@ -9,6 +8,7 @@ import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Tab as FumaTab, Tabs as FumaTabs } from 'fumadocs-ui/components/tabs';
 import { ImageZoom } from 'fumadocs-ui/components/image-zoom';
 import { ZoneLink } from '@/components/zone-link';
+import { PlaygroundLink } from '@/components/playground-link';
 import { withDocsBasePath, withoutDocsBasePath } from '@/lib/docs-paths';
 import { PlaceholderPre as InteractivePlaceholderPre } from './placeholder-code';
 import { HeadingAnchor } from './heading-anchor';
@@ -20,7 +20,7 @@ function DocsLink({ href = '', children, className, ...props }: AnchorHTMLAttrib
   const target = withoutDocsBasePath(href);
   if (target.startsWith('/') || target.startsWith('#')) return <ZoneLink href={target} prefetch={false} className={className} {...props}>{children}</ZoneLink>;
   if (target.startsWith('https://play.axiom.co/')) {
-    return <a href={target} className={['playground-link', className].filter(Boolean).join(' ')} target="_blank" rel="noreferrer" {...props}><Play size={12} /><span>{children}</span><ExternalLink size={11} aria-label="Opens in a new tab" /></a>;
+    return <PlaygroundLink href={target} className={className} {...props}>{children}</PlaygroundLink>;
   }
   return <a href={target} className={className} {...props}>{children}</a>;
 }

@@ -78,10 +78,11 @@ Analytics is disabled unless a public project token is present. Local developmen
 
 ```bash
 NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=phc_...
-NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
-PostHog is initialized through Next.js `instrumentation-client.ts`. Configured deployments capture the initial page view, client-side route changes, page leaves, and standard autocapture events. Person profiles are created only for identified users. There is no Fathom or do11y integration.
+The project token is intentionally public because the browser sends events directly to PostHog. The ingestion host is fixed to Axiom's `https://m.axiom.co` proxy; PostHog personal API keys and other server credentials must never use a `NEXT_PUBLIC_` prefix.
+
+PostHog is initialized through Next.js `instrumentation-client.ts`. Configured deployments capture the initial page view, client-side route changes, page leaves, standard autocapture events, and privacy-safe docs product events. Search terms, AI prompts and answers, code contents, placeholder values, API credentials, request data, and response data are excluded. Person profiles are created only for identified users. There is no Fathom or do11y integration.
 
 ## AI-readable routes
 

@@ -54,6 +54,8 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
 
   const tryIt = page.locator('.api-try');
   await tryIt.getByText('Try it', { exact: true }).click();
+  await expect(tryIt).toHaveClass(/ph-no-capture/);
+  await expect(tryIt).toHaveAttribute('data-ph-no-capture', 'true');
   await expect(tryIt.getByLabel('API token Required')).toHaveAttribute('data-ph-no-capture', 'true');
   const orgIdInput = tryIt.getByPlaceholder('Your organization ID');
   await expect(orgIdInput).toHaveCount(0);
@@ -156,6 +158,8 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
     await page.keyboard.press('ControlOrMeta+KeyK');
     return dialog.isVisible();
   }, { timeout: 15_000 }).toBe(true);
+  await expect(dialog).toHaveClass(/ph-no-capture/);
+  await expect(dialog).toHaveAttribute('data-ph-no-capture', 'true');
   await expect(page.getByRole('tab', { name: 'Search' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab', { name: 'Search' })).toHaveCSS('padding-left', '9px');
   const searchInput = page.getByRole('combobox', { name: 'Search documentation' });

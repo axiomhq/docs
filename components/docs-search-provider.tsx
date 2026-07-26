@@ -10,14 +10,19 @@ import {
   useMemo,
   useState,
 } from 'react';
+import {
+  type AssistantEntryPoint,
+  captureDocsEvent,
+  type SearchEntryPoint,
+} from '@/lib/docs-analytics';
 
 type SearchMode = 'search' | 'assistant';
 
 type DocsSearchContextValue = {
   open: boolean;
   mode: SearchMode;
-  openSearch: () => void;
-  openAssistant: (draft?: string) => void;
+  openSearch: (entryPoint?: SearchEntryPoint) => void;
+  openAssistant: (draft?: string, entryPoint?: AssistantEntryPoint) => void;
   close: () => void;
   setMode: (mode: SearchMode) => void;
   assistantDraft: string;
@@ -36,11 +41,16 @@ export function DocsSearchProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<SearchMode>('search');
   const [assistantDraft, setAssistantDraft] = useState('');
 
-  const openSearch = useCallback(() => {
+  const openSearch = useCallback((entryPoint: SearchEntryPoint = 'header') => {
+    captureDocsEvent('docs_search_opened', { entry_point: entryPoint });
     setMode('search');
     setOpen(true);
   }, []);
-  const openAssistant = useCallback((draft = '') => {
+  const openAssistant = useCallback((
+    draft = '',
+    entryPoint: AssistantEntryPoint = 'hero',
+  ) => {
+    captureDocsEvent('docs_ai_opened', { entry_point: entryPoint });
     setAssistantDraft(draft);
     setMode('assistant');
     setOpen(true);
@@ -53,11 +63,11 @@ export function DocsSearchProvider({ children }: { children: ReactNode }) {
       const key = event.key.toLowerCase();
       if (key === 'k' || event.code === 'KeyK') {
         event.preventDefault();
-        openSearch();
+        openSearch('shortcut');
       }
       if (key === 'i' || event.code === 'KeyI') {
         event.preventDefault();
-        openAssistant();
+        openAssistant('', 'shortcut');
       }
     };
     window.addEventListener('keydown', handleShortcut);

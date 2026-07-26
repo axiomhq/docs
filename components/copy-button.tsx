@@ -2,8 +2,20 @@
 
 import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';
+import { captureDocsEvent } from '@/lib/docs-analytics';
 
-export function CopyButton({ value, label = 'Copy' }: { value: string; label?: string }) {
+export function CopyButton({
+  value,
+  label = 'Copy',
+  analytics,
+}: {
+  value: string;
+  label?: string;
+  analytics?: {
+    codeKind: 'api_sample' | 'endpoint_path';
+    language?: string;
+  };
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -12,6 +24,12 @@ export function CopyButton({ value, label = 'Copy' }: { value: string; label?: s
       aria-label={`${label} to clipboard`}
       onClick={async () => {
         await navigator.clipboard.writeText(value);
+        if (analytics) {
+          captureDocsEvent('docs_code_copied', {
+            code_kind: analytics.codeKind,
+            language: analytics.language,
+          });
+        }
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1600);
       }}

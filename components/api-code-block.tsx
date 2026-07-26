@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { captureDocsEvent } from '@/lib/docs-analytics';
 import { CopyButton } from './copy-button';
 
 export type ApiCodeSample = {
@@ -41,9 +42,11 @@ export function ApiCodeBlock({ samples, label }: { samples: ApiCodeSample[]; lab
   if (!selected) return null;
 
   const selectLanguage = (id: string) => {
+    if (id === selected.id) return;
     setSelectedId(id);
     window.localStorage.setItem(languagePreferenceKey, id);
     window.dispatchEvent(new CustomEvent(languagePreferenceEvent, { detail: id }));
+    captureDocsEvent('docs_api_language_selected', { language: id });
   };
 
   return (
@@ -64,7 +67,10 @@ export function ApiCodeBlock({ samples, label }: { samples: ApiCodeSample[]; lab
             ))}
           </div>
         ) : <span>{label ?? selected.label}</span>}
-        <CopyButton value={selected.code} />
+        <CopyButton
+          value={selected.code}
+          analytics={{ codeKind: 'api_sample', language: selected.id }}
+        />
       </div>
       <div className="api-code-body" role="tabpanel" aria-label={`${selected.label} code example`}>
         {selected.highlighted}

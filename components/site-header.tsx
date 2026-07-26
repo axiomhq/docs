@@ -6,6 +6,7 @@ import { useTheme } from 'next-themes';
 import { Check, Menu, Monitor, Moon, Search, Sun, X } from 'lucide-react';
 import { useRef, useSyncExternalStore } from 'react';
 import { useDocsSearchController } from '@/components/docs-search-provider';
+import { captureDocsEvent } from '@/lib/docs-analytics';
 
 const tabs = [
   { label: 'Documentation', href: '/docs', match: (path: string) => !path.startsWith('/docs/apl/') && !path.startsWith('/docs/mpl/') && !path.startsWith('/docs/restapi/') },
@@ -56,7 +57,7 @@ export function SiteHeader({ drawerOpen, onMenu }: { drawerOpen: boolean; onMenu
       </Link>
       <DocumentationSections />
       <div className="header-actions">
-        <button className="header-search" aria-label="Search documentation and ask AI" onClick={openSearch}>
+        <button className="header-search" aria-label="Search documentation and ask AI" onClick={() => openSearch('header')}>
           <Search size={14} /><span>Search or ask AI…</span><kbd>⌘K</kbd>
         </button>
         <details className="theme-menu" ref={themeMenu}>
@@ -67,7 +68,15 @@ export function SiteHeader({ drawerOpen, onMenu }: { drawerOpen: boolean; onMenu
             <button role="menuitemradio" aria-checked={selectedTheme === 'light'} onClick={() => chooseTheme('light')}><Sun size={14} /><span>Light</span>{selectedTheme === 'light' && <Check size={13} />}</button>
           </div>
         </details>
-        <a className="console-button" href="https://app.axiom.co" target="_blank" rel="noreferrer">Open console <span>→</span></a>
+        <a
+          className="console-button"
+          href="https://app.axiom.co"
+          target="_blank"
+          rel="noreferrer"
+          onClick={() => captureDocsEvent('docs_console_opened', { placement: 'header' })}
+        >
+          Open console <span>→</span>
+        </a>
       </div>
     </header>
   );

@@ -6,7 +6,7 @@ import { useDocsSearchController } from '@/components/docs-search-provider';
 export function SearchPrompt() {
   const { openSearch } = useDocsSearchController();
   return (
-    <button className="hero-search" onClick={openSearch}>
+    <button className="hero-search" onClick={() => openSearch('hero')}>
       <Search size={16} />
       <span>Search the docs — or ask a question…</span>
       <kbd>⌘K</kbd>
@@ -16,5 +16,5 @@ export function SearchPrompt() {
 
 export function AskAiPrompt() {
   const { openAssistant } = useDocsSearchController();
-  return <button onClick={() => openAssistant()}>Ask AI ⌘I</button>;
+  return <button onClick={() => openAssistant('', 'hero')}>Ask AI ⌘I</button>;
 }
