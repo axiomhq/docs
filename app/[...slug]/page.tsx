@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { DocsBody, DocsDescription, DocsTitle } from 'fumadocs-ui/page';
-import { DocsShell } from '@/components/docs-shell';
 import { ApiOperation } from '@/components/api-operation';
 import { mdxComponents } from '@/components/mdx-components';
 import { TableOfContents, type TocItem } from '@/components/table-of-contents';
@@ -46,7 +45,7 @@ export default async function DocumentationPage({ params }: PageProps) {
     : page.data.toc.map((item) => ({ title: item.title, url: item.url, depth: item.depth }));
 
   return (
-    <DocsShell navigation={navigation} activeHref={href}>
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={structuredDataProps(
@@ -90,7 +89,7 @@ export default async function DocumentationPage({ params }: PageProps) {
         </article>
         {tocItems.length > 0 && <TableOfContents items={tocItems} />}
       </div>
-    </DocsShell>
+    </>
   );
 }
 

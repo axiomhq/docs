@@ -2,9 +2,22 @@
 
 import { ZoneLink as Link } from '@/components/zone-link';
 import { ChevronRight } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { withDocsBasePath } from '@/lib/docs-paths';
 import type { NavigationGroup, NavigationItem } from '@/lib/navigation';
 import { DocumentationSections, SiteHeader } from './site-header';
+
+type Section = 'documentation' | 'query' | 'api' | 'changelog';
+
+// Mirrors lib/navigation's getSection rather than importing it: that module
+// pulls docs.json and the fumadocs source into any bundle that imports it.
+function sectionOf(pathname: string): Section {
+  if (pathname === '/docs/changelog' || pathname.startsWith('/docs/changelog/')) return 'changelog';
+  if (pathname.startsWith('/docs/apl/') || pathname.startsWith('/docs/mpl/')) return 'query';
+  if (pathname.startsWith('/docs/restapi/')) return 'api';
+  return 'documentation';
+}
 
 function containsActive(item: NavigationItem, activeHref: string): boolean {
   if (item.href === activeHref) return true;
@@ -34,7 +47,14 @@ function NavItem({ item, activeHref, onNavigate, depth = 0 }: { item: Navigation
   );
 }
 
-export function DocsShell({ navigation, activeHref, children, landing = false }: { navigation: NavigationGroup[]; activeHref: string; children: React.ReactNode; landing?: boolean }) {
+export function DocsShell({ navigations, children }: { navigations: Record<Section, NavigationGroup[]>; children: React.ReactNode }) {
+  // The shell lives in the root layout so navigation payloads exclude it; the
+  // active page and sidebar section are derived from the pathname instead of
+  // per-page props. usePathname reports app-relative paths (no /docs basePath).
+  const pathname = usePathname();
+  const landing = pathname === '/';
+  const activeHref = landing ? '/docs' : withDocsBasePath(pathname);
+  const navigation = navigations[sectionOf(activeHref)];
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
 
