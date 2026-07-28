@@ -6,6 +6,7 @@ import { ApiOperation } from '@/components/api-operation';
 import { mdxComponents } from '@/components/mdx-components';
 import { TableOfContents, type TocItem } from '@/components/table-of-contents';
 import { ArticleFooter } from '@/components/article-footer';
+import { CopyPageMenu } from '@/components/copy-page';
 import { ZoneLink as Link } from '@/components/zone-link';
 import { withoutDocsBasePath } from '@/lib/docs-paths';
 import { getAdjacentNavigation, getBreadcrumbs, getNavigation, getSection } from '@/lib/navigation';
@@ -29,6 +30,10 @@ export default async function DocumentationPage({ params }: PageProps) {
   const adjacentNavigation = getAdjacentNavigation(navigation, href);
   const breadcrumbs = getBreadcrumbs(navigation, href);
   if (breadcrumbs.length > 0) breadcrumbs[breadcrumbs.length - 1] = { title: page.data.title };
+  // Structured data keeps the full trail; the visible breadcrumb shows only the
+  // first two ancestor groups — never the page itself, whose title sits directly
+  // below — so deep sections can't produce long trails.
+  const visibleBreadcrumbs = breadcrumbs.slice(0, -1).slice(0, 2);
   const querySyntaxTitle = section === 'query' && slug?.at(-1) !== 'overview' && slug?.some((segment) => /(?:function|operator)s?$/.test(segment));
   const Body = page.data.body;
   const tocItems: TocItem[] = page.data.openapi
@@ -56,17 +61,20 @@ export default async function DocumentationPage({ params }: PageProps) {
       />
       <div className="article-layout">
         <article className={querySyntaxTitle ? 'doc-article query-syntax-article' : 'doc-article'}>
-          <nav className="doc-breadcrumbs" aria-label="Breadcrumb">
-            {breadcrumbs.map((item, index) => {
-              const current = index === breadcrumbs.length - 1;
-              return (
-                <span className="doc-breadcrumb" key={`${item.title}-${index}`}>
-                  {item.href && !current ? <Link href={item.href} prefetch={false}>{item.title}</Link> : <span aria-current={current ? 'page' : undefined}>{item.title}</span>}
-                  {!current && <b aria-hidden="true">/</b>}
-                </span>
-              );
-            })}
-          </nav>
+          <div className="doc-topline">
+            <nav className="doc-breadcrumbs" aria-label="Breadcrumb">
+              {visibleBreadcrumbs.map((item, index) => {
+                const last = index === visibleBreadcrumbs.length - 1;
+                return (
+                  <span className="doc-breadcrumb" key={`${item.title}-${index}`}>
+                    {item.href ? <Link href={item.href} prefetch={false}>{item.title}</Link> : <span>{item.title}</span>}
+                    {!last && <b aria-hidden="true">/</b>}
+                  </span>
+                );
+              })}
+            </nav>
+            {!page.data.openapi && <CopyPageMenu markdownPath={`${href}.md`} />}
+          </div>
           <DocsTitle className={querySyntaxTitle ? 'query-syntax-title' : undefined}>{page.data.title}</DocsTitle>
           <DocsDescription>{page.data.description}</DocsDescription>
           <DocsBody>

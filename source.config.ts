@@ -22,4 +22,11 @@ export const docs = defineDocs({
   },
 });
 
-export default defineConfig();
+export default defineConfig({
+  mdxOptions: {
+    // Imported snippet MDX compiles as standalone modules that never receive the
+    // components prop page.tsx passes, so they need the provider to pick up the
+    // shared pre/notice/link mappings from mdx-components.tsx.
+    providerImportSource: '@/mdx-components',
+  },
+});
