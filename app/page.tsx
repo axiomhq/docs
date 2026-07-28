@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
-import { DocsShell } from '@/components/docs-shell';
 import { AskAiPrompt, SearchPrompt } from '@/components/search-prompt';
 import { ZoneLink as Link } from '@/components/zone-link';
-import { getNavigation } from '@/lib/navigation';
 import { ogImage } from '@/lib/og';
 
 const quickCards = [
@@ -40,26 +38,24 @@ export const metadata: Metadata = {
 
 export default function DocsLandingPage() {
   return (
-    <DocsShell navigation={getNavigation('documentation')} activeHref="/docs" landing>
-      <div className="landing-content">
-        <section className="landing-hero">
-          <h1>From first event to petabyte scale.</h1>
-          <p>Send, store, and query logs, traces, metrics, and events. From first ingest to petabyte scale.</p>
-          <SearchPrompt />
-        </section>
-        <section className="quick-grid" aria-label="Popular starting points">
-          {quickCards.map((card) => <Link href={card.href} prefetch={false} className="quick-card" key={card.title}><strong>{card.title}</strong><span>{card.description}</span><small>{card.action}</small></Link>)}
-        </section>
-        <section className="landing-section">
-          <div className="section-heading"><h2>Send data</h2><span /><Link href="/docs/apps/introduction" prefetch={false}>All integrations →</Link></div>
-          <div className="integration-list">{integrations.map(([label, href]) => <Link href={href} prefetch={false} key={label}>{label}</Link>)}</div>
-        </section>
-        <section className="landing-section platform-index">
-          <div className="section-heading"><h2>Explore the platform</h2><span /></div>
-          {platformRows.map(([title, description, href]) => <Link href={href} prefetch={false} key={title}><strong>{title}</strong><span>{description}</span><b>→</b></Link>)}
-        </section>
-        <footer className="landing-footer"><span>Can’t find it?</span><AskAiPrompt /><a href="https://discord.gg/axiomco">Discord</a><a href="https://axiom.co/contact">Support</a><small>axiom.co/docs</small></footer>
-      </div>
-    </DocsShell>
+    <div className="landing-content">
+      <section className="landing-hero">
+        <h1>From first event to petabyte scale.</h1>
+        <p>Send, store, and query logs, traces, metrics, and events. From first ingest to petabyte scale.</p>
+        <SearchPrompt />
+      </section>
+      <section className="quick-grid" aria-label="Popular starting points">
+        {quickCards.map((card) => <Link href={card.href} prefetch={false} className="quick-card" key={card.title}><strong>{card.title}</strong><span>{card.description}</span><small>{card.action}</small></Link>)}
+      </section>
+      <section className="landing-section">
+        <div className="section-heading"><h2>Send data</h2><span /><Link href="/docs/apps/introduction" prefetch={false}>All integrations →</Link></div>
+        <div className="integration-list">{integrations.map(([label, href]) => <Link href={href} prefetch={false} key={label}>{label}</Link>)}</div>
+      </section>
+      <section className="landing-section platform-index">
+        <div className="section-heading"><h2>Explore the platform</h2><span /></div>
+        {platformRows.map(([title, description, href]) => <Link href={href} prefetch={false} key={title}><strong>{title}</strong><span>{description}</span><b>→</b></Link>)}
+      </section>
+      <footer className="landing-footer"><span>Can’t find it?</span><AskAiPrompt /><a href="https://discord.gg/axiomco">Discord</a><a href="https://axiom.co/contact">Support</a><small>axiom.co/docs</small></footer>
+    </div>
   );
 }

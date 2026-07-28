@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { RootProvider } from 'fumadocs-ui/provider/next';
+import { DocsShell } from '@/components/docs-shell';
 import { DocsToaster } from '@/components/docs-toaster';
 import { DocsSearchProvider } from '@/components/docs-search-provider';
+import { getNavigation } from '@/lib/navigation';
 import { siteGraph, structuredDataProps } from '@/lib/structured-data';
 import './globals.css';
 
@@ -40,7 +42,18 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           search={{ enabled: false }}
         >
           <DocsSearchProvider>
-            {children}
+            {/* The shell renders here — in a segment with no params — so client
+                navigation reuses it and page payloads carry only the article. */}
+            <DocsShell
+              navigations={{
+                documentation: getNavigation('documentation'),
+                query: getNavigation('query'),
+                api: getNavigation('api'),
+                changelog: getNavigation('changelog'),
+              }}
+            >
+              {children}
+            </DocsShell>
             <DocsToaster />
           </DocsSearchProvider>
         </RootProvider>
