@@ -229,8 +229,8 @@ test('table links and notice blocks retain clear affordance and rhythm', async (
 
   const noticeParagraphs = page.locator('.doc-notice').first().locator('p');
   await expect(noticeParagraphs).toHaveCount(3);
-  await expect(noticeParagraphs.nth(1)).toHaveCSS('margin-top', '10px');
-  await expect(noticeParagraphs.nth(2)).toHaveCSS('margin-top', '10px');
+  await expect(noticeParagraphs.nth(1)).toHaveCSS('margin-top', '14px');
+  await expect(noticeParagraphs.nth(2)).toHaveCSS('margin-top', '14px');
 });
 
 test('analytics is silent without a PostHog project token', async ({ page }) => {
@@ -440,13 +440,27 @@ test('article hierarchy and footer navigation follow the compact docs pattern', 
   await expect(page.getByRole('link', { name: 'Suggest edits on GitHub' })).toBeVisible();
 });
 
-test('deep documentation pages show their complete navigation ancestry', async ({ page }) => {
+test('deep documentation pages cap the breadcrumb at the first two ancestors', async ({ page }) => {
   await page.goto('/docs/dashboard-elements/pie-chart');
 
   const breadcrumbs = page.getByRole('navigation', { name: 'Breadcrumb' });
-  await expect(breadcrumbs).toHaveText(/Understand data\s*\/\s*Console\s*\/\s*Dashboard\s*\/\s*Elements\s*\/\s*Element types\s*\/\s*Pie chart/);
-  await expect(breadcrumbs.getByRole('link', { name: 'Dashboard', exact: true })).toHaveAttribute('href', '/docs/dashboards/create');
-  await expect(breadcrumbs.getByText('Pie chart', { exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(breadcrumbs).toHaveText(/^\s*Understand data\s*\/\s*Console\s*$/);
+  await expect(breadcrumbs.getByText('Pie chart')).toHaveCount(0);
+  await expect(breadcrumbs.getByRole('link')).toHaveCount(2);
+});
+
+test('the copy page menu offers the Markdown surface and assistant links', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/docs/dashboard-elements/pie-chart');
+
+  await page.locator('.copy-page-menu summary').click();
+  await expect(page.getByRole('menuitem', { name: 'View as Markdown' })).toHaveAttribute('href', '/docs/dashboard-elements/pie-chart.md');
+  await expect(page.getByRole('menuitem', { name: 'Open in ChatGPT' })).toHaveAttribute('href', /chatgpt\.com.*axiom\.co%2Fdocs%2Fdashboard-elements%2Fpie-chart\.md/);
+
+  await page.getByRole('button', { name: 'Copy page', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Copied' })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('# Pie chart');
 });
 
 test('placeholder forms update and copy every matching code example', async ({ page, context }) => {

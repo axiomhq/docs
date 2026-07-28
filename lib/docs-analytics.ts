@@ -56,6 +56,9 @@ type DocsAnalyticsEvents = {
     language?: string;
   };
   docs_example_customized: { field_name: ExampleField };
+  docs_page_context_action: {
+    action: 'copy_markdown' | 'view_markdown' | 'open_chatgpt' | 'open_claude' | 'open_perplexity';
+  };
   docs_playground_opened: Record<string, never>;
   docs_console_opened: { placement: 'header' };
   docs_edit_opened: { page_path: string };
