@@ -1,0 +1,123 @@
+import legacyConfig from '@/docs.json';
+import { source } from '@/lib/source';
+
+export type NavigationItem = {
+  title: string;
+  href?: string;
+  method?: string;
+  children?: NavigationItem[];
+};
+
+export type NavigationGroup = { title: string; items: NavigationItem[] };
+export type AdjacentNavigationItem = { title: string; href: string };
+export type BreadcrumbNavigationItem = { title: string; href?: string };
+
+type LegacyNested = { group: string; pages: LegacyPage[] };
+type LegacyPage = string | LegacyNested;
+
+const apiFrontmatter = /^v\d+\s+(get|post|put|patch|delete)\s+/i;
+const apiGroupNames: Record<string, string> = {
+  'Annotation endpoints': 'Annotations',
+  'API token endpoints': 'API tokens',
+  'Dashboard endpoints': 'Dashboards',
+  'Dataset endpoints': 'Datasets',
+  'Edge endpoints': 'Edge',
+  'Map field endpoints': 'Map fields',
+  'Monitor endpoints': 'Monitors',
+  'Notifier endpoints': 'Notifiers',
+  'Organization endpoints': 'Organizations',
+  'Role-Based Access Control endpoints': 'Role-based access control',
+  'Saved queries endpoints': 'Saved queries',
+  'User endpoints': 'Users',
+  'Views endpoints': 'Views',
+  'Virtual fields endpoints': 'Virtual fields',
+};
+
+function humanize(value: string) {
+  return value
+    .split('/').at(-1)!
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function pageItem(slug: string): NavigationItem {
+  const page = source.getPage(slug.split('/'));
+  const openapi = page?.data.openapi;
+  const method = typeof openapi === 'string' ? openapi.match(apiFrontmatter)?.[1]?.toUpperCase() : undefined;
+  return {
+    title: page?.data.sidebarTitle ?? page?.data.title ?? humanize(slug),
+    href: `/docs/${slug}`,
+    method,
+  };
+}
+
+function nestedItem(item: LegacyPage): NavigationItem {
+  if (typeof item === 'string') return pageItem(item);
+  return { title: apiGroupNames[item.group] ?? item.group, children: item.pages.map(nestedItem) };
+}
+
+export function getNavigation(section: 'documentation' | 'query' | 'api' | 'changelog'): NavigationGroup[] {
+  if (section === 'changelog') {
+    return [{ title: 'Updates', items: [{ title: 'Changelog', href: '/docs/changelog' }] }];
+  }
+
+  const index = section === 'documentation' ? 0 : section === 'query' ? 1 : 2;
+  const tab = legacyConfig.navigation.tabs[index];
+  return tab.groups.map((group) => ({
+    title: section === 'api' ? (apiGroupNames[group.group] ?? group.group) : group.group,
+    items: (group.pages as LegacyPage[]).map(nestedItem),
+  }));
+}
+
+function flattenNavigation(items: NavigationItem[]): NavigationItem[] {
+  return items.flatMap((item) => item.href ? [item] : flattenNavigation(item.children ?? []));
+}
+
+function firstNavigationHref(items: NavigationItem[]): string | undefined {
+  for (const item of items) {
+    if (item.href) return item.href;
+    const href = firstNavigationHref(item.children ?? []);
+    if (href) return href;
+  }
+}
+
+function findNavigationTrail(items: NavigationItem[], activeHref: string): BreadcrumbNavigationItem[] | undefined {
+  for (const item of items) {
+    if (item.href === activeHref) return [{ title: item.title, href: item.href }];
+    const children = item.children ?? [];
+    const childTrail = findNavigationTrail(children, activeHref);
+    if (childTrail) return [{ title: item.title, href: firstNavigationHref(children) }, ...childTrail];
+  }
+}
+
+export function getBreadcrumbs(navigation: NavigationGroup[], activeHref: string): BreadcrumbNavigationItem[] {
+  for (const group of navigation) {
+    const trail = findNavigationTrail(group.items, activeHref);
+    if (trail) return [{ title: group.title, href: firstNavigationHref(group.items) }, ...trail];
+  }
+  return [];
+}
+
+export function getAdjacentNavigation(navigation: NavigationGroup[], activeHref: string) {
+  const pages = navigation.flatMap((group) => flattenNavigation(group.items));
+  const index = pages.findIndex((item) => item.href === activeHref);
+
+  function adjacentItem(item?: NavigationItem): AdjacentNavigationItem | undefined {
+    if (!item?.href) return undefined;
+    const page = source.getPage(item.href.replace(/^\/docs\//, '').split('/'));
+    return { title: page?.data.title ?? item.title, href: item.href };
+  }
+
+  return {
+    previous: index > 0 ? adjacentItem(pages[index - 1]) : undefined,
+    next: index >= 0 ? adjacentItem(pages[index + 1]) : undefined,
+  };
+}
+
+export function getSection(pathname: string): 'documentation' | 'query' | 'api' | 'changelog' {
+  if (pathname === '/docs/changelog' || pathname.startsWith('/docs/changelog/')) return 'changelog';
+  if (pathname.startsWith('/docs/apl/') || pathname.startsWith('/docs/mpl/')) return 'query';
+  if (pathname.startsWith('/docs/restapi/')) return 'api';
+  return 'documentation';
+}
