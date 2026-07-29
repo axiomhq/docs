@@ -132,7 +132,18 @@ jobs:
                 const msg = String(r.Message).replace(/\|/g, '\\|');
                 body += `| ${sev[r.Severity] || ''} | ${loc} | \`${r.Check}\` | ${msg} |\n`;
               }
-              body += '\n_Advisory only — this check never blocks the PR. Fixes are optional._\n';
+              body += '\n_Advisory only — this check never blocks the PR._\n';
+              body += '\n<details><summary>ℹ️ How to read this &amp; when it&#39;s fine to ignore</summary>\n\n';
+              body += 'This is advisory prose linting ([Vale](https://vale.sh) with the Google developer style guide). ';
+              body += 'It is guidance, not a gate — nothing here blocks the merge.\n\n';
+              body += '**Fix the suggestions that improve the writing** (contractions, first-person "we", terminology). ';
+              body += "**It's expected that some won't make sense — ignore those.** Vale reads Markdown as prose, so it ";
+              body += 'sometimes flags code, identifiers, product/UI names, or example data that only look like prose. Those are false positives; leaving them is the right call.\n\n';
+              body += 'To silence a false positive at the source:\n';
+              body += '- Wrap code-like text (identifiers, values, query fragments, durations) in `` `backticks` `` so Vale treats it as code.\n';
+              body += '- Wrap a whole region — e.g. an example or data table — between `{/* vale off */}` and `{/* vale on */}`.\n\n';
+              body += 'If a rule is consistently wrong for our docs, propose disabling it in `.vale.ini` rather than working around it each time.\n';
+              body += '</details>\n';
             }
 
             if (skipped.length) {
