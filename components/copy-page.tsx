@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Copy, FileText, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { captureDocsEvent } from '@/lib/docs-analytics';
+import { copyToClipboard } from '@/lib/clipboard';
 import { useDocsSearchController } from '@/components/docs-search-provider';
 
 // Assistant links must reference the production origin: a preview or localhost
@@ -75,7 +76,7 @@ export function CopyPageMenu({ markdownPath }: { markdownPath: string }) {
     try {
       const response = await fetch(markdownPath);
       if (!response.ok) throw new Error(`${response.status}`);
-      await navigator.clipboard.writeText(await response.text());
+      if (!(await copyToClipboard(await response.text()))) throw new Error('copy failed');
       setCopied(true);
       window.clearTimeout(resetTimer.current);
       resetTimer.current = window.setTimeout(() => setCopied(false), 2000);

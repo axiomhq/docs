@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { copyToClipboard as writeClipboard } from "@/lib/clipboard";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import type { ComponentProps, CSSProperties, HTMLAttributes } from "react";
 import {
@@ -468,14 +469,14 @@ export const CodeBlockCopyButton = ({
   const { code } = useContext(CodeBlockContext);
 
   const copyToClipboard = useCallback(async () => {
-    if (typeof window === "undefined" || !navigator?.clipboard?.writeText) {
+    if (typeof window === "undefined") {
       onError?.(new Error("Clipboard API not available"));
       return;
     }
 
     try {
       if (!isCopied) {
-        await navigator.clipboard.writeText(code);
+        if (!(await writeClipboard(code))) throw new Error("Copy failed");
         setIsCopied(true);
         onCopy?.();
         timeoutRef.current = window.setTimeout(

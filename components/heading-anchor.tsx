@@ -2,6 +2,7 @@
 
 import type { HTMLAttributes, MouseEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/clipboard';
 
 type HeadingTag = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
@@ -16,10 +17,9 @@ export function HeadingAnchor({ as: Heading, children, id, className, ...props }
     url.hash = id;
     window.history.replaceState(null, '', url);
 
-    try {
-      await navigator.clipboard.writeText(url.href);
+    if (await copyToClipboard(url.href)) {
       toast.success('Link copied', { description: `#${id}` });
-    } catch {
+    } else {
       toast.error('Couldn’t copy link');
     }
   }
