@@ -252,8 +252,8 @@ The system is flat by default. Canvas, surface, raised, and overlay tones establ
 
 ### Navigation
 
-- **Style:** The fixed 56px header, 260px desktop sidebar, and floating table of contents form one hierarchy. Header tabs and sidebar items are 14px sans; TOC links are 13px sans; sidebar group headers and breadcrumbs use monospace technical chrome. The nav system is sized for comfortable scanning, not maximum density.
-- **States:** Hover uses a subtle tonal shift. Active items gain stronger text weight and a raised neutral background; orange appears only in small selected indicators where established.
+- **Style:** The fixed 56px header, 260px desktop sidebar, and floating table of contents form one hierarchy. Header tabs and sidebar items are 14px sans; TOC links are 13px sans; sidebar group headers and breadcrumbs use monospace technical chrome. The nav system is sized for comfortable scanning, not maximum density. The sidebar sits on a **recessed rail** (`--bg-sidebar`: true black in dark, `gray-100` in light) with a hairline right divider, so it reads a step below the brighter reading column — tonal contrast plus a border, never a shadow (see the Flat-by-Default Rule).
+- **States:** Hover uses a subtle tonal shift. The active **section tab** in the header carries a short orange underline at the header edge; active **sidebar items** gain stronger text weight and a clearly raised neutral background (lifted enough to read against the recessed rail). Orange stays confined to these small selected indicators.
 - **Mobile:** Below the desktop breakpoint, top-level sections and the page hierarchy share one drawer. Never expose two competing hamburger menus.
 
 ### Search and Assistant
