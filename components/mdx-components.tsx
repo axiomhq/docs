@@ -15,12 +15,20 @@ import { PlaceholderPre as InteractivePlaceholderPre } from './placeholder-code'
 import { HeadingAnchor } from './heading-anchor';
 import { LanguageComparisons } from './language-comparisons';
 
+// play.axiom.co links come in two shapes: runnable APL query links
+// (…/query?initForm=…) that render as the compact "Run in Playground" button
+// beside a code block, and plain prose links to the demo homepage, which should
+// render as ordinary text links rather than a stray mono pill.
+function isPlaygroundQueryLink(href: string): boolean {
+  return href.startsWith('https://play.axiom.co/') && href.includes('/query');
+}
+
 // Content retains root-relative paths from the Mintlify layout. Pages and public assets both live
 // in this app's /docs zone, so normalize them before handing navigation to Next.js.
 function DocsLink({ href = '', children, className, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
   const target = withoutDocsBasePath(href);
   if (target.startsWith('/') || target.startsWith('#')) return <ZoneLink href={target} prefetch={false} className={className} {...props}>{children}</ZoneLink>;
-  if (target.startsWith('https://play.axiom.co/')) {
+  if (isPlaygroundQueryLink(target)) {
     return <PlaygroundLink href={target} className={className} {...props}>{children}</PlaygroundLink>;
   }
   return <a href={target} className={className} {...props}>{children}</a>;
@@ -90,7 +98,7 @@ function Tabs({ children }: { children: ReactNode }) {
 function containsPlaygroundLink(node: ReactNode): boolean {
   if (!isValidElement(node)) return false;
   const props = node.props as { children?: ReactNode; href?: string };
-  if (props.href?.startsWith('https://play.axiom.co/')) return true;
+  if (props.href && isPlaygroundQueryLink(props.href)) return true;
   return Children.toArray(props.children).some(containsPlaygroundLink);
 }
 
