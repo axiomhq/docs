@@ -10,10 +10,11 @@ export function HeadingAnchor({ as: Heading, children, id, className, ...props }
     event.preventDefault();
     if (!id) return;
 
+    // Copy the deep link and reflect it in the URL bar without scrolling the
+    // page (replaceState does not scroll, unlike assigning location.hash).
     const url = new URL(window.location.href);
     url.hash = id;
     window.history.replaceState(null, '', url);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     try {
       await navigator.clipboard.writeText(url.href);
