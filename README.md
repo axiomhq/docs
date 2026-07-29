@@ -6,7 +6,7 @@ This repository powers [axiom.co/docs](https://axiom.co/docs). It is a self-host
 
 - Node.js 24.18.0 (pinned in `.node-version`)
 - pnpm 11.9.0 (pinned in `package.json`)
-- Optional: [Vale](https://vale.sh/docs/install) for editorial style checks
+- Optional: [Vale](https://vale.sh/docs/install) for editorial style checks. Vale parses MDX through [`mdx2vast`](https://github.com/errata-ai/mdx2vast) (`npm install -g mdx2vast`, must be on `$PATH`), then run `vale content` locally. CI also runs Vale on the docs changed in a PR and posts the findings as an advisory comment; it never blocks the merge.
 
 ## Local development
 

@@ -177,11 +177,11 @@ The following table compares concepts and data structures between Splunk and APL
 
 |     Concept           |   Splunk                     |    APL                                  |       Comment                   |
 |----------------------------------|----------------------------------------|------------------------|---------------------------------------------------------------------------------|
-|   data caches                    |     buckets | caching and retention policies  | Controls the period and caching level for the data.This setting directly affects the performance of queries.                                                                       |
+|   data caches                    |     buckets | caching and retention policies  | Controls the period and caching level for the data. This setting directly affects the performance of queries.                                                                       |
 | logical partition of data        | index       |      dataset                    |     Allows logical separation of the data.                                                                                                                                         | 
 | structured event metadata        | N/A         | dataset                         | Splunk doesn’t expose the concept of metadata to the search language. APL logs have the concept of a dataset, which has fields and columns. Each event instance is mapped to a row.|
 | data record                      |     event   |      row                        |          Terminology change only.                                                                                                                                                  |
-| types                            | datatype    | datatype                        | APL data types are more explicit because they are set on the fields. Both have the ability to work dynamically with data types and roughly equivalent sets of data types.          |
+| types                            | datatype    | datatype                        | APL data types are more explicit because they’re set on the fields. Both have the ability to work dynamically with data types and roughly equivalent sets of data types.          |
 | query and search                 | search      | query                           | Concepts essentially are the same between APL and Splunk| 
 
 ## Functions 
@@ -211,12 +211,12 @@ In Splunk, the function is invoked by using the `eval` operator. In APL, it can 
 
 ## Filter
  
-APL log queries start from a tabular result set in which a filter is applied. In Splunk, filtering is the default operation on the current index. You may also use the where operator in Splunk, but we don’t recommend it.
+APL log queries start from a tabular result set in which a filter is applied. In Splunk, filtering is the default operation on the current index. You may also use the where operator in Splunk, but Axiom doesn’t recommend it.
 
 | Product          | Operator |              Example                                           |
 |:-----------------|:------------------|:------------------------------------------------------|
-| Splunk | **search**        | Sample.Logs="330009.2" method="GET" _indextime>-24h              |
-| APL | **where** | ['sample-http-logs'] <br />&#124; where method == "GET" and _time > ago(24h)|
+| Splunk | **search**        | `Sample.Logs="330009.2" method="GET" _indextime>-24h`              |
+| APL | **where** | ['sample-http-logs'] <br />&#124; where method == "GET" and _time > `ago(24h)`|
 
 ## Get n events or rows for inspection 
 
@@ -224,7 +224,7 @@ APL log queries also support `take` as an alias to `limit`. In Splunk, if the re
 
 |          Product      | Operator         |      Example |
 |-----------------------|-------------------|---------------|
-|       Splunk          | head              | Sample.Logs=330009.2 <br />&#124; head 100 | 
+|       Splunk          | head              | `Sample.Logs=330009.2` <br />&#124; head 100 | 
 |       APL                   | limit             | ['sample-htto-logs'] <br />&#124; limit 100 |
 
 ## Get the first *n* events or rows ordered by a field or column
@@ -233,7 +233,7 @@ For the bottom results, in Splunk, use `tail`. In APL, specify ordering directio
 
 | Product              | Operator        | Example       |
 |:---------------------|:----------------|:--------------|
-| Splunk               | head |  Sample.Logs="33009.2" <br />&#124; sort Event.Sequence <br />&#124; head 20 |
+| Splunk               | head |  `Sample.Logs="33009.2"` <br />&#124; sort `Event.Sequence` <br />&#124; head 20 |
 | APL                  | top | ['sample-http-logs']<br />&#124; top 20 by method |
 
 ## Extend the result set with new fields or columns
@@ -242,8 +242,8 @@ Splunk has an `eval` function, but it’s not comparable to the `eval` operator 
 
 |          Product              |        Operator            |       Example |
 |:------------------------------|:--------------------------|:---------------|
-| Splunk | eval |  Sample.Logs=330009.2<br />&#124; eval state= if(Data.Exception = "0", "success", "error") |
-| APL | extend | ['sample-http-logs']<br />&#124; extend Grade = iff(req_duration_ms >= 80, "A", "B") |
+| Splunk | eval |  `Sample.Logs=330009.2`<br />&#124; eval state= `if(Data.Exception = "0", "success", "error")` |
+| APL | extend | ['sample-http-logs']<br />&#124; extend Grade = `iff(req_duration_ms >= 80, "A", "B")` |
 
 ## Rename
 
@@ -251,7 +251,7 @@ APL uses the `project` operator to rename a field. In the `project` operator, a 
 
 | Product | Operator | Example |
 |:---|:---|:---|
-| Splunk | rename |  Sample.Logs=330009.2<br />&#124; rename Date.Exception as execption |
+| Splunk | rename |  `Sample.Logs=330009.2`<br />&#124; rename `Date.Exception` as execption |
 | APL | project | ['sample-http-logs']<br />&#124; project updated_status = status |
 
 ## Format results and projection
@@ -260,14 +260,14 @@ Splunk uses the `table` command to select which columns to include in the result
 
 | Product | Operator | Example |
 |:---------|:---|:---|
-| Splunk | table | Event.Rule=330009.2<br />&#124; table rule, state |
+| Splunk | table | `Event.Rule=330009.2`<br />&#124; table rule, state |
 | APL | project | ['sample-http-logs']<br />&#124; project status, method |
 
 Splunk uses the `field -` command to select which columns to exclude from the results. APL has a `project-away` operator that does the same.
 
 | Product | Operator | Example |
 |:---|:---|:---|
-| Splunk | **fields -** | Sample.Logs=330009.2`<br />&#124; fields - quota, hightest_seller |
+| Splunk | **fields -** | `Sample.Logs=330009.2`<br />&#124; fields - quota, hightest_seller |
 | APL | **project-away** |['sample-http-logs']<br />&#124; project-away method, status |
 
 ## Aggregation
@@ -284,7 +284,7 @@ In Splunk, to sort in ascending order, you must use the `reverse` operator. APL 
 
 | Product | Operator | Example |
 |:---|:---|:---|
-| Splunk | sort |  Sample.logs=120103 <br />&#124; sort Data.Hresult <br />&#124; reverse |
+| Splunk | sort |  Sample.logs=120103 <br />&#124; sort `Data.Hresult` <br />&#124; reverse |
 | APL | order by | ['sample-http-logs'] <br />&#124; order by status desc |
 
 Whether you’re just starting your transition or you’re in the thick of it, this guide can serve as a helpful roadmap to assist you in your journey from Splunk to Axiom Processing Language.
