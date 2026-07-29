@@ -3,6 +3,7 @@
 import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';
 import { captureDocsEvent } from '@/lib/docs-analytics';
+import { copyToClipboard } from '@/lib/clipboard';
 
 export function CopyButton({
   value,
@@ -23,7 +24,7 @@ export function CopyButton({
       type="button"
       aria-label={`${label} to clipboard`}
       onClick={async () => {
-        await navigator.clipboard.writeText(value);
+        if (!(await copyToClipboard(value))) return;
         if (analytics) {
           captureDocsEvent('docs_code_copied', {
             code_kind: analytics.codeKind,

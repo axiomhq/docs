@@ -10,6 +10,7 @@ colors:
   signal-white: "#fafafa"
   soft-white: "#e5e5e5"
   muted-gray: "#a3a3a3"
+  mid-gray: "#858585"
   quiet-gray: "#737373"
   paper-white: "#ffffff"
   graphite-copy: "#404040"
@@ -17,6 +18,8 @@ colors:
   warning-amber: "#f59e0b"
   success-green: "#10b981"
   information-blue: "#3b82f6"
+  accent-text-light: "#b8461d"
+  warning-text-light: "#92400e"
 typography:
   display:
     fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif"
@@ -38,10 +41,16 @@ typography:
     letterSpacing: "-0.022em"
   body:
     fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif"
-    fontSize: "15px"
+    fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.75
-    letterSpacing: "normal"
+    letterSpacing: "-0.006em"
+  ui:
+    fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 500
+    lineHeight: "18px"
+    letterSpacing: "-0.006em"
   label:
     fontFamily: "Geist Mono, ui-monospace, SF Mono, Menlo, monospace"
     fontSize: "12px"
@@ -50,9 +59,9 @@ typography:
     letterSpacing: "normal"
   code:
     fontFamily: "Geist Mono, ui-monospace, SF Mono, Menlo, monospace"
-    fontSize: "12px"
+    fontSize: "13px"
     fontWeight: 400
-    lineHeight: "20px"
+    lineHeight: "21px"
     letterSpacing: "normal"
 rounded:
   hairline: "2px"
@@ -97,10 +106,10 @@ components:
   navigation-item:
     backgroundColor: "{colors.graphite-canvas}"
     textColor: "{colors.muted-gray}"
-    typography: "{typography.label}"
+    typography: "{typography.ui}"
     rounded: "{rounded.control}"
     padding: "6px 10px"
-    height: "28px"
+    height: "30px"
 ---
 
 # Design System: Axiom Docs
@@ -145,9 +154,17 @@ The palette behaves like instrument markings on graphite: neutral surfaces carry
 - **Graphite Raised:** The dark hover and nested-surface layer.
 - **Graphite Overlay:** The dark popover and dialog layer.
 - **Signal White and Soft White:** Primary and secondary dark-theme text, respectively.
-- **Muted Gray and Quiet Gray:** Supporting text, metadata, breadcrumbs, inactive navigation, and low-priority chrome.
+- **Muted Gray, Mid Gray, and Quiet Gray:** Supporting text, metadata, breadcrumbs, inactive navigation, and low-priority chrome. The neutral text ramp is tuned so every rung that carries text clears WCAG AA in both themes: dark quaternary uses Mid Gray (#858585 ≥ 4.5:1), and in light the tertiary/quaternary rungs shift down one step (Graphite Copy / Quiet Gray) so the bottom rung still reads. Quiet Gray is never used for text at metadata scale on the light canvas.
 - **Paper White:** The light-theme surface and inverse text reference.
-- **Graphite Copy:** The primary long-form copy value in light mode.
+- **Graphite Copy:** The primary long-form copy value in light mode, and the light-theme tertiary text rung.
+
+### Text-on-Light Variants
+
+Two accents need a darkened value to stay legible when they carry **text** on the light canvas, since the brand hues only reach ~3.6:1 there. These are theme-aware tokens (`--color-accent-text`, `--color-warning-text`) that resolve to the brand hue in dark and to the darker value in light:
+
+- **Accent Text (light #b8461d):** Axiom Orange used as text or fill — search-match highlights, hovered links (5.1:1).
+- **Warning Text (light #92400e):** Amber used as text — the API `REQUIRED` markers (6+:1).
+- **Method badges** likewise carry theme-aware text colors: the bright dark-theme greens/blues/ambers/reds are replaced by darker values on the light tint so `GET`/`POST`/`PUT`/`DELETE` clear AA in both themes.
 
 ### Named Rules
 
@@ -171,16 +188,19 @@ The palette behaves like instrument markings on graphite: neutral surfaces carry
 
 - **Display** (600, 44px, 48px): Landing-page statements only; reduce to 36px/40px on phones.
 - **Headline** (600, 34px, 42px): Article titles; use the query monospace treatment for APL/MPL function and operator pages.
-- **Title** (600, 24px, 31px): Primary article sections with balanced wrapping.
-- **Body** (400, 15px, 1.75): Long-form reading at a maximum article measure of 720px and a practical text measure around 65–75 characters.
-- **Intro** (400, 17px, 27px): The first article summary; lower contrast than the title and more open than body copy.
-- **UI** (450–600, 13px, 16px): Navigation and compact controls.
-- **Label** (450–600, 10–12px, 14–16px): Breadcrumbs, table headers, metadata, and compact technical chrome; uppercase only when the label is genuinely categorical.
-- **Code** (400, 12px, 20px): Multiline code and API samples; inline code scales to the surrounding prose.
+- **Title** (600, 24px, 31px): Primary article sections (h2) with balanced wrapping.
+- **Subsection** (600, 20px/17px): Article h3 (20px) and h4 (17px), sized to stay clearly above the 16px body.
+- **Body** (400, 16px, 1.75): Long-form reading in a 768px article column. The column is deliberately generous; body was lifted from 15px→16px to ease sustained technical reading.
+- **Intro** (400, 18px, 29px): The first article summary; lower contrast than the title and more open than body copy.
+- **UI** (450–600, 14px, 18px): Header nav, sidebar items, and drawer navigation. The whole nav system (header tabs, sidebar, dropdown menus) reads at 13–14px so navigation is comfortable, not cramped.
+- **TOC** (450–550, 13px): Floating table-of-contents links.
+- **Label** (450–600, 10–13px, 14–18px): Breadcrumbs, table headers, metadata, and compact technical chrome; uppercase only when the label is genuinely categorical. The `DOCS` brand badge is 14px mono with a 2px orange separator.
+- **Code** (400, 13px, 21px): Multiline code and API samples in the reading column; inline code scales to the surrounding prose (`.84em`), except inside table cells where it inherits the 14px cell size.
+- **Prose tables** (400, 14px body / 550, 13px mono header): Content tables read at body-adjacent size, not label size.
 
 ### Named Rules
 
-**The Reading First Rule.** Long-form text stays within 65–75 characters, uses a generous 1.75 line height, and never inherits compact UI leading.
+**The Reading First Rule.** Long-form text lives in a fixed 768px column at 16px/1.75, and never inherits compact UI leading. Code, tables, and figures may use the full column; running prose shares the same width so the article reads as one measured block.
 
 **The Mono With Purpose Rule.** Monospace means code, query syntax, identifiers, values, or technical chrome. It is never a blanket aesthetic applied to ordinary prose.
 
@@ -213,15 +233,15 @@ The system is flat by default. Canvas, surface, raised, and overlay tones establ
 
 ### Chips
 
-- **Style:** Use only for compact status, source, or API-method metadata. Corners stay at 3px; labels are 8–11px monospace or compact sans.
-- **State:** Color communicates the method or status and is paired with text. Avoid pill shapes for navigation or ordinary actions.
+- **Style:** Use only for compact status, source, or API-method metadata. Corners stay at 3px; labels are 9–11px monospace or compact sans.
+- **State:** Color communicates the method or status and is always paired with text. Method-badge colors are theme-aware so they clear AA on both the dark and light tints. Avoid pill shapes for navigation or ordinary actions.
 
 ### Cards / Containers
 
 - **Corner Style:** Restrained 4px corners for search results, code, frames, tables, and API surfaces.
 - **Background:** Canvas, surface, or raised neutral tokens according to nesting depth.
 - **Shadow Strategy:** None in document flow; follow the Elevation rules for overlays only.
-- **Border:** One-pixel neutral borders define grouping. Semantic notices are the deliberate exception: they use a 2–3px semantic left rule and a subtle inert background.
+- **Border:** One-pixel neutral borders define grouping. Semantic notices (callouts) are the deliberate exception: a 3px semantic left rule, a subtle inert background, a soft 3px radius, and sans-serif body copy at 14px (never monospace — callouts are prose, not code).
 - **Internal Padding:** Usually 12–16px; larger landing-page regions create separation with whitespace instead of card chrome.
 
 ### Inputs / Fields
@@ -232,13 +252,17 @@ The system is flat by default. Canvas, surface, raised, and overlay tones establ
 
 ### Navigation
 
-- **Style:** The fixed 56px header, 260px desktop sidebar, and floating table of contents form one hierarchy. Header tabs are compact sans labels; sidebar groups and breadcrumbs use monospace technical chrome.
-- **States:** Hover uses a subtle tonal shift. Active items gain stronger text weight and a raised neutral background; orange appears only in small selected indicators where established.
+- **Style:** The fixed 56px header, 260px desktop sidebar, and floating table of contents form one hierarchy. Header tabs and sidebar items are 14px sans; TOC links are 13px sans; sidebar group headers and breadcrumbs use monospace technical chrome. The nav system is sized for comfortable scanning, not maximum density. The sidebar sits on a **recessed rail** (`--bg-sidebar`: true black in dark, `gray-100` in light) with a hairline right divider, so it reads a step below the brighter reading column — tonal contrast plus a border, never a shadow (see the Flat-by-Default Rule).
+- **States:** Hover uses a subtle tonal shift. The active **section tab** in the header carries a short orange underline at the header edge; active **sidebar items** gain stronger text weight and a clearly raised neutral background (lifted enough to read against the recessed rail). Orange stays confined to these small selected indicators.
 - **Mobile:** Below the desktop breakpoint, top-level sections and the page hierarchy share one drawer. Never expose two competing hamburger menus.
 
 ### Search and Assistant
 
 Search and Ask AI share one modal entry point. The dialog uses a strong structural border, a 4px radius, and the dialog shadow; mode tabs, the query field, ranked results, assistant messages, sources, and composer remain visually distinct through dividers and tonal layers. Search must feel immediate, while the assistant loads only when requested and remains grounded in documentation sources.
+
+### Copy Page menu
+
+Each article exposes a split "Copy page" control with a dropdown of page actions, styled as two-line items (bold action + muted description). Native actions come first — **Copy page** (Markdown for LLMs), **View as Markdown**, and **Ask AI about this page** (opens the grounded in-product assistant with the page as context) — then a divider and external hand-offs to **Claude, ChatGPT, and Grok**, each with its monochrome brand mark (never a generic external-link glyph) and a `?q=` deep link carrying the page's Markdown URL.
 
 ### Code and Query Controls
 
@@ -246,7 +270,7 @@ Code samples use a surface background, 4px corners, high-contrast syntax themes,
 
 ### Tables and API Schemas
 
-Tables are compact, bordered, and scan-oriented. Headers use small monospace labels on an inert surface; body rows use readable sans copy, consistent 7–12px cell padding, and hairline separators. Nested API schema children are visibly indented, and locations or method metadata occupy dedicated columns or badges.
+Tables are bordered and scan-oriented. Prose content tables read at 14px sans body / 13px mono headers with ~9px cell padding; inline code in a cell drops its chip and inherits the cell size so identifier columns stay legible. The denser API schema tables keep their compact label-scale type. Nested API schema children are visibly indented, and locations or method metadata occupy dedicated columns or badges.
 
 ## Do's and Don'ts
 
@@ -256,7 +280,7 @@ Tables are compact, bordered, and scan-oriented. Headers use small monospace lab
 - **Do** use Axiom Orange as a scarce interaction signal and keep status colors semantic.
 - **Do** preserve the contrast ladder between headings, body copy, metadata, code, and disabled states in both themes.
 - **Do** keep ordinary controls and containers at 3–4px radii with a compact 4px spacing rhythm.
-- **Do** center the reading experience in the viewport, protect 720px article measure, and keep the landing-page TOC column reserved even when empty.
+- **Do** center the reading experience in the viewport, protect the 768px article column, and keep the landing-page TOC column reserved even when empty.
 - **Do** use tonal layers and one-pixel borders for structure; reserve shadows for floating menus and dialogs.
 - **Do** keep documentation, query reference, and API reference coherent while preserving their distinct controls and density.
 - **Do** meet WCAG 2.2 AA, including keyboard access, visible focus, contrast, semantic structure, and reduced-motion behavior.

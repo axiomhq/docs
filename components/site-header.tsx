@@ -2,6 +2,7 @@
 
 import { ZoneLink as Link } from '@/components/zone-link';
 import { usePathname } from 'next/navigation';
+import { withDocsBasePath } from '@/lib/docs-paths';
 import { useTheme } from 'next-themes';
 import { Check, Menu, Monitor, Moon, Search, Sun, X } from 'lucide-react';
 import { useRef, useSyncExternalStore } from 'react';
@@ -23,7 +24,9 @@ function AxiomMark() {
 }
 
 export function DocumentationSections({ className = 'header-tabs', onNavigate }: { className?: string; onNavigate?: () => void }) {
-  const pathname = usePathname();
+  // usePathname() strips the /docs basePath, but the tab matchers below expect
+  // the full /docs-prefixed path — normalize it the same way the sidebar does.
+  const pathname = withDocsBasePath(usePathname());
 
   return (
     <nav className={className} aria-label="Documentation sections">

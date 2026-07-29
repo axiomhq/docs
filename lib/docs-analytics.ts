@@ -9,7 +9,8 @@ export type AssistantEntryPoint =
   | 'mode_tab'
   | 'search_handoff'
   | 'search_empty_state'
-  | 'search_footer';
+  | 'search_footer'
+  | 'copy_page_menu';
 
 type DurationBucket = 'under_250ms' | '250ms_to_1s' | '1s_to_3s' | '3s_to_10s' | 'over_10s';
 type StatusClass = '2xx' | '3xx' | '4xx' | '5xx' | 'unknown';
@@ -57,7 +58,7 @@ type DocsAnalyticsEvents = {
   };
   docs_example_customized: { field_name: ExampleField };
   docs_page_context_action: {
-    action: 'copy_markdown' | 'view_markdown' | 'open_chatgpt' | 'open_claude' | 'open_perplexity';
+    action: 'copy_markdown' | 'view_markdown' | 'ask_ai' | 'open_claude' | 'open_chatgpt' | 'open_grok';
   };
   docs_playground_opened: Record<string, never>;
   docs_console_opened: { placement: 'header' };
