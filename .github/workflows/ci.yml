@@ -49,15 +49,22 @@ jobs:
       pull-requests: write
     env:
       VALE_VERSION: 3.15.2
+      MDX2VAST_VERSION: 0.3.1
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install Vale
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+      - name: Install Vale and mdx2vast
         run: |
           curl -sSfL "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz" \
             | sudo tar -xz -C /usr/local/bin vale
           vale --version
+          # mdx2vast gives Vale a real MDX AST so code/JSX are excluded. Must be on $PATH.
+          npm install -g "mdx2vast@${MDX2VAST_VERSION}"
+          mdx2vast --version
       - name: Run Vale on changed docs
         id: vale
         run: |
@@ -65,14 +72,26 @@ jobs:
           head='${{ github.event.pull_request.head.sha }}'
           mapfile -t files < <(git diff --name-only --diff-filter=d "$base" "$head" -- content | grep -E '\.mdx?$' || true)
           echo "count=${#files[@]}" >> "$GITHUB_OUTPUT"
+          : > vale-skipped.txt
           if [ "${#files[@]}" -eq 0 ]; then
             echo 'No changed docs; skipping Vale.'
             echo '{}' > vale.json
             exit 0
           fi
           printf '%s\n' "${files[@]}"
-          # Vale exits non-zero when it finds alerts; this job stays green regardless.
-          vale --output=JSON "${files[@]}" > vale.json || true
+          # Lint each file on its own and merge the JSON. A file mdx2vast can't
+          # parse (E100) is recorded and skipped rather than aborting the batch,
+          # so one bad file never wipes the report. This job stays green regardless.
+          merged='{}'
+          for f in "${files[@]}"; do
+            json="$(vale --output=JSON "$f" 2>/dev/null || true)"
+            if [ -n "$json" ] && printf '%s' "$json" | jq -e 'type == "object"' >/dev/null 2>&1; then
+              merged="$(jq -s '.[0] * .[1]' <(printf '%s' "$merged") <(printf '%s' "$json"))"
+            else
+              echo "$f" >> vale-skipped.txt
+            fi
+          done
+          printf '%s' "$merged" > vale.json
       - name: Post report comment
         if: steps.vale.outputs.count != '0'
         uses: actions/github-script@v7
@@ -82,6 +101,10 @@ jobs:
             const marker = '<!-- vale-report -->';
             let data = {};
             try { data = JSON.parse(fs.readFileSync('vale.json', 'utf8')); } catch {}
+            let skipped = [];
+            try {
+              skipped = fs.readFileSync('vale-skipped.txt', 'utf8').split('\n').filter(Boolean);
+            } catch {}
 
             const sev = { error: '🔴', warning: '🟡', suggestion: '🔵' };
             const rows = [];
@@ -110,6 +133,11 @@ jobs:
                 body += `| ${sev[r.Severity] || ''} | ${loc} | \`${r.Check}\` | ${msg} |\n`;
               }
               body += '\n_Advisory only — this check never blocks the PR. Fixes are optional._\n';
+            }
+
+            if (skipped.length) {
+              body += `\n> ⚠️ ${skipped.length} file(s) couldn't be parsed as MDX and were skipped:\n`;
+              body += skipped.map((f) => `> - \`${f}\``).join('\n') + '\n';
             }
 
             const { owner, repo } = context.repo;
