@@ -39,7 +39,7 @@ export function DocumentationSections({ className = 'header-tabs', onNavigate }:
   const headerTabs = className.split(' ').includes('header-tabs');
 
   return (
-    <nav className={[className, headerTabs && 'flex gap-1 max-xl:hidden'].filter(Boolean).join(' ')} aria-label="Documentation sections">
+    <nav className={cn(className, headerTabs && 'flex gap-1 max-xl:hidden')} aria-label="Documentation sections">
       {tabs.map((tab) => {
         const active = tab.match(pathname);
         return (
@@ -47,13 +47,13 @@ export function DocumentationSections({ className = 'header-tabs', onNavigate }:
             key={tab.href}
             href={tab.href}
             prefetch={false}
-            className={[
+            className={cn(
               active && 'active',
               headerTabs && 'relative rounded-[4px] px-2.5 py-1.5 font-sans text-[14px] leading-4 font-medium tracking-[-.006em] hover:bg-(--bg-emph-tertiary)',
               headerTabs && (active
                 ? "text-(--text-primary) after:content-[''] after:absolute after:left-[10px] after:right-[10px] after:bottom-[-14px] after:h-[2px] after:rounded-t-[1px] after:bg-(--color-accent)"
                 : 'text-(--text-tertiary) hover:text-(--text-secondary)'),
-            ].filter(Boolean).join(' ')}
+            )}
             onClick={onNavigate}
           >{tab.label}</Link>
         );

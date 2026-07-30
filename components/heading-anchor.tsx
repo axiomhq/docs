@@ -2,6 +2,7 @@
 
 import type { HTMLAttributes, MouseEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';
 
 type HeadingTag = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
@@ -27,7 +28,7 @@ export function HeadingAnchor({ as: Heading, children, id, className, ...props }
   if (!id) return <Heading className={className} {...props}>{children}</Heading>;
 
   return (
-    <Heading id={id} className={['anchor-heading scroll-mt-[88px]', className].filter(Boolean).join(' ')} {...props}>
+    <Heading id={id} className={cn('anchor-heading scroll-mt-[88px]', className)} {...props}>
       <a href={`#${id}`} onClick={copyAnchor} title="Copy link to this section" className="inline-flex items-baseline gap-[.35em] no-underline!">
         <span>{children}</span>
         {/* The reveal is keyed off `.anchor-heading` directly rather than
