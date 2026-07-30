@@ -23,13 +23,11 @@ const SITE_ORIGIN = 'https://axiom.co';
 // Utilities shared by every row / icon in the popover (was
 // `.copy-page-popover button, .copy-page-popover a` and friends).
 const POPOVER_ITEM =
-  'w-full px-[9px] py-2 flex items-start gap-[11px] border-0 rounded-[4px] text-(--text-secondary)! bg-transparent text-left no-underline! cursor-pointer [&:hover]:bg-(--bg-emph-tertiary) focus-visible:outline-2 focus-visible:outline-(--color-accent) focus-visible:outline-offset-[-2px]';
-const POPOVER_ITEM_TEXT = 'min-w-0 flex flex-col gap-0.5';
+  'w-full px-[9px] py-[7px] flex items-center gap-2.5 border-0 rounded-[4px] text-(--text-secondary)! bg-transparent text-left no-underline! cursor-pointer [&:hover]:bg-(--bg-emph-tertiary) focus-visible:outline-2 focus-visible:outline-(--color-accent) focus-visible:outline-offset-[-2px]';
 const POPOVER_ITEM_TITLE =
-  'text-(--text-primary) font-sans text-[13px] leading-[17px] font-[550] tracking-[-.006em]';
-const POPOVER_ITEM_DESC = 'text-(--text-tertiary)! font-sans text-xs! leading-4! font-normal';
+  'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-(--text-primary) font-sans text-[13px] leading-[17px] font-[550] tracking-[-.006em]';
 const POPOVER_ICON =
-  'flex-none mt-0.5 text-(--icon-secondary) [.copy-page-popover_button:hover_&]:text-(--text-primary) [.copy-page-popover_a:hover_&]:text-(--text-primary)';
+  'flex-none text-(--icon-secondary) [.copy-page-popover_button:hover_&]:text-(--text-primary) [.copy-page-popover_a:hover_&]:text-(--text-primary)';
 const POPOVER_BRAND = `copy-page-brand w-[15px] h-[15px] ${POPOVER_ICON}`;
 // Shared by the copy button and the menu trigger.
 const TRIGGER_FOCUS =
@@ -129,31 +127,26 @@ export function CopyPageMenu({ markdownPath }: { markdownPath: string }) {
       </button>
       <details className="copy-page-menu group/menu" ref={menu}>
         <summary role="button" aria-haspopup="menu" aria-label="More page actions" className={cn('h-[30px] w-[27px] inline-flex items-center justify-center border border-(--border-primary) border-l-0 rounded-l-none rounded-r-[4px] text-(--text-quaternary) bg-(--bg-surface) cursor-pointer list-none [&::-webkit-details-marker]:hidden [&:hover]:text-(--text-primary) [&:hover]:bg-(--bg-inert) group-open/menu:text-(--text-primary) group-open/menu:bg-(--bg-inert)', TRIGGER_FOCUS)}><ChevronDown size={14} /></summary>
-        <div className="copy-page-popover hidden group-open/menu:block absolute top-[34px] right-0 z-[70] w-[296px] p-[5px] border border-(--border-primary) rounded-[6px] bg-(--bg-overlay) shadow-[0_8px_28px_rgba(0,0,0,.28)]" role="menu" aria-label="Page actions">
-          <button type="button" role="menuitem" className={POPOVER_ITEM} onClick={copyPage}>
-            <Copy size={15} className={POPOVER_ICON} />
-            <span className={POPOVER_ITEM_TEXT}><strong className={POPOVER_ITEM_TITLE}>Copy page</strong><small className={POPOVER_ITEM_DESC}>Copy this page as Markdown for LLMs</small></span>
-          </button>
+        <div className="copy-page-popover hidden group-open/menu:block absolute top-[34px] right-0 z-[70] w-[220px] p-[5px] border border-(--border-primary) rounded-[6px] bg-(--bg-overlay) shadow-[0_8px_28px_rgba(0,0,0,.28)]" role="menu" aria-label="Page actions">
           <a role="menuitem" className={POPOVER_ITEM} href={markdownPath} target="_blank" rel="noreferrer" onClick={() => chooseAction('view_markdown')}>
             <FileText size={15} className={POPOVER_ICON} />
-            <span className={POPOVER_ITEM_TEXT}><strong className={POPOVER_ITEM_TITLE}>View as Markdown</strong><small className={POPOVER_ITEM_DESC}>Open this page as plain text</small></span>
+            <span className={POPOVER_ITEM_TITLE}>View as Markdown</span>
           </a>
           <button type="button" role="menuitem" className={POPOVER_ITEM} onClick={askAiAboutPage}>
             <MessageSquare size={15} className={POPOVER_ICON} />
-            <span className={POPOVER_ITEM_TEXT}><strong className={POPOVER_ITEM_TITLE}>Ask AI about this page</strong><small className={POPOVER_ITEM_DESC}>Chat with this page as context</small></span>
+            <span className={POPOVER_ITEM_TITLE}>Ask AI about this page</span>
           </button>
-          <hr className="my-[5px]! mx-[3px]! border-0! border-t! border-t-(--border-primary)!" />
           <a role="menuitem" className={POPOVER_ITEM} href={`https://claude.ai/new?q=${assistantPrompt}`} target="_blank" rel="noreferrer" onClick={() => chooseAction('open_claude')}>
             <ClaudeIcon />
-            <span className={POPOVER_ITEM_TEXT}><strong className={POPOVER_ITEM_TITLE}>Open in Claude</strong><small className={POPOVER_ITEM_DESC}>Ask Claude about this page</small></span>
+            <span className={POPOVER_ITEM_TITLE}>Open in Claude</span>
           </a>
           <a role="menuitem" className={POPOVER_ITEM} href={`https://chatgpt.com/?hints=search&q=${assistantPrompt}`} target="_blank" rel="noreferrer" onClick={() => chooseAction('open_chatgpt')}>
             <ChatGptIcon />
-            <span className={POPOVER_ITEM_TEXT}><strong className={POPOVER_ITEM_TITLE}>Open in ChatGPT</strong><small className={POPOVER_ITEM_DESC}>Ask ChatGPT about this page</small></span>
+            <span className={POPOVER_ITEM_TITLE}>Open in ChatGPT</span>
           </a>
           <a role="menuitem" className={POPOVER_ITEM} href={`https://grok.com/?q=${assistantPrompt}`} target="_blank" rel="noreferrer" onClick={() => chooseAction('open_grok')}>
             <GrokIcon />
-            <span className={POPOVER_ITEM_TEXT}><strong className={POPOVER_ITEM_TITLE}>Open in Grok</strong><small className={POPOVER_ITEM_DESC}>Ask Grok about this page</small></span>
+            <span className={POPOVER_ITEM_TITLE}>Open in Grok</span>
           </a>
         </div>
       </details>

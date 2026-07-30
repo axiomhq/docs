@@ -20,15 +20,10 @@ type PageProps = { params: Promise<{ slug?: string[] }> };
 // collapses into a drawer at 1240px.
 const DOC_ARTICLE_CLASS = 'doc-article w-[min(768px,100%)] my-0 mx-auto translate-x-[-130px] max-xl:translate-x-0';
 
-// Two deliberate deviations from the plain `hover:text-…` utility, both required to
-// reproduce the old `.doc-breadcrumbs a:hover` rule exactly:
-//   * `!` — the unlayered base rule `a { color: inherit }` in globals.css outranks
-//     anything in `@layer utilities` no matter its specificity, so a normal utility
-//     would never paint; only an important declaration wins that cascade.
-//   * `[&:hover]` rather than `hover:` — Tailwind v4 wraps the `hover:` variant in
-//     `@media (hover: hover)`, which would drop the state on touch devices that the
-//     hand-written rule still served.
-const BREADCRUMB_LINK_CLASS = '[&:hover]:text-(--text-secondary)!';
+// The trail renders in the brand orange, so hover signals with an underline
+// instead of a colour change. `[&:hover]` rather than `hover:` — Tailwind v4
+// wraps `hover:` in `@media (hover: hover)`, which would drop the state on touch.
+const BREADCRUMB_LINK_CLASS = '[&:hover]:underline [&:hover]:underline-offset-[3px]';
 
 export default async function DocumentationPage({ params }: PageProps) {
   const { slug } = await params;
@@ -76,7 +71,7 @@ export default async function DocumentationPage({ params }: PageProps) {
       <div className="article-layout relative min-h-[calc(100vh_-_56px)] pt-14 pb-24 px-[clamp(32px,6vw,96px)] max-md:px-9 max-sm:pt-9 max-sm:pb-18 max-sm:px-5">
         <article className={querySyntaxTitle ? `${DOC_ARTICLE_CLASS} query-syntax-article` : DOC_ARTICLE_CLASS}>
           <div className="doc-topline mt-0 mx-0 mb-5 flex items-start justify-between gap-x-4 gap-y-2">
-            <nav className="doc-breadcrumbs m-0 flex flex-wrap gap-x-2 gap-y-1 text-(--text-quaternary) font-mono text-[12px] leading-4 font-[450]" aria-label="Breadcrumb">
+            <nav className="doc-breadcrumbs m-0 flex flex-wrap gap-x-2 gap-y-1 text-(--color-accent-text) font-mono text-[12px] leading-4 font-[450]" aria-label="Breadcrumb">
               {visibleBreadcrumbs.map((item, index) => {
                 const last = index === visibleBreadcrumbs.length - 1;
                 return (
