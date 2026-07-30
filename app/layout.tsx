@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import localFont from 'next/font/local';
+import { cn } from '@/lib/utils';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import { DocsShell } from '@/components/docs-shell';
 import { DocsToaster } from '@/components/docs-toaster';
@@ -37,7 +38,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={`${geist.variable} ${berkeleyMono.variable}`}>
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={cn(geist.variable, berkeleyMono.variable)}>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={structuredDataProps(siteGraph())} />
         <RootProvider

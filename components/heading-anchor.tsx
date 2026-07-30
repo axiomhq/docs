@@ -27,10 +27,19 @@ export function HeadingAnchor({ as: Heading, children, id, className, ...props }
   if (!id) return <Heading className={className} {...props}>{children}</Heading>;
 
   return (
-    <Heading id={id} className={['anchor-heading', className].filter(Boolean).join(' ')} {...props}>
-      <a href={`#${id}`} onClick={copyAnchor} title="Copy link to this section">
+    <Heading id={id} className={['anchor-heading scroll-mt-[88px]', className].filter(Boolean).join(' ')} {...props}>
+      <a href={`#${id}`} onClick={copyAnchor} title="Copy link to this section" className="inline-flex items-baseline gap-[.35em] no-underline!">
         <span>{children}</span>
-        <span className="anchor-hash" aria-hidden="true">#</span>
+        {/* The reveal is keyed off `.anchor-heading` directly rather than
+            `group-hover:` / `group-focus-visible:`: Tailwind v4 wraps `hover:`
+            in `@media (hover: hover)`, which would drop the marker on
+            coarse-pointer devices where the original CSS showed it. */}
+        <span
+          className="anchor-hash text-(--text-quaternary) font-mono text-[.72em] font-medium opacity-0 translate-x-[-3px] transition-[opacity,translate] duration-150 ease-[ease] [.anchor-heading:hover_&]:opacity-100 [.anchor-heading:hover_&]:translate-x-0 [.anchor-heading:has(a:focus-visible)_&]:opacity-100 [.anchor-heading:has(a:focus-visible)_&]:translate-x-0"
+          aria-hidden="true"
+        >
+          #
+        </span>
       </a>
     </Heading>
   );

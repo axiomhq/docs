@@ -1,4 +1,5 @@
 import { Children, cloneElement, createElement, isValidElement } from 'react';
+import { cn } from '@/lib/utils';
 import type { AnchorHTMLAttributes, ComponentProps, ImgHTMLAttributes, ReactElement, ReactNode } from 'react';
 import type { MDXComponents } from 'mdx/types';
 import defaultComponents from 'fumadocs-ui/mdx';
@@ -63,16 +64,28 @@ function PlaceholderPre(props: ComponentProps<'pre'>) {
   return <InteractivePlaceholderPre {...props} source={textOf(props.children)} />;
 }
 
+// The left rule carries the notice's meaning, so each variant only has to supply
+// --notice-accent; everything else is shared. Unknown types fall back to info,
+// matching the old CSS where the base rule set the default accent.
+const NOTICE_ACCENT: Record<string, string> = {
+  info: 'doc-notice-info [--notice-accent:var(--color-info)]',
+  idea: 'doc-notice-idea [--notice-accent:var(--color-accent)]',
+  warn: 'doc-notice-warn [--notice-accent:var(--color-warning)]',
+  error: 'doc-notice-error [--notice-accent:var(--color-destructive)]',
+  success: 'doc-notice-success [--notice-accent:var(--color-success)]',
+};
+
 function Notice({ children, title, type = 'info' }: { children: ReactNode; title?: ReactNode; type?: 'info' | 'warn' | 'error' | 'success' | 'idea' }) {
-  return <aside className={`doc-notice doc-notice-${type}`}>{title && <strong>{title}</strong>}<div>{children}</div></aside>;
+  const accent = NOTICE_ACCENT[type] ?? `doc-notice-${type} [--notice-accent:var(--color-info)]`;
+  return <aside className={cn('doc-notice my-6 mx-0 py-[15px] px-4 border-l-3 border-l-(--notice-accent) rounded-[3px] bg-(--bg-inert) text-(--text-secondary) font-sans text-[14px] leading-[22px] font-[450] tracking-[-.005em]', accent)}>{title && <strong className="block mb-[5px] text-(--text-primary) font-semibold">{title}</strong>}<div>{children}</div></aside>;
 }
 
 function Frame({ children, caption }: { children: ReactNode; caption?: ReactNode }) {
-  return <figure className="doc-frame">{children}{caption && <figcaption>{caption}</figcaption>}</figure>;
+  return <figure className="doc-frame my-6 mx-0 p-2 border border-(--border-primary) rounded-[4px] bg-(--bg-surface)">{children}{caption && <figcaption className="pt-2 px-1 pb-[2px] text-(--text-quaternary) text-[12px]">{caption}</figcaption>}</figure>;
 }
 
 function CodeGroup({ children }: { children: ReactNode }) {
-  return <div className="code-group">{children}</div>;
+  return <div className="code-group my-6 mx-0 overflow-hidden border border-(--border-primary) rounded-[4px]">{children}</div>;
 }
 
 function Accordion({ children, title }: { children: ReactNode; title: ReactNode }) {
@@ -107,7 +120,7 @@ function Tab({ children, value }: { children: ReactNode; title?: string; value?:
   Children.toArray(children).forEach((child, index) => {
     if (containsPlaygroundLink(child) && content.length > 0) {
       const query = content.pop();
-      content.push(<div className="query-example" key={`query-${index}`}>{query}{child}</div>);
+      content.push(<div className="query-example relative mt-[11px]" key={`query-${index}`}>{query}{child}</div>);
       return;
     }
     content.push(child);
@@ -116,7 +129,7 @@ function Tab({ children, value }: { children: ReactNode; title?: string; value?:
 }
 
 function Field({ children, path, type, required }: { children: ReactNode; path?: string; type?: string; required?: boolean }) {
-  return <div className="api-field"><div className="api-field-heading"><code>{path}</code>{type && <span>{type}</span>}{required && <strong>required</strong>}</div>{children}</div>;
+  return <div className="api-field my-4 mx-0 py-4 px-0 border-t border-t-(--border-secondary)"><div className="api-field-heading flex items-center gap-2"><code>{path}</code>{type && <span className="text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-[450]">{type}</span>}{required && <strong className="text-(--red-400) font-mono text-[10px] leading-[14px] font-[450]">required</strong>}</div>{children}</div>;
 }
 
 export function Icon({ icon, iconType }: { icon?: string; iconType?: string }) {
@@ -132,7 +145,7 @@ export function Icon({ icon, iconType }: { icon?: string; iconType?: string }) {
   }
 
   return createElement(glyph, {
-    className: 'doc-icon',
+    className: 'doc-icon w-[1.05em] h-[1.05em] my-0 mx-[.1em] inline-block align-[-.16em] flex-none text-(--text-secondary)',
     strokeWidth: docIconStrokeWidth(iconType),
     'aria-hidden': true,
     focusable: 'false',

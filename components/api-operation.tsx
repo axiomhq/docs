@@ -1,4 +1,5 @@
 import { highlight } from 'fumadocs-core/highlight';
+import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 import { CopyButton } from './copy-button';
 import { ApiCodeBlock, type ApiCodeSample } from './api-code-block';
@@ -17,10 +18,13 @@ function schemaType(document: JsonObject, input: JsonObject | undefined): string
   return schema.format ? `${type}<${schema.format}>` : type;
 }
 
-function PlainMarkdown({ value }: { value?: string }) {
+// `.api-schema-description code, .api-section-copy code` in globals.css.
+const inlineCodeClass = 'py-px px-1 border border-(--border-secondary) rounded-[3px] bg-(--bg-inert) font-mono';
+
+function PlainMarkdown({ value, codeClassName }: { value?: string; codeClassName?: string }) {
   if (!value) return null;
   const chunks = value.split(/(`[^`]+`)/g);
-  return <>{chunks.map((chunk, index) => chunk.startsWith('`') && chunk.endsWith('`') ? <code key={index}>{chunk.slice(1, -1)}</code> : <span key={index}>{chunk}</span>)}</>;
+  return <>{chunks.map((chunk, index) => chunk.startsWith('`') && chunk.endsWith('`') ? <code className={codeClassName} key={index}>{chunk.slice(1, -1)}</code> : <span key={index}>{chunk}</span>)}</>;
 }
 
 type SchemaRow = {
@@ -66,25 +70,32 @@ function schemaRows(document: JsonObject, input: JsonObject | undefined, require
   });
 }
 
+// `.api-section > h2` and `.api-section > h2 a` in globals.css.
+const sectionHeadingClass = 'm-0! p-0 border-0 text-(--text-primary) font-sans! text-[18px]! leading-6! font-semibold! tracking-[-.01em]';
+const sectionHeadingLinkClass = 'text-(--text-quaternary)! no-underline! font-mono text-[14px] leading-5 font-[450]';
+
+const schemaHeadCellClass = 'py-[7px] px-3 border-x-0! border-t-0! border-b! border-b-(--border-primary)! text-(--text-quaternary) bg-(--bg-inert) font-mono text-[10px] leading-[14px] font-medium tracking-[.06em] text-left uppercase';
+const schemaCellClass = 'h-[37px] py-2 px-3 border-x-0! border-t-0! border-b! border-b-(--border-tertiary)! align-middle';
+
 function SchemaTable({ document, rows, label }: { document: JsonObject; rows: SchemaRow[]; label: string }) {
   if (rows.length === 0) return null;
   const hasLocation = rows.some((row) => row.location);
   return (
-    <div className="api-schema-wrap">
-      <table className="api-schema-table" data-has-location={hasLocation || undefined} aria-label={label}>
-        <thead><tr><th>Property</th><th>Type</th>{hasLocation && <th>Location</th>}<th>Description</th></tr></thead>
-        <tbody>{rows.map((row) => (
-          <tr className={row.hasChildren ? 'api-schema-object-row' : undefined} data-depth={row.depth} key={row.key}>
-            <td className="api-schema-name" style={{ paddingLeft: 12 + row.depth * 18 }}>
-              {row.depth > 0 && <span className="api-schema-branch" aria-hidden="true">└</span>}
-              <code>{row.name}</code>
+    <div className="api-schema-wrap mt-[14px] overflow-x-auto border border-(--border-primary) rounded-[4px] max-sm:-mr-2">
+      <table className="api-schema-table w-full min-w-[620px] m-0! border-0! border-collapse table-fixed text-[12px]!" data-has-location={hasLocation || undefined} aria-label={label}>
+        <thead><tr><th className={cn(schemaHeadCellClass, hasLocation ? 'w-[28%]' : 'w-[30%]')}>Property</th><th className={cn(schemaHeadCellClass, hasLocation ? 'w-[18%]' : 'w-[25%]')}>Type</th>{hasLocation && <th className={cn(schemaHeadCellClass, 'w-[14%]')}>Location</th>}<th className={schemaHeadCellClass}>Description</th></tr></thead>
+        <tbody className="[&>tr:last-child>td]:border-b-0!">{rows.map((row) => (
+          <tr className={row.hasChildren ? 'api-schema-object-row [&>td]:bg-(--bg-inert)' : undefined} data-depth={row.depth} key={row.key}>
+            <td className={cn('api-schema-name relative whitespace-nowrap', schemaCellClass)} style={{ paddingLeft: 12 + row.depth * 18 }}>
+              {row.depth > 0 && <span className="api-schema-branch mr-1.5 text-(--border-strong) font-mono text-[11px] leading-[14px] font-normal" aria-hidden="true">└</span>}
+              <code className="p-0! border-0! bg-transparent! font-mono text-(--text-primary)! text-[12px]! font-[550]">{row.name}</code>
             </td>
-            <td className="api-schema-type">
-              <code>{schemaType(document, row.field)}</code>
-              {row.required && <b>Required</b>}
+            <td className={cn('api-schema-type whitespace-nowrap', schemaCellClass)}>
+              <code className="mr-[7px] p-0! border-0! bg-transparent! text-(--text-quaternary)! font-mono! text-[10px]! leading-[14px]! font-[450]! tracking-[.04em] uppercase">{schemaType(document, row.field)}</code>
+              {row.required && <b className="mr-[7px] text-(--color-warning-text)! font-mono! text-[10px]! leading-[14px]! font-[450]! tracking-[.04em] uppercase">Required</b>}
             </td>
-            {hasLocation && <td className="api-schema-location"><code>{row.location}</code></td>}
-            <td className="api-schema-description"><PlainMarkdown value={row.description} />{!row.description && <span aria-hidden="true">—</span>}</td>
+            {hasLocation && <td className={cn('api-schema-location', schemaCellClass)}><code className="p-0! border-0! text-(--text-tertiary)! bg-transparent! font-mono! text-[10px]! leading-[14px]! font-medium! tracking-[.05em] uppercase">{row.location}</code></td>}
+            <td className={cn('api-schema-description text-(--text-secondary)! font-sans text-[13px] leading-[19px] font-normal', schemaCellClass)}><PlainMarkdown value={row.description} codeClassName={inlineCodeClass} />{!row.description && <span aria-hidden="true">—</span>}</td>
           </tr>
         ))}</tbody>
       </table>
@@ -203,12 +214,12 @@ export async function ApiOperation({ value, children }: { value: string; childre
   }));
 
   return <div className="api-operation">
-    <div className="endpoint-bar"><span className={`endpoint-method method-${method}`}>{method.toUpperCase()}</span><code>{displayPath}</code><CopyButton value={displayPath} label="" analytics={{ codeKind: 'endpoint_path' }} /></div>
+    <div className="endpoint-bar"><span className={cn('endpoint-method', 'method-' + method)}>{method.toUpperCase()}</span><code>{displayPath}</code><CopyButton value={displayPath} label="" analytics={{ codeKind: 'endpoint_path' }} /></div>
     {operation.description && <p className="endpoint-description"><PlainMarkdown value={operation.description} /></p>}
     {children}
-    {parameters.length > 0 && <section className="api-section" id="parameters"><h2>Parameters <a href="#parameters">#</a></h2><SchemaTable document={document} rows={parameterRows} label="Request parameters" /></section>}
-    {bodyContent && <section className="api-section" id="body"><h2>Body <a href="#body">#</a></h2><p className="api-section-copy"><PlainMarkdown value={resolveSchema(document, bodySchema)?.description ?? operation.requestBody?.description} /></p><div className="media-types">{Object.keys(bodyContent).map((type) => <code key={type}>{type}</code>)}</div><SchemaTable document={document} rows={bodyRows} label="Request body schema" /></section>}
-    <section className="api-section" id="example"><h2>Request <a href="#example">#</a></h2><ApiCodeBlock samples={requestCodeSamples} /><ApiTryIt operation={value} method={method} parameters={tryParameters} serverVariables={serverVariables} bodyType={bodyType} bodyExample={bodyExample} /></section>
-    {responseEntries.length > 0 && <section className="api-section" id="response"><h2>Response <a href="#response">#</a></h2>{responseEntries.map(([code, response]) => <div className="api-response" key={code}><div><span className={/^2/.test(code) ? 'status-dot success' : 'status-dot error'} /><code>{code}</code><span>{response.description}</span></div>{response.content && <small>{Object.keys(response.content).join(', ')}</small>}</div>)}{responseSchema && <SchemaTable document={document} rows={responseRows} label="Response schema" />}</section>}
+    {parameters.length > 0 && <section className="api-section mt-11" id="parameters"><h2 className={sectionHeadingClass}>Parameters <a className={sectionHeadingLinkClass} href="#parameters">#</a></h2><SchemaTable document={document} rows={parameterRows} label="Request parameters" /></section>}
+    {bodyContent && <section className="api-section mt-11" id="body"><h2 className={sectionHeadingClass}>Body <a className={sectionHeadingLinkClass} href="#body">#</a></h2><p className="api-section-copy mt-3 text-(--text-secondary) text-[15px] leading-[25px]"><PlainMarkdown value={resolveSchema(document, bodySchema)?.description ?? operation.requestBody?.description} codeClassName={inlineCodeClass} /></p><div className="media-types mt-3 flex flex-wrap gap-1.5">{Object.keys(bodyContent).map((type) => <code className="py-[3px] px-[7px] border border-(--border-primary) rounded-[3px] text-(--text-tertiary) bg-(--bg-inert) text-[10px]" key={type}>{type}</code>)}</div><SchemaTable document={document} rows={bodyRows} label="Request body schema" /></section>}
+    <section className="api-section mt-11" id="example"><h2 className={sectionHeadingClass}>Request <a className={sectionHeadingLinkClass} href="#example">#</a></h2><ApiCodeBlock samples={requestCodeSamples} /><ApiTryIt operation={value} method={method} parameters={tryParameters} serverVariables={serverVariables} bodyType={bodyType} bodyExample={bodyExample} /></section>
+    {responseEntries.length > 0 && <section className="api-section mt-11" id="response"><h2 className={sectionHeadingClass}>Response <a className={sectionHeadingLinkClass} href="#response">#</a></h2>{responseEntries.map(([code, response]) => <div className="api-response min-h-[43px] py-2.5 px-1 flex items-center gap-3 border-b border-b-(--border-tertiary) max-sm:items-start max-sm:flex-col" key={code}><div className="flex items-center gap-2"><span className={cn(/^2/.test(code) ? 'status-dot success bg-(--green-500)' : 'status-dot error bg-(--red-400)', 'size-2 inline-block rounded-[999px] text-(--text-tertiary) text-[12px]')} /><code className="p-0! border-0! bg-transparent! text-(--text-secondary)!">{code}</code><span className="text-(--text-tertiary) text-[12px]">{response.description}</span></div>{response.content && <small className="ml-auto text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-[450] uppercase max-sm:ml-4">{Object.keys(response.content).join(', ')}</small>}</div>)}{responseSchema && <SchemaTable document={document} rows={responseRows} label="Response schema" />}</section>}
   </div>;
 }

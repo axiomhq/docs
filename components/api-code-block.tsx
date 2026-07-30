@@ -50,14 +50,15 @@ export function ApiCodeBlock({ samples, label }: { samples: ApiCodeSample[]; lab
   };
 
   return (
-    <div className="api-code">
-      <div className="api-code-head">
+    <div className="api-code mt-4 overflow-hidden border border-(--border-primary) rounded-[4px] bg-(--bg-surface)">
+      <div className="api-code-head min-h-[38px] pt-0 pr-2 pb-0 pl-2.5 flex items-center border-b border-b-(--border-primary) text-(--text-tertiary) font-mono text-[12px] leading-4 font-[450]">
         {samples.length > 1 ? (
-          <div className="api-code-tabs" role="tablist" aria-label="Request language">
+          <div className="api-code-tabs self-stretch flex items-stretch gap-0.5" role="tablist" aria-label="Request language">
             {samples.map((sample) => (
               <button
                 type="button"
                 role="tab"
+                className="relative px-2 py-0 border-0 text-(--text-quaternary) bg-transparent cursor-pointer font-mono! text-[11px]! leading-4! font-medium! hover:text-(--text-secondary) aria-selected:text-(--text-primary) aria-selected:after:content-[''] aria-selected:after:absolute aria-selected:after:right-2 aria-selected:after:-bottom-px aria-selected:after:left-2 aria-selected:after:h-0.5 aria-selected:after:bg-(--color-accent)"
                 aria-selected={sample.id === selected.id}
                 key={sample.id}
                 onClick={() => selectLanguage(sample.id)}

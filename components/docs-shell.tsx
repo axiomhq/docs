@@ -1,6 +1,7 @@
 'use client';
 
 import { ZoneLink as Link } from '@/components/zone-link';
+import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -28,24 +29,64 @@ function isSyntaxReference(href?: string): boolean {
   return Boolean(href && /\/(?:scalar-functions|aggregation-functions|operators)\//.test(href));
 }
 
+// Shared row geometry: the stylesheet declared `.sidebar-link, .nav-nested summary`
+// together, so both call sites append the identical utility list.
+//
+// `max-xl:` (not `max-xl:`) — v4's `max-*` variant emits
+// `(width < 1240px)`, which drops the 1240px column the original `(max-width: 1240px)`
+// blocks include and that this component's own `matchMedia('(min-width: 80rem)')`
+// still treats as mobile.
+const navRow =
+  'flex min-h-[30px] m-0 -mx-2.5 cursor-pointer items-center gap-[7px] rounded-[4px] px-2.5 py-1.5 font-sans text-[14px] leading-[18px] tracking-[-.006em] max-xl:min-h-[44px] max-xl:pt-3 max-xl:pb-3';
+// `[&:hover]:` (not `hover:`) — v4 wraps `hover:` in `@media (hover: hover)`, which
+// would drop the tap-induced hover styling the original gave touch devices, i.e. the
+// drawer, which is the only place this list is reachable on a phone.
+// `text-*!` — globals.css keeps an UNLAYERED `a { color: inherit }`; unlayered rules
+// beat `@layer utilities` regardless of specificity, so link colours must be !important.
+const navRowIdle =
+  'text-(--text-tertiary)! font-[450] [&:hover]:bg-(--bg-emph-tertiary) [&:hover]:text-(--text-secondary)!';
+const truncateRow = 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap';
+
 function NavItem({ item, activeHref, onNavigate, depth = 0 }: { item: NavigationItem; activeHref: string; onNavigate: () => void; depth?: number }) {
   if (item.children) {
     const open = containsActive(item, activeHref);
     return (
-      <details className="nav-nested" open={open}>
-        <summary style={{ paddingLeft: 10 + depth * 10 }}><span>{item.title}</span><ChevronRight size={12} /></summary>
+      <details className="nav-nested mx-0 my-px open:[&>summary_svg]:[transform:rotate(90deg)]" open={open}>
+        <summary className={cn(navRow, navRowIdle, 'list-none [&::-webkit-details-marker]:hidden')} style={{ paddingLeft: 10 + depth * 10 }}><span className={truncateRow}>{item.title}</span><ChevronRight size={12} className="ml-auto flex-none [transition:transform_.15s_ease]" /></summary>
         <div>{item.children.map((child) => <NavItem key={child.href ?? child.title} item={child} activeHref={activeHref} onNavigate={onNavigate} depth={depth + 1} />)}</div>
       </details>
     );
   }
 
+  const active = item.href === activeHref;
+  const syntaxReference = isSyntaxReference(item.href);
+
   return (
-    <Link href={item.href!} prefetch={false} className={['sidebar-link', item.href === activeHref && 'active', isSyntaxReference(item.href) && 'syntax-reference-link'].filter(Boolean).join(' ')} style={{ paddingLeft: 10 + depth * 10 }} onClick={onNavigate}>
-      <span className="sidebar-link-label">{item.title}</span>
-      {item.method && <span className={`method method-${item.method.toLowerCase()}`}>{item.method}</span>}
+    <Link href={item.href!} prefetch={false} className={['sidebar-link', navRow, active && 'active bg-(--bg-emph-primary) font-semibold text-(--text-primary)!', !active && navRowIdle, syntaxReference && 'syntax-reference-link'].filter(Boolean).join(' ')} style={{ paddingLeft: 10 + depth * 10 }} onClick={onNavigate}>
+      <span className={cn('sidebar-link-label', truncateRow, syntaxReference && 'font-(family-name:--font-query) tracking-[0]')}>{item.title}</span>
+      {item.method && <span className={cn('method', 'method-' + item.method.toLowerCase(), 'ml-auto min-w-[34px] flex-none rounded-[3px] px-1 py-px text-center font-mono text-[10px] leading-[14px] font-semibold tracking-[.02em]')}>{item.method}</span>}
     </Link>
   );
 }
+
+// `.drawer-sections` renders as <nav> inside DocumentationSections (site-header.tsx);
+// its <a> children are styled here through descendant variants so nothing outside
+// this call site is affected — the default `header-tabs` variant is untouched.
+const drawerSections = [
+  'drawer-sections hidden',
+  'max-xl:m-0 max-xl:mb-5 max-xl:flex max-xl:flex-col max-xl:gap-0.5 max-xl:border-b max-xl:border-b-(--border-primary) max-xl:pb-4',
+  'max-xl:[&_a]:flex max-xl:[&_a]:min-h-[44px] max-xl:[&_a]:items-center max-xl:[&_a]:rounded-[4px] max-xl:[&_a]:px-2.5 max-xl:[&_a]:py-0 max-xl:[&_a]:font-sans max-xl:[&_a]:text-[14px] max-xl:[&_a]:leading-[18px]',
+  'max-xl:[&_a:not(.active)]:font-medium max-xl:[&_a:not(.active)]:text-(--text-tertiary)!',
+  'max-xl:[&_a:not(.active):hover]:bg-(--bg-emph-tertiary) max-xl:[&_a:not(.active):hover]:text-(--text-secondary)!',
+  'max-xl:[&_a.active]:bg-(--bg-emph-secondary) max-xl:[&_a.active]:font-semibold max-xl:[&_a.active]:text-(--text-primary)!',
+].join(' ');
+
+const sidebarBase =
+  'sidebar fixed top-14 bottom-0 left-0 z-30 w-[260px] overflow-y-auto border-r border-r-(--border-primary) bg-(--bg-sidebar) pt-14 pr-4 pb-12 pl-6 [scrollbar-width:thin] max-xl:z-[70] max-xl:w-[min(320px,88vw)] max-xl:pt-4 max-xl:pb-[max(48px,env(safe-area-inset-bottom))] max-xl:shadow-[12px_0_48px_rgba(0,0,0,.35)] motion-reduce:[transition:none]!';
+const sidebarClosed =
+  'max-xl:invisible max-xl:[transform:translateX(-105%)] max-xl:[transition:transform_.2s_ease,visibility_0s_linear_.2s]';
+const sidebarOpen =
+  'open max-xl:visible max-xl:[transform:translateX(0)] max-xl:[transition:transform_.2s_ease,visibility_0s_linear_0s]';
 
 export function DocsShell({ navigations, children }: { navigations: Record<Section, NavigationGroup[]>; children: React.ReactNode }) {
   // The shell lives in the root layout so navigation payloads exclude it; the
@@ -59,7 +100,7 @@ export function DocsShell({ navigations, children }: { navigations: Record<Secti
   const drawerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const desktop = window.matchMedia('(min-width: 1241px)');
+    const desktop = window.matchMedia('(min-width: 80rem)');
     const closeAtDesktop = (event: MediaQueryListEvent) => {
       if (event.matches) setDrawerOpen(false);
     };
@@ -88,22 +129,26 @@ export function DocsShell({ navigations, children }: { navigations: Record<Secti
   const closeDrawer = () => setDrawerOpen(false);
 
   return (
-    <div className="docs-app">
+    <div className="docs-app min-h-screen">
       <SiteHeader drawerOpen={drawerOpen} onMenu={() => setDrawerOpen((open) => !open)} />
-      <div className="docs-grid">
-        <aside id="docs-navigation-drawer" ref={drawerRef} className={drawerOpen ? 'sidebar open' : 'sidebar'}>
-          <DocumentationSections className="drawer-sections" onNavigate={closeDrawer} />
+      <div className="docs-grid grid min-h-screen grid-cols-[260px_minmax(0,1fr)] pt-14 max-xl:block">
+        <aside id="docs-navigation-drawer" ref={drawerRef} className={drawerOpen ? `${sidebarBase} ${sidebarOpen}` : `${sidebarBase} ${sidebarClosed}`}>
+          <DocumentationSections className={drawerSections} onNavigate={closeDrawer} />
           <nav aria-label="Page navigation">
             {navigation.map((group) => (
-              <section className="sidebar-group" key={group.title}>
-                <h2>{group.title}</h2>
+              <section className="sidebar-group m-0 mb-6" key={group.title}>
+                {/* Every utility that collides with the UNLAYERED `h1,h2,…` / `h2` element
+                    rules in styles/tokens.css is !important: unlayered declarations beat
+                    `@layer utilities` no matter the specificity, so without `!` these
+                    headings fall back to 24px/28px sans. */}
+                <h2 className="m-0! mb-2! font-mono! text-[11px]! leading-[14px]! font-semibold! tracking-[.1em]! text-(--text-secondary)! uppercase">{group.title}</h2>
                 {group.items.map((item) => <NavItem key={item.href ?? item.title} item={item} activeHref={activeHref} onNavigate={closeDrawer} />)}
               </section>
             ))}
           </nav>
         </aside>
-        {drawerOpen && <button className="sidebar-backdrop" aria-hidden="true" tabIndex={-1} onClick={closeDrawer} />}
-        <main className={landing ? 'docs-main landing-main' : 'docs-main'}>{children}</main>
+        {drawerOpen && <button className="sidebar-backdrop hidden max-xl:fixed max-xl:inset-[56px_0_0] max-xl:z-[60] max-xl:block max-xl:border-0 max-xl:bg-[rgba(0,0,0,.5)]" aria-hidden="true" tabIndex={-1} onClick={closeDrawer} />}
+        <main className={landing ? 'docs-main landing-main col-[2] min-w-0 pr-[260px] max-xl:pr-0' : 'docs-main col-[2] min-w-0'}>{children}</main>
       </div>
     </div>
   );
