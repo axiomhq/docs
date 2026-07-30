@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Geist } from 'next/font/google';
 import localFont from 'next/font/local';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import { DocsShell } from '@/components/docs-shell';
@@ -8,15 +9,17 @@ import { getNavigation } from '@/lib/navigation';
 import { siteGraph, structuredDataProps } from '@/lib/structured-data';
 import './globals.css';
 
-const geist = localFont({
-  src: './fonts/Geist-Variable.ttf',
+const geist = Geist({
+  subsets: ['latin'],
   variable: '--font-geist',
   display: 'swap',
 });
 
-const geistMono = localFont({
-  src: './fonts/GeistMono-Variable.ttf',
-  variable: '--font-geist-mono',
+// Full original file — do NOT subset: the Berkeley Mono EULA (§1.12 + §8)
+// prohibits Derivative Works, which includes subsetting the binary.
+const berkeleyMono = localFont({
+  src: './fonts/Berkeley_Mono_Variable.woff2',
+  variable: '--font-berkeley-mono',
   display: 'swap',
 });
 
@@ -34,7 +37,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={`${geist.variable} ${geistMono.variable}`}>
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={`${geist.variable} ${berkeleyMono.variable}`}>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={structuredDataProps(siteGraph())} />
         <RootProvider
