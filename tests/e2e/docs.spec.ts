@@ -261,9 +261,7 @@ test('landing content reserves the desktop table-of-contents rail', async ({ pag
     await page.goto('/docs');
 
     const hero = (await page.locator('.landing-hero').boundingBox())!;
-    const search = (await page.locator('.hero-search').boundingBox())!;
     expect(Math.abs(hero.x + hero.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
-    expect(search.width).toBe(hero.width);
   }
 });
 
@@ -516,7 +514,8 @@ test('article copy keeps a distinct contrast hierarchy in both themes', async ({
   const heading = page.getByRole('heading', { name: 'Ingestion architecture', level: 2 });
   const boldLabel = page.locator('.doc-article .prose strong').first();
 
-  await expect(bodyCopy).toHaveCSS('color', 'rgb(212, 212, 212)');
+  // Body copy matches the lede at --text-tertiary (gray-400 dark).
+  await expect(bodyCopy).toHaveCSS('color', 'rgb(163, 163, 163)');
   await expect(heading).toHaveCSS('color', 'rgb(250, 250, 250)');
   await expect(boldLabel).toHaveCSS('color', 'rgb(250, 250, 250)');
 

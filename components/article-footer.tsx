@@ -2,32 +2,33 @@
 
 import { ZoneLink as Link } from '@/components/zone-link';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';
 import { captureDocsEvent } from '@/lib/docs-analytics';
 import type { AdjacentNavigationItem } from '@/lib/navigation';
 
 type Feedback = 'yes' | 'no';
 
-// Hover states are written as `[&:hover]` / explicit-ancestor variants instead
-// of `hover:` / `group-hover:`, which Tailwind v4 compiles inside
-// `@media (hover: hover)` — the hand-written CSS these replace was
-// unconditional, and coarse-pointer devices (and Playwright's Pixel 7 project)
-// must keep it. Colour/decoration/`<small>` metrics carry `!` because the
-// unlayered element defaults (`a { color: inherit; text-decoration: none }`,
-// `small { font-size: 12px; line-height: 16px; color: var(--text-tertiary) }`)
-// outrank anything Tailwind emits into `@layer utilities`.
+// Hover states use `[&:hover]` / explicit-ancestor variants instead of
+// `hover:` / `group-hover:`, which Tailwind v4 compiles inside
+// `@media (hover: hover)` — coarse-pointer devices (and Playwright's Pixel 7
+// project) must keep the unconditional behaviour.
 
-// Utilities shared by both adjacent-page cards (was `.article-pagination a`).
+// Borderless adjacent-page links: the hover tint bleeds past the text column
+// via the negative inline margin, so idle they read as plain text.
+// flex-col-reverse: the kicker sits first in the DOM (screen readers and the
+// e2e accessible-name queries hear "Previous <title>") while the title renders
+// on top.
 const PAGINATION_LINK =
-  'min-h-[76px] px-[14px] py-[13px] flex items-center gap-[11px] border border-(--border-primary) rounded-[4px] text-(--text-tertiary)! bg-(--bg-surface) no-underline! transition-[border-color,background,color] duration-150 ease-[ease] [&:hover]:border-(--border-strong) [&:hover]:text-(--text-primary)! [&:hover]:bg-(--bg-raised)';
-const PAGINATION_TEXT = 'min-w-0 flex flex-1 flex-col gap-[3px]';
+  'min-w-0 -mx-3.5 px-3.5 py-3 flex flex-col-reverse gap-1.5 rounded-[6px] no-underline transition-[background-color] duration-150 ease-[ease] [&:hover]:bg-(--bg-inert)';
 const PAGINATION_KICKER =
-  'text-(--text-quaternary)! font-mono text-[10px]! leading-[14px]! font-medium tracking-[.05em] uppercase';
+  'inline-flex items-center gap-1.5 text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-medium tracking-[.05em] uppercase transition-colors duration-150 ease-[ease] [.article-pagination_a:hover_&]:text-(--text-tertiary)';
 const PAGINATION_TITLE =
-  'overflow-hidden text-(--text-secondary) font-sans text-[13px] leading-[18px] font-[550] text-ellipsis whitespace-nowrap [.article-pagination_a:hover_&]:text-(--text-primary)';
+  'max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-(--text-secondary) font-sans text-[15px] leading-[21px] font-[550] tracking-[-.008em] transition-colors duration-150 ease-[ease] [.article-pagination_a:hover_&]:text-(--text-primary)';
+const PAGINATION_ARROW =
+  'flex-none transition-transform duration-150 ease-[ease]';
 const FEEDBACK_BUTTON =
-  '[font:inherit] p-0 border-0 text-(--text-tertiary) bg-transparent cursor-pointer underline decoration-(--border-strong) underline-offset-[3px] [&:hover:not(:disabled)]:text-(--text-primary) [&:hover:not(:disabled)]:decoration-(--color-accent) aria-pressed:text-(--text-primary) aria-pressed:decoration-(--color-accent) disabled:cursor-default disabled:aria-[pressed=false]:text-(--text-quaternary) disabled:aria-[pressed=false]:no-underline';
+  'h-7 px-2.5 inline-flex items-center gap-1.5 border-0 rounded-[4px] text-(--text-tertiary) bg-(--bg-emph-tertiary) font-sans text-[12px] leading-4 font-medium cursor-pointer transition-[background-color,color] duration-150 ease-[ease] [&:hover:not(:disabled)]:text-(--text-primary) [&:hover:not(:disabled)]:bg-(--bg-emph-secondary) aria-pressed:text-(--color-accent-text) aria-pressed:bg-[color-mix(in_srgb,var(--color-accent)_13%,transparent)] disabled:cursor-default disabled:aria-[pressed=false]:opacity-45';
 
 export function ArticleFooter({
   pageHref,
@@ -55,30 +56,19 @@ export function ArticleFooter({
   }
 
   return (
-    <footer className="article-footer mt-16 pt-6 border-t border-(--border-primary) text-(--text-quaternary) font-mono text-xs leading-4 font-[450]">
-      {(previous || next) && (
-        <nav className="article-pagination grid grid-cols-2 gap-[10px] max-sm:grid-cols-[1fr]" aria-label="Adjacent documentation pages">
-          {previous && (
-            <Link href={previous.href} prefetch={false} className={cn('article-previous', PAGINATION_LINK)}>
-              <ArrowLeft size={15} aria-hidden="true" />
-              <span className={PAGINATION_TEXT}><small className={PAGINATION_KICKER}>Previous</small><strong className={PAGINATION_TITLE}>{previous.title}</strong></span>
-            </Link>
-          )}
-          {next && (
-            <Link href={next.href} prefetch={false} className={cn('article-next col-[2] text-right max-sm:col-[1]', PAGINATION_LINK)}>
-              <span className={PAGINATION_TEXT}><small className={PAGINATION_KICKER}>Next</small><strong className={PAGINATION_TITLE}>{next.title}</strong></span>
-              <ArrowRight size={15} aria-hidden="true" />
-            </Link>
-          )}
-        </nav>
-      )}
-
-      <div className="article-footer-meta mt-[18px] flex items-center justify-between gap-x-6 gap-y-2 flex-wrap">
-        <div className="page-feedback flex items-center gap-3 text-(--text-tertiary) max-sm:items-start max-sm:flex-wrap">
-          <span className="text-(--text-secondary) font-[550] max-sm:w-full">Was this page helpful?</span>
-          <div className="page-feedback-actions flex gap-[14px]">
-            <button type="button" className={FEEDBACK_BUTTON} aria-label="Yes, this page was helpful" aria-pressed={feedback === 'yes'} disabled={feedback !== null} onClick={() => submitFeedback('yes')}>Yes</button>
-            <button type="button" className={FEEDBACK_BUTTON} aria-label="No, this page was not helpful" aria-pressed={feedback === 'no'} disabled={feedback !== null} onClick={() => submitFeedback('no')}>No</button>
+    <footer className="article-footer mt-20 text-(--text-quaternary) font-mono text-xs leading-4 font-[450]">
+      <div className="article-footer-meta flex items-center justify-between gap-x-6 gap-y-3 flex-wrap">
+        <div className="page-feedback flex items-center gap-3 text-(--text-tertiary) max-sm:flex-wrap">
+          <span className="text-(--text-secondary) font-sans text-[13px] leading-4 font-[550] max-sm:w-full">Was this page helpful?</span>
+          <div className="page-feedback-actions flex gap-1.5">
+            <button type="button" className={FEEDBACK_BUTTON} aria-label="Yes, this page was helpful" aria-pressed={feedback === 'yes'} disabled={feedback !== null} onClick={() => submitFeedback('yes')}>
+              <ThumbsUp size={12} aria-hidden="true" />
+              Yes
+            </button>
+            <button type="button" className={FEEDBACK_BUTTON} aria-label="No, this page was not helpful" aria-pressed={feedback === 'no'} disabled={feedback !== null} onClick={() => submitFeedback('no')}>
+              <ThumbsDown size={12} aria-hidden="true" />
+              No
+            </button>
           </div>
           {feedback && <span className="page-feedback-thanks text-(--text-quaternary)" role="status">Thanks for the feedback.</span>}
         </div>
@@ -87,13 +77,37 @@ export function ArticleFooter({
             href={editHref}
             target="_blank"
             rel="noreferrer"
-            className="text-(--text-quaternary)! no-underline! [&:hover]:text-(--text-secondary)! [&:hover]:underline! [&:hover]:decoration-current! [&:hover]:underline-offset-[3px]!"
+            className="inline-flex items-center gap-1 text-(--text-quaternary) no-underline transition-colors duration-150 ease-[ease] [&:hover]:text-(--text-secondary)"
             onClick={() => captureDocsEvent('docs_edit_opened', { page_path: pageHref })}
           >
             Suggest edits on GitHub
+            <ArrowUpRight size={12} aria-hidden="true" />
           </a>
         </div>
       </div>
+
+      {(previous || next) && (
+        <nav className="article-pagination mt-8 grid grid-cols-2 gap-6 max-sm:grid-cols-[1fr]" aria-label="Adjacent documentation pages">
+          {previous && (
+            <Link href={previous.href} prefetch={false} className={cn('article-previous items-start', PAGINATION_LINK)}>
+              <small className={PAGINATION_KICKER}>
+                <ArrowLeft size={11} aria-hidden="true" className={cn(PAGINATION_ARROW, '[.article-previous:hover_&]:-translate-x-0.5')} />
+                Previous
+              </small>
+              <strong className={PAGINATION_TITLE}>{previous.title}</strong>
+            </Link>
+          )}
+          {next && (
+            <Link href={next.href} prefetch={false} className={cn('article-next col-[2] items-end text-right max-sm:col-[1]', PAGINATION_LINK)}>
+              <small className={PAGINATION_KICKER}>
+                Next
+                <ArrowRight size={11} aria-hidden="true" className={cn(PAGINATION_ARROW, '[.article-next:hover_&]:translate-x-0.5')} />
+              </small>
+              <strong className={PAGINATION_TITLE}>{next.title}</strong>
+            </Link>
+          )}
+        </nav>
+      )}
     </footer>
   );
 }
