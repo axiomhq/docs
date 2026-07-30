@@ -50,6 +50,7 @@ export function ApiTryIt({
   serverVariables,
   bodyType,
   bodyExample,
+  requiresAuth = true,
 }: {
   operation: string;
   method: string;
@@ -57,6 +58,7 @@ export function ApiTryIt({
   serverVariables: ApiTryItParameter[];
   bodyType?: string;
   bodyExample?: unknown;
+  requiresAuth?: boolean;
 }) {
   const [token, setToken] = useState('');
   const [orgId, setOrgId] = useState('');
@@ -154,16 +156,16 @@ export function ApiTryIt({
     >
       <summary><span className="api-try-chevron"><ChevronRight size={14} /></span><span><strong>Try it</strong><small>Run this request against your Axiom organization</small></span></summary>
       <div className="api-try-panel">
-        <p>Credentials stay in this browser tab and are only sent to Axiom when you run the request.</p>
+        <p>{requiresAuth ? 'Credentials stay in this browser tab and are only sent to Axiom when you run the request.' : 'This endpoint doesn’t require authentication.'}</p>
         <div className="api-try-fields">
-          <label><span>API token <b>Required</b></span><input data-ph-no-capture type="password" autoComplete="off" value={token} onChange={(event) => persistCredential(tokenKey, event.target.value, setToken)} placeholder="xaat-…" /></label>
-          {personalToken && <label><span>Organization ID <b>Required for PAT</b></span><input data-ph-no-capture type="text" autoComplete="off" value={orgId} onChange={(event) => persistCredential(orgKey, event.target.value, setOrgId)} placeholder="Your organization ID" /></label>}
+          {requiresAuth && <label><span>API token <b>Required</b></span><input data-ph-no-capture type="password" autoComplete="off" value={token} onChange={(event) => persistCredential(tokenKey, event.target.value, setToken)} placeholder="xaat-…" /></label>}
+          {requiresAuth && personalToken && <label><span>Organization ID <b>Required for PAT</b></span><input data-ph-no-capture type="text" autoComplete="off" value={orgId} onChange={(event) => persistCredential(orgKey, event.target.value, setOrgId)} placeholder="Your organization ID" /></label>}
           {serverVariables.map((item) => <label key={item.name}><span>{item.name} {item.required && <b>Required</b>}</span><input value={variables[item.name] ?? ''} onChange={(event) => setVariables((current) => ({ ...current, [item.name]: event.target.value }))} placeholder={item.description} /></label>)}
           {visibleParameters.map((item) => <label key={`${item.location}-${item.name}`}><span>{item.name} <code>{item.location}</code>{item.required && <b>Required</b>}</span><input value={values[item.name] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [item.name]: event.target.value }))} placeholder={item.description} /></label>)}
           {bodyType && <label className="api-try-body"><span>Request body <code>{bodyType}</code></span><textarea value={body} onChange={(event) => setBody(event.target.value)} spellCheck={false} /></label>}
         </div>
-        {personalToken && !orgId && <p className="api-try-guidance">Personal access tokens require an organization ID. Find it in <strong>Settings → General</strong> or in your Axiom app URL. <Link href="/docs/reference/tokens#determine-organization-id">Learn more</Link>.</p>}
-        <div className="api-try-actions"><button type="button" disabled={pending || !token || (personalToken && !orgId)} onClick={runRequest}>{pending ? <LoaderCircle className="api-try-spinner" size={13} /> : <Play size={12} />}{pending ? 'Running…' : `Run ${method.toUpperCase()} request`}</button></div>
+        {requiresAuth && personalToken && !orgId && <p className="api-try-guidance">Personal access tokens require an organization ID. Find it in <strong>Settings → General</strong> or in your Axiom app URL. <Link href="/docs/reference/tokens#determine-organization-id">Learn more</Link>.</p>}
+        <div className="api-try-actions"><button type="button" disabled={pending || (requiresAuth && (!token || (personalToken && !orgId)))} onClick={runRequest}>{pending ? <LoaderCircle className="api-try-spinner" size={13} /> : <Play size={12} />}{pending ? 'Running…' : `Run ${method.toUpperCase()} request`}</button></div>
         {error && <p className="api-try-error" role="alert">{error}</p>}
         {result && <div className="api-try-result"><div><span className={result.status >= 200 && result.status < 300 ? 'status-dot success' : 'status-dot error'} /><strong>{result.status} {result.statusText}</strong><small>{result.contentType}</small></div><pre><code>{prettyBody(result.body, result.contentType)}</code></pre></div>}
       </div>

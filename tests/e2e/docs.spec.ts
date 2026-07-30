@@ -104,6 +104,23 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await expect(listResponseSchema.getByRole('row').filter({ hasText: /^└name/ }).first()).toHaveAttribute('data-depth', '1');
 });
 
+test('unauthenticated endpoints omit credentials from samples and the request runner', async ({ page }) => {
+  await page.goto('/docs/restapi/endpoints/provisionOrg');
+
+  const requestCode = page.locator('#example .api-code');
+  const curlPanel = requestCode.getByRole('tabpanel', { name: 'cURL code example' });
+  await expect(curlPanel).toContainText("curl -X POST 'https://api.axiom.co/v2/orgs/provision'");
+  await expect(curlPanel).not.toContainText('Authorization');
+  await requestCode.getByRole('tab', { name: 'Python' }).click();
+  await expect(requestCode.getByRole('tabpanel', { name: 'Python code example' })).not.toContainText('Authorization');
+
+  const tryIt = page.locator('.api-try');
+  await tryIt.getByText('Try it', { exact: true }).click();
+  await expect(tryIt.getByText('This endpoint doesn’t require authentication.')).toBeVisible();
+  await expect(tryIt.getByLabel('API token Required')).toHaveCount(0);
+  await expect(tryIt.getByRole('button', { name: 'Run POST request' })).toBeEnabled();
+});
+
 test('theme defaults to the system and persists an explicit local preference', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/docs');
