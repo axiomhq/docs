@@ -431,7 +431,7 @@ test('article hierarchy and footer navigation follow the compact docs pattern', 
 
   const pagination = page.getByRole('navigation', { name: 'Adjacent documentation pages' });
   await expect(pagination.getByRole('link', { name: /Previous AI agents/ })).toHaveAttribute('href', '/docs/console/intelligence/ai-agents-overview');
-  await expect(pagination.getByRole('link', { name: /Next Skills for AI agents/ })).toHaveAttribute('href', '/docs/console/intelligence/skills');
+  await expect(pagination.getByRole('link', { name: /Next Agent-created organizations/ })).toHaveAttribute('href', '/docs/console/intelligence/agent-created-orgs');
 
   const helpful = page.getByRole('button', { name: 'Yes, this page was helpful' });
   await helpful.click();
