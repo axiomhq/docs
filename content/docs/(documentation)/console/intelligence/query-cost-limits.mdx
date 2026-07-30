@@ -18,10 +18,8 @@ Query cost limits are separate from your organization’s [monthly spending limi
 ## How query cost limits work
 
 - Limits apply to **query costs**: the billed cost of the query compute (GB-hours) an identity uses, measured the same way as in [Usage and billing](/reference/usage-billing). Ingest, storage, and other operations don’t count towards the limit and are never blocked by it.
-- You can set an **hourly limit**, a **daily limit**, or both, in dollars. The hourly window resets at the top of each hour (UTC), and the daily window resets at midnight UTC. The windows are fixed, not rolling.
-- A limit you don’t set is unlimited. A limit of **$0 blocks all queries** for that identity, which is useful for tokens or roles that should never query at all.
-- When an identity exceeds a limit, its query requests fail with HTTP status code `429` until the window resets. Everything else keeps working: the token or user can still ingest data and use other parts of the API.
-- Query cost limits are independent of your plan’s monthly query allowance. They cap individual tokens and members within your organization; your organization-level allowances and billing are unchanged.
+- You can set an **hourly limit**, a **daily limit**, or both, in dollars. The hourly window resets at the top of each hour (UTC), and the daily window resets at midnight UTC.
+- When an identity exceeds a limit, its query requests fail with HTTP status code `429` until the window resets. Other requests continue to work as normal.
 
 You can set query cost limits on two kinds of identity:
 
@@ -37,11 +35,11 @@ The typical setup for an agent that connects with an API token:
 1. In **Query cost limits**, enter an hourly limit, a daily limit, or both, in dollars.
 1. Click **Create**, and then configure your agent with the new token.
 
-The agent now queries freely within its budget. If it exhausts the budget, its queries fail with an error that states the limit and when it resets. Agents typically read the error, report it, and continue when the window resets. Ingest through the same token is unaffected.
+The agent now queries freely within its budget. If it exhausts the budget, its queries fail with an error that states the limit and when it resets.
 
 To add limits to an existing token, click <Icon icon="gear" iconType="solid"/> **Settings > API tokens**, select the token, and then edit **Query cost limits**. The token page also shows live usage meters for each limit with a countdown to the next reset.
 
-If your agents connect through the remote Axiom MCP Server, they authenticate with OAuth and act as your user account, so token limits don’t apply to them. Instead, set limits on a role you hold, or ask an admin to. Role limits cap everything you run as that member, including your own console queries.
+If your agents connect through the remote Axiom MCP Server, they authenticate with OAuth and act as your user account, so token limits don’t apply to them. Instead, set limits on a role you hold. Role limits cap everything you run as that member, including your own console queries.
 
 ## Set limits on a role
 
@@ -70,6 +68,5 @@ When a token or member exceeds a limit, query requests return HTTP status code `
 - Queries from that identity are blocked until the window resets. No action is needed: an hourly limit unblocks at the top of the next hour (UTC), a daily limit at midnight UTC.
 - Other identities are unaffected. Other tokens, members, monitors, and dashboards keep querying as usual.
 - Ingest and management operations from the limited identity keep working.
-- In the Axiom console, affected members see a notification that their query cost limit is reached.
 
 To unblock an identity before the window resets, raise or clear its limits. The change takes effect for new queries within moments.
