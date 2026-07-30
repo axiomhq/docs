@@ -40,7 +40,7 @@ const fieldLegendClass = 'text-(--text-secondary) font-mono text-[11px] leading-
 // out-specify the originals today, so plain utilities must keep losing to them.
 const fieldBadgeClass = 'ml-1.5 text-(--color-warning-text) font-mono text-[10px] leading-[14px] font-medium not-italic tracking-[.04em] uppercase';
 const fieldNoteClass = 'ml-1.5 p-0 border-0 bg-transparent text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-medium not-italic tracking-[.04em] uppercase';
-const fieldControlClass = 'w-full border border-(--border-primary) rounded-[4px] outline-none text-(--text-primary) bg-(--bg-canvas) font-mono! text-[12px]! leading-[18px]! font-normal! focus:border-(--blue-500) focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--blue-500)_15%,transparent)]';
+const fieldControlClass = 'w-full border border-(--border-primary) rounded-[4px] outline-none text-(--text-primary) bg-(--bg-canvas) font-mono! text-[12px]! leading-[18px]! font-normal! focus:border-(--color-accent) focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-accent)_18%,transparent)]';
 const fieldInputClass = `${fieldControlClass} h-[34px] px-2.5 py-0 placeholder:text-(--text-quaternary)`;
 const fieldTextareaClass = `${fieldControlClass} min-h-[150px] p-2.5 resize-y`;
 
