@@ -1,4 +1,5 @@
 import { highlight } from 'fumadocs-core/highlight';
+import { axiomCodeDark, axiomCodeLight } from '@/lib/code-theme';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 import { CopyButton } from './copy-button';
@@ -20,6 +21,16 @@ function schemaType(document: JsonObject, input: JsonObject | undefined): string
 
 // `.api-schema-description code, .api-section-copy code` in globals.css.
 const inlineCodeClass = 'py-px px-1 border border-(--border-secondary) rounded-[3px] bg-(--bg-inert) font-mono';
+
+// The dark palette sits at 1.9–2.5:1 on the light tints, so the light theme
+// repoints to darker text values that clear AA (>=4.5:1) on the same tints.
+const METHOD_COLORS: Record<string, string> = {
+  get: 'method-get text-[#34d399] bg-[rgba(16,185,129,.11)] [:root[data-theme=light]_&]:text-[#047857] [:root[data-theme=light]_&]:bg-[rgba(16,185,129,.12)]',
+  post: 'method-post text-[#60a5fa] bg-[rgba(59,130,246,.11)] [:root[data-theme=light]_&]:text-[#1d4ed8] [:root[data-theme=light]_&]:bg-[rgba(59,130,246,.12)]',
+  put: 'method-put text-[#fbbf24] bg-[rgba(245,158,11,.11)] [:root[data-theme=light]_&]:text-[#92400e] [:root[data-theme=light]_&]:bg-[rgba(245,158,11,.14)]',
+  patch: 'method-patch text-[#fbbf24] bg-[rgba(245,158,11,.11)] [:root[data-theme=light]_&]:text-[#92400e] [:root[data-theme=light]_&]:bg-[rgba(245,158,11,.14)]',
+  delete: 'method-delete text-[#f87171] bg-[rgba(239,68,68,.11)] [:root[data-theme=light]_&]:text-[#b91c1c] [:root[data-theme=light]_&]:bg-[rgba(239,68,68,.12)]',
+};
 
 function PlainMarkdown({ value, codeClassName }: { value?: string; codeClassName?: string }) {
   if (!value) return null;
@@ -82,7 +93,9 @@ function SchemaTable({ document, rows, label }: { document: JsonObject; rows: Sc
   const hasLocation = rows.some((row) => row.location);
   return (
     <div className="api-schema-wrap mt-[14px] overflow-x-auto border border-(--border-primary) rounded-[4px] max-sm:-mr-2">
-      <table className="api-schema-table w-full min-w-[620px] m-0! border-0! border-collapse table-fixed text-[12px]!" data-has-location={hasLocation || undefined} aria-label={label}>
+      {/* Corner cells carry the wrapper's inner radius — collapsed cell
+          backgrounds paint square past an ancestor's rounded clip. */}
+      <table className="api-schema-table w-full min-w-[620px] m-0! border-0! border-collapse table-fixed text-[12px]! [&_thead_th:first-child]:rounded-tl-[3px] [&_thead_th:last-child]:rounded-tr-[3px] [&_tbody_tr:last-child_td:first-child]:rounded-bl-[3px] [&_tbody_tr:last-child_td:last-child]:rounded-br-[3px]" data-has-location={hasLocation || undefined} aria-label={label}>
         <thead><tr><th className={cn(schemaHeadCellClass, hasLocation ? 'w-[28%]' : 'w-[30%]')}>Property</th><th className={cn(schemaHeadCellClass, hasLocation ? 'w-[18%]' : 'w-[25%]')}>Type</th>{hasLocation && <th className={cn(schemaHeadCellClass, 'w-[14%]')}>Location</th>}<th className={schemaHeadCellClass}>Description</th></tr></thead>
         <tbody className="[&>tr:last-child>td]:border-b-0!">{rows.map((row) => (
           <tr className={row.hasChildren ? 'api-schema-object-row [&>td]:bg-(--bg-inert)' : undefined} data-depth={row.depth} key={row.key}>
@@ -167,7 +180,7 @@ async function highlightedSamples(samples: ReturnType<typeof requestSamples>): P
     id: sample.id,
     label: sample.label,
     code: sample.code,
-    highlighted: await highlight(sample.code, { lang: sample.language, themes: { light: 'github-light-high-contrast', dark: 'github-dark-high-contrast' } }),
+    highlighted: await highlight(sample.code, { lang: sample.language, themes: { light: axiomCodeLight, dark: axiomCodeDark } }),
   })));
 }
 
@@ -214,8 +227,13 @@ export async function ApiOperation({ value, children }: { value: string; childre
   }));
 
   return <div className="api-operation">
-    <div className="endpoint-bar"><span className={cn('endpoint-method', 'method-' + method)}>{method.toUpperCase()}</span><code>{displayPath}</code><CopyButton value={displayPath} label="" analytics={{ codeKind: 'endpoint_path' }} /></div>
-    {operation.description && <p className="endpoint-description"><PlainMarkdown value={operation.description} /></p>}
+    <div className="endpoint-bar my-4 py-2.5 px-3 flex items-center gap-2.5 border border-(--border-primary) rounded-[4px] bg-(--bg-surface)">
+      <span className={cn('endpoint-method py-[3px] px-[7px] border border-(--border-primary) rounded-[4px] font-mono text-[10px] leading-4 font-semibold tracking-[.04em]', METHOD_COLORS[method] ?? 'method-' + method)}>{method.toUpperCase()}</span>
+      {/* `!` beats the prose inline-code chip styles this <code> sits inside. */}
+      <code className="flex-1 overflow-x-auto text-(--text-secondary) bg-transparent! border-0! font-mono! text-[13px]! leading-[18px]! font-[450]! whitespace-nowrap">{displayPath}</code>
+      <CopyButton value={displayPath} label="" analytics={{ codeKind: 'endpoint_path' }} />
+    </div>
+    {operation.description && <p className="endpoint-description mt-4 mb-6 text-(--text-tertiary) font-sans text-[16px] leading-[26px] font-normal"><PlainMarkdown value={operation.description} /></p>}
     {children}
     {parameters.length > 0 && <section className="api-section mt-11" id="parameters"><h2 className={sectionHeadingClass}>Parameters <a className={sectionHeadingLinkClass} href="#parameters">#</a></h2><SchemaTable document={document} rows={parameterRows} label="Request parameters" /></section>}
     {bodyContent && <section className="api-section mt-11" id="body"><h2 className={sectionHeadingClass}>Body <a className={sectionHeadingLinkClass} href="#body">#</a></h2><p className="api-section-copy mt-3 text-(--text-secondary) text-[15px] leading-[25px]"><PlainMarkdown value={resolveSchema(document, bodySchema)?.description ?? operation.requestBody?.description} codeClassName={inlineCodeClass} /></p><div className="media-types mt-3 flex flex-wrap gap-1.5">{Object.keys(bodyContent).map((type) => <code className="py-[3px] px-[7px] border border-(--border-primary) rounded-[3px] text-(--text-tertiary) bg-(--bg-inert) text-[10px]" key={type}>{type}</code>)}</div><SchemaTable document={document} rows={bodyRows} label="Request body schema" /></section>}
