@@ -60,7 +60,7 @@ function isSyntaxReference(href?: string): boolean {
 // blocks include and that this component's own `matchMedia('(min-width: 80rem)')`
 // still treats as mobile.
 const navRow =
-  "flex min-h-[30px] m-0 -mx-2.5 cursor-pointer items-center gap-[7px] rounded-[4px] px-2.5 py-1.5 font-sans text-[14px] leading-[18px] tracking-[-.006em] max-xl:min-h-[44px] max-xl:pt-3 max-xl:pb-3";
+  "flex min-h-[30px] m-0 -mx-2.5 cursor-pointer items-center gap-[7px] rounded-[4px] px-2.5 py-1.5 font-sans text-[14px] leading-[18px] tracking-[-.006em] max-xl:min-h-[40px] max-xl:py-2";
 // `[&:hover]:` (not `hover:`) — v4 wraps `hover:` in `@media (hover: hover)`, which
 // would drop the tap-induced hover styling the original gave touch devices, i.e. the
 // drawer, which is the only place this list is reachable on a phone.
@@ -95,7 +95,9 @@ function NavItem({
             navRowIdle,
             "list-none [&::-webkit-details-marker]:hidden",
           )}
-          style={{ paddingLeft: 10 + depth * 10 }}
+          // Indent the row itself (-10 mirrors navRow's -mx-2.5) so the pill
+          // keeps navRow's symmetric px-2.5 around the label at every depth.
+          style={{ marginLeft: -10 + depth * 10 }}
         >
           <span className={truncateRow}>{item.title}</span>
           <ChevronRight
@@ -133,7 +135,9 @@ function NavItem({
         !active && navRowIdle,
         syntaxReference && "syntax-reference-link",
       )}
-      style={{ paddingLeft: 10 + depth * 10 }}
+      // Indent the row itself (-10 mirrors navRow's -mx-2.5) so the pill
+      // keeps navRow's symmetric px-2.5 around the label at every depth.
+      style={{ marginLeft: -10 + depth * 10 }}
       onClick={onNavigate}
     >
       <span
@@ -166,15 +170,20 @@ function NavItem({
 // this call site is affected — the default `header-tabs` variant is untouched.
 const drawerSections = cn(
   "drawer-sections hidden",
-  "max-xl:m-0 max-xl:mb-5 max-xl:flex max-xl:flex-col max-xl:gap-0.5 max-xl:border-b max-xl:border-b-(--border-primary) max-xl:pb-4",
-  "max-xl:[&_a]:flex max-xl:[&_a]:min-h-[44px] max-xl:[&_a]:items-center max-xl:[&_a]:rounded-[4px] max-xl:[&_a]:px-2.5 max-xl:[&_a]:py-0 max-xl:[&_a]:font-sans max-xl:[&_a]:text-[14px] max-xl:[&_a]:leading-[18px]",
+  "max-xl:m-0 max-xl:mb-5 max-xl:flex max-xl:flex-col max-xl:gap-px max-xl:border-b max-xl:border-b-(--border-primary) max-xl:pb-3",
+  // Bleed the divider across the drawer's own padding (px-6) so it runs
+  // edge to edge; the matching inner padding keeps the links aligned.
+  "max-xl:-mx-6 max-xl:px-6",
+  // `-mx-2.5` mirrors navRow's gutter bleed so the pills and label column
+  // align exactly with the nav rows below.
+  "max-xl:[&_a]:flex max-xl:[&_a]:min-h-[38px] max-xl:[&_a]:items-center max-xl:[&_a]:-mx-2.5 max-xl:[&_a]:rounded-[4px] max-xl:[&_a]:px-2.5 max-xl:[&_a]:py-0 max-xl:[&_a]:font-sans max-xl:[&_a]:text-[13px] max-xl:[&_a]:leading-[18px]",
   "max-xl:[&_a:not(.active)]:font-medium max-xl:[&_a:not(.active)]:text-(--text-tertiary)!",
   "max-xl:[&_a:not(.active):hover]:bg-(--bg-emph-tertiary) max-xl:[&_a:not(.active):hover]:text-(--text-secondary)!",
   "max-xl:[&_a.active]:bg-(--bg-emph-secondary) max-xl:[&_a.active]:font-medium max-xl:[&_a.active]:[text-shadow:-0.2px_0_0_currentColor,0.2px_0_0_currentColor] max-xl:[&_a.active]:text-(--text-primary)!",
 );
 
 const sidebarBase =
-  "sidebar fixed top-14 bottom-0 left-0 z-30 w-[260px] overflow-y-auto border-r border-r-(--border-primary) bg-(--bg-sidebar) pt-14 pr-4 pb-12 pl-6 [scrollbar-width:thin] max-xl:z-[70] max-xl:w-[min(320px,88vw)] max-xl:pt-4 max-xl:pb-[max(48px,env(safe-area-inset-bottom))] max-xl:shadow-[12px_0_48px_rgba(0,0,0,.35)] motion-reduce:[transition:none]!";
+  "sidebar fixed top-14 bottom-0 left-0 z-30 w-[260px] overflow-y-auto scroll-fade-t scroll-fade-b border-r border-r-(--border-primary) bg-(--bg-sidebar) pt-14 px-6 pb-12 [scrollbar-width:thin] max-xl:z-[70] max-xl:w-[min(300px,86vw)] max-xl:pt-4 max-xl:pb-[max(48px,env(safe-area-inset-bottom))] max-xl:shadow-[12px_0_48px_rgba(0,0,0,.35)] motion-reduce:[transition:none]!";
 const sidebarClosed =
   "max-xl:invisible max-xl:[transform:translateX(-105%)] max-xl:[transition:transform_.2s_ease,visibility_0s_linear_.2s]";
 const sidebarOpen =
@@ -250,7 +259,9 @@ export function DocsShell({
           <nav aria-label="Page navigation">
             {navigation.map((group) => (
               <section
-                className="sidebar-group m-0 mb-6"
+                // 20px group gap on mobile matches the divider→first-heading
+                // gap above, so the drawer keeps one vertical rhythm.
+                className="sidebar-group m-0 mb-6 max-xl:mb-5"
                 key={group.title}
               >
                 {/* Every utility that collides with the UNLAYERED `h1,h2,…` / `h2` element

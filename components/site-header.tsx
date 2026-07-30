@@ -51,7 +51,7 @@ export function DocumentationSections({ className = 'header-tabs', onNavigate }:
               active && 'active',
               headerTabs && 'relative rounded-[4px] px-2.5 py-1.5 font-sans text-[14px] leading-4 font-medium tracking-[-.006em] hover:bg-(--bg-emph-tertiary)',
               headerTabs && (active
-                ? "text-(--text-primary) after:content-[''] after:absolute after:left-[10px] after:right-[10px] after:bottom-[-14px] after:h-[2px] after:rounded-t-[1px] after:bg-(--color-accent)"
+                ? "text-(--text-primary) after:content-[''] after:absolute after:left-[10px] after:right-[10px] after:bottom-[-14px] after:h-px after:bg-(--color-accent)"
                 : 'text-(--text-tertiary) hover:text-(--text-secondary)'),
             )}
             onClick={onNavigate}
@@ -78,10 +78,10 @@ export function SiteHeader({ drawerOpen, onMenu }: { drawerOpen: boolean; onMenu
 
   return (
     <header className="site-header fixed inset-x-0 top-0 bottom-auto z-50 flex h-14 items-center gap-6 px-6 py-0 border-b border-(--border-primary) bg-[color-mix(in_srgb,var(--bg-canvas)_94%,transparent)] backdrop-blur-[12px] max-md:gap-3 max-md:px-4 max-sm:gap-2">
-      {/* Hidden on desktop; becomes the 44px drawer toggle below xl, matching
+      {/* Hidden on desktop; becomes the drawer toggle below xl, matching
           the drawer breakpoint in docs-shell. */}
-      <button id="docs-navigation-trigger" className={cn('header-icon mobile-menu-trigger hidden', headerIconClass, 'max-xl:inline-flex max-xl:h-11 max-xl:w-11 max-xl:-ml-2 max-xl:border-transparent')} aria-label={drawerOpen ? 'Close navigation' : 'Open navigation'} aria-controls="docs-navigation-drawer" aria-expanded={drawerOpen} onClick={onMenu}>
-        {drawerOpen ? <X size={18} /> : <Menu size={18} />}
+      <button id="docs-navigation-trigger" className={cn('header-icon mobile-menu-trigger hidden', headerIconClass, 'max-xl:inline-flex max-xl:h-10 max-xl:w-10 max-xl:-ml-2 max-xl:border-transparent')} aria-label={drawerOpen ? 'Close navigation' : 'Open navigation'} aria-controls="docs-navigation-drawer" aria-expanded={drawerOpen} onClick={onMenu}>
+        {drawerOpen ? <X size={16} /> : <Menu size={16} />}
       </button>
       <Link href="/docs" prefetch={false} className="brand flex h-7 flex-none items-center gap-[9px]" aria-label="Axiom documentation home">
         <AxiomMark />
