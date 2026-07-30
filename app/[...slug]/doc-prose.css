@@ -1,0 +1,187 @@
+/* Article reading-column typography for MDX-rendered content, applied via
+   `doc-prose` on DocsBody (alongside fumadocs' own `prose`). Deliberately
+   UNLAYERED: it must outrank `@layer utilities` on elements inside the
+   article exactly like the hand-written rules it replaces — components that
+   need to override it locally use `!` utilities. Declarations use @apply so
+   values stay in the design-token vocabulary. */
+@reference "../globals.css";
+
+.doc-prose {
+    --docs-type-size: 16px;
+    --docs-type-leading: 1.75;
+    --docs-type-flow: 1.4em;
+    /* Body copy matches the lede's colour — the brighter gray-300 read as
+     bold against it. --text-tertiary is theme-aware (gray-400 dark /
+     gray-600 light). */
+    --docs-copy: var(--text-tertiary);
+    --tw-prose-body: var(--docs-copy);
+    --tw-prose-headings: var(--text-primary);
+    --tw-prose-links: var(--text-primary);
+    --tw-prose-bold: var(--text-primary);
+    --tw-prose-code: var(--text-primary);
+    --tw-prose-bullets: var(--text-quaternary);
+    @apply max-w-none font-normal text-(--docs-copy) text-(length:--docs-type-size) leading-(--docs-type-leading) tracking-[-.006em];
+
+    /* `:is` (not `:where`) so these outrank plain colour utilities on elements
+     inside the article. */
+    & :is(p, li, dd, td) {
+        @apply text-(--docs-copy);
+    }
+    & :is(strong, b) {
+        @apply text-(--text-primary);
+    }
+
+    /* Vertical rhythm: zero every block, then space adjacent flow siblings.
+     Reading-column measure applies to direct children. */
+    & :where(p, ul, ol, blockquote, table, figure, hr) {
+        @apply my-0;
+    }
+    & > :where(p, ul, ol, blockquote, dl) {
+        @apply max-w-[768px];
+    }
+    &
+        > :where(
+            p,
+            ul,
+            ol,
+            blockquote,
+            table,
+            figure,
+            hr,
+            .fd-codeblock
+        )
+        + :where(
+            p,
+            ul,
+            ol,
+            blockquote,
+            table,
+            figure,
+            hr,
+            .fd-codeblock
+        ) {
+        @apply mt-(--docs-type-flow);
+    }
+
+    /* Heading rules honour `.not-prose` — components like fumadocs' Card
+       render their own <h3> titles, which the article heading margins were
+       inflating (a 40px gap above every card title). */
+    & h2:not(:is(.not-prose, .not-prose *)) {
+        @apply mt-[58px] mb-[14px] p-0 font-sans text-[24px] leading-[31px] font-semibold tracking-[-.022em] text-balance;
+    }
+    & h3:not(:is(.not-prose, .not-prose *)) {
+        @apply mt-10 mb-[11px] font-sans text-[20px] leading-[27px] font-semibold tracking-[-.015em] text-balance;
+    }
+    & h4:not(:is(.not-prose, .not-prose *)) {
+        @apply mt-8 mb-[9px] font-sans text-[17px] leading-6 font-semibold tracking-[-.01em];
+    }
+    & h2 + h3:not(:is(.not-prose, .not-prose *)) {
+        @apply mt-[18px];
+    }
+    & h3 + h4:not(:is(.not-prose, .not-prose *)) {
+        @apply mt-4;
+    }
+    & :where(h2, h3, h4) + :where(p, ul, ol) {
+        @apply mt-0;
+    }
+
+    & :where(ul, ol) {
+        @apply ps-[1.35em];
+    }
+    & li {
+        @apply ps-[.25em];
+    }
+    & li + li {
+        @apply mt-[.55em];
+    }
+    & :is(li > ul, li > ol) {
+        @apply mt-[.55em];
+    }
+
+    & blockquote {
+        @apply mt-[calc(var(--docs-type-flow)*1.15)] py-0.5 ps-[18px] pe-0 border-l-2 border-l-(--border-strong) text-(--text-tertiary) not-italic;
+    }
+    & hr {
+        @apply mt-[calc(var(--docs-type-flow)*2)] border-(--border-primary);
+    }
+    & table {
+        @apply mt-[calc(var(--docs-type-flow)*1.25)] text-[.93em];
+    }
+
+    & a {
+        @apply decoration-(--border-strong) underline-offset-[3px];
+    }
+    & :where(p, li, td, dd) a:not(.playground-link) {
+        @apply text-(--text-primary) underline decoration-[color-mix(in_oklab,var(--text-primary)_30%,transparent)];
+    }
+    & :where(p, li, td, dd) a:not(.playground-link):hover {
+        @apply decoration-(--color-accent);
+    }
+    & a:focus-visible {
+        @apply rounded-[2px] outline-2 outline-(--color-accent) outline-offset-2;
+    }
+
+    & :not(pre) > code {
+        @apply py-px px-1 border border-(--border-primary) rounded-[3px] bg-(--bg-inert) font-mono text-[.84em];
+    }
+    /* Flatter, more legible keycaps than Tailwind Typography's default (tiny
+     .875em text, low contrast, heavy raised-key shadow). */
+    & kbd {
+        @apply py-px px-1.5 border border-(--border-primary) rounded-[4px] bg-(--bg-emph-tertiary) shadow-[0_1px_0_var(--border-strong)] text-(--text-secondary) font-mono text-[12px] leading-[18px] font-medium align-baseline;
+    }
+    /* Multi-line code in the reading column tracks the body bump: 12px -> 13px. */
+    & :is(pre, pre code) {
+        @apply text-[13px] leading-[21px];
+    }
+
+    &
+        :is(
+            figure[data-rehype-pretty-code-figure],
+            figure.shiki,
+            .fd-codeblock
+        ) {
+        @apply border-(--border-primary) rounded-[4px]! bg-(--bg-inert) shadow-none!;
+    }
+    & figure:has(+ .placeholder-config) {
+        @apply rounded-b-none!;
+    }
+
+    /* Code-block copy button reveals on hover, or on keyboard focus only
+     (:focus-visible) — a mouse click copies without the button sticking on. */
+    & figure > div:has(> button[aria-label="Copy Text"]) {
+        @apply opacity-0 transition-opacity duration-[.12s] ease-[ease];
+    }
+    & figure:hover > div:has(> button[aria-label="Copy Text"]),
+    &
+        figure
+        > div:has(> button[aria-label="Copy Text"]:focus-visible) {
+        @apply opacity-100;
+    }
+
+    /* Markdown tables (fumadocs wraps them in div.relative.overflow-auto). */
+    & div.relative.overflow-auto:has(> table) {
+        @apply my-[18px]! overflow-auto border border-(--border-primary) rounded-[4px];
+
+        & > table {
+            @apply w-full m-0! border-0! border-collapse table-auto text-[12px]! rounded-none!;
+        }
+        & th {
+            @apply py-2 px-2.5 border-0 border-r border-r-(--border-primary) border-b border-b-(--border-primary) text-(--text-secondary) bg-(--bg-inert) font-mono text-[13px] leading-[18px] font-[550] text-left;
+        }
+        & td {
+            @apply py-[9px] px-2.5 border-0 border-r border-r-(--border-tertiary) border-b border-b-(--border-tertiary) text-(--docs-copy) font-sans text-[14px] leading-[22px] font-normal align-top;
+        }
+        & :is(th, td):last-child {
+            @apply border-r-0;
+        }
+        & tbody tr:last-child td {
+            @apply border-b-0;
+        }
+
+        /* Inline code in cells already reads as an identifier via the mono face;
+       drop the chip so dense tables stay calm — just monospace. */
+        & :is(th, td) code {
+            @apply p-0 border-0 rounded-none bg-transparent text-[length:inherit];
+        }
+    }
+}
