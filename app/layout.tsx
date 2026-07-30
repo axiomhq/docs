@@ -38,8 +38,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={cn(geist.variable, berkeleyMono.variable)}>
-      <body>
+    // `antialiased` matches www: macOS's default subpixel smoothing fattens
+    // light-on-dark text, making 400 read like a medium weight.
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" className={cn(geist.variable, berkeleyMono.variable, 'scroll-smooth antialiased bg-(--bg-canvas)')}>
+      <body className="m-0 bg-(--bg-canvas) text-(--text-primary) font-sans font-normal">
         <script type="application/ld+json" dangerouslySetInnerHTML={structuredDataProps(siteGraph())} />
         <RootProvider
           theme={{ attribute: ['class', 'data-theme'], defaultTheme: 'system', enableSystem: true, storageKey: 'axiom-docs-theme' }}

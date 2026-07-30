@@ -6,9 +6,12 @@ import { useDocsSearchController } from '@/components/docs-search-provider';
 export function SearchPrompt() {
   const { openSearch } = useDocsSearchController();
   return (
-    <button className="hero-search" onClick={() => openSearch('hero')}>
+    <button
+      className="hero-search w-full h-10 mt-7 px-[14px] py-0 flex items-center gap-2.5 border border-(--border-strong) rounded-[4px] text-(--text-tertiary) bg-(--bg-surface) cursor-pointer hover:bg-(--bg-raised)"
+      onClick={() => openSearch('hero')}
+    >
       <Search size={16} />
-      <span>Search the docs — or ask a question…</span>
+      <span className="flex-1 text-left font-sans text-[15px] leading-5 font-normal">Search the docs — or ask a question…</span>
       <kbd>⌘K</kbd>
     </button>
   );
@@ -16,5 +19,5 @@ export function SearchPrompt() {
 
 export function AskAiPrompt() {
   const { openAssistant } = useDocsSearchController();
-  return <button onClick={() => openAssistant('', 'hero')}>Ask AI ⌘I</button>;
+  return <button className="p-0 border-0 text-inherit bg-transparent cursor-pointer" onClick={() => openAssistant('', 'hero')}>Ask AI ⌘I</button>;
 }

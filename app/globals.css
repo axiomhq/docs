@@ -13,240 +13,29 @@
 @custom-variant dark (&:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *));
 
 /* Element defaults live in @layer base so component utilities (@layer
-   utilities) can override them; unlayered they would always win. */
+   utilities) can override them; unlayered they would always win. Only elements
+   with no owning component remain: `a` and `kbd` are authored directly in MDX
+   content. `html`/`body` are styled in app/layout.tsx; box-sizing and form
+   `font: inherit` come from Tailwind's preflight. */
 @layer base {
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; background: var(--bg-canvas); }
-  body { margin: 0; color: var(--text-primary); background: var(--bg-canvas); font-family: var(--font-sans); }
-  button, input, textarea { font: inherit; }
-  a { color: inherit; text-decoration: none; }
-  kbd { border: 1px solid var(--border-primary); border-radius: 3px; padding: 1px 5px; background: var(--bg-emph-tertiary); color: var(--text-quaternary); font: 450 10px/14px var(--font-mono); }
+  a { @apply text-inherit no-underline; }
+  kbd { @apply py-px px-[5px] border border-(--border-primary) rounded-[3px] bg-(--bg-emph-tertiary) text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-[450]; }
 }
 
-/* No font-weight bump on active — bolder glyphs are wider and reflow the
-   whole tab row on click; colour + the accent underline carry the state. */
-
-.docs-search-mode-tabs button:focus-visible, .docs-search-clear:focus-visible, .docs-search-close:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.docs-search-clear { margin-left: auto; padding: 4px 7px; border: 0; border-radius: 3px; color: var(--text-tertiary); background: transparent; font: 500 12px/16px var(--font-sans); cursor: pointer; }
-.docs-search-clear:hover { color: var(--text-primary); background: var(--bg-emph-tertiary); }
-.docs-search-clear + .docs-search-close { margin-left: 0; }
-
-.docs-search-panel, .docs-assistant-panel { min-height: 0; flex: 1; }
-
-.docs-assistant-panel { display: grid; grid-template-rows: minmax(0, 1fr) auto; background: var(--bg-canvas); }
-.docs-assistant-messages { min-height: 0; height: 100%; overflow-y: auto; padding: 22px 24px 28px; overscroll-behavior: contain; }
-/* AI Elements' <Message>/<MessageContent> own the bubble layout; these rules
-   only carry the Axiom role label and width constraints on top of it. */
-.docs-ai-markdown { color: var(--text-secondary); font: 400 14px/22px var(--font-sans); }
-.docs-ai-markdown > :first-child { margin-top: 0 !important; }
-.docs-ai-markdown > :last-child { margin-bottom: 0 !important; }
-/* Streamdown ships a full-page heading scale; inside a 700px panel it reads as
-   oversized, so re-anchor headings to the Axiom docs scale. Unlayered, so these
-   win over Tailwind's utilities. */
-.docs-ai-markdown h1, .docs-ai-markdown h2, .docs-ai-markdown h3,
-.docs-ai-markdown h4, .docs-ai-markdown h5, .docs-ai-markdown h6 {
-  color: var(--text-primary); font-family: var(--font-sans); letter-spacing: -.01em;
-}
-.docs-ai-markdown h1 { margin: 22px 0 8px; font-size: 16px; line-height: 24px; font-weight: 500; }
-.docs-ai-markdown h2 { margin: 18px 0 7px; font-size: 14px; line-height: 21px; font-weight: 500; }
-.docs-ai-markdown h3 { margin: 16px 0 6px; font-size: 13px; line-height: 20px; font-weight: 500; }
-.docs-ai-markdown h4, .docs-ai-markdown h5, .docs-ai-markdown h6 { margin: 14px 0 5px; font-size: 12px; line-height: 18px; font-weight: 500; }
-.docs-ai-markdown h1:first-child, .docs-ai-markdown h2:first-child, .docs-ai-markdown h3:first-child { margin-top: 0; }
-
-.docs-ai-markdown p, .docs-ai-markdown ul, .docs-ai-markdown ol { margin: 0 0 11px; }
-.docs-ai-markdown ul, .docs-ai-markdown ol { padding-left: 18px; }
-.docs-ai-markdown li { margin: 3px 0; padding-left: 2px; }
-.docs-ai-markdown li::marker { color: var(--text-quaternary); }
-.docs-ai-markdown li > p { margin: 0 0 4px; }
-.docs-ai-markdown li:last-child { margin-bottom: 0; }
-.docs-ai-markdown ul ul, .docs-ai-markdown ol ol, .docs-ai-markdown ul ol, .docs-ai-markdown ol ul { margin: 3px 0 0; }
-.docs-ai-markdown hr { margin: 16px 0; border: 0; border-top: 1px solid var(--border-secondary); }
-.docs-ai-markdown blockquote { margin: 0 0 11px; padding-left: 11px; border-left: 2px solid var(--border-strong); color: var(--text-tertiary); }
-.docs-ai-markdown table { width: 100%; margin: 0 0 12px; border-collapse: collapse; font-size: 12.5px; }
-.docs-ai-markdown th, .docs-ai-markdown td { padding: 5px 8px; border: 1px solid var(--border-secondary); text-align: left; }
-.docs-ai-markdown th { color: var(--text-primary); background: var(--bg-inert); font-weight: 600; }
-.docs-ai-markdown strong { color: var(--text-primary); font-weight: 600; }
-.docs-ai-markdown a { color: var(--text-primary); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
-.docs-ai-markdown a:hover { text-decoration-color: var(--color-accent); }
-.docs-ai-markdown code:not(pre code) { padding: 1px 4px; border: 1px solid var(--border-primary); border-radius: 3px; color: var(--text-primary); background: var(--bg-inert); font: 450 12px/18px var(--font-mono); }
-/* Streamdown nests a bordered, rounded body inside an already-bordered, rounded
-   shell, which reads as a double frame. Collapse it to a single Axiom surface.
-   The header row and its buttons are left exactly as they are. */
-/* The actions row overlays the header via -mt-10, which assumes Streamdown's
-   h-8 header plus its gap-2. Keep that 8px gap intact and pad the header and
-   body identically so the language label lines up with the code gutter. */
-.docs-ai-markdown [data-streamdown='code-block'] { margin: 12px 0; padding: 0; gap: 8px; overflow: hidden; border: 1px solid var(--border-primary); border-radius: 4px; background: var(--bg-surface); }
-.docs-ai-markdown [data-streamdown='code-block-header'] { padding: 0 12px; color: var(--text-tertiary); font: 450 11px/16px var(--font-mono); }
-.docs-ai-markdown [data-streamdown='code-block-header'] > span { margin-left: 0; }
-.docs-ai-markdown [data-streamdown='code-block-header'] + div { padding-right: 8px; }
-.docs-ai-markdown [data-streamdown='code-block-actions'] { border-color: var(--border-secondary); background: var(--bg-raised); }
-.docs-ai-markdown [data-streamdown='code-block-body'] { margin: 0; padding: 0 12px 12px; border: 0; border-radius: 0; background: transparent; }
-.docs-ai-markdown pre { margin: 0 !important; padding: 0; background: transparent !important; }
-.docs-ai-markdown pre, .docs-ai-markdown pre code { font: 450 12px/19px var(--font-mono); }
-/* <Sources> is a Collapsible (trigger + content), so the chip row lives on the
-   content element rather than the root. */
-.docs-assistant-working { padding: 7px 0; display: flex; align-items: center; gap: 8px; color: var(--text-tertiary); font: 450 11px/16px var(--font-mono); }
-.docs-assistant-working > span:first-child { width: 6px; height: 6px; flex: none; border: 1px solid var(--color-accent); animation: docs-assistant-pulse 1s ease-in-out infinite; }
+/* Referenced by `animate-[docs-assistant-pulse_…]` in docs-assistant.tsx and
+   the docs-search.tsx loading fallback. */
 @keyframes docs-assistant-pulse { 50% { background: var(--color-accent); opacity: .45; } }
-/* PromptInput renders the <form>; the surrounding chrome lives on the footer so
-   the disclaimer keeps sitting inside the same bordered surface as before.
-   These rules are unlayered, so they win over Tailwind's @layer utilities. */
-.docs-assistant-input-wrap [data-slot='input-group-addon'] { width: auto; padding: 0; border: 0; background: transparent; }
 
-@media (prefers-reduced-motion: reduce) {
-  .docs-assistant-working > span:first-child { animation: none; background: var(--color-accent); }
-}
-
-.method-get { color: #34d399; background: rgba(16,185,129,.11); }
-.method-post { color: #60a5fa; background: rgba(59,130,246,.11); }
-.method-put, .method-patch { color: #fbbf24; background: rgba(245,158,11,.11); }
-.method-delete { color: #f87171; background: rgba(239,68,68,.11); }
-/* Light theme: the dark-tuned method colors sit at 1.9–2.5:1 on the light tint.
-   Repoint to darker text values that clear AA (>=4.5:1) on the same tints. */
-:root[data-theme='light'] .method-get { color: #047857; background: rgba(16,185,129,.12); }
-:root[data-theme='light'] .method-post { color: #1d4ed8; background: rgba(59,130,246,.12); }
-:root[data-theme='light'] .method-put, :root[data-theme='light'] .method-patch { color: #92400e; background: rgba(245,158,11,.14); }
-:root[data-theme='light'] .method-delete { color: #b91c1c; background: rgba(239,68,68,.12); }
-
-.hero-search { width: 100%; height: 40px; margin-top: 28px; padding: 0 14px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border-strong); border-radius: 4px; color: var(--text-tertiary); background: var(--bg-surface); cursor: pointer; }
-.hero-search:hover { border-color: var(--border-strong); background: var(--bg-raised); }
-.hero-search span { flex: 1; text-align: left; font: 400 15px/20px var(--font-sans); }
-.landing-footer button { padding: 0; border: 0; color: inherit; background: transparent; cursor: pointer; }
-
-.doc-article > h1, .doc-article [data-docs-title] { margin: 0; color: var(--text-primary); font: 600 34px/42px var(--font-sans); letter-spacing: -.03em; text-wrap: balance; }
-.doc-article .query-syntax-title { font: 600 32px/40px var(--font-query) !important; font-variant-ligatures: none; letter-spacing: 0; }
-.query-syntax-article .prose a:is([href*='/scalar-functions/'], [href*='/aggregation-functions/'], [href*='/operators/']) { font-family: var(--font-query); font-variant-ligatures: none; letter-spacing: 0; }
-/* Lede tracks the body text size (--docs-type-size 16px / 1.75); it stays
-   distinct through colour and the wider margin, not scale. */
-.doc-article > p:first-of-type { max-width: 640px; margin: 6px 0 34px; color: var(--text-tertiary); font: 400 16px/28px var(--font-sans); letter-spacing: -.006em; text-wrap: pretty; }
-.doc-article .prose {
-  --docs-type-size: 16px;
-  --docs-type-leading: 1.75;
-  --docs-type-flow: 1.4em;
-  --docs-copy: var(--gray-300);
-  --tw-prose-body: var(--docs-copy);
-  --tw-prose-headings: var(--text-primary);
-  --tw-prose-links: var(--text-primary);
-  --tw-prose-bold: var(--text-primary);
-  --tw-prose-code: var(--text-primary);
-  --tw-prose-bullets: var(--text-quaternary);
-  max-width: none;
-  color: var(--docs-copy);
-  font-size: var(--docs-type-size);
-  line-height: var(--docs-type-leading);
-  letter-spacing: -.006em;
-}
-:root[data-theme='light'] .doc-article .prose { --docs-copy: var(--gray-600); }
-.doc-article .prose :where(p, li, dd, td) { color: var(--docs-copy); }
-.doc-article .prose :where(strong, b) { color: var(--text-primary); }
-.doc-article .prose :where(p, ul, ol, blockquote, table, figure, hr) { margin-block: 0; }
-/* Article reading column measure. */
-.doc-article .prose > :where(p, ul, ol, blockquote, dl) { max-width: 768px; }
-.doc-article .prose > :where(p, ul, ol, blockquote, table, figure, hr, .fd-codeblock) + :where(p, ul, ol, blockquote, table, figure, hr, .fd-codeblock) { margin-block-start: var(--docs-type-flow); }
-.doc-article .prose h2 { margin: 58px 0 14px; padding: 0; font: 600 24px/31px var(--font-sans); letter-spacing: -.022em; text-wrap: balance; }
-.doc-article .prose h3 { margin: 40px 0 11px; font: 600 20px/27px var(--font-sans); letter-spacing: -.015em; text-wrap: balance; }
-.doc-article .prose h4 { margin: 32px 0 9px; font: 600 17px/24px var(--font-sans); letter-spacing: -.01em; }
-.doc-article .prose h2 + h3 { margin-top: 18px; }
-.doc-article .prose h3 + h4 { margin-top: 16px; }
-.doc-article .prose :where(h2, h3, h4) + :where(p, ul, ol) { margin-top: 0; }
-.doc-article .prose :where(ul, ol) { padding-inline-start: 1.35em; }
-.doc-article .prose :where(li) { padding-inline-start: .25em; }
-.doc-article .prose :where(li + li) { margin-top: .55em; }
-.doc-article .prose :where(li > ul, li > ol) { margin-top: .55em; }
-.doc-article .prose :where(blockquote) { margin-top: calc(var(--docs-type-flow) * 1.15); padding: 2px 0 2px 18px; border-left: 2px solid var(--border-strong); color: var(--text-tertiary); font-style: normal; }
-.doc-article .prose :where(hr) { margin-top: calc(var(--docs-type-flow) * 2); border-color: var(--border-primary); }
-.doc-article .prose :where(table) { margin-top: calc(var(--docs-type-flow) * 1.25); font-size: .93em; }
-.doc-notice :where(p, ul, ol) { margin: 0; }
-.doc-article .prose .doc-notice :where(p, ul, ol) + :where(p, ul, ol) { margin-top: 14px; }
-/* Show the # on hover, or on keyboard focus only (:focus-visible) — a mouse
-   click copies the link without leaving the marker stuck on afterwards. */
-.doc-article .prose a { text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
-.doc-article .prose :where(p, li, td, dd) a:not(.playground-link) { color: var(--text-primary); text-decoration-line: underline; text-decoration-color: color-mix(in oklab, var(--text-primary) 30%, transparent); }
-.doc-article .prose :where(p, li, td, dd) a:not(.playground-link):hover { text-decoration-color: var(--color-accent); }
-.doc-article .prose a:focus-visible { border-radius: 2px; outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.doc-article .prose :not(pre) > code { border: 1px solid var(--border-primary); border-radius: 3px; padding: 1px 4px; background: var(--bg-inert); font-family: var(--font-mono); font-size: .84em; }
-/* Override Tailwind Typography's default keycap kbd (tiny .875em text, low
-   contrast, heavy 0 3px raised-key shadow that made keys read small and sit
-   below the baseline). Flatter, more legible, vertically centred with the text. */
-.doc-article .prose kbd { padding: 1px 6px; border: 1px solid var(--border-primary); border-radius: 4px; background: var(--bg-emph-tertiary); box-shadow: 0 1px 0 var(--border-strong); color: var(--text-secondary); font: 500 12px/18px var(--font-mono); vertical-align: baseline; }
-/* Multi-line code in the reading column tracks the body bump: 12px -> 13px. */
-.doc-article .prose pre, .doc-article .prose pre code { font-size: 13px; line-height: 21px; }
-.doc-article figure[data-rehype-pretty-code-figure], .doc-article figure.shiki, .doc-article .fd-codeblock { border-color: var(--border-primary); border-radius: 4px !important; background: var(--bg-surface); box-shadow: none !important; }
-.doc-article figure:has(+ .placeholder-config) { border-bottom-left-radius: 0 !important; border-bottom-right-radius: 0 !important; }
-.accordion-group { width: 100%; margin: 12px 0; }
-.accordion-group > div { width: 100%; margin: 0 !important; overflow: hidden; border: 1px solid var(--border-primary) !important; border-radius: 4px !important; background: var(--bg-surface); }
-.accordion-group h3 { margin: 0 !important; }
-.accordion-group h3 button { min-height: 34px; padding: 5px 9px !important; gap: 6px !important; color: var(--text-secondary); font: 550 12px/16px var(--font-sans); }
-.accordion-group h3 button:hover { background: var(--bg-inert); color: var(--text-primary); }
-.accordion-group [data-state='open'] > div { padding: 2px 10px 10px !important; }
-.language-comparison-content > div > :first-child { margin-top: 0 !important; }
-.language-comparison-content > div > :last-child { margin-bottom: 0 !important; }
-.docs-tabs { margin: 20px 0; }
-.docs-tabs > div { margin: 0 !important; overflow: hidden; border: 1px solid var(--border-primary) !important; border-radius: 4px !important; background: var(--bg-surface) !important; }
-.docs-tabs [role='tablist'] { min-height: 38px; padding: 0 10px !important; align-items: stretch; gap: 2px !important; border-bottom: 1px solid var(--border-primary); background: var(--bg-surface); }
-.docs-tabs [role='tab'] { position: relative; padding: 0 8px !important; border: 0 !important; color: var(--text-quaternary) !important; font: 500 11px/16px var(--font-mono) !important; }
-.docs-tabs [role='tab']:hover { color: var(--text-secondary) !important; }
-.docs-tabs [role='tab'][aria-selected='true'] { color: var(--text-primary) !important; }
-.docs-tabs [role='tab'][aria-selected='true']::after { position: absolute; right: 8px; bottom: -1px; left: 8px; height: 2px; background: var(--color-accent); content: ''; }
-.docs-tabs [role='tabpanel'] { padding: 14px 16px 16px !important; border-radius: 0 !important; background: var(--bg-raised) !important; }
-.docs-tabs [role='tabpanel'] > * { margin-block: 0 !important; }
-.docs-tabs [role='tabpanel'] > * + * { margin-top: 11px !important; }
-.docs-tabs figure[data-rehype-pretty-code-figure], .docs-tabs figure.shiki { border-radius: 4px !important; box-shadow: none !important; }
-.query-example > figure { margin: 0 !important; }
-.query-example > p:has(> .playground-link) { position: absolute; z-index: 2; top: 7px; right: 8px; margin: 0 !important; }
-.doc-article figure > div:has(> button[aria-label='Copy Text']) { opacity: 0; transition: opacity .12s ease; }
-.doc-article figure:hover > div:has(> button[aria-label='Copy Text']), .doc-article figure > div:has(> button[aria-label='Copy Text']:focus-visible) { opacity: 1; }
-.query-example figure > div:has(> button[aria-label='Copy Text']) { top: 7px !important; right: 164px !important; width: 24px; height: 24px; }
-.query-example figure button[aria-label='Copy Text'] { width: 24px; height: 24px; border: 1px solid var(--border-primary); border-radius: 3px; background: color-mix(in srgb, var(--bg-canvas) 88%, transparent); }
-.doc-article .prose div.relative.overflow-auto:has(> table) { margin: 18px 0 !important; overflow: auto; border: 1px solid var(--border-primary); border-radius: 4px; }
-.doc-article .prose div.relative.overflow-auto:has(> table) > table { width: 100%; margin: 0 !important; border: 0 !important; border-collapse: collapse; font-size: 12px; }
-.doc-article .prose div.relative.overflow-auto:has(> table) th { padding: 8px 10px; border: 0; border-right: 1px solid var(--border-primary); border-bottom: 1px solid var(--border-primary); color: var(--text-secondary); background: var(--bg-inert); font: 550 13px/18px var(--font-mono); text-align: left; }
-.doc-article .prose div.relative.overflow-auto:has(> table) td { padding: 9px 10px; border: 0; border-right: 1px solid var(--border-tertiary); border-bottom: 1px solid var(--border-tertiary); color: var(--docs-copy); font: 400 14px/22px var(--font-sans); vertical-align: top; }
-.doc-article .prose div.relative.overflow-auto:has(> table) :is(th, td):last-child { border-right: 0; }
-.doc-article .prose div.relative.overflow-auto:has(> table) tbody tr:last-child td { border-bottom: 0; }
-/* Inline code in table cells already reads as an identifier via the mono face;
-   drop the chip (border/tint/pad) so dense tables stay calm — just monospace. */
-.doc-article .prose div.relative.overflow-auto:has(> table) :is(th, td) code { padding: 0; border: 0; border-radius: 0; background: transparent; font-size: inherit; }
-.docs-tabs [role='tabpanel'] > div.relative.overflow-auto:has(> table) { margin-top: 11px !important; margin-bottom: 0 !important; }
-.floating-toc a code { color: inherit !important; font-size: inherit; }
-.doc-frame img, .doc-frame video { width: 100%; border-radius: 2px; }
-.code-group > * { margin: 0 !important; border: 0 !important; border-radius: 0 !important; border-bottom: 1px solid var(--border-primary) !important; }
-.code-group > *:last-child { border-bottom: 0 !important; }
-/* <Icon> now renders a real lucide glyph rather than a boxed letter, so it is an
-   inline mark sized to the surrounding text — matching how Mintlify rendered it. */
 /* Inline glyphs in prose, e.g. <img className="inline-icon" src=".../share.svg">.
-   The Font Awesome assets are 576x512 with fill="currentColor", which does not
-   inherit through <img> — it paints black — so size them to the text and invert
-   on dark surfaces to keep them legible. */
-.inline-icon { width: 1.05em; height: 1.05em; margin: 0 .12em; display: inline-block; vertical-align: -.16em; object-fit: contain; }
-:root:not([data-theme='light']) .inline-icon { filter: invert(1); }
-.nav-table { margin: 24px 0; border: 1px solid var(--border-primary); border-radius: 4px; }
-.nav-table a { padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; border-bottom: 1px solid var(--border-primary); }
-.nav-table a:last-child { border-bottom: 0; }
-.nav-table span { color: var(--text-tertiary); font-size: 13px; }
-.endpoint-bar { margin: 16px 0; padding: 10px 12px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border-primary); border-radius: 4px; background: var(--bg-surface); }
-.endpoint-bar > code { flex: 1; overflow-x: auto; color: var(--text-secondary); background: transparent !important; border: 0 !important; font: 450 13px/18px var(--font-mono) !important; white-space: nowrap; }
-.endpoint-method { padding: 3px 7px; border: 1px solid var(--border-primary); border-radius: 4px; font: 600 10px/16px var(--font-mono); letter-spacing: .04em; }
-.endpoint-description { margin: 16px 0 24px; color: var(--text-tertiary); font: 400 16px/26px var(--font-sans); }
-.api-code-body pre { margin: 0 !important; padding: 14px 16px !important; overflow-x: auto; border: 0 !important; border-radius: 0 !important; background: transparent !important; color: var(--shiki-light) !important; font: 400 12px/20px var(--font-mono) !important; }
-.api-code-body pre code { display: block; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; font: inherit !important; }
-.api-code-body pre span { color: var(--shiki-light); }
-:root[data-theme='dark'] .api-code-body pre { color: var(--shiki-dark) !important; }
-:root[data-theme='dark'] .api-code-body pre span { color: var(--shiki-dark) !important; }
-.axiom-placeholder-highlight { color: var(--blue-500); }
-.dark .axiom-placeholder-highlight { color: #60a5fa; }
-
-@media (width < 48rem) {
-        .docs-search-clear { min-height: 44px; }
-              }
-@media (width < 40rem) {
-          .docs-search-clear { font-size: 14px; }
-                  .docs-assistant-messages { padding: 18px 14px 24px; }
-                                                  }
+   Authored as raw JSX in MDX content, so there is no component to carry
+   utilities. The Font Awesome assets are 576x512 with fill="currentColor",
+   which does not inherit through <img> — it paints black — so size them to the
+   text and invert on dark surfaces to keep them legible. */
+.inline-icon { @apply w-[1.05em] h-[1.05em] my-0 mx-[.12em] inline-block align-[-.16em] object-contain dark:invert; }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
-  }
+  *, *::before, *::after { @apply scroll-auto! duration-[.01ms]! [animation-duration:.01ms]!; }
+}
 
 /* ╔══════════════════════════════════════════════════════════════╗
    ║ shadcn / AI Elements → Axiom token bridge                    ║

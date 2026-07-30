@@ -21,7 +21,7 @@ export function LanguageComparisons({ children, titles }: { children: ReactNode;
           );
         })}
       </div>
-      {openIndex !== null && <div className="language-comparison-content pt-[14px] px-4 pb-4 border-t border-t-(--border-primary) bg-(--bg-raised)" id={`${id}-${openIndex}`} role="region" aria-label={titles[openIndex]}>{panels[openIndex]}</div>}
+      {openIndex !== null && <div className="language-comparison-content pt-[14px] px-4 pb-4 border-t border-t-(--border-primary) bg-(--bg-raised) [&>div>:first-child]:mt-0! [&>div>:last-child]:mb-0!" id={`${id}-${openIndex}`} role="region" aria-label={titles[openIndex]}>{panels[openIndex]}</div>}
     </div>
   );
 }

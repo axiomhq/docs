@@ -32,9 +32,11 @@ const LazyAssistantPanel = dynamic(
   {
     ssr: false,
     loading: () => (
-      <section id="docs-assistant-panel" role="tabpanel" aria-labelledby="docs-assistant-tab" className="docs-assistant-panel">
-        <div className="docs-assistant-messages">
-          <div className="docs-assistant-working" role="status"><span /> Loading assistant…</div>
+      <section id="docs-assistant-panel" role="tabpanel" aria-labelledby="docs-assistant-tab" className="docs-assistant-panel min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas)">
+        <div className="docs-assistant-messages min-h-0 h-full overflow-y-auto pt-[22px] px-6 pb-7 overscroll-contain max-sm:pt-[18px] max-sm:px-[14px] max-sm:pb-6">
+          <div className="docs-assistant-working py-[7px] px-0 flex items-center gap-2 text-(--text-tertiary) font-mono text-[11px] leading-4 font-[450]" role="status">
+            <span className="size-1.5 flex-none border border-(--color-accent) animate-[docs-assistant-pulse_1s_ease-in-out_infinite] motion-reduce:animate-none motion-reduce:bg-(--color-accent)" /> Loading assistant…
+          </div>
         </div>
       </section>
     ),
