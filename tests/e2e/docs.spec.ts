@@ -291,7 +291,7 @@ test('table of contents tracks the active heading and keeps a transparent surfac
   const tocCode = codedTocLink.locator('code').first();
   await expect(tocCode).toHaveCSS('color', await codedTocLink.evaluate((element) => getComputedStyle(element).color));
   await expect(tocCode).toHaveCSS('font-size', await codedTocLink.evaluate((element) => getComputedStyle(element).fontSize));
-  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/docs/doc-assets/logo/favicon.svg?v=2');
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/docs/favicon.ico');
 });
 
 test('query reference navigation and MDX components follow the compact interaction model', async ({ page }) => {

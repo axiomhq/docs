@@ -31,7 +31,9 @@ export const metadata: Metadata = {
     template: '%s | Axiom Docs',
   },
   description: 'Learn how to send, store, and query logs, traces, metrics, and events with Axiom.',
-  icons: { icon: { url: '/docs/doc-assets/logo/favicon.svg?v=2', type: 'image/svg+xml' } },
+  // Same multi-res raster icon as www: Google Search's favicon crawler
+  // refetches favicon.ico and won't show an SVG-only icon.
+  icons: { icon: [{ url: '/docs/favicon.ico', sizes: 'any' }] },
   openGraph: { siteName: 'Axiom', type: 'website', locale: 'en_US' },
   twitter: { card: 'summary_large_image' },
 };
