@@ -15,6 +15,8 @@ import { withDocsBasePath, withoutDocsBasePath } from '@/lib/docs-paths';
 import { PlaceholderPre as InteractivePlaceholderPre } from './placeholder-code';
 import { HeadingAnchor } from './heading-anchor';
 import { LanguageComparisons } from './language-comparisons';
+import { Mermaid } from './mermaid';
+import { AppCard, AppCards } from './app-cards';
 
 // play.axiom.co links come in two shapes: runnable APL query links
 // (…/query?initForm=…) that render as the compact "Run in Playground" button
@@ -77,24 +79,50 @@ const NOTICE_ACCENT: Record<string, string> = {
 
 function Notice({ children, title, type = 'info' }: { children: ReactNode; title?: ReactNode; type?: 'info' | 'warn' | 'error' | 'success' | 'idea' }) {
   const accent = NOTICE_ACCENT[type] ?? `doc-notice-${type} [--notice-accent:var(--color-info)]`;
-  return <aside className={cn('doc-notice my-6 mx-0 py-[15px] px-4 border-l-3 border-l-(--notice-accent) rounded-[3px] bg-(--bg-inert) text-(--text-secondary) font-sans text-[14px] leading-[22px] font-[450] tracking-[-.005em]', accent)}>{title && <strong className="block mb-[5px] text-(--text-primary) font-semibold">{title}</strong>}<div>{children}</div></aside>;
+  return <aside className={cn('doc-notice my-6 mx-0 py-[15px] px-4 border-l-3 border-l-(--notice-accent) rounded-[3px] bg-(--bg-inert) text-(--text-secondary) font-sans text-[14px] leading-[22px] font-[450] tracking-[-.005em] [&_:where(p,ul,ol)]:m-0! [&_:is(p,ul,ol)+:is(p,ul,ol)]:mt-[14px]!', accent)}>{title && <strong className="block mb-[5px] text-(--text-primary) font-semibold">{title}</strong>}<div>{children}</div></aside>;
 }
 
+// Borderless media: the screenshot itself is the surface — no padded box.
+// Captions hang beneath with a └ tick, like an annotation off the image.
 function Frame({ children, caption }: { children: ReactNode; caption?: ReactNode }) {
-  return <figure className="doc-frame my-6 mx-0 p-2 border border-(--border-primary) rounded-[4px] bg-(--bg-surface)">{children}{caption && <figcaption className="pt-2 px-1 pb-[2px] text-(--text-quaternary) text-[12px]">{caption}</figcaption>}</figure>;
+  return (
+    <figure className="doc-frame my-6 mx-0 p-0 [&_img]:w-full [&_img]:rounded-[4px] [&_video]:w-full [&_video]:rounded-[4px]">
+      {children}
+      {caption && (
+        <figcaption className="mt-2 flex items-start gap-1.5 pl-1 text-(--text-quaternary) font-sans text-[12px] leading-[17px]">
+          <span aria-hidden="true" className="flex-none font-mono leading-[15px]">└</span>
+          <span className="min-w-0">{caption}</span>
+        </figcaption>
+      )}
+    </figure>
+  );
 }
 
 function CodeGroup({ children }: { children: ReactNode }) {
-  return <div className="code-group my-6 mx-0 overflow-hidden border border-(--border-primary) rounded-[4px]">{children}</div>;
+  return <div className="code-group my-6 mx-0 overflow-hidden border border-(--border-primary) rounded-[4px] [&>*]:m-0! [&>*]:border-0! [&>*]:rounded-none! [&>*]:border-b! [&>*]:border-b-(--border-primary)! [&>*:last-child]:border-b-0!">{children}</div>;
 }
 
+// Wrapped in the same restyle class as AccordionGroup — a bare <Accordions>
+// would fall through to fumadocs defaults plus the article's h3 typography
+// (heading-scale trigger with the prose heading margin trapped inside the box).
 function Accordion({ children, title }: { children: ReactNode; title: ReactNode }) {
-  return <Accordions type="single"><FumaAccordion title={title}>{children}</FumaAccordion></Accordions>;
+  return <div className={ACCORDION_GROUP_CLASS}><Accordions type="single"><FumaAccordion title={title}>{children}</FumaAccordion></Accordions></div>;
 }
+
+// Restyles fumadocs' Accordions internals; `!` where fumadocs' own classes
+// carry data-state variants that would otherwise outrank the wrapper variant.
+const ACCORDION_GROUP_CLASS = cn(
+  'accordion-group w-full my-3 mx-0',
+  '[&>div]:w-full [&>div]:m-0! [&>div]:overflow-hidden [&>div]:border! [&>div]:border-(--border-primary)! [&>div]:rounded-[4px]! [&>div]:bg-(--bg-surface)',
+  '[&_h3]:m-0!',
+  '[&_h3_button]:min-h-[34px] [&_h3_button]:py-[5px]! [&_h3_button]:px-[9px]! [&_h3_button]:gap-1.5! [&_h3_button]:text-(--text-secondary) [&_h3_button]:font-sans [&_h3_button]:text-[12px] [&_h3_button]:leading-4 [&_h3_button]:font-[550]',
+  '[&_h3_button:hover]:bg-(--bg-inert) [&_h3_button:hover]:text-(--text-primary)',
+  "[&_[data-state='open']>div]:pt-0.5! [&_[data-state='open']>div]:px-2.5! [&_[data-state='open']>div]:pb-2.5!",
+);
 
 function AccordionGroup({ children }: { children: ReactNode }) {
   const items = Children.toArray(children).filter(isValidElement) as ReactElement<{ children?: ReactNode; title?: ReactNode }>[];
-  return <div className="accordion-group"><Accordions type="single">{items.map((item, index) => <FumaAccordion key={index} title={item.props.title}>{item.props.children}</FumaAccordion>)}</Accordions></div>;
+  return <div className={ACCORDION_GROUP_CLASS}><Accordions type="single">{items.map((item, index) => <FumaAccordion key={index} title={item.props.title}>{item.props.children}</FumaAccordion>)}</Accordions></div>;
 }
 
 function QueryLanguageComparisons({ children }: { children: ReactNode }) {
@@ -102,10 +130,30 @@ function QueryLanguageComparisons({ children }: { children: ReactNode }) {
   return <LanguageComparisons titles={items.map((item) => textOf(item.props.title))}>{items.map((item, index) => <div key={index}>{item.props.children}</div>)}</LanguageComparisons>;
 }
 
+// Restyles fumadocs' Tabs internals. The `!` markers mirror the rules this
+// replaces: fumadocs styles the same properties with data/aria variants.
+// Hover is scoped to :not([aria-selected=true]) because the hover and selected
+// colour rules tie on specificity — unscoped, emit order would decide.
+const DOCS_TABS_CLASS = cn(
+  'docs-tabs my-5 mx-0',
+  '[&>div]:m-0! [&>div]:overflow-hidden [&>div]:border! [&>div]:border-(--border-primary)! [&>div]:rounded-[4px]! [&>div]:bg-(--bg-surface)!',
+  "[&_[role='tablist']]:min-h-[38px] [&_[role='tablist']]:py-0! [&_[role='tablist']]:px-2.5! [&_[role='tablist']]:items-stretch [&_[role='tablist']]:gap-0.5! [&_[role='tablist']]:border-b [&_[role='tablist']]:border-b-(--border-primary) [&_[role='tablist']]:bg-(--bg-surface)",
+  "[&_[role='tab']]:relative [&_[role='tab']]:py-0! [&_[role='tab']]:px-2! [&_[role='tab']]:border-0! [&_[role='tab']]:text-(--text-quaternary)! [&_[role='tab']]:font-mono! [&_[role='tab']]:text-[11px]! [&_[role='tab']]:leading-4! [&_[role='tab']]:font-medium!",
+  "[&_[role='tab']:hover:not([aria-selected='true'])]:text-(--text-secondary)!",
+  "[&_[role='tab'][aria-selected='true']]:text-(--text-primary)!",
+  "[&_[role='tab'][aria-selected='true']]:after:absolute [&_[role='tab'][aria-selected='true']]:after:right-2 [&_[role='tab'][aria-selected='true']]:after:-bottom-px [&_[role='tab'][aria-selected='true']]:after:left-2 [&_[role='tab'][aria-selected='true']]:after:h-0.5 [&_[role='tab'][aria-selected='true']]:after:bg-(--color-accent) [&_[role='tab'][aria-selected='true']]:after:content-['']",
+  "[&_[role='tabpanel']]:pt-[14px]! [&_[role='tabpanel']]:px-4! [&_[role='tabpanel']]:pb-4! [&_[role='tabpanel']]:rounded-none! [&_[role='tabpanel']]:bg-(--bg-raised)!",
+  "[&_[role='tabpanel']>*]:my-0! [&_[role='tabpanel']>*+*]:mt-[11px]!",
+  '[&_:is(figure[data-rehype-pretty-code-figure],figure.shiki)]:rounded-[4px]! [&_:is(figure[data-rehype-pretty-code-figure],figure.shiki)]:shadow-none!',
+  // Re-override the article's table-wrap margin (its :has() selector is more
+  // specific than the generic panel child rules above).
+  "[&_[role='tabpanel']>div.relative.overflow-auto:has(>table)]:mt-[11px]! [&_[role='tabpanel']>div.relative.overflow-auto:has(>table)]:mb-0!",
+);
+
 function Tabs({ children }: { children: ReactNode }) {
   const tabs = Children.toArray(children).filter(isValidElement) as ReactElement<{ title?: string; value?: string }>[];
   const items = tabs.map((tab, index) => tab.props.title ?? `Tab ${index + 1}`);
-  return <div className="docs-tabs"><FumaTabs items={items}>{tabs.map((tab, index) => cloneElement(tab, { ...tab.props, value: items[index] }))}</FumaTabs></div>;
+  return <div className={DOCS_TABS_CLASS}><FumaTabs items={items}>{tabs.map((tab, index) => cloneElement(tab, { ...tab.props, value: items[index] }))}</FumaTabs></div>;
 }
 
 function containsPlaygroundLink(node: ReactNode): boolean {
@@ -115,12 +163,23 @@ function containsPlaygroundLink(node: ReactNode): boolean {
   return Children.toArray(props.children).some(containsPlaygroundLink);
 }
 
+// Overlays the "Run in Playground" pill and the copy button on the code block's
+// top-right corner; the copy button sits left of the pill and gets a backdrop
+// so it stays legible over code.
+const QUERY_EXAMPLE_CLASS = cn(
+  'query-example relative mt-[11px]',
+  '[&>figure]:m-0!',
+  '[&>p:has(>.playground-link)]:absolute [&>p:has(>.playground-link)]:z-2 [&>p:has(>.playground-link)]:top-[7px] [&>p:has(>.playground-link)]:right-2 [&>p:has(>.playground-link)]:m-0!',
+  "[&_figure>div:has(>button[aria-label='Copy_Text'])]:top-[7px]! [&_figure>div:has(>button[aria-label='Copy_Text'])]:right-[164px]! [&_figure>div:has(>button[aria-label='Copy_Text'])]:size-6",
+  "[&_figure_button[aria-label='Copy_Text']]:size-6 [&_figure_button[aria-label='Copy_Text']]:border [&_figure_button[aria-label='Copy_Text']]:border-(--border-primary) [&_figure_button[aria-label='Copy_Text']]:rounded-[3px] [&_figure_button[aria-label='Copy_Text']]:bg-[color-mix(in_srgb,var(--bg-canvas)_88%,transparent)]",
+);
+
 function Tab({ children, value }: { children: ReactNode; title?: string; value?: string }) {
   const content: ReactNode[] = [];
   Children.toArray(children).forEach((child, index) => {
     if (containsPlaygroundLink(child) && content.length > 0) {
       const query = content.pop();
-      content.push(<div className="query-example relative mt-[11px]" key={`query-${index}`}>{query}{child}</div>);
+      content.push(<div className={QUERY_EXAMPLE_CLASS} key={`query-${index}`}>{query}{child}</div>);
       return;
     }
     content.push(child);
@@ -187,6 +246,9 @@ export const mdxComponents: MDXComponents = {
   Frame,
   Icon,
   Info,
+  Mermaid,
+  AppCard,
+  AppCards,
   Note: (props) => <Notice {...props} type="info" />,
   Tip: (props) => <Notice {...props} type="idea" />,
   Warning,

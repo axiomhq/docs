@@ -23,6 +23,7 @@ export const FA_TO_LUCIDE = {
   'ellipsis-vertical': 'EllipsisVertical',
   function: 'SquareFunction',
   gear: 'Settings',
+  hexagon: 'Hexagon',
   house: 'House',
   'pen-to-square': 'SquarePen',
   pencil: 'Pencil',
