@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { CopyButton } from './copy-button';
 import { ApiCodeBlock, type ApiCodeSample } from './api-code-block';
 import { ApiTryIt, type ApiTryItParameter } from './api-try-it';
-import { getApiOperation, resolveSchema, schemaExample } from '@/lib/openapi';
+import { getApiOperation, operationRequiresAuth, resolveSchema, schemaExample } from '@/lib/openapi';
 
 // OpenAPI documents are heterogeneous recursive JSON objects.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,19 +92,24 @@ function SchemaTable({ document, rows, label }: { document: JsonObject; rows: Sc
   );
 }
 
-function requestSamples(method: string, requestUrl: string, bodyType: string | undefined, bodyExample: unknown) {
+function requestSamples(method: string, requestUrl: string, bodyType: string | undefined, bodyExample: unknown, requiresAuth: boolean) {
   const upperMethod = method.toUpperCase();
   const json = bodyType ? JSON.stringify(bodyExample, null, 2) : undefined;
-  const curl = [`curl -X ${upperMethod} '${requestUrl}'`, `  -H 'Authorization: Bearer API_TOKEN'`, ...(bodyType ? [`  -H 'Content-Type: ${bodyType}'`, `  -d '${JSON.stringify(bodyExample)}'`] : [])].join(' \\\n');
+  const curl = [`curl -X ${upperMethod} '${requestUrl}'`, ...(requiresAuth ? [`  -H 'Authorization: Bearer API_TOKEN'`] : []), ...(bodyType ? [`  -H 'Content-Type: ${bodyType}'`, `  -d '${JSON.stringify(bodyExample)}'`] : [])].join(' \\\n');
+  const javascriptHeaders = [
+    ...(requiresAuth ? [`    Authorization: 'Bearer API_TOKEN',`] : []),
+    ...(bodyType ? [`    'Content-Type': '${bodyType}',`] : []),
+  ];
   const javascriptOptions = [
     `  method: '${upperMethod}',`,
-    `  headers: {`,
-    `    Authorization: 'Bearer API_TOKEN',`,
-    ...(bodyType ? [`    'Content-Type': '${bodyType}',`] : []),
-    `  },`,
+    ...(javascriptHeaders.length ? [`  headers: {`, ...javascriptHeaders, `  },`] : []),
     ...(json ? [`  body: JSON.stringify(${json.replace(/\n/g, '\n  ')}),`] : []),
   ];
   const javascript = [`const response = await fetch('${requestUrl}', {`, ...javascriptOptions, `});`, ``, `const data = await response.json();`].join('\n');
+  const pythonHeaders = [
+    ...(requiresAuth ? [`'Authorization': 'Bearer API_TOKEN'`] : []),
+    ...(bodyType ? [`'Content-Type': '${bodyType}'`] : []),
+  ];
   const python = [
     ...(json ? [`import json`] : []),
     `import requests`,
@@ -112,7 +117,7 @@ function requestSamples(method: string, requestUrl: string, bodyType: string | u
     `response = requests.request(`,
     `    '${upperMethod}',`,
     `    '${requestUrl}',`,
-    `    headers={'Authorization': 'Bearer API_TOKEN'${bodyType ? `, 'Content-Type': '${bodyType}'` : ''}},`,
+    ...(pythonHeaders.length ? [`    headers={${pythonHeaders.join(', ')}},`] : []),
     ...(json ? [`    json=json.loads('''${json}'''),`] : []),
     `)`,
     `response.raise_for_status()`,
@@ -130,7 +135,7 @@ function requestSamples(method: string, requestUrl: string, bodyType: string | u
     `func main() {`,
     `    req, err := http.NewRequest("${upperMethod}", "${requestUrl}", ${goBody})`,
     `    if err != nil { panic(err) }`,
-    `    req.Header.Set("Authorization", "Bearer API_TOKEN")`,
+    ...(requiresAuth ? [`    req.Header.Set("Authorization", "Bearer API_TOKEN")`] : []),
     ...(bodyType ? [`    req.Header.Set("Content-Type", "${bodyType}")`] : []),
     ``,
     `    res, err := http.DefaultClient.Do(req)`,
@@ -175,7 +180,8 @@ export async function ApiOperation({ value, children }: { value: string; childre
   const concretePath = displayPath.replace(/\{([^}]+)\}/g, (_, name) => name.toUpperCase().replace(/-/g, '_'));
   const requestUrl = baseUrl ? new URL(path.replace(/^\//, '').replace(/\{([^}]+)\}/g, (_, name) => name.toUpperCase().replace(/-/g, '_')), baseUrl).toString() : concretePath;
   const bodyExample = bodyType ? schemaExample(document, bodySchema) : undefined;
-  const requestCodeSamples = await highlightedSamples(requestSamples(method, requestUrl, bodyType, bodyExample));
+  const requiresAuth = operationRequiresAuth(document, operation);
+  const requestCodeSamples = await highlightedSamples(requestSamples(method, requestUrl, bodyType, bodyExample, requiresAuth));
   const parameterRows: SchemaRow[] = parameters.map((parameter: JsonObject) => ({
     key: `${parameter.in}-${parameter.name}`,
     name: parameter.name,
@@ -208,7 +214,7 @@ export async function ApiOperation({ value, children }: { value: string; childre
     {children}
     {parameters.length > 0 && <section className="api-section" id="parameters"><h2>Parameters <a href="#parameters">#</a></h2><SchemaTable document={document} rows={parameterRows} label="Request parameters" /></section>}
     {bodyContent && <section className="api-section" id="body"><h2>Body <a href="#body">#</a></h2><p className="api-section-copy"><PlainMarkdown value={resolveSchema(document, bodySchema)?.description ?? operation.requestBody?.description} /></p><div className="media-types">{Object.keys(bodyContent).map((type) => <code key={type}>{type}</code>)}</div><SchemaTable document={document} rows={bodyRows} label="Request body schema" /></section>}
-    <section className="api-section" id="example"><h2>Request <a href="#example">#</a></h2><ApiCodeBlock samples={requestCodeSamples} /><ApiTryIt operation={value} method={method} parameters={tryParameters} serverVariables={serverVariables} bodyType={bodyType} bodyExample={bodyExample} /></section>
+    <section className="api-section" id="example"><h2>Request <a href="#example">#</a></h2><ApiCodeBlock samples={requestCodeSamples} /><ApiTryIt operation={value} method={method} parameters={tryParameters} serverVariables={serverVariables} bodyType={bodyType} bodyExample={bodyExample} requiresAuth={requiresAuth} /></section>
     {responseEntries.length > 0 && <section className="api-section" id="response"><h2>Response <a href="#response">#</a></h2>{responseEntries.map(([code, response]) => <div className="api-response" key={code}><div><span className={/^2/.test(code) ? 'status-dot success' : 'status-dot error'} /><code>{code}</code><span>{response.description}</span></div>{response.content && <small>{Object.keys(response.content).join(', ')}</small>}</div>)}{responseSchema && <SchemaTable document={document} rows={responseRows} label="Response schema" />}</section>}
   </div>;
 }
