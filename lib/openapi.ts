@@ -83,6 +83,11 @@ export function getApiOperationSections(value: string): ApiOperationSection[] {
   ];
 }
 
+export function operationRequiresAuth(document: JsonObject, operation: JsonObject): boolean {
+  const security = (operation.security ?? document.security) as unknown[] | undefined;
+  return !security || security.length > 0;
+}
+
 export function schemaExample(document: JsonObject, input: JsonObject | undefined, depth = 0): unknown {
   const schema = resolveSchema(document, input);
   if (!schema || depth > 4) return null;

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getApiOperation, resolveSchema } from '@/lib/openapi';
+import { getApiOperation, operationRequiresAuth, resolveSchema } from '@/lib/openapi';
 import { limitRequest } from '@/lib/request-rate-limit';
 import { isPersonalAccessToken } from '@/lib/token';
 
@@ -64,14 +64,17 @@ export async function POST(request: Request) {
   }
 
   if (typeof input.operation !== 'string') return error('A documented API operation is required.');
-  if (typeof input.token !== 'string' || !input.token.trim()) return error('Enter an API token before running the request.');
-  if (input.token.length > 4096) return error('The API token is too long.');
-  const personalToken = isPersonalAccessToken(input.token);
-  if (personalToken && (typeof input.orgId !== 'string' || !input.orgId.trim())) {
-    return error('Enter your organization ID when using a personal access token.');
-  }
   const data = getApiOperation(input.operation);
   if (!data) return error('This API operation is not available.');
+
+  const requiresAuth = operationRequiresAuth(data.document, data.operation);
+  const token = typeof input.token === 'string' ? input.token.trim() : '';
+  if (requiresAuth && !token) return error('Enter an API token before running the request.');
+  if (token.length > 4096) return error('The API token is too long.');
+  const personalToken = isPersonalAccessToken(token);
+  if (requiresAuth && personalToken && (typeof input.orgId !== 'string' || !input.orgId.trim())) {
+    return error('Enter your organization ID when using a personal access token.');
+  }
 
   const parameterValues = stringRecord(input.parameters);
   const serverValues = stringRecord(input.serverVariables);
@@ -118,7 +121,8 @@ export async function POST(request: Request) {
     }
   }
 
-  const headers = new Headers({ Authorization: `Bearer ${input.token.trim()}`, Accept: '*/*' });
+  const headers = new Headers({ Accept: '*/*' });
+  if (token) headers.set('Authorization', `Bearer ${token}`);
   if (contentType && body !== undefined) headers.set('Content-Type', contentType);
   if (personalToken && typeof input.orgId === 'string' && input.orgId.trim()) headers.set('X-Axiom-Org-Id', input.orgId.trim());
 
