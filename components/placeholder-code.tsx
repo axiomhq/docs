@@ -1,6 +1,8 @@
 'use client';
 
 import { isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { cn } from '@/lib/utils';
+import { ChevronDown } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 import { CodeBlock, Pre } from 'fumadocs-ui/components/codeblock';
 import { captureDocsEvent } from '@/lib/docs-analytics';
@@ -18,6 +20,9 @@ type Values = Partial<Record<FieldKey, string>>;
 
 const fieldKeys = Object.keys(fields) as FieldKey[];
 const trackedFields = new Set<FieldKey>();
+
+// `.placeholder-config input, .placeholder-config select` in globals.css.
+const placeholderControlClass = 'min-w-0 h-8 px-2.5 py-0 border border-(--border-primary) rounded-[4px] outline-none text-(--text-secondary) bg-(--bg-canvas) font-mono text-[12px] leading-4 font-normal focus:border-(--color-accent) focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-accent)_18%,transparent)]';
 
 function placeholderPattern() {
   return new RegExp(`\\b(${fieldKeys.join('|')})\\b`, 'g');
@@ -97,10 +102,10 @@ export function PlaceholderPre({ source: sourceProp, ...props }: ComponentProps<
 
   return <>
     <CodeBlock ref={codeBlockRef} {...props}><Pre>{props.children}</Pre></CodeBlock>
-    {hydrated && usedFields.length > 0 && <div className="placeholder-config ph-no-capture" aria-label="Customize this example" data-ph-no-capture>
+    {hydrated && usedFields.length > 0 && <div className="placeholder-config ph-no-capture mt-0 mx-0 mb-6 py-[14px] px-4 flex flex-col gap-2.5 border-x border-b border-(--border-primary) rounded-t-none rounded-b-[4px] bg-(--bg-inert)" aria-label="Customize this example" data-ph-no-capture>
       {usedFields.map((key) => {
         const field = fields[key];
-        return <label key={key}><span>{field.label}</span>{'options' in field ? <select value={values[key] ?? ''} onChange={(event) => update(key, event.target.value)}>{field.options.map((option) => <option value={option} key={option}>{option || 'Select edge deployment'}</option>)}</select> : <input value={values[key] ?? ''} placeholder={field.placeholder} autoComplete="off" data-1p-ignore data-ph-no-capture onChange={(event) => update(key, event.target.value)} />}</label>;
+        return <label className="grid grid-cols-[110px_1fr] items-center gap-3 text-(--text-tertiary) font-sans text-[12px] leading-4 font-medium max-sm:grid-cols-[1fr] max-sm:gap-[5px]" key={key}><span>{field.label}</span>{'options' in field ? <span className="relative min-w-0"><select className={cn(placeholderControlClass, 'w-full appearance-none pr-8')} value={values[key] ?? ''} onChange={(event) => update(key, event.target.value)}>{field.options.map((option) => <option value={option} key={option}>{option || 'Select edge deployment'}</option>)}</select><ChevronDown size={14} aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-(--text-quaternary)" /></span> : <input className={cn(placeholderControlClass, 'font-mono! text-[12px]! leading-4! font-normal!')} value={values[key] ?? ''} placeholder={field.placeholder} autoComplete="off" data-1p-ignore data-ph-no-capture onChange={(event) => update(key, event.target.value)} />}</label>;
       })}
     </div>}
   </>;

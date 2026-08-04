@@ -12,8 +12,37 @@ import { getAdjacentNavigation, getBreadcrumbs, getNavigation, getSection } from
 import { ogImage } from '@/lib/og';
 import { pageGraph, structuredDataProps } from '@/lib/structured-data';
 import { source } from '@/lib/source';
+import './doc-prose.css';
+import { cn } from '@/lib/utils';
 
 type PageProps = { params: Promise<{ slug?: string[] }> };
+
+// The reading column is shifted left of centre so the fixed table of contents on the
+// right does not push the measure off-axis; the shift is dropped once the sidebar
+// collapses into a drawer at 1240px.
+const DOC_ARTICLE_CLASS = 'doc-article w-[min(768px,100%)] my-0 mx-auto translate-x-[-130px] max-xl:translate-x-0';
+
+// The trail renders in the brand orange, so hover signals with an underline
+// instead of a colour change. `[&:hover]` rather than `hover:` — Tailwind v4
+// wraps `hover:` in `@media (hover: hover)`, which would drop the state on touch.
+// decoration-current: the base `a:hover` element default recolours underlines
+// to --text-primary, which reads as a stray white line under the orange trail.
+const BREADCRUMB_LINK_CLASS = '[&:hover]:underline [&:hover]:underline-offset-[3px] [&:hover]:decoration-current';
+
+const DOC_TITLE_CLASS = 'm-0 text-(--text-primary) font-sans text-[34px] leading-[42px] font-semibold tracking-[-.03em] text-balance';
+const QUERY_SYNTAX_TITLE_CLASS = 'query-syntax-title m-0 text-(--text-primary) font-(family-name:--font-query) text-[32px] leading-10 font-semibold tracking-normal text-balance [font-variant-ligatures:none]';
+
+// Lede tracks the body text size (--docs-type-size 16px / 1.75); it stays
+// distinct through colour and the wider margin, not scale.
+const DOC_LEDE_CLASS = 'max-w-[640px] mt-1.5 mb-[34px] mx-0 text-(--text-tertiary) font-sans text-[16px] leading-7 font-normal tracking-[-.006em] text-pretty';
+
+// Article typography lives in ./doc-prose.css — one nested, unlayered
+// stylesheet scoped under .doc-prose (see that file for why it is unlayered).
+const DOC_PROSE_CLASS = 'doc-prose';
+
+// Function and operator links render in the query face on syntax pages.
+const QUERY_SYNTAX_PROSE_CLASS =
+  "[&_a:is([href*='/scalar-functions/'],[href*='/aggregation-functions/'],[href*='/operators/'])]:font-(family-name:--font-query) [&_a:is([href*='/scalar-functions/'],[href*='/aggregation-functions/'],[href*='/operators/'])]:[font-variant-ligatures:none] [&_a:is([href*='/scalar-functions/'],[href*='/aggregation-functions/'],[href*='/operators/'])]:tracking-normal";
 
 export default async function DocumentationPage({ params }: PageProps) {
   const { slug } = await params;
@@ -58,25 +87,25 @@ export default async function DocumentationPage({ params }: PageProps) {
           }),
         )}
       />
-      <div className="article-layout">
-        <article className={querySyntaxTitle ? 'doc-article query-syntax-article' : 'doc-article'}>
-          <div className="doc-topline">
-            <nav className="doc-breadcrumbs" aria-label="Breadcrumb">
+      <div className="article-layout relative min-h-[calc(100vh_-_56px)] pt-14 pb-24 px-[clamp(32px,6vw,96px)] max-md:px-9 max-sm:pt-9 max-sm:pb-18 max-sm:px-5">
+        <article className={querySyntaxTitle ? `${DOC_ARTICLE_CLASS} query-syntax-article` : DOC_ARTICLE_CLASS}>
+          <div className="doc-topline mt-0 mx-0 mb-5 flex items-start justify-between gap-x-4 gap-y-2">
+            <nav className="doc-breadcrumbs m-0 flex flex-wrap gap-x-2 gap-y-1 text-(--color-accent-text) font-mono text-[12px] leading-4 font-[450]" aria-label="Breadcrumb">
               {visibleBreadcrumbs.map((item, index) => {
                 const last = index === visibleBreadcrumbs.length - 1;
                 return (
-                  <span className="doc-breadcrumb" key={`${item.title}-${index}`}>
-                    {item.href ? <Link href={item.href} prefetch={false}>{item.title}</Link> : <span>{item.title}</span>}
-                    {!last && <b aria-hidden="true">/</b>}
+                  <span className="doc-breadcrumb inline-flex gap-2 min-w-0" key={`${item.title}-${index}`}>
+                    {item.href ? <Link href={item.href} prefetch={false} className={BREADCRUMB_LINK_CLASS}>{item.title}</Link> : <span>{item.title}</span>}
+                    {!last && <b aria-hidden="true" className="text-(--border-strong) font-normal">/</b>}
                   </span>
                 );
               })}
             </nav>
             {!page.data.openapi && <CopyPageMenu markdownPath={`${href}.md`} />}
           </div>
-          <DocsTitle className={querySyntaxTitle ? 'query-syntax-title' : undefined}>{page.data.title}</DocsTitle>
-          <DocsDescription>{page.data.description}</DocsDescription>
-          <DocsBody>
+          <DocsTitle className={querySyntaxTitle ? QUERY_SYNTAX_TITLE_CLASS : DOC_TITLE_CLASS}>{page.data.title}</DocsTitle>
+          <DocsDescription className={DOC_LEDE_CLASS}>{page.data.description}</DocsDescription>
+          <DocsBody className={cn(DOC_PROSE_CLASS, querySyntaxTitle && QUERY_SYNTAX_PROSE_CLASS)}>
             {page.data.openapi ? <ApiOperation value={page.data.openapi}><Body components={mdxComponents} /></ApiOperation> : <Body components={mdxComponents} />}
           </DocsBody>
           <ArticleFooter

@@ -20,7 +20,7 @@ export function CopyButton({
   const [copied, setCopied] = useState(false);
   return (
     <button
-      className="copy-button"
+      className="copy-button ml-auto p-1 inline-flex items-center gap-1.5 border-0 text-(--text-quaternary) bg-transparent cursor-pointer font-mono! text-[11px]! leading-4! font-[450]! hover:text-(--text-primary)"
       type="button"
       aria-label={`${label} to clipboard`}
       onClick={async () => {

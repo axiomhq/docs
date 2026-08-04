@@ -1,7 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
+
+// Was `.floating-toc a` / `.floating-toc a.active` (+ its ::before marker). The
+// colour and weight are split across the two branches rather than layered, so
+// the active state never depends on stylesheet ordering to win.
+//
+// Every colour carries `!` because the unlayered `a { color: inherit }` in
+// app/globals.css outranks anything Tailwind emits into `@layer utilities`;
+// without it all three states would collapse to the inherited body colour.
+// Hover uses `[&:hover]` rather than `hover:` so it is not gated behind
+// `@media (hover: hover)`, matching the unconditional rule it replaces.
+const TOC_LINK =
+  'relative block py-[5px] overflow-hidden font-sans text-[13px] leading-[17px] tracking-[-.006em] text-ellipsis whitespace-nowrap transition-[color] duration-150 ease-[ease] [&:hover]:text-(--text-primary)!';
+const TOC_LINK_IDLE = 'text-(--text-quaternary)! font-[450]';
+const TOC_LINK_ACTIVE =
+  "active text-(--text-primary)! font-[550] before:absolute before:left-px before:top-1/2 before:-translate-y-1/2 before:w-[5px] before:h-[9px] before:bg-current before:content-['']";
 
 export type TocItem = {
   title: ReactNode;
@@ -49,19 +65,26 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
   }, [items]);
 
   return (
-    <aside className="floating-toc" aria-label="On this page">
-      <strong>On this page</strong>
-      {items.map((item) => (
-        <a
-          className={item.url === activeUrl ? 'active' : undefined}
-          aria-current={item.url === activeUrl ? 'location' : undefined}
-          href={item.url}
-          key={item.url}
-          style={{ paddingLeft: 10 + Math.max(0, item.depth - 2) * 10 }}
-        >
-          {item.title}
-        </a>
-      ))}
+    <aside
+      className="floating-toc fixed right-8 top-[112px] z-20 flex w-[210px] max-h-[calc(100vh_-_144px)] flex-col p-0 bg-transparent max-xl:hidden [&_a_code]:text-inherit! [&_a_code]:[font-size:inherit]"
+      aria-label="On this page"
+    >
+      {/* The heading stays outside the scroller so the scroll-fade mask never
+          dims it — only the link list scrolls and fades at its edges. */}
+      <strong className="block mb-[9px] flex-none text-(--text-tertiary) font-mono text-[11px] leading-[14px] font-semibold tracking-[.08em] uppercase">On this page</strong>
+      <div className="min-h-0 flex-1 overflow-auto scroll-fade-t scroll-fade-b">
+        {items.map((item) => (
+          <a
+            className={cn(TOC_LINK, item.url === activeUrl ? TOC_LINK_ACTIVE : TOC_LINK_IDLE)}
+            aria-current={item.url === activeUrl ? 'location' : undefined}
+            href={item.url}
+            key={item.url}
+            style={{ paddingLeft: 10 + Math.max(0, item.depth - 2) * 10 }}
+          >
+            {item.title}
+          </a>
+        ))}
+      </div>
     </aside>
   );
 }

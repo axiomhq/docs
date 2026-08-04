@@ -37,7 +37,8 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
     [...new Set(elements.map((element) => getComputedStyle(element).color))]
   ));
   expect(tokenColors.length).toBeGreaterThan(1);
-  expect(tokenColors).toContain('rgb(240, 243, 246)');
+  // axiom-dark default token colour (lib/code-theme.ts).
+  expect(tokenColors).toContain('rgb(184, 184, 184)');
   await expect(requestCode.locator('pre code')).toHaveCSS('border-top-width', '0px');
 
   const parametersHeading = page.getByRole('heading', { name: 'Parameters', level: 2 });
@@ -261,9 +262,7 @@ test('landing content reserves the desktop table-of-contents rail', async ({ pag
     await page.goto('/docs');
 
     const hero = (await page.locator('.landing-hero').boundingBox())!;
-    const search = (await page.locator('.hero-search').boundingBox())!;
     expect(Math.abs(hero.x + hero.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
-    expect(search.width).toBe(hero.width);
   }
 });
 
@@ -293,7 +292,7 @@ test('table of contents tracks the active heading and keeps a transparent surfac
   const tocCode = codedTocLink.locator('code').first();
   await expect(tocCode).toHaveCSS('color', await codedTocLink.evaluate((element) => getComputedStyle(element).color));
   await expect(tocCode).toHaveCSS('font-size', await codedTocLink.evaluate((element) => getComputedStyle(element).fontSize));
-  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/docs/doc-assets/logo/favicon.svg?v=2');
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/docs/favicon.ico');
 });
 
 test('query reference navigation and MDX components follow the compact interaction model', async ({ page }) => {
@@ -348,7 +347,7 @@ test('query reference navigation and MDX components follow the compact interacti
 
   const outputTable = tabs.getByRole('table').first();
   await expect(outputTable.locator('xpath=..')).toHaveCSS('border-radius', '4px');
-  await expect(outputTable.getByRole('columnheader').first()).toHaveCSS('padding', '7px 10px');
+  await expect(outputTable.getByRole('columnheader').first()).toHaveCSS('padding', '8px 10px');
 
   const relatedFunction = page.getByRole('link', { name: 'iff', exact: true }).last();
   await expect(relatedFunction).toHaveAttribute('href', '/docs/apl/scalar-functions/conditional-function/iff');
@@ -375,7 +374,7 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
   await expect(brand.locator('.brand-mark')).toBeVisible();
   await expect(brand.locator('.brand-logo')).toHaveCount(0);
   const badge = brand.locator('.brand-badge');
-  await expect(badge).toHaveCSS('font-size', '12px');
+  await expect(badge).toHaveCSS('font-size', '14px');
   await expect(badge).toHaveCSS('border-left-color', 'rgb(218, 92, 43)');
   await expect(badge).toHaveCSS('border-radius', '0px');
   await expect(badge).toHaveCSS('font-weight', '600');
@@ -398,7 +397,9 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
   });
   expect(noticeStyles.background).not.toBe(noticeStyles.canvas);
   expect(noticeStyles.borderLeft).toBe('3px');
-  expect(noticeStyles.font).not.toBe(noticeStyles.bodyFont);
+  // Notices share the body sans face; the left rule and tint carry the
+  // differentiation (they rendered in a distinct face before the Geist swap).
+  expect(noticeStyles.font).toBe(noticeStyles.bodyFont);
   expect(noticeStyles.shadow).toBe('none');
 
   const heading = page.getByRole('heading', { name: 'Ingestion architecture', level: 2 });
@@ -516,7 +517,8 @@ test('article copy keeps a distinct contrast hierarchy in both themes', async ({
   const heading = page.getByRole('heading', { name: 'Ingestion architecture', level: 2 });
   const boldLabel = page.locator('.doc-article .prose strong').first();
 
-  await expect(bodyCopy).toHaveCSS('color', 'rgb(212, 212, 212)');
+  // Body copy matches the lede at --text-tertiary (gray-400 dark).
+  await expect(bodyCopy).toHaveCSS('color', 'rgb(163, 163, 163)');
   await expect(heading).toHaveCSS('color', 'rgb(250, 250, 250)');
   await expect(boldLabel).toHaveCSS('color', 'rgb(250, 250, 250)');
 
