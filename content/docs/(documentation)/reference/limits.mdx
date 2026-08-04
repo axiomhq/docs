@@ -55,7 +55,7 @@ The following limits are applied to all accounts, irrespective of the pricing pl
 
 ### Limits on ingested data
 
-The table below summarizes the limits Axiom applies to each data ingest. These limits are independent of your pricing plan.
+The table below summarizes the limits Axiom applies to each data ingest. These limits are independent of your pricing plan. For metrics, see [Limits on ingested metrics](#limits-on-ingested-metrics).
 
 |                              | Limit     |
 | ---------------------------- | --------- |
@@ -71,6 +71,25 @@ If you try to ingest data that exceeds these limits, Axiom does the following:
     - NaN
     - +Infty
     - -Infty
+
+### Limits on ingested metrics
+
+The limits below apply to OpenTelemetry metrics that you send to the `/v1/metrics` endpoint. They’re separate from the event ingest limits above and independent of your pricing plan.
+
+|                                | Limit                       |
+| ------------------------------ | --------------------------- |
+| Maximum request size           | 4 MiB (4,194,304 bytes)     |
+| Maximum metric name length     | 256 bytes                   |
+| Maximum attribute name length  | 256 bytes                   |
+| Maximum attribute value length | 1 KiB (1,024 bytes)         |
+
+The maximum request size applies to the uncompressed payload. Axiom accepts gzip, zstd, brotli, and deflate compression, and compressing requests reduces the bandwidth you use. Axiom checks the request size after decompressing the request, so compression doesn’t allow you to send more data in a single request.
+
+If a request exceeds the maximum request size, Axiom rejects it with the HTTP status code `413`. The OpenTelemetry Collector treats this status code as a permanent error, so it drops the batch instead of retrying it.
+
+To keep requests within the limit, use the `batch` processor in your OpenTelemetry Collector configuration and set `send_batch_max_size`. Whether a given batch size stays within 4 MiB depends on the number of attributes that your data points carry. If you receive `413` responses, reduce `send_batch_max_size`. For an example configuration, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
+
+If a metric name or an attribute exceeds the limits above, Axiom doesn’t reject the whole request. It responds with the HTTP status code `200` and an OpenTelemetry `partial_success` message that reports the number of rejected data points.
 
 ### Special fields
 
