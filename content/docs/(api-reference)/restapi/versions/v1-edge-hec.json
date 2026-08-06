@@ -1,0 +1,365 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "Splunk HTTP Event Collector (HEC) compatible ingest API, served from the edge deployment.",
+    "title": "Axiom HEC",
+    "termsOfService": "http://axiom.co/terms",
+    "contact": {
+      "name": "Axiom support team",
+      "url": "https://axiom.co",
+      "email": "hello@axiom.co"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://hec.{axiom-domain}/"
+    }
+  ],
+  "paths": {
+    "/services/collector/event": {
+      "post": {
+        "security": [
+          {
+            "Auth": [
+              "ingest|create"
+            ]
+          }
+        ],
+        "tags": [
+          "hec"
+        ],
+        "operationId": "ingestHecEvent",
+        "summary": "Ingest Splunk HEC events",
+        "description": "Ingest one or more Splunk HEC event envelopes. Bodies may contain multiple envelopes, concatenated or newline-delimited. The target dataset is resolved from the `index` query parameter, then the `index` field of the first event, then the dataset the token is scoped to when it grants ingest access to exactly one dataset.",
+        "parameters": [
+          {
+            "description": "The dataset (Splunk index) to ingest into. Overrides the `index` field in the event envelope.",
+            "name": "index",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HecEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The events were accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request could not be processed. The `code` field identifies the Splunk error: `5` (no data), `6` (invalid data format), or `7` (incorrect index).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-limit-requests": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/services/collector": {
+      "post": {
+        "security": [
+          {
+            "Auth": [
+              "ingest|create"
+            ]
+          }
+        ],
+        "tags": [
+          "hec"
+        ],
+        "operationId": "ingestHecCollector",
+        "summary": "Ingest Splunk HEC events (alias)",
+        "description": "Alias of `/services/collector/event`. Accepts the same event envelopes and parameters.",
+        "parameters": [
+          {
+            "description": "The dataset (Splunk index) to ingest into. Overrides the `index` field in the event envelope.",
+            "name": "index",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HecEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The events were accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request could not be processed. The `code` field identifies the Splunk error: `5` (no data), `6` (invalid data format), or `7` (incorrect index).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-limit-requests": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/services/collector/raw": {
+      "post": {
+        "security": [
+          {
+            "Auth": [
+              "ingest|create"
+            ]
+          }
+        ],
+        "tags": [
+          "hec"
+        ],
+        "operationId": "ingestHecRaw",
+        "summary": "Ingest raw Splunk HEC events",
+        "description": "Ingest a raw payload. Each line of a `text/plain` body becomes an event; JSON bodies are also accepted. Event metadata is supplied through query parameters rather than an envelope.",
+        "parameters": [
+          {
+            "description": "The dataset (Splunk index) to ingest into.",
+            "name": "index",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The sourcetype to attach to every event in the request.",
+            "name": "sourcetype",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The source to attach to every event in the request.",
+            "name": "source",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The host to attach to every event in the request.",
+            "name": "host",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "text/plain": {
+              "schema": {
+                "description": "Raw event data. Each line becomes a separate event.",
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "description": "A JSON payload to ingest as a single event.",
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The events were accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request could not be processed. The `code` field identifies the Splunk error: `5` (no data), `6` (invalid data format), or `7` (incorrect index).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-limit-requests": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/services/collector/health": {
+      "get": {
+        "security": [],
+        "tags": [
+          "hec"
+        ],
+        "operationId": "getHecHealth",
+        "summary": "Check HEC health",
+        "description": "Report whether the collector is available and accepting data. No authentication is required. A healthy collector responds with HEC code `17`.",
+        "responses": {
+          "200": {
+            "description": "The collector is healthy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/services/collector/health/1.0": {
+      "get": {
+        "security": [],
+        "tags": [
+          "hec"
+        ],
+        "operationId": "getHecHealthVersioned",
+        "summary": "Check HEC health (versioned)",
+        "description": "Versioned alias of `/services/collector/health`. No authentication is required.",
+        "responses": {
+          "200": {
+            "description": "The collector is healthy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "Auth": {
+        "description": "Authenticate using an API token with ingest permission. HEC clients typically send the token in the Splunk scheme: `Authorization: Splunk <token>`. The Bearer scheme (`Authorization: Bearer <token>`) and HTTP Basic (`x:<token>`) are also accepted. For more information, see [Tokens](/reference/tokens).",
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+            "tokenUrl": "https://www.googleapis.com/oauth2/v4/token",
+            "scopes": {}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "HecEvent": {
+        "description": "A Splunk HEC event envelope.",
+        "type": "object",
+        "properties": {
+          "event": {
+            "description": "The event payload. When an object, its keys become top-level fields of the Axiom event. When a string, it is stored in the `_raw` field.",
+            "example": {
+              "message": "hello from HEC",
+              "severity": "INFO"
+            }
+          },
+          "fields": {
+            "description": "Additional fields merged into the event.",
+            "type": "object"
+          },
+          "time": {
+            "description": "The event timestamp, as epoch seconds, epoch milliseconds, or an RFC 3339 string. When omitted, Axiom assigns the ingest time.",
+            "example": "2024-01-07T12:00:00Z"
+          },
+          "index": {
+            "description": "The dataset (Splunk index) to ingest into. The `index` query parameter takes precedence.",
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "sourcetype": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "event": {
+            "message": "hello from HEC",
+            "severity": "INFO"
+          },
+          "sourcetype": "httpevent"
+        }
+      },
+      "HecStatus": {
+        "description": "The Splunk HEC status envelope.",
+        "type": "object",
+        "required": [
+          "text",
+          "code"
+        ],
+        "properties": {
+          "text": {
+            "description": "A human-readable status message.",
+            "type": "string",
+            "example": "Success"
+          },
+          "code": {
+            "description": "The Splunk status code. `0` indicates success, `17` indicates a healthy collector, and `5`, `6`, and `7` indicate no data, invalid data format, and incorrect index respectively.",
+            "type": "integer",
+            "example": 0
+          }
+        }
+      }
+    }
+  }
+}
