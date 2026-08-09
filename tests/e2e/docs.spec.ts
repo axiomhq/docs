@@ -450,6 +450,19 @@ test('deep documentation pages cap the breadcrumb at the first two ancestors', a
   await expect(breadcrumbs.getByRole('link')).toHaveCount(2);
 });
 
+test('breadcrumbs align with the copy page control', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/docs/dashboard-elements/pie-chart');
+
+  const breadcrumbs = page.getByRole('navigation', { name: 'Breadcrumb' });
+  const breadcrumbTextBox = await breadcrumbs.locator('.doc-breadcrumb').first().boundingBox();
+  const copyPageBox = await page.locator('.copy-page').boundingBox();
+  expect(breadcrumbTextBox).not.toBeNull();
+  expect(copyPageBox).not.toBeNull();
+  expect(Math.abs(breadcrumbTextBox!.y + breadcrumbTextBox!.height / 2 - (copyPageBox!.y + copyPageBox!.height / 2))).toBeLessThanOrEqual(1);
+  await expect(breadcrumbs).toHaveCSS('font-weight', '550');
+});
+
 test('the copy page menu offers the Markdown surface and assistant links', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.setViewportSize({ width: 1440, height: 900 });
