@@ -1,13 +1,15 @@
 ---
-title: 'How federated search works'
-description: 'Learn how Axiom implements Splunk federated search, how work is divided between Axiom and the Splunk search head, and how to choose a mode.'
+title: 'How the Splunk Portal works'
+description: 'Learn how the Axiom Splunk Portal implements Splunk federated search, how work is divided between Axiom and the Splunk search head, and how to choose a mode.'
 sidebarTitle: How it works
-keywords: ['splunk', 'federated search', 'federated provider', 'pushdown', 'transparent mode', 'standard mode', 'spl']
+keywords: ['splunk', 'splunk portal', 'federated search', 'federated provider', 'pushdown', 'transparent mode', 'standard mode', 'spl']
 ---
 
-Federated search makes Axiom datasets appear as ordinary Splunk indexes. Anyone who knows SPL, or just knows how to click around Splunk dashboards, can search petabyte-scale Axiom data from their existing Splunk search head, live and with exact results.
+The Axiom Splunk Portal makes Axiom datasets appear as ordinary Splunk indexes. Anyone who knows SPL, or just knows how to click around Splunk dashboards, can search petabyte-scale Axiom data from their existing Splunk search head, live and with exact results.
 
-Axiom implements the remote side of Splunk’s federated search protocol, the same protocol Splunk uses between its own deployments. Your Splunk search head registers Axiom as a federated provider and treats it like a remote Splunk peer. Axiom translates the dispatched work into its own queries, runs them, and streams results back in Splunk’s native result format. No data is copied into Splunk, and nothing is installed on the search head.
+The Portal implements the remote side of Splunk’s federated search protocol, the same protocol Splunk uses between its own deployments. Your Splunk search head registers the Portal as a federated provider and treats it like a remote Splunk peer. The Portal translates the dispatched work into Axiom queries, runs them inside Axiom, and streams results back in Splunk’s native result format. No data is copied into Splunk, and nothing is installed on the search head.
+
+A Portal is an Axiom integration that speaks another tool’s own remote-data protocol, so Axiom appears natively inside that tool. The Splunk Portal is the first of the family.
 
 ```mermaid
 sequenceDiagram
@@ -23,18 +25,18 @@ sequenceDiagram
 
 ## Where the work happens
 
-The defining feature of federated search with Axiom is **pushdown**: the expensive parts of a search run inside Axiom, next to the data.
+The defining feature of the Splunk Portal is **pushdown**: the expensive parts of a search run inside Axiom, next to the data.
 
 - **Pushed down to Axiom.** Filters, projections, and aggregations are translated and computed inside Axiom. A `stats count` over a billion events scans the data in Axiom and returns a handful of rows to Splunk. Pushed-down aggregations are exact at any dataset size, not sampled, and include `stats`, `timechart`, `chart`, `top`, `rare`, and `tstats`.
 - **Run on the search head.** Streaming and transforming commands like `eval`, `rex`, `dedup`, and `transaction` run on the Splunk search head over the events Axiom returns, identical to how Splunk works with its own remote peers. Everything behaves like native SPL because it is native SPL.
 
-This split means the Splunk search head’s limits stop mattering for anything except raw event retrieval. Aggregation results are effectively unbounded because they’re computed in Axiom. For the exact command-by-command breakdown, see [SPL command support](/splunk/federated-search/spl-support).
+This split means the Splunk search head’s limits stop mattering for anything except raw event retrieval. Aggregation results are effectively unbounded because they’re computed in Axiom. For the exact command-by-command breakdown, see [SPL command support](/splunk/portal/spl-support).
 
-Axiom never degrades results silently. Whenever a result is trimmed or estimated, the search shows a WARN or INFO banner explaining what happened, and per-search Axiom metrics appear in Splunk’s Job Inspector. For details, see [Monitor and troubleshoot](/splunk/federated-search/troubleshoot).
+The Portal never degrades results silently. Whenever a result is trimmed or estimated, the search shows a WARN or INFO banner explaining what happened, and per-search Axiom metrics appear in Splunk’s Job Inspector. For details, see [Monitor and troubleshoot](/splunk/portal/troubleshoot).
 
 ## Two modes
 
-Splunk federated search has two modes, and Axiom supports both.
+Splunk federated search has two modes, and the Portal supports both.
 
 **Standard mode** maps each Axiom dataset to a federated index that users address as `index=federated:<name>`. It’s explicit, simple to reason about, and the recommended starting point. Each dataset you expose is mapped once by a Splunk admin.
 
@@ -65,24 +67,24 @@ If you use Splunk Enterprise Security, choose transparent mode. Splunk doesn’t
 </Note>
 
 <Warning>
-Use one mode per Splunk deployment. Registering both a standard and a transparent provider against the same Axiom endpoint yields inconsistent results. This is a general caveat of Splunk federated search, not specific to Axiom.
+Use one mode per Splunk deployment. Registering both a standard and a transparent provider against the same Portal endpoint yields inconsistent results. This is a general caveat of Splunk federated search, not specific to Axiom.
 </Warning>
 
 ## Supported Splunk versions
 
-Axiom verifies federated search against Splunk Enterprise 9.0 through 10.4 in both modes. Splunk Enterprise 9.0 or later is recommended.
+Axiom verifies the Splunk Portal against Splunk Enterprise 9.0 through 10.4 in both modes. Splunk Enterprise 9.0 or later is recommended.
 
-Splunk Cloud Platform is supported in standard mode on the Victoria Experience, which all new Splunk Cloud instances use. To check which experience your environment uses, see [Determine your Splunk Cloud Platform Experience](https://help.splunk.com/en/splunk-cloud-platform/administer/admin-manual/10.5.2605/get-started-managing-splunk-cloud-platform/determine-your-splunk-cloud-platform-experience) in the Splunk documentation.
+The Portal supports Splunk Cloud Platform in standard mode on the Victoria Experience, which all new Splunk Cloud instances use. To check which experience your environment uses, see [Determine your Splunk Cloud Platform Experience](https://help.splunk.com/en/splunk-cloud-platform/administer/admin-manual/10.5.2605/get-started-managing-splunk-cloud-platform/determine-your-splunk-cloud-platform-experience) in the Splunk documentation.
 
 ## Security model
 
-- The connection is always initiated by your Splunk search head over HTTPS. Axiom never connects into your network.
+- The connection is always initiated by your Splunk search head over HTTPS. The Portal never connects into your network.
 - Splunk authenticates with an Axiom API token that needs only query permissions on the datasets you choose to expose. Reads only, no ingest or management access.
 - Revoking the token immediately removes Splunk’s access. For more information, see [Tokens](/reference/tokens).
 
 ## What’s next
 
-- [Set up standard mode](/splunk/federated-search/set-up-standard)
-- [Set up transparent mode](/splunk/federated-search/set-up-transparent)
-- [SPL command support](/splunk/federated-search/spl-support)
-- [Examples](/splunk/federated-search/examples)
+- [Set up standard mode](/splunk/portal/set-up-standard)
+- [Set up transparent mode](/splunk/portal/set-up-transparent)
+- [SPL command support](/splunk/portal/spl-support)
+- [Examples](/splunk/portal/examples)

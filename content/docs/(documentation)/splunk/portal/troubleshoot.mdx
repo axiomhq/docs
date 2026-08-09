@@ -1,11 +1,11 @@
 ---
-title: 'Monitor and troubleshoot federated search'
+title: 'Monitor and troubleshoot the Splunk Portal'
 description: 'Learn how to read Axiom metrics in the Splunk Job Inspector, what each search banner means, and how to resolve common issues.'
 sidebarTitle: Monitor and troubleshoot
-keywords: ['splunk', 'federated search', 'troubleshooting', 'job inspector', 'banners', 'authentication', 'test connection']
+keywords: ['splunk', 'splunk portal', 'federated search', 'troubleshooting', 'job inspector', 'banners', 'authentication', 'test connection']
 ---
 
-Federated search never degrades silently. Every degraded path surfaces a visible banner on the search job, and every search reports Axiom-side metrics in Splunk’s Job Inspector. Start there.
+The Splunk Portal never degrades silently. Every degraded path surfaces a visible banner on the search job, and every search reports Axiom-side metrics in Splunk’s Job Inspector. Start there.
 
 ## Inspect a search
 
@@ -24,7 +24,7 @@ Banners on federated searches are prefixed with `[axiom,<provider>]`.
 | Banner | Meaning | What to do |
 | --- | --- | --- |
 | `Axiom: aggregation pushed down (N events aggregated at the source)` | INFO. The aggregation ran inside Axiom, and results are exact regardless of size. | Nothing. This is the good path. |
-| `Axiom: aggregation computed over sampled events (provider row cap reached)…` | WARN. A command that runs on the search head needed more events than the row cap. | Narrow the time range or filters, or use a pushed-down function. See [SPL command support](/splunk/federated-search/spl-support). |
+| `Axiom: aggregation computed over sampled events (provider row cap reached)…` | WARN. A command that runs on the search head needed more events than the row cap. | Narrow the time range or filters, or use a pushed-down function. See [SPL command support](/splunk/portal/spl-support). |
 | `Axiom: results truncated…` | WARN. Raw event retrieval hit the row cap. | Narrow the search, or add `fields` or filters so more rows fit. |
 | `Axiom: one or more fields are not present in the dataset…` | INFO. A filter referenced a field the dataset doesn’t have. Splunk semantics: no matches. | Check the field name against the dataset schema. |
 | `Axiom authentication failed…` | FATAL. Axiom rejected the credential. | Set the provider’s service account password to the token value, the string starting with `xaat-`, not the token’s name. Check the token isn’t expired or revoked. |
@@ -34,7 +34,7 @@ Banners on federated searches are prefixed with `[axiom,<provider>]`.
 ## Common issues
 
 **Test connection succeeds, but searches report an authentication failure.**
-Splunk’s **Test connection** verifies DNS, TLS, protocol compatibility, and that a credential reached Axiom, but it doesn’t run a query. A well-formed but expired, revoked, or mistyped token can pass the test. Run `index=federated:<name> | stats count` as the real credential check. If it shows the authentication banner, replace the service account password with the token value. The most common cause is entering the token’s name instead of the `xaat-` token string.
+Splunk’s **Test connection** verifies DNS, TLS, protocol compatibility, and that a credential reached the Portal, but it doesn’t run a query. A well-formed but expired, revoked, or mistyped token can pass the test. Run `index=federated:<name> | stats count` as the real credential check. If it shows the authentication banner, replace the service account password with the token value. The most common cause is entering the token’s name instead of the `xaat-` token string.
 
 **A search returns 0 rows, but the data exists.**
 Check the time range first: the search’s `earliest` and `latest` are applied to the Axiom query as-is. Then check the field name. Dotted names must be quoted in SPL: `"service.name"=frontend`. A bare `index=` search with a bad credential can also look like an empty result. Run `| stats count` to surface any authentication banner.
@@ -46,7 +46,7 @@ Continuously ingesting datasets see new data between runs. Compare with identica
 Bins of one day and longer align to the provider’s configured time zone, UTC by default. This mirrors native Splunk, where a provider bins in its own time zone and the search head doesn’t re-bin. Sub-day spans are timezone-independent and never need attention. [Contact Axiom](https://axiom.co/contact) to align daily bins to your users’ time zone.
 
 **A lookup or data model doesn’t work.**
-Lookups and data models require [transparent mode](/splunk/federated-search/set-up-transparent). Scripted, external, and KV store lookups can’t run on any federated provider. CSV lookups work fully.
+Lookups and data models require [transparent mode](/splunk/portal/set-up-transparent). Scripted, external, and KV store lookups can’t run on any federated provider. CSV lookups work fully.
 
 **Results look inconsistent across searches.**
 Check that only one mode is registered. Pointing a standard and a transparent provider at the same endpoint yields inconsistent results. Use one mode per deployment.
