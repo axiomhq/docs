@@ -2,6 +2,7 @@ import v1 from '@/content/docs/(api-reference)/restapi/versions/v1.json';
 import v2 from '@/content/docs/(api-reference)/restapi/versions/v2.json';
 import edgeIngest from '@/content/docs/(api-reference)/restapi/versions/v1-edge-ingest.json';
 import edgeQuery from '@/content/docs/(api-reference)/restapi/versions/v1-edge-query.json';
+import edgeHec from '@/content/docs/(api-reference)/restapi/versions/v1-edge-hec.json';
 
 // OpenAPI documents are heterogeneous recursive JSON objects.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,6 +13,7 @@ const documents: Record<string, JsonObject> = {
   v2,
   'v1-edge-ingest': edgeIngest,
   'v1-edge-query': edgeQuery,
+  'v1-edge-hec': edgeHec,
 };
 
 export type ApiOperationData = {

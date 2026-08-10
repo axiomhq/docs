@@ -16,6 +16,16 @@ describe('OpenAPI migration', () => {
     expect(schemaExample(endpoint.document, schema)).toMatchObject({ ingested: 2, failed: 0 });
   });
 
+  it('resolves the edge HEC endpoint reference and status schema', () => {
+    const endpoint = getApiOperation('v1-edge-hec post /services/collector/event');
+    expect(endpoint?.method).toBe('post');
+    expect(endpoint?.displayPath).toBe('/services/collector/event');
+    expect(endpoint?.operation.operationId).toBe('ingestHecEvent');
+
+    const schema = endpoint!.operation.responses['200'].content['application/json'].schema;
+    expect(schemaExample(endpoint!.document, schema)).toMatchObject({ text: 'Success', code: 0 });
+  });
+
   it('unwraps array responses and chained schema references', () => {
     const endpoint = getApiOperation('v2 get /dashboards')!;
     const responseSchema = endpoint.operation.responses['200'].content['application/json'].schema;
