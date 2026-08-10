@@ -34,10 +34,11 @@ Every SPL command falls into one of three states when it runs against Axiom data
 | `count`, `count(f)` | Pushed down | Including the top-N pattern `stats count by X \| sort \| head N` |
 | `sum`, `avg`, `mean`, `min`, `max`, `range` | Pushed down | Numeric and string fields. `min` and `max` compare strings lexicographically, matching Splunk |
 | `stdev`, `stdevp`, `var`, `varp` | Pushed down | |
-| `first`, `last`, `earliest`, `latest` | Pushed down | |
+| `first`, `last`, `earliest`, `latest` | Pushed down | Events lacking the field are skipped, matching Splunk. `first` and `last` follow stream order, which native Splunk doesn’t guarantee to be time order either. Use `earliest` and `latest` for time-deterministic endpoints |
 | `values`, `dc`, `distinct_count`, `estdc`, `mode` | Pushed down | Exact up to 50,000 distinct values per group, with a WARN beyond that. See [Limits](#limits) |
-| `median`, `perc<N>`, `exactperc`, `upperperc` | Pushed down | Exact up to 50,000 distinct values per group, with a WARN beyond that |
-| `list` | Pushed down | Newest-first, capped like native Splunk |
+| `exactperc<N>` | Pushed down | Exact and deterministic, computed from the exact value multiset shipped to the search head. Exact up to 50,000 distinct values per group, with a WARN beyond that |
+| `median`, `perc<N>`, `upperperc` | Pushed down | Approximate on native Splunk too: Splunk’s percentile estimator is digest-based and order-dependent. The provider ships an exact value histogram, and the search head’s estimator does the rest. Use `exactperc<N>` when exactness matters |
+| `list` | Pushed down | Capped like native Splunk. Member order follows stream order, which native Splunk doesn’t guarantee either. Apply `mvsort` when a deterministic order matters |
 | Multiple aggregations in one `stats` | Pushed down | Any mix of the above, for example `stats count avg(x) min(kind) median(dur) by user` |
 | `by` with multiple fields | Pushed down | Events lacking a group key are excluded, matching Splunk semantics |
 
@@ -45,9 +46,11 @@ Every SPL command falls into one of three states when it runs against Axiom data
 
 | Command | Support | Notes |
 | --- | --- | --- |
-| `timechart [span=X] <aggs>` | Pushed down | Automatic spans follow Splunk’s ladder. Same aggregation support as `stats` |
+| `timechart [span=X] <aggs>` | Pushed down | Automatic spans follow Splunk’s ladder. Same aggregation support as `stats`. Series options `limit`, `useother`, `usenull`, and `cont` are supported. `bins` and `minspan` fall back to the search head |
 | `timechart … by K` | Pushed down | Single split field. Null keys become `"NULL"`, matching Splunk |
 | `chart <aggs> by K` | Pushed down | `chart … over X by Y` falls back to the search head |
+| `bin _time span=X` before `stats` | Pushed down | The bin folds into the aggregation’s group key, timezone-aligned for spans of one day and longer, like `timechart` |
+| `bin` and `bucket` with `span=N` on other fields | Pushed down | Applied per event before the search head finalizes. Numeric bins render Splunk’s `lo-hi` range labels |
 | `bin` and `bucket` options `aligntime` and log spans | Search head | |
 | `top [N] f`, `rare [N] f` | Pushed down | Forms with a `by` clause fall back to the search head |
 | `tstats count WHERE … BY …` | Pushed down | Simple forms. Exotic options fall back to the search head |
@@ -66,7 +69,7 @@ Multivalue fields are first-class: array-valued Axiom fields arrive as real Splu
 | --- | --- |
 | Event timestamps | Full sub-second precision is preserved end to end, so trace-level event ordering is correct, not floored to whole seconds. `_subsecond` is populated alongside `_time` |
 | `timechart` bins of one day and longer | Aligned to the provider’s configured time zone, UTC by default, including daylight saving time transitions. Sub-day spans are timezone-independent. This mirrors how a native Splunk provider bins in its own time zone |
-| Raw retrieval | Searches bounded by their own `head N` return exact results in a single response. Unbounded raw searches stream, so response size is bounded by your search head rather than by the provider |
+| Raw retrieval | Searches bounded by their own `head N` return exact results in a single response, honored up to 100,000 events within the response byte budget. Unbounded raw searches stream, so response size is bounded by your search head rather than by the provider |
 
 ## Transparent mode knowledge objects
 
@@ -78,7 +81,7 @@ Transparent mode providers replicate the search head’s knowledge bundle to the
 | Automatic lookups | Supported | Applied per matching sourcetype, source, or host stanza, invisibly, like a native indexer |
 | `\| datamodel X search`, `\| pivot` | Supported | Splunk pre-expands these into plain SPL before dispatch |
 | `tag=`, `eventtype=` | Supported | Pre-expanded by the search head |
-| `tstats count FROM datamodel=X BY X.f` | Pushed down | Exact counts at any scale. Aggregations other than `count` fall back to the search head |
+| `tstats <aggs> FROM datamodel=X BY X.f` | Pushed down | `count`, `sum`, `avg`, `dc`, `values`, `min`, `max`, and more push down with exact results at any scale. Fields that can’t be mapped fall back to the search head |
 | `\| inputlookup` | Search head | Splunk never dispatches it to a provider. It reads the search head’s own lookup tables |
 | Data model acceleration with `summariesonly=true` | Pushed down | Treated as live compute. Results are exact, just not read from a pre-built summary |
 | KV store, external, and scripted lookups | Not supported | These execute code inside a Splunk instance, so no federated provider can run them. CSV lookups, the common case, work fully |
@@ -87,7 +90,7 @@ Transparent mode providers replicate the search head’s knowledge bundle to the
 
 There are two genuine limits, and both come from outside the Portal. Everything else is either a bounded estimate that warns when reached, or standard Splunk behavior.
 
-**Raw event retrieval is size-bounded.** When you pull individual events rather than an aggregation, the response is bounded by what your Splunk search head accepts. The defaults are 20,000 events or about 40 MB per search. When a result is trimmed, the search shows a WARN banner. This affects raw retrieval only: aggregations are computed inside Axiom and stay exact at any dataset size. Adding `fields` or narrowing filters lets more rows fit.
+**Raw event retrieval is size-bounded.** When you pull individual events rather than an aggregation, the response is bounded by what your Splunk search head accepts. The default budget is 20,000 events or about 40 MB per search, and an explicit `head N` is honored beyond the default, up to 100,000 events, with the byte budget applying first. When a search delivers fewer events than requested, a banner names the budget that was reached. This affects raw retrieval only: aggregations are computed inside Axiom and stay exact at any dataset size. Keeping fewer columns with `fields` or narrowing filters lets more events fit.
 
 **Scripted, external, and KV store lookups can’t run.** They execute code inside a Splunk instance. CSV lookups work fully.
 
