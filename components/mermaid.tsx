@@ -36,8 +36,12 @@ function axiomThemeVariables(dark: boolean) {
 }
 
 // Injected into the rendered SVG. The SVG is inline in the page, so CSS
-// variables resolve and flip with data-theme like everything else.
-const THEME_CSS = `
+// variables resolve and flip with data-theme like everything else. Light
+// canvases wash the brand tints out, so they get a stronger mix than dark.
+function themeCss(dark: boolean) {
+  const fill = dark ? '8%' : '15%';
+  const stroke = dark ? '62%' : '80%';
+  return `
   .node rect, .cluster rect { rx: 4px; ry: 4px; }
   .nodeLabel { font-weight: 450; letter-spacing: -.01em; padding: 2px 4px; line-height: 1.35; }
   .cluster-label span, .cluster-label .nodeLabel, .cluster-label text {
@@ -45,25 +49,60 @@ const THEME_CSS = `
   }
   .edgePaths path { stroke-width: 1.25px; }
   .marker { stroke-width: 1px; }
-  .node[data-axiom-brand] rect, .node[data-axiom-brand] path {
-    stroke: color-mix(in srgb, var(--color-accent) 62%, transparent);
-    fill: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  .node[data-axiom-brand] rect, .node[data-axiom-brand] path,
+  .node.axiom rect, .node.axiom path {
+    stroke: color-mix(in srgb, var(--color-accent) ${stroke}, transparent);
+    fill: color-mix(in srgb, var(--color-accent) ${fill}, transparent);
   }
   /* Mermaid inlines colours on the nested label elements, so descendants and
      !important are both needed for the brand label to win. */
-  .node[data-axiom-brand] .nodeLabel, .node[data-axiom-brand] .nodeLabel * {
+  .node[data-axiom-brand] .nodeLabel, .node[data-axiom-brand] .nodeLabel *,
+  .node.axiom .nodeLabel, .node.axiom .nodeLabel * {
     color: var(--color-accent-text) !important; font-weight: 600;
   }
+  /* Charts opt nodes into product colours with :::axiom / :::splunk. The green
+     scale flips with data-theme, so both modes stay readable. */
+  .node.splunk rect, .node.splunk path {
+    stroke: color-mix(in srgb, var(--green-9) ${stroke}, transparent);
+    fill: color-mix(in srgb, var(--green-9) ${fill}, transparent);
+  }
+  .node.splunk .nodeLabel, .node.splunk .nodeLabel * {
+    color: var(--green-11) !important; font-weight: 600;
+  }
+  /* Sequence-diagram actors, tagged by name in tagBrandNodes. Mermaid styles
+     actors through id-scoped selectors, so !important is needed to win. */
+  g[data-brand="axiom"] rect.actor {
+    stroke: color-mix(in srgb, var(--color-accent) ${stroke}, transparent) !important;
+    fill: color-mix(in srgb, var(--color-accent) ${fill}, transparent) !important;
+  }
+  g[data-brand="axiom"] text.actor, g[data-brand="axiom"] text.actor tspan {
+    fill: var(--color-accent-text) !important; font-weight: 600;
+  }
+  g[data-brand="splunk"] rect.actor {
+    stroke: color-mix(in srgb, var(--green-9) ${stroke}, transparent) !important;
+    fill: color-mix(in srgb, var(--green-9) ${fill}, transparent) !important;
+  }
+  g[data-brand="splunk"] text.actor, g[data-brand="splunk"] text.actor tspan {
+    fill: var(--green-11) !important; font-weight: 600;
+  }
 `;
+}
 
 // Nodes labelled exactly "Axiom" are the product in an architecture diagram;
-// pick them out in the brand accent.
-function tagAxiomNodes(svg: string): string {
+// pick them out in the brand accent. Sequence-diagram actors have no :::class
+// syntax, so they're tagged by name instead: an actor named after either
+// product gets that product's colour.
+function tagBrandNodes(svg: string): string {
   const doc = new DOMParser().parseFromString(svg, 'text/html');
   const root = doc.body.querySelector('svg');
   if (!root) return svg;
   for (const label of root.querySelectorAll('.nodeLabel')) {
     if (label.textContent?.trim() === 'Axiom') label.closest('.node')?.setAttribute('data-axiom-brand', '');
+  }
+  for (const actor of root.querySelectorAll('text.actor')) {
+    const name = actor.textContent?.trim().toLowerCase() ?? '';
+    const brand = name.includes('axiom') ? 'axiom' : name.includes('splunk') ? 'splunk' : null;
+    if (brand) actor.closest('g')?.setAttribute('data-brand', brand);
   }
   return root.outerHTML;
 }
@@ -93,7 +132,7 @@ export function Mermaid({ chart }: { chart: string }) {
           theme: 'base',
           darkMode: dark,
           themeVariables: axiomThemeVariables(dark),
-          themeCSS: THEME_CSS,
+          themeCSS: themeCss(dark),
           flowchart: {
             curve: 'basis',
             padding: 10,
@@ -102,11 +141,14 @@ export function Mermaid({ chart }: { chart: string }) {
             // Clear the uppercase title off the first node row.
             subGraphTitleMargin: { top: 8, bottom: 16 },
           },
+          // Actor boxes are sized from mermaid's own font metrics, which run
+          // narrower than the mono stack; widen so names don't overflow.
+          sequence: { width: 180 },
         });
         const rendered = await mermaid.render(id, chart.replaceAll('\\n', '\n'));
         if (cancelled) return;
         setFailed(false);
-        setSvg(tagAxiomNodes(rendered.svg));
+        setSvg(tagBrandNodes(rendered.svg));
         if (containerRef.current) rendered.bindFunctions?.(containerRef.current);
       } catch (error) {
         // Leave the source readable rather than an empty frame when the chart
