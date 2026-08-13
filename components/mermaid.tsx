@@ -26,8 +26,14 @@ function axiomThemeVariables(dark: boolean) {
     // Edges and labels. Edges keep one literal grey across themes; it reads as
     // chrome on both canvases and matches the reviewed diagram style.
     lineColor: '#575757',
+    signalColor: '#575757',
     textColor: token('--text-secondary'),
     edgeLabelBackground: token('--bg-canvas'),
+    // Sequence-diagram notes default to mermaid's yellow sticky; keep them on
+    // the same quiet surfaces as everything else.
+    noteBkgColor: token('--bg-inert'),
+    noteBorderColor: token('--border-primary'),
+    noteTextColor: token('--text-secondary'),
     // Secondary/tertiary shapes fall back to quiet surfaces.
     secondaryColor: token('--bg-inert'),
     secondaryBorderColor: token('--border-primary'),
@@ -57,7 +63,9 @@ function themeCss(dark: boolean) {
   .cluster-label span, .cluster-label .nodeLabel, .cluster-label text {
     text-transform: uppercase; font-size: 10px; font-weight: 600; letter-spacing: .09em;
   }
-  .edgePaths path { stroke-width: 1.25px; stroke-linecap: round; }
+  /* Scoped to normal edges so ==> thick links keep their weight. */
+  .edgePaths path { stroke-linecap: round; }
+  .edgePaths path.edge-thickness-normal { stroke-width: 1.25px; }
   .marker { stroke-width: 1px; }
   .node[data-axiom-brand] rect, .node[data-axiom-brand] path,
   .node.axiom rect, .node.axiom path {
@@ -153,18 +161,33 @@ function orthogonalizeEdges(root: SVGSVGElement, radius = 10) {
   const boxes = nodeBoxes(root);
   const nearBox = (p: [number, number], b: Box) =>
     p[0] >= b.x - 4 && p[0] <= b.x + b.w + 4 && p[1] >= b.y - 4 && p[1] <= b.y + b.h + 4;
+  const boxList = [...boxes.values()];
+  type Pt = [number, number];
   type Edge = {
     path: SVGPathElement;
-    s: [number, number];
-    e: [number, number];
+    s: Pt;
+    e: Pt;
     sd: 'h' | 'v';
     ed: 'h' | 'v';
     sdSign: number;
     edSign: number;
     dstBox?: Box;
+    pairKey?: string;
   };
   const edges: Edge[] = [];
-  for (const path of root.querySelectorAll<SVGPathElement>('.edgePaths path')) {
+  const paths = [...root.querySelectorAll<SVGPathElement>('.edgePaths path')];
+  // Where mermaid centred each edge's label, captured before any rewrite so
+  // labels can be re-matched to their edge afterwards. DOM order is not a
+  // reliable pairing between .edgeLabel and path elements.
+  const origMids = paths.map((p): Pt | null => {
+    try {
+      const pt = p.getPointAtLength(p.getTotalLength() / 2);
+      return [pt.x, pt.y];
+    } catch {
+      return null;
+    }
+  });
+  for (const path of paths) {
     const d = path.getAttribute('d') ?? '';
     // Absolute move/line commands only; anything else (curves, relative
     // commands) is not a plain polyline and is left as rendered.
@@ -206,7 +229,27 @@ function orthogonalizeEdges(root: SVGSVGElement, radius = 10) {
           ? [edSign > 0 ? dstBox.x : dstBox.x + dstBox.w, dstBox.y + dstBox.h / 2]
           : [dstBox.x + dstBox.w / 2, edSign > 0 ? dstBox.y : dstBox.y + dstBox.h];
     }
-    edges.push({ path, s, e, sd, ed, sdSign, edSign, dstBox });
+    edges.push({ path, s, e, sd, ed, sdSign, edSign, dstBox, pairKey: ends ? [ends[1], ends[2]].sort().join('|') : undefined });
+  }
+  // Opposite-direction (or duplicate) edges between the same two nodes
+  // collapse onto one line once both are snapped to border centres; shift
+  // each of the pair off-centre so they run parallel instead.
+  const byPair = new Map<string, Edge[]>();
+  for (const edge of edges) {
+    if (edge.pairKey) byPair.set(edge.pairKey, [...(byPair.get(edge.pairKey) ?? []), edge]);
+  }
+  for (const group of byPair.values()) {
+    if (group.length < 2) continue;
+    for (const [i, edge] of group.entries()) {
+      const off = (i - (group.length - 1) / 2) * 18;
+      if (edge.sd === 'h') {
+        edge.s = [edge.s[0], edge.s[1] + off];
+        edge.e = [edge.e[0], edge.e[1] + off];
+      } else {
+        edge.s = [edge.s[0] + off, edge.s[1]];
+        edge.e = [edge.e[0] + off, edge.e[1]];
+      }
+    }
   }
   // Arrowheads: the marker tip extends 4px past the path end (viewBox 10 wide
   // at scale 0.8, ref point at its middle), which buries it inside the target
@@ -247,6 +290,23 @@ function orthogonalizeEdges(root: SVGSVGElement, radius = 10) {
       }
     }
   }
+  // Several edges assigned to the same top/bottom border would still fuse
+  // into one arrow; fan them out along the border instead. Side anchors are
+  // left alone: those overlaps are the deliberate merge junctions.
+  const byEntry = new Map<string, Edge[]>();
+  for (const edge of edges) {
+    if (edge.ed !== 'v' || !edge.dstBox) continue;
+    const key = `${edge.e[0].toFixed(0)},${edge.e[1].toFixed(0)}`;
+    byEntry.set(key, [...(byEntry.get(key) ?? []), edge]);
+  }
+  for (const group of byEntry.values()) {
+    if (group.length < 2) continue;
+    group.sort((a, b) => a.s[0] - b.s[0]);
+    const gap = Math.min(14, (group[0].dstBox!.w - 8) / group.length);
+    for (const [i, edge] of group.entries()) {
+      edge.e = [edge.e[0] + (i - (group.length - 1) / 2) * gap, edge.e[1]];
+    }
+  }
   for (const edge of edges) {
     if (edge.path.getAttribute('marker-end')) {
       if (edge.ed === 'h') edge.e = [edge.e[0] - edge.edSign * inset, edge.e[1]];
@@ -257,20 +317,79 @@ function orthogonalizeEdges(root: SVGSVGElement, radius = 10) {
       else edge.s = [edge.s[0], edge.s[1] + edge.sdSign * inset];
     }
   }
-  for (const { path, s, e, sd, ed } of edges) {
-    let route: [number, number][];
-    if (sd === 'h' && ed === 'h') {
-      const mx = (s[0] + e[0]) / 2;
-      route = Math.abs(s[1] - e[1]) < 2 ? [s, e] : [s, [mx, s[1]], [mx, e[1]], e];
-    } else if (sd === 'v' && ed === 'v') {
-      const my = (s[1] + e[1]) / 2;
-      route = Math.abs(s[0] - e[0]) < 2 ? [s, e] : [s, [s[0], my], [e[0], my], e];
-    } else if (sd === 'h') {
-      route = [s, [e[0], s[1]], e];
-    } else {
-      route = [s, [s[0], e[1]], e];
+  // A route is only used if none of its runs cut through a node box (the
+  // endpoints' own boxes excepted: anchors sit on their borders). Candidates
+  // shift the connecting run off-centre before giving up; when every shape
+  // collides, dagre's original routing already avoided the obstacle, so the
+  // edge keeps it.
+  const segHits = (a: Pt, b: Pt, box: Box) =>
+    Math.min(a[0], b[0]) < box.x + box.w + 2 &&
+    Math.max(a[0], b[0]) > box.x - 2 &&
+    Math.min(a[1], b[1]) < box.y + box.h + 2 &&
+    Math.max(a[1], b[1]) > box.y - 2;
+  const isClear = (route: Pt[], skip: Box[]) => {
+    for (let i = 0; i < route.length - 1; i++) {
+      for (const box of boxList) {
+        if (!skip.includes(box) && segHits(route[i], route[i + 1], box)) return false;
+      }
     }
+    return true;
+  };
+  const rewrittenMid = new Map<SVGPathElement, Pt>();
+  for (const { path, s, e, sd, ed } of edges) {
+    const skip = boxList.filter((b) => nearBox(s, b) || nearBox(e, b));
+    const mx = (s[0] + e[0]) / 2;
+    const my = (s[1] + e[1]) / 2;
+    let candidates: Pt[][];
+    if (sd === 'h' && ed === 'h') {
+      const step = e[0] > s[0] ? 24 : -24;
+      candidates =
+        Math.abs(s[1] - e[1]) < 2
+          ? [[s, e]]
+          : [mx, s[0] + step, e[0] - step].map((x): Pt[] => [s, [x, s[1]], [x, e[1]], e]);
+    } else if (sd === 'v' && ed === 'v') {
+      const step = e[1] > s[1] ? 24 : -24;
+      candidates =
+        Math.abs(s[0] - e[0]) < 2
+          ? [[s, e]]
+          : [my, s[1] + step, e[1] - step].map((y): Pt[] => [s, [s[0], y], [e[0], y], e]);
+    } else if (sd === 'h') {
+      candidates = [
+        [s, [e[0], s[1]], e],
+        [s, [mx, s[1]], [mx, my], [e[0], my], e],
+      ];
+    } else {
+      candidates = [
+        [s, [s[0], e[1]], e],
+        [s, [s[0], my], [mx, my], [mx, e[1]], e],
+      ];
+    }
+    const route = candidates.find((r) => isClear(r, skip));
+    if (!route) continue;
     path.setAttribute('d', roundedPathD(route, radius));
+    const mid = path.getPointAtLength(path.getTotalLength() / 2);
+    rewrittenMid.set(path, [mid.x, mid.y]);
+  }
+  // Mermaid centred each label on the original diagonal; re-centre it on the
+  // rewritten route or it floats beside the line it belongs to. Labels match
+  // their edge by proximity to the original label anchor.
+  for (const label of root.querySelectorAll<SVGGElement>('.edgeLabels .edgeLabel')) {
+    if (!label.textContent?.trim()) continue;
+    const t = /translate\(\s*(-?[\d.]+)[ ,]\s*(-?[\d.]+)/.exec(label.getAttribute('transform') ?? '');
+    if (!t) continue;
+    let best = -1;
+    let bestDist = 40;
+    for (const [i, m] of origMids.entries()) {
+      if (!m) continue;
+      const dist = Math.hypot(m[0] - Number(t[1]), m[1] - Number(t[2]));
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    }
+    if (best < 0) continue;
+    const mid = rewrittenMid.get(paths[best]);
+    if (mid) label.setAttribute('transform', `translate(${mid[0]}, ${mid[1]})`);
   }
 }
 
