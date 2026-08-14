@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 import { IntegrationIcon } from "@/components/integration-icons";
 import {
   CarbonApi,
-  CarbonCode,
   CarbonRocket,
 } from "@/components/landing-icons";
+import { AplSearchIcon } from "@/assets/icons";
 import { IconCard } from "@/components/icon-card";
 import { HeroFlaresShader } from "@/components/hero-flares-shader";
 import { LandingSectionHeading } from "@/components/landing-section-heading";
@@ -28,7 +28,7 @@ const quickCards = [
     description:
       "From count() to joins. Operators, functions, and worked examples.",
     href: "/docs/apl/introduction",
-    Icon: CarbonCode,
+    Icon: AplSearchIcon,
   },
   {
     title: "API reference",
@@ -211,7 +211,7 @@ export default function DocsLandingPage() {
         {quickCards.map(({ Icon, ...card }) => (
           <IconCard
             {...card}
-            icon={<Icon size={22} />}
+            icon={<Icon />}
             gap="md"
             className="quick-card"
             key={card.title}

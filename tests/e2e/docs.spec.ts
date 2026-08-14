@@ -1788,13 +1788,22 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
       shadow: styles.boxShadow,
     };
   });
-  expect(noticeStyles.background).not.toBe(noticeStyles.canvas);
+  // Notices sit on the shared card surface (which matches the canvas in the
+  // light theme); the icon, label, and left rule carry the differentiation.
+  const cardColor = await page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--card)';
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+  expect(noticeStyles.background).toBe(cardColor);
   expect(noticeStyles.borderLeft).toBe('2px');
   expect(noticeStyles.headingColor).toBe(noticeStyles.borderLeftColor);
   expect(noticeStyles.iconColor).toBe(noticeStyles.borderLeftColor);
   expect(noticeStyles.labelColor).toBe(noticeStyles.borderLeftColor);
-  // Notices share the body sans face; the icon, label, left rule, and tint
-  // carry the differentiation.
+  // Notices share the body sans face.
   expect(noticeStyles.font).toBe(noticeStyles.bodyFont);
   expect(noticeStyles.shadow).toBe('none');
 

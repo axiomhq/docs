@@ -1,4 +1,5 @@
 import type { ComponentType, SVGProps } from "react";
+import { AplSearchIcon } from "./apl-search";
 import { ArrowUpRightIcon } from "./arrow-up-right";
 import { AiAgentsIcon } from "./ai-agents";
 import {
@@ -42,6 +43,7 @@ import { SplunkIcon } from "./splunk";
 import { WhatIsAxiomIcon } from "./what-is-axiom";
 
 export {
+  AplSearchIcon,
   ArrowUpRightIcon,
   AiAgentsIcon,
   ApiHealthIcon,
