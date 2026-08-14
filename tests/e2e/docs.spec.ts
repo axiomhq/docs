@@ -109,6 +109,8 @@ test('theme defaults to the system and persists an explicit local preference', a
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/docs');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect(await page.locator('html').evaluate((element) => getComputedStyle(element).getPropertyValue('--radius').trim())).toMatch(/^0?\.475rem$/);
+  expect(await page.locator('html').evaluate((element) => getComputedStyle(element).getPropertyValue('--radius-4xl').trim())).toMatch(/^calc\(0?\.475rem \* 2\.6\)$/);
   expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBeNull();
 
   await page.getByRole('button', { name: 'Color theme: system' }).click();
@@ -530,14 +532,14 @@ test('article copy keeps a distinct contrast hierarchy in both themes', async ({
   const heading = page.getByRole('heading', { name: 'Ingestion architecture', level: 2 });
   const boldLabel = page.locator('.doc-article .prose strong').first();
 
-  // Body copy matches the lede at --text-tertiary (gray-400 dark).
-  await expect(bodyCopy).toHaveCSS('color', 'rgb(163, 163, 163)');
+  // Body copy matches www's secondary foreground in each theme.
+  await expect(bodyCopy).toHaveCSS('color', 'rgba(255, 255, 255, 0.6)');
   await expect(heading).toHaveCSS('color', 'rgb(250, 250, 250)');
   await expect(boldLabel).toHaveCSS('color', 'rgb(250, 250, 250)');
 
   await page.getByRole('button', { name: 'Color theme: system' }).click();
   await page.getByRole('menuitemradio', { name: 'Light' }).click();
-  await expect(bodyCopy).toHaveCSS('color', 'rgb(82, 82, 82)');
+  await expect(bodyCopy).toHaveCSS('color', 'rgb(18, 18, 18)');
   await expect(heading).toHaveCSS('color', 'rgb(10, 10, 10)');
   await expect(boldLabel).toHaveCSS('color', 'rgb(10, 10, 10)');
 });
