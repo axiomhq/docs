@@ -66,7 +66,7 @@ export function DocsSearchDialog() {
   return (
     <dialog
       ref={dialogRef}
-      className="docs-search-dialog ph-no-capture m-auto h-[min(650px,calc(100dvh_-_64px))] w-[min(720px,calc(100vw_-_32px))] max-h-none max-w-none overflow-hidden rounded-[4px] border border-(--border-strong) bg-(--bg-overlay) p-0 text-(--text-primary) shadow-[0_16px_48px_rgba(0,0,0,.36)] backdrop:bg-[rgba(0,0,0,.58)] backdrop:backdrop-blur-[2px] max-sm:h-[calc(100dvh_-_12px)] max-sm:w-[calc(100vw_-_12px)]"
+      className="docs-search-dialog ph-no-capture m-auto h-[min(650px,calc(100dvh_-_64px))] w-[min(720px,calc(100vw_-_32px))] max-h-none max-w-none overflow-hidden rounded-md border border-(--border-strong) bg-(--bg-overlay) p-0 text-(--text-primary) shadow-[0_16px_48px_rgba(0,0,0,.36)] backdrop:bg-[rgba(0,0,0,.58)] backdrop:backdrop-blur-[2px] max-sm:h-[calc(100dvh_-_12px)] max-sm:w-[calc(100vw_-_12px)]"
       aria-label="Search and ask Axiom Docs"
       data-ph-no-capture
       onCancel={(event) => {
@@ -231,7 +231,7 @@ function SearchPanel() {
         {search.trim() && (
           <button
             type="button"
-            className="docs-search-ask-row mb-1.5 flex min-h-[42px] w-full cursor-pointer items-center justify-between gap-3 rounded-[4px] border border-(--border-primary) bg-(--bg-inert) px-[11px] py-0 text-left font-sans! text-[13px]! leading-[18px]! font-medium! text-(--text-secondary) transition-[color,border-color,background] duration-(--duration-1) ease-(--ease-out) hover:border-(--border-strong) hover:bg-(--bg-raised) hover:text-(--text-primary) focus-visible:border-(--color-accent) focus-visible:bg-(--bg-raised) focus-visible:text-(--text-primary) focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-(--color-accent) active:bg-(--bg-emph-secondary) max-md:min-h-11 max-sm:text-[14px]!"
+            className="docs-search-ask-row mb-1.5 flex min-h-[42px] w-full cursor-pointer items-center justify-between gap-3 rounded-md border border-(--border-primary) bg-(--bg-inert) px-[11px] py-0 text-left font-sans! text-[13px]! leading-[18px]! font-medium! text-(--text-secondary) transition-[color,border-color,background] duration-(--duration-1) ease-(--ease-out) hover:border-(--border-strong) hover:bg-(--bg-raised) hover:text-(--text-primary) focus-visible:border-(--color-accent) focus-visible:bg-(--bg-raised) focus-visible:text-(--text-primary) focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-(--color-accent) active:bg-(--bg-emph-secondary) max-md:min-h-11 max-sm:text-[14px]!"
             onClick={() => handoff('search_handoff', search.trim())}
           >
             <span className="inline-flex min-w-0 items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap"><BookOpen size={15} /> Ask AI about “{search.trim()}”</span>
@@ -265,7 +265,7 @@ function SearchPanel() {
               role="option"
               tabIndex={-1}
               aria-selected={activeIndex === index}
-              className="docs-search-result flex min-h-[58px] w-full cursor-pointer flex-col justify-center gap-[3px] rounded-[4px] border-0 bg-transparent px-[11px] py-2 text-left text-(--text-secondary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-(--bg-emph-tertiary) hover:text-(--text-primary) hover:outline-0 focus-visible:shadow-[inset_0_0_0_1px_var(--color-accent)] aria-selected:bg-(--bg-emph-tertiary) aria-selected:text-(--text-primary) aria-selected:outline-0 max-sm:min-h-16"
+              className="docs-search-result flex min-h-[58px] w-full cursor-pointer flex-col justify-center gap-[3px] rounded-md border-0 bg-transparent px-[11px] py-2 text-left text-(--text-secondary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-(--bg-emph-tertiary) hover:text-(--text-primary) hover:outline-0 focus-visible:shadow-[inset_0_0_0_1px_var(--color-accent)] aria-selected:bg-(--bg-emph-tertiary) aria-selected:text-(--text-primary) aria-selected:outline-0 max-sm:min-h-16"
               key={result.id}
               onMouseEnter={() => setSelectedIndex(index)}
               onClick={() => navigate(result.url, index + 1, 'pointer')}

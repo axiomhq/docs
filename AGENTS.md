@@ -60,7 +60,7 @@ The README mentions port 3000 for general contributors. Port 3100 is the establi
 - `components/docs-search.tsx` — unified, debounced Search/Ask AI dialog and ranked search results.
 - `components/docs-assistant.tsx` — lazily loaded assistant conversation UI and source presentation.
 - `components/markdown.tsx` — bounded streaming Markdown renderer for assistant answers.
-- `components/site-header.tsx` — top-level section tabs, unified search/AI entry point, theme menu, and console link.
+- `components/site-header.tsx` — top-level section tabs, unified search/AI entry point, dark/light theme toggle, and console link.
 - `components/table-of-contents.tsx` — transparent floating TOC and scroll tracking.
 - `components/heading-anchor.tsx` — hover hash, smooth navigation, clipboard copy, and Sonner feedback.
 - `components/mdx-components.tsx` — compatibility boundary between legacy MDX constructs and Axiom/Fumadocs components.
@@ -173,7 +173,7 @@ The design has gone through detailed browser review. Treat the following as prod
 - Header tabs are Documentation, Query reference, and API reference. Do not add Changelog unless explicitly requested.
 - Search and “Ask AI” are one entry point because Fumadocs search provides both behaviors.
 - “Open console” is sentence case.
-- Theme defaults to system and uses `next-themes` local persistence under `axiom-docs-theme`. The menu offers System, Dark, and Light with matching icons.
+- Theme follows the system by default and uses `next-themes` local persistence under `axiom-docs-theme`. The header exposes a single-click dark/light toggle; the first click stores the opposite of the currently resolved system theme.
 - Sidebar expansion chevrons sit on the right, so nested labels do not acquire awkward left indentation.
 - All ancestors of the active sidebar page remain expanded during navigation.
 - API method badges sit at the right edge of sidebar rows, after the endpoint name.

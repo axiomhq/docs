@@ -7,7 +7,7 @@ export function SearchPrompt() {
   const { openSearch } = useDocsSearchController();
   return (
     <button
-      className="hero-search w-full h-10 mt-7 px-[14px] py-0 flex items-center gap-2.5 border border-(--border-strong) rounded-[4px] text-(--text-tertiary) bg-(--bg-surface) cursor-pointer hover:bg-(--bg-raised)"
+      className="hero-search w-full h-10 mt-7 px-[14px] py-0 flex items-center gap-2.5 border border-(--border-strong) rounded-md text-(--text-tertiary) bg-(--bg-surface) cursor-pointer hover:bg-(--bg-raised)"
       onClick={() => openSearch('hero')}
     >
       <Search size={16} />

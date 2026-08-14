@@ -488,7 +488,7 @@ export function Mermaid({ chart }: { chart: string }) {
   }, [chart, rawId, resolvedTheme]);
 
   if (failed) {
-    return <pre className="doc-mermaid-source my-6 p-4 overflow-x-auto border border-(--border-primary) rounded-[4px] bg-(--bg-surface) text-(--text-tertiary)">{chart}</pre>;
+    return <pre className="doc-mermaid-source my-6 p-4 overflow-x-auto border border-(--border-primary) rounded-md bg-(--bg-surface) text-(--text-tertiary)">{chart}</pre>;
   }
 
   return (

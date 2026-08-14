@@ -86,7 +86,7 @@ function Notice({ children, title, type = 'info' }: { children: ReactNode; title
 // Captions hang beneath with a └ tick, like an annotation off the image.
 function Frame({ children, caption }: { children: ReactNode; caption?: ReactNode }) {
   return (
-    <figure className="doc-frame my-6 mx-0 p-0 [&_img]:w-full [&_img]:rounded-[4px] [&_video]:w-full [&_video]:rounded-[4px]">
+    <figure className="doc-frame my-6 mx-0 p-0 [&_img]:w-full [&_img]:rounded-md [&_video]:w-full [&_video]:rounded-md">
       {children}
       {caption && (
         <figcaption className="mt-2 flex items-start gap-1.5 pl-1 text-(--text-quaternary) font-sans text-[12px] leading-[17px]">
@@ -99,7 +99,7 @@ function Frame({ children, caption }: { children: ReactNode; caption?: ReactNode
 }
 
 function CodeGroup({ children }: { children: ReactNode }) {
-  return <div className="code-group my-6 mx-0 overflow-hidden border border-(--border-primary) rounded-[4px] [&>*]:m-0! [&>*]:border-0! [&>*]:rounded-none! [&>*]:border-b! [&>*]:border-b-(--border-primary)! [&>*:last-child]:border-b-0!">{children}</div>;
+  return <div className="code-group my-6 mx-0 overflow-hidden border border-(--border-primary) rounded-md [&>*]:m-0! [&>*]:border-0! [&>*]:rounded-none! [&>*]:border-b! [&>*]:border-b-(--border-primary)! [&>*:last-child]:border-b-0!">{children}</div>;
 }
 
 // Wrapped in the same restyle class as AccordionGroup — a bare <Accordions>
@@ -113,7 +113,7 @@ function Accordion({ children, title }: { children: ReactNode; title: ReactNode 
 // carry data-state variants that would otherwise outrank the wrapper variant.
 const ACCORDION_GROUP_CLASS = cn(
   'accordion-group w-full my-3 mx-0',
-  '[&>div]:w-full [&>div]:m-0! [&>div]:overflow-hidden [&>div]:border! [&>div]:border-(--border-primary)! [&>div]:rounded-[4px]! [&>div]:bg-(--bg-surface)',
+  '[&>div]:w-full [&>div]:m-0! [&>div]:overflow-hidden [&>div]:border! [&>div]:border-(--border-primary)! [&>div]:rounded-md! [&>div]:bg-(--bg-surface)',
   '[&_h3]:m-0!',
   '[&_h3_button]:min-h-[34px] [&_h3_button]:py-[5px]! [&_h3_button]:px-[9px]! [&_h3_button]:gap-1.5! [&_h3_button]:text-(--text-secondary) [&_h3_button]:font-sans [&_h3_button]:text-[12px] [&_h3_button]:leading-4 [&_h3_button]:font-[550]',
   '[&_h3_button:hover]:bg-(--bg-inert) [&_h3_button:hover]:text-(--text-primary)',
@@ -136,7 +136,7 @@ function QueryLanguageComparisons({ children }: { children: ReactNode }) {
 // colour rules tie on specificity — unscoped, emit order would decide.
 const DOCS_TABS_CLASS = cn(
   'docs-tabs my-5 mx-0',
-  '[&>div]:m-0! [&>div]:overflow-hidden [&>div]:border! [&>div]:border-(--border-primary)! [&>div]:rounded-[4px]! [&>div]:bg-(--bg-surface)!',
+  '[&>div]:m-0! [&>div]:overflow-hidden [&>div]:border! [&>div]:border-(--border-primary)! [&>div]:rounded-md! [&>div]:bg-(--bg-surface)!',
   "[&_[role='tablist']]:min-h-[38px] [&_[role='tablist']]:py-0! [&_[role='tablist']]:px-2.5! [&_[role='tablist']]:items-stretch [&_[role='tablist']]:gap-0.5! [&_[role='tablist']]:border-b [&_[role='tablist']]:border-b-(--border-primary) [&_[role='tablist']]:bg-(--bg-surface)",
   "[&_[role='tab']]:relative [&_[role='tab']]:py-0! [&_[role='tab']]:px-2! [&_[role='tab']]:border-0! [&_[role='tab']]:text-(--text-quaternary)! [&_[role='tab']]:font-mono! [&_[role='tab']]:text-[11px]! [&_[role='tab']]:leading-4! [&_[role='tab']]:font-medium!",
   "[&_[role='tab']:hover:not([aria-selected='true'])]:text-(--text-secondary)!",
@@ -144,7 +144,7 @@ const DOCS_TABS_CLASS = cn(
   "[&_[role='tab'][aria-selected='true']]:after:absolute [&_[role='tab'][aria-selected='true']]:after:right-2 [&_[role='tab'][aria-selected='true']]:after:-bottom-px [&_[role='tab'][aria-selected='true']]:after:left-2 [&_[role='tab'][aria-selected='true']]:after:h-0.5 [&_[role='tab'][aria-selected='true']]:after:bg-(--color-accent) [&_[role='tab'][aria-selected='true']]:after:content-['']",
   "[&_[role='tabpanel']]:pt-[14px]! [&_[role='tabpanel']]:px-4! [&_[role='tabpanel']]:pb-4! [&_[role='tabpanel']]:rounded-none! [&_[role='tabpanel']]:bg-(--bg-raised)!",
   "[&_[role='tabpanel']>*]:my-0! [&_[role='tabpanel']>*+*]:mt-[11px]!",
-  '[&_:is(figure[data-rehype-pretty-code-figure],figure.shiki)]:rounded-[4px]! [&_:is(figure[data-rehype-pretty-code-figure],figure.shiki)]:shadow-none!',
+  '[&_:is(figure[data-rehype-pretty-code-figure],figure.shiki)]:rounded-md! [&_:is(figure[data-rehype-pretty-code-figure],figure.shiki)]:shadow-none!',
   // Re-override the article's table-wrap margin (its :has() selector is more
   // specific than the generic panel child rules above).
   "[&_[role='tabpanel']>div.relative.overflow-auto:has(>table)]:mt-[11px]! [&_[role='tabpanel']>div.relative.overflow-auto:has(>table)]:mb-0!",

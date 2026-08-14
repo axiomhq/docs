@@ -72,7 +72,7 @@ const AI_MARKDOWN_CLASS = cn(
   // The actions row overlays the header via -mt-10, which assumes Streamdown's
   // h-8 header plus its gap-2. Keep that 8px gap intact and pad the header and
   // body identically so the language label lines up with the code gutter.
-  "[&_[data-streamdown='code-block']]:my-3 [&_[data-streamdown='code-block']]:p-0 [&_[data-streamdown='code-block']]:gap-2 [&_[data-streamdown='code-block']]:overflow-hidden [&_[data-streamdown='code-block']]:border [&_[data-streamdown='code-block']]:border-(--border-primary) [&_[data-streamdown='code-block']]:rounded-[4px] [&_[data-streamdown='code-block']]:bg-(--bg-surface)",
+  "[&_[data-streamdown='code-block']]:my-3 [&_[data-streamdown='code-block']]:p-0 [&_[data-streamdown='code-block']]:gap-2 [&_[data-streamdown='code-block']]:overflow-hidden [&_[data-streamdown='code-block']]:border [&_[data-streamdown='code-block']]:border-(--border-primary) [&_[data-streamdown='code-block']]:rounded-md [&_[data-streamdown='code-block']]:bg-(--bg-surface)",
   "[&_[data-streamdown='code-block-header']]:py-0 [&_[data-streamdown='code-block-header']]:px-3 [&_[data-streamdown='code-block-header']]:text-(--text-tertiary) [&_[data-streamdown='code-block-header']]:font-mono [&_[data-streamdown='code-block-header']]:text-[11px] [&_[data-streamdown='code-block-header']]:leading-4 [&_[data-streamdown='code-block-header']]:font-[450]",
   "[&_[data-streamdown='code-block-header']>span]:ms-0 [&_[data-streamdown='code-block-header']+div]:pe-2",
   "[&_[data-streamdown='code-block-actions']]:border-(--border-secondary) [&_[data-streamdown='code-block-actions']]:bg-(--bg-raised)",
@@ -239,7 +239,7 @@ export function DocsAssistantPanel({
               {chat.error && (
                 <MessageScrollerItem>
                   <div
-                    className="docs-assistant-error px-[11px] py-[10px] flex flex-col gap-1 border border-[color-mix(in_srgb,var(--color-destructive)_50%,transparent)] rounded-[4px] text-(--text-tertiary) bg-[color-mix(in_srgb,var(--color-destructive)_7%,transparent)] font-sans text-[12px] leading-[18px] font-[450]"
+                    className="docs-assistant-error px-[11px] py-[10px] flex flex-col gap-1 border border-[color-mix(in_srgb,var(--color-destructive)_50%,transparent)] rounded-md text-(--text-tertiary) bg-[color-mix(in_srgb,var(--color-destructive)_7%,transparent)] font-sans text-[12px] leading-[18px] font-[450]"
                     role="alert"
                   >
                     <strong className="text-(--text-primary) font-semibold">The assistant couldn’t answer.</strong>
@@ -283,7 +283,7 @@ export function DocsAssistantPanel({
               // renders type="button" while streaming, so this half of the rule
               // never applied to the stop button. Gated to keep that behaviour.
               !isBusy &&
-                'flex-none size-8 p-0 inline-flex items-center justify-center border border-(--border-primary) focus-visible:border-(--border-primary) rounded-[4px] text-(--text-on-inverse-primary) bg-(--bg-emph-primary-inverse) hover:bg-(--bg-emph-primary-inverse) cursor-pointer transition-[opacity,background] duration-(--duration-1) ease-(--ease-out)',
+                'flex-none size-8 p-0 inline-flex items-center justify-center border border-(--border-primary) focus-visible:border-(--border-primary) rounded-md text-(--text-on-inverse-primary) bg-(--bg-emph-primary-inverse) hover:bg-(--bg-emph-primary-inverse) cursor-pointer transition-[opacity,background] duration-(--duration-1) ease-(--ease-out)',
             )}
             status={chat.status}
             onStop={stop}
@@ -321,7 +321,7 @@ function AssistantMessage({
     return (
       <Message from="user" className="docs-assistant-message user gap-[7px] max-w-[82%] max-sm:max-w-[92%] ml-auto items-end">
         <span className="text-(--text-tertiary) font-mono text-[10px] leading-[14px] font-semibold tracking-[.06em] uppercase">You</span>
-        <MessageContent className="docs-assistant-bubble border border-(--border-primary) group-[.is-user]:rounded-[4px] group-[.is-user]:px-3 group-[.is-user]:py-[10px] group-[.is-user]:text-(--text-secondary) group-[.is-user]:bg-(--bg-surface) font-sans text-[13px] leading-5 font-[450] whitespace-pre-wrap">{text}</MessageContent>
+        <MessageContent className="docs-assistant-bubble border border-(--border-primary) group-[.is-user]:rounded-md group-[.is-user]:px-3 group-[.is-user]:py-[10px] group-[.is-user]:text-(--text-secondary) group-[.is-user]:bg-(--bg-surface) font-sans text-[13px] leading-5 font-[450] whitespace-pre-wrap">{text}</MessageContent>
       </Message>
     );
   }
@@ -370,7 +370,7 @@ function AssistantMessage({
             reads as a hang. */}
         {!active && !text && (
           <div
-            className="docs-assistant-error px-[11px] py-[10px] flex flex-col gap-1 border border-[color-mix(in_srgb,var(--color-destructive)_50%,transparent)] rounded-[4px] text-(--text-tertiary) bg-[color-mix(in_srgb,var(--color-destructive)_7%,transparent)] font-sans text-[12px] leading-[18px] font-[450]"
+            className="docs-assistant-error px-[11px] py-[10px] flex flex-col gap-1 border border-[color-mix(in_srgb,var(--color-destructive)_50%,transparent)] rounded-md text-(--text-tertiary) bg-[color-mix(in_srgb,var(--color-destructive)_7%,transparent)] font-sans text-[12px] leading-[18px] font-[450]"
             role="alert"
           >
             <strong className="text-(--text-primary) font-semibold">The assistant didn’t finish this answer.</strong>

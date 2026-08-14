@@ -92,7 +92,7 @@ function SchemaTable({ document, rows, label }: { document: JsonObject; rows: Sc
   if (rows.length === 0) return null;
   const hasLocation = rows.some((row) => row.location);
   return (
-    <div className="api-schema-wrap mt-[14px] overflow-x-auto border border-(--border-primary) rounded-[4px] max-sm:-mr-2">
+    <div className="api-schema-wrap mt-[14px] overflow-x-auto border border-(--border-primary) rounded-md max-sm:-mr-2">
       {/* Corner cells carry the wrapper's inner radius — collapsed cell
           backgrounds paint square past an ancestor's rounded clip. */}
       <table className="api-schema-table w-full min-w-[620px] m-0! border-0! border-collapse table-fixed text-[12px]! [&_thead_th:first-child]:rounded-tl-[3px] [&_thead_th:last-child]:rounded-tr-[3px] [&_tbody_tr:last-child_td:first-child]:rounded-bl-[3px] [&_tbody_tr:last-child_td:last-child]:rounded-br-[3px]" data-has-location={hasLocation || undefined} aria-label={label}>
@@ -227,8 +227,8 @@ export async function ApiOperation({ value, children }: { value: string; childre
   }));
 
   return <div className="api-operation">
-    <div className="endpoint-bar my-4 py-2.5 px-3 flex items-center gap-2.5 border border-(--border-primary) rounded-[4px] bg-(--bg-surface)">
-      <span className={cn('endpoint-method py-[3px] px-[7px] border border-(--border-primary) rounded-[4px] font-mono text-[10px] leading-4 font-semibold tracking-[.04em]', METHOD_COLORS[method] ?? 'method-' + method)}>{method.toUpperCase()}</span>
+    <div className="endpoint-bar my-4 py-2.5 px-3 flex items-center gap-2.5 border border-(--border-primary) rounded-md bg-(--bg-surface)">
+      <span className={cn('endpoint-method py-[3px] px-[7px] border border-(--border-primary) rounded-md font-mono text-[10px] leading-4 font-semibold tracking-[.04em]', METHOD_COLORS[method] ?? 'method-' + method)}>{method.toUpperCase()}</span>
       {/* `!` beats the prose inline-code chip styles this <code> sits inside. */}
       <code className="flex-1 overflow-x-auto text-(--text-secondary) bg-transparent! border-0! font-mono! text-[13px]! leading-[18px]! font-[450]! whitespace-nowrap">{displayPath}</code>
       <CopyButton value={displayPath} label="" analytics={{ codeKind: 'endpoint_path' }} />

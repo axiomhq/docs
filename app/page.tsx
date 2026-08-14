@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { ScrollText, Waypoints, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { AskAiPrompt } from "@/components/search-prompt";
 import { IntegrationIcon } from "@/components/integration-icons";
 import {
   CarbonApi,
@@ -303,20 +302,6 @@ export default function DocsLandingPage() {
           </Link>
         ))}
       </section>
-      {/* Full-bleed across the main column: -mx cancels landing-content's own
-          padding; at xl+ the right margin also swallows landing-main's 260px
-          TOC-balance padding so the bar reaches the viewport edge. */}
-      <footer className="landing-footer mt-20 -mx-14 mb-0 py-5 px-8 flex items-center gap-6 border-t border-(--border-primary) text-(--text-tertiary) font-mono text-[12px] leading-4 font-[450] xl:mr-[calc(-3.5rem-260px)] max-lg:-mx-10 max-md:-mx-7 max-sm:mt-16 max-sm:-mx-5 max-sm:mb-0 max-sm:py-5 max-sm:px-5 max-sm:flex-wrap max-sm:gap-x-5 max-sm:gap-y-[14px]">
-        <span className="text-(--text-quaternary) uppercase tracking-[.06em]">
-          Can’t find it?
-        </span>
-        <AskAiPrompt />
-        <a href="https://discord.gg/axiomco">Discord</a>
-        <a href="https://axiom.co/contact">Support</a>
-        <small className="ml-auto text-(--text-quaternary)! font-mono text-[12px]! leading-4! font-[450] max-sm:w-full max-sm:ml-0">
-          axiom.co/docs
-        </small>
-      </footer>
     </div>
   );
 }

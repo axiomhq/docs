@@ -23,7 +23,7 @@ const SITE_ORIGIN = 'https://axiom.co';
 // Utilities shared by every row / icon in the popover (was
 // `.copy-page-popover button, .copy-page-popover a` and friends).
 const POPOVER_ITEM =
-  'w-full px-[9px] py-[7px] flex items-center gap-2.5 border-0 rounded-[4px] text-(--text-secondary)! bg-transparent text-left no-underline! cursor-pointer [&:hover]:bg-(--bg-emph-tertiary) focus-visible:outline-2 focus-visible:outline-(--color-accent) focus-visible:outline-offset-[-2px]';
+  'w-full px-[9px] py-[7px] flex items-center gap-2.5 border-0 rounded-md text-(--text-secondary)! bg-transparent text-left no-underline! cursor-pointer [&:hover]:bg-(--bg-emph-tertiary) focus-visible:outline-2 focus-visible:outline-(--color-accent) focus-visible:outline-offset-[-2px]';
 const POPOVER_ITEM_TITLE =
   'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-(--text-primary) font-sans text-[13px] leading-[17px] font-[550] tracking-[-.006em]';
 const POPOVER_ICON =

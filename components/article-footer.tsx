@@ -28,7 +28,7 @@ const PAGINATION_TITLE =
 const PAGINATION_ARROW =
   'flex-none transition-transform duration-150 ease-[ease]';
 const FEEDBACK_BUTTON =
-  'h-7 px-2.5 inline-flex items-center gap-1.5 border-0 rounded-[4px] text-(--text-tertiary) bg-(--bg-emph-tertiary) font-sans text-[12px] leading-4 font-medium cursor-pointer transition-[background-color,color] duration-150 ease-[ease] [&:hover:not(:disabled)]:text-(--text-primary) [&:hover:not(:disabled)]:bg-(--bg-emph-secondary) aria-pressed:text-(--color-accent-text) aria-pressed:bg-[color-mix(in_srgb,var(--color-accent)_13%,transparent)] disabled:cursor-default disabled:aria-[pressed=false]:opacity-45';
+  'h-7 px-2.5 inline-flex items-center gap-1.5 border-0 rounded-md text-(--text-tertiary) bg-(--bg-emph-tertiary) font-sans text-[12px] leading-4 font-medium cursor-pointer transition-[background-color,color] duration-150 ease-[ease] [&:hover:not(:disabled)]:text-(--text-primary) [&:hover:not(:disabled)]:bg-(--bg-emph-secondary) aria-pressed:text-(--color-accent-text) aria-pressed:bg-[color-mix(in_srgb,var(--color-accent)_13%,transparent)] disabled:cursor-default disabled:aria-[pressed=false]:opacity-45';
 
 export function ArticleFooter({
   pageHref,

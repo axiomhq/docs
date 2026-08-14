@@ -10,7 +10,7 @@ export function LanguageComparisons({ children, titles }: { children: ReactNode;
   const id = useId();
 
   return (
-    <div className="language-comparisons w-full my-3 overflow-hidden border border-(--border-primary) rounded-[4px] bg-(--bg-surface)">
+    <div className="language-comparisons w-full my-3 overflow-hidden border border-(--border-primary) rounded-md bg-(--bg-surface)">
       <div className="language-comparison-options grid grid-cols-2 [&>button+button]:border-l [&>button+button]:border-l-(--border-primary)">
         {titles.map((title, index) => {
           const open = openIndex === index;

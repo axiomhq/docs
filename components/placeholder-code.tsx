@@ -22,7 +22,7 @@ const fieldKeys = Object.keys(fields) as FieldKey[];
 const trackedFields = new Set<FieldKey>();
 
 // `.placeholder-config input, .placeholder-config select` in globals.css.
-const placeholderControlClass = 'min-w-0 h-8 px-2.5 py-0 border border-(--border-primary) rounded-[4px] outline-none text-(--text-secondary) bg-(--bg-canvas) font-mono text-[12px] leading-4 font-normal focus:border-(--color-accent) focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-accent)_18%,transparent)]';
+const placeholderControlClass = 'min-w-0 h-8 px-2.5 py-0 border border-(--border-primary) rounded-md outline-none text-(--text-secondary) bg-(--bg-canvas) font-mono text-[12px] leading-4 font-normal focus:border-(--color-accent) focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-accent)_18%,transparent)]';
 
 function placeholderPattern() {
   return new RegExp(`\\b(${fieldKeys.join('|')})\\b`, 'g');
