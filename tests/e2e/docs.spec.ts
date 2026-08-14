@@ -1815,7 +1815,11 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
   await expect(page).toHaveURL(/#ingestion-architecture$/);
   await expect(heading).toBeInViewport();
   expect((await heading.boundingBox())!.y).toBeGreaterThanOrEqual(56);
-  await expect(page.getByText('Link copied', { exact: true })).toBeVisible();
+  // Copy feedback is an inline checkmark swapped in for the chain icon for a
+  // short period; no toast is shown.
+  await expect(heading.locator('.anchor-hash svg.lucide-check')).toBeVisible();
+  await expect(page.getByText('Link copied', { exact: true })).toHaveCount(0);
+  await expect(heading.locator('.anchor-hash svg.lucide-link')).toBeVisible({ timeout: 5000 });
 
   const indicator = page
     .getByRole('complementary', { name: 'On this page' })
