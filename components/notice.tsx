@@ -69,7 +69,7 @@ export function Notice({
     <aside
       data-notice-type={noticeType}
       className={cn(
-        "doc-notice my-6 mx-0 p-3 border-l-2 border-l-(--notice-accent) rounded-sm rounded-l-none! bg-[color-mix(in_srgb,var(--notice-accent)_6%,var(--bg-canvas))] text-(--text-secondary) font-sans text-[14px] leading-[22px] font-[450] tracking-[-.005em] [&_:where(p,ul,ol)]:m-0! [&_:is(p,ul,ol)+:is(p,ul,ol)]:mt-[14px]!",
+        "doc-notice my-6 mx-0 p-3 border-l-2 border-l-(--notice-accent) rounded-sm rounded-l-none! bg-card text-(--text-secondary) font-sans text-[14px] leading-[22px] font-[450] tracking-[-.005em] [&_:where(p,ul,ol)]:m-0! [&_:is(p,ul,ol)+:is(p,ul,ol)]:mt-[14px]!",
         variant.className,
       )}
     >

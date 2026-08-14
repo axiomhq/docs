@@ -133,7 +133,7 @@ const platformRows = [
   [
     "Explore data",
     "Search, filter, and inspect every event in real time.",
-    "/docs/query-data/stream",
+    "/docs/query-data/explore",
   ],
   [
     "Query with APL",

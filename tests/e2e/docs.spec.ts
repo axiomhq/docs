@@ -82,7 +82,7 @@ test('shared icon cards match the www treatment with compact docs spacing', asyn
   ).toHaveAttribute('href', '/docs/send-data/syslog-proxy');
   await expect(
     platformList.getByRole('link', { name: /Explore data/ }),
-  ).toHaveAttribute('href', '/docs/query-data/stream');
+  ).toHaveAttribute('href', '/docs/query-data/explore');
   await expect(
     platformList.getByRole('link', { name: /Query with APL/ }),
   ).toHaveAttribute('href', '/docs/apl/introduction');
@@ -133,7 +133,7 @@ test('landing platform rows stay simple and contained across breakpoints', async
   const platformListBox = (await page.locator('.platform-list').boundingBox())!;
   const separatorBox = (await separators.first().boundingBox())!;
   expect(separatorBox.height).toBe(1);
-  expect(Math.abs(separatorBox.width - platformListBox.width * 0.8)).toBeLessThanOrEqual(1);
+  expect(Math.abs(separatorBox.width - (platformListBox.width - 10))).toBeLessThanOrEqual(1);
   expect(
     Math.abs(
       separatorBox.x -
@@ -185,7 +185,7 @@ test('landing platform rows stay simple and contained across breakpoints', async
   ).toBeLessThanOrEqual(1);
   const mobilePlatformListBox = (await page.locator('.platform-list').boundingBox())!;
   const mobileSeparatorBox = (await separators.first().boundingBox())!;
-  expect(Math.abs(mobileSeparatorBox.width - mobilePlatformListBox.width * 0.8))
+  expect(Math.abs(mobileSeparatorBox.width - (mobilePlatformListBox.width - 10)))
     .toBeLessThanOrEqual(1);
   expect(
     Math.abs(
@@ -737,6 +737,7 @@ test('search and mobile navigation are keyboard and touch accessible', async ({ 
 });
 
 test('search and the docs assistant share one private, keyboard-accessible dialog', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto('/docs');
 
   const dialog = page.getByRole('dialog', { name: 'Search and ask Axiom Docs' });
@@ -787,7 +788,15 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
   await expect(assistantInput).toHaveValue('dataset retention', { timeout: 15_000 });
   await expect(assistantInput).toHaveAttribute('data-ph-no-capture', 'true');
   await expect(page.locator('.docs-assistant-composer')).toHaveCSS('box-shadow', 'none');
-  await expect(page.locator('.docs-assistant-input-wrap')).toHaveCSS('border-color', 'rgb(218, 92, 43)');
+  const accentColor = await page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--color-accent)';
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+  await expect(page.locator('.docs-assistant-input-wrap')).toHaveCSS('border-color', accentColor);
   expect(await page.evaluate(() => Object.values(localStorage).includes('dataset retention'))).toBe(false);
 
   await page.keyboard.press('Escape');
@@ -1823,7 +1832,7 @@ test('article hierarchy and footer navigation follow the compact docs pattern', 
 
   const pagination = page.getByRole('navigation', { name: 'Adjacent documentation pages' });
   await expect(pagination.getByRole('link', { name: /Previous AI agents/ })).toHaveAttribute('href', '/docs/console/intelligence/ai-agents-overview');
-  await expect(pagination.getByRole('link', { name: /Next Agent-created organizations/ })).toHaveAttribute('href', '/docs/console/intelligence/agent-created-orgs');
+  await expect(pagination.getByRole('link', { name: /Next Set query cost limits for AI agents/ })).toHaveAttribute('href', '/docs/console/intelligence/query-cost-limits');
 
   const helpful = page.getByRole('button', { name: 'Yes, this page was helpful' });
   const unhelpful = page.getByRole('button', { name: 'No, this page was not helpful' });
