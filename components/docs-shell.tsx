@@ -52,25 +52,6 @@ function isSyntaxReference(href?: string): boolean {
   );
 }
 
-// Shared row geometry: the stylesheet declared `.sidebar-link, .nav-nested summary`
-// together, so both call sites append the identical utility list.
-//
-// `max-xl:` (not `max-xl:`) — v4's `max-*` variant emits
-// `(width < 1240px)`, which drops the 1240px column the original `(max-width: 1240px)`
-// blocks include and that this component's own `matchMedia('(min-width: 80rem)')`
-// still treats as mobile.
-const navRow =
-  "flex min-h-[30px] m-0 -mx-2.5 cursor-pointer items-center gap-[7px] rounded-md px-2.5 py-1.5 font-sans text-[14px] leading-[18px] tracking-[-.006em] max-xl:min-h-[40px] max-xl:py-2";
-// `[&:hover]:` (not `hover:`) — v4 wraps `hover:` in `@media (hover: hover)`, which
-// would drop the tap-induced hover styling the original gave touch devices, i.e. the
-// drawer, which is the only place this list is reachable on a phone.
-// `text-*!` — globals.css keeps an UNLAYERED `a { color: inherit }`; unlayered rules
-// beat `@layer utilities` regardless of specificity, so link colours must be !important.
-const navRowIdle =
-  "font-[450] text-secondary-foreground! [&:hover]:bg-sidebar-accent [&:hover]:text-sidebar-accent-foreground!";
-const truncateRow =
-  "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap";
-
 function NavItem({
   item,
   activeHref,
@@ -91,15 +72,16 @@ function NavItem({
       >
         <summary
           className={cn(
-            navRow,
-            navRowIdle,
+            "flex min-h-[30px] m-0 -mx-2.5 cursor-pointer items-center gap-[7px] rounded-md px-2.5 py-1.5 font-sans text-[14px] leading-[18px] tracking-[-.006em] max-xl:min-h-[40px] max-xl:py-2",
+            "font-[450] text-secondary-foreground! [&:hover]:bg-sidebar-accent [&:hover]:text-sidebar-accent-foreground!",
             "list-none [&::-webkit-details-marker]:hidden",
           )}
-          // Indent the row itself (-10 mirrors navRow's -mx-2.5) so the pill
-          // keeps navRow's symmetric px-2.5 around the label at every depth.
+          // Indent the row itself while preserving the pill's symmetric gutter.
           style={{ marginLeft: -10 + depth * 10 }}
         >
-          <span className={truncateRow}>{item.title}</span>
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+            {item.title}
+          </span>
           <ChevronRight
             size={12}
             className="ml-auto flex-none [transition:transform_.15s_ease]"
@@ -129,21 +111,21 @@ function NavItem({
       prefetch={false}
       className={cn(
         "sidebar-link",
-        navRow,
+        "flex min-h-[30px] m-0 -mx-2.5 cursor-pointer items-center gap-[7px] rounded-md px-2.5 py-1.5 font-sans text-[14px] leading-[18px] tracking-[-.006em] max-xl:min-h-[40px] max-xl:py-2",
         active &&
           "active bg-sidebar-accent font-[450] text-sidebar-accent-foreground! [text-shadow:-0.2px_0_0_currentColor,0.2px_0_0_currentColor]",
-        !active && navRowIdle,
+        !active &&
+          "font-[450] text-secondary-foreground! [&:hover]:bg-sidebar-accent [&:hover]:text-sidebar-accent-foreground!",
         syntaxReference && "syntax-reference-link",
       )}
-      // Indent the row itself (-10 mirrors navRow's -mx-2.5) so the pill
-      // keeps navRow's symmetric px-2.5 around the label at every depth.
+      // Indent the row itself while preserving the pill's symmetric gutter.
       style={{ marginLeft: -10 + depth * 10 }}
       onClick={onNavigate}
     >
       <span
         className={cn(
           "sidebar-link-label",
-          truncateRow,
+          "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap",
           syntaxReference &&
             "font-(family-name:--font-query) tracking-[0]",
         )}
@@ -164,30 +146,6 @@ function NavItem({
     </Link>
   );
 }
-
-// `.drawer-sections` renders as <nav> inside DocumentationSections (site-header.tsx);
-// its <a> children are styled here through descendant variants so nothing outside
-// this call site is affected — the default `header-tabs` variant is untouched.
-const drawerSections = cn(
-  "drawer-sections hidden",
-  "max-xl:m-0 max-xl:mb-5 max-xl:flex max-xl:flex-col max-xl:gap-px max-xl:border-b max-xl:border-sidebar-border max-xl:pb-3",
-  // Bleed the divider across the drawer's own padding (px-6) so it runs
-  // edge to edge; the matching inner padding keeps the links aligned.
-  "max-xl:-mx-6 max-xl:px-6",
-  // `-mx-2.5` mirrors navRow's gutter bleed so the pills and label column
-  // align exactly with the nav rows below.
-  "max-xl:[&_a]:flex max-xl:[&_a]:min-h-[38px] max-xl:[&_a]:items-center max-xl:[&_a]:-mx-2.5 max-xl:[&_a]:rounded-md max-xl:[&_a]:px-2.5 max-xl:[&_a]:py-0 max-xl:[&_a]:font-sans max-xl:[&_a]:text-[13px] max-xl:[&_a]:leading-[18px]",
-  "max-xl:[&_a:not(.active)]:font-medium max-xl:[&_a:not(.active)]:text-secondary-foreground!",
-  "max-xl:[&_a:not(.active):hover]:bg-sidebar-accent max-xl:[&_a:not(.active):hover]:text-sidebar-accent-foreground!",
-  "max-xl:[&_a.active]:bg-sidebar-accent max-xl:[&_a.active]:font-medium max-xl:[&_a.active]:text-sidebar-accent-foreground! max-xl:[&_a.active]:[text-shadow:-0.2px_0_0_currentColor,0.2px_0_0_currentColor]",
-);
-
-const sidebarBase =
-  "sidebar sticky top-14 z-30 flex h-[calc(100svh-3.5rem)] w-64 flex-none flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground max-xl:fixed max-xl:bottom-0 max-xl:left-0 max-xl:z-[70] max-xl:h-auto max-xl:w-[min(300px,86vw)] max-xl:shadow-[12px_0_48px_rgba(0,0,0,.35)] motion-reduce:[transition:none]!";
-const sidebarClosed =
-  "max-xl:invisible max-xl:[transform:translateX(-105%)] max-xl:[transition:transform_.2s_ease,visibility_0s_linear_.2s]";
-const sidebarOpen =
-  "open max-xl:visible max-xl:[transform:translateX(0)] max-xl:[transition:transform_.2s_ease,visibility_0s_linear_0s]";
 
 export function DocsShell({
   navigations,
@@ -247,15 +205,24 @@ export function DocsShell({
         <aside
           id="docs-navigation-drawer"
           ref={drawerRef}
-          className={
+          className={cn(
+            "sidebar sticky top-14 z-30 flex h-[calc(100svh-3.5rem)] w-64 flex-none flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground max-xl:fixed max-xl:bottom-0 max-xl:left-0 max-xl:z-[70] max-xl:h-auto max-xl:w-[min(300px,86vw)] max-xl:shadow-[12px_0_48px_rgba(0,0,0,.35)] motion-reduce:[transition:none]!",
             drawerOpen
-              ? `${sidebarBase} ${sidebarOpen}`
-              : `${sidebarBase} ${sidebarClosed}`
-          }
+              ? "open max-xl:visible max-xl:[transform:translateX(0)] max-xl:[transition:transform_.2s_ease,visibility_0s_linear_0s]"
+              : "max-xl:invisible max-xl:[transform:translateX(-105%)] max-xl:[transition:transform_.2s_ease,visibility_0s_linear_.2s]",
+          )}
         >
           <div className="sidebar-scroll scroll-fade-t scroll-fade-b min-h-0 flex-1 overflow-y-auto px-6 pt-14 pb-12 [scrollbar-width:thin] max-xl:pt-4 max-xl:pb-[max(48px,env(safe-area-inset-bottom))]">
             <DocumentationSections
-              className={drawerSections}
+              className={cn(
+                "drawer-sections hidden",
+                "max-xl:m-0 max-xl:mb-5 max-xl:flex max-xl:flex-col max-xl:gap-px max-xl:border-b max-xl:border-sidebar-border max-xl:pb-3",
+                "max-xl:-mx-6 max-xl:px-6",
+                "max-xl:[&_a]:flex max-xl:[&_a]:min-h-[38px] max-xl:[&_a]:items-center max-xl:[&_a]:-mx-2.5 max-xl:[&_a]:rounded-md max-xl:[&_a]:px-2.5 max-xl:[&_a]:py-0 max-xl:[&_a]:font-sans max-xl:[&_a]:text-[13px] max-xl:[&_a]:leading-[18px]",
+                "max-xl:[&_a:not(.active)]:font-medium max-xl:[&_a:not(.active)]:text-secondary-foreground!",
+                "max-xl:[&_a:not(.active):hover]:bg-sidebar-accent max-xl:[&_a:not(.active):hover]:text-sidebar-accent-foreground!",
+                "max-xl:[&_a.active]:bg-sidebar-accent max-xl:[&_a.active]:font-medium max-xl:[&_a.active]:text-sidebar-accent-foreground! max-xl:[&_a.active]:[text-shadow:-0.2px_0_0_currentColor,0.2px_0_0_currentColor]",
+              )}
               onNavigate={closeDrawer}
             />
             <nav aria-label="Page navigation">

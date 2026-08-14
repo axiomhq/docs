@@ -4,21 +4,6 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 
-// Was `.floating-toc a` / `.floating-toc a.active` (+ its ::before marker). The
-// colour and weight are split across the two branches rather than layered, so
-// the active state never depends on stylesheet ordering to win.
-//
-// Every colour carries `!` because the unlayered `a { color: inherit }` in
-// app/globals.css outranks anything Tailwind emits into `@layer utilities`;
-// without it all three states would collapse to the inherited body colour.
-// Hover uses `[&:hover]` rather than `hover:` so it is not gated behind
-// `@media (hover: hover)`, matching the unconditional rule it replaces.
-const TOC_LINK =
-  'relative block py-[5px] overflow-hidden font-sans text-[13px] leading-[17px] tracking-[-.006em] text-ellipsis whitespace-nowrap transition-[color] duration-150 ease-[ease] [&:hover]:text-foreground!';
-const TOC_LINK_IDLE = 'text-muted-foreground! font-[450]';
-const TOC_LINK_ACTIVE =
-  "active text-foreground! font-[550] before:absolute before:left-px before:top-1/2 before:-translate-y-1/2 before:w-[5px] before:h-[9px] before:bg-current before:content-['']";
-
 export type TocItem = {
   title: ReactNode;
   url: string;
@@ -75,7 +60,12 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
       <div className="min-h-0 flex-1 overflow-auto scroll-fade-t scroll-fade-b">
         {items.map((item) => (
           <a
-            className={cn(TOC_LINK, item.url === activeUrl ? TOC_LINK_ACTIVE : TOC_LINK_IDLE)}
+            className={cn(
+              'relative block py-[5px] overflow-hidden font-sans text-[13px] leading-[17px] tracking-[-.006em] text-ellipsis whitespace-nowrap transition-[color] duration-150 ease-[ease] [&:hover]:text-foreground!',
+              item.url === activeUrl
+                ? "active text-foreground! font-[550] before:absolute before:left-px before:top-1/2 before:-translate-y-1/2 before:w-[5px] before:h-[9px] before:bg-current before:content-['']"
+                : 'text-muted-foreground! font-[450]',
+            )}
             aria-current={item.url === activeUrl ? 'location' : undefined}
             href={item.url}
             key={item.url}

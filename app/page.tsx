@@ -156,16 +156,6 @@ const title = "Axiom Docs";
 const description =
   "Learn how to send, store, and query logs, traces, metrics, and events with Axiom.";
 
-// Shared by .landing-hero, .quick-grid and .landing-section in globals.css.
-const measure = "w-[min(760px,100%)] mx-auto";
-// `!` marks utilities whose property is also set by an element default
-// (`h1,h2,p,small,a` in styles/tokens.css, `a { color: inherit }` in
-// app/globals.css). Those defaults now live in @layer base, so the plain
-// utilities would win anyway — the `!` is belt-and-braces from the migration
-// and safe to drop in a cleanup pass.
-const sectionHeadingTitle =
-  "m-0! text-(--text-tertiary)! font-mono! text-[12px]! leading-4! tracking-[.08em]! uppercase";
-
 export const metadata: Metadata = {
   title,
   description,
@@ -192,7 +182,7 @@ export default function DocsLandingPage() {
       <section
         className={cn(
           "landing-hero",
-          measure,
+          "w-[min(760px,100%)] mx-auto",
           "pt-6 px-0 pb-12 max-sm:pt-2",
         )}
       >
@@ -207,7 +197,7 @@ export default function DocsLandingPage() {
       <section
         className={cn(
           "quick-grid",
-          measure,
+          "w-[min(760px,100%)] mx-auto",
           "grid grid-cols-3 gap-4 max-sm:grid-cols-1",
         )}
         aria-label="Popular starting points"
@@ -231,9 +221,17 @@ export default function DocsLandingPage() {
           </Link>
         ))}
       </section>
-      <section className={cn("landing-section", measure, "mt-14")}>
+      <section
+        className={cn(
+          "landing-section",
+          "w-[min(760px,100%)] mx-auto",
+          "mt-14",
+        )}
+      >
         <div className="section-heading flex items-center gap-4 mb-5">
-          <h2 className={sectionHeadingTitle}>Send data</h2>
+          <h2 className="m-0! text-(--text-tertiary)! font-mono! text-[12px]! leading-4! tracking-[.08em]! uppercase">
+            Send data
+          </h2>
           <span className="flex-1 border-t border-(--border-primary)" />
           <Link
             href="/docs/apps/introduction"
@@ -275,12 +273,12 @@ export default function DocsLandingPage() {
       <section
         className={cn(
           "landing-section platform-index",
-          measure,
+          "w-[min(760px,100%)] mx-auto",
           "mt-14",
         )}
       >
         <div className="section-heading flex items-center gap-4 mb-2">
-          <h2 className={sectionHeadingTitle}>
+          <h2 className="m-0! text-(--text-tertiary)! font-mono! text-[12px]! leading-4! tracking-[.08em]! uppercase">
             Explore the platform
           </h2>
           <span className="flex-1 border-t border-(--border-primary) text-(--text-tertiary) font-sans text-[13px] leading-5 font-normal" />

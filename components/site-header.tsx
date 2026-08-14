@@ -39,10 +39,6 @@ const tabs = [
   },
 ];
 
-// The mobile navigation trigger keeps a full touch target.
-const headerIconClass =
-  "h-7 w-7 items-center justify-center gap-1.5 rounded-md border border-border bg-transparent text-secondary-foreground cursor-pointer hover:bg-secondary";
-
 function AxiomMark() {
   return (
     <svg
@@ -146,11 +142,7 @@ export function SiteHeader({
           the drawer breakpoint in docs-shell. */}
       <button
         id="docs-navigation-trigger"
-        className={cn(
-          "header-icon mobile-menu-trigger hidden",
-          headerIconClass,
-          "max-xl:inline-flex max-xl:h-10 max-xl:w-10 max-xl:border-transparent",
-        )}
+        className="header-icon mobile-menu-trigger hidden h-7 w-7 items-center justify-center gap-1.5 rounded-md border border-border bg-transparent text-secondary-foreground cursor-pointer hover:bg-secondary max-xl:inline-flex max-xl:h-10 max-xl:w-10 max-xl:border-transparent"
         aria-label={
           drawerOpen ? "Close navigation" : "Open navigation"
         }

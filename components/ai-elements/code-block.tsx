@@ -77,20 +77,6 @@ const TokenSpan = ({ token }: { token: ThemedToken }) => (
   </span>
 );
 
-// Line number styles using CSS counters
-const LINE_NUMBER_CLASSES = cn(
-  "block",
-  "before:content-[counter(line)]",
-  "before:inline-block",
-  "before:[counter-increment:line]",
-  "before:w-8",
-  "before:mr-4",
-  "before:text-right",
-  "before:text-muted-foreground/50",
-  "before:font-mono",
-  "before:select-none"
-);
-
 // Line rendering component
 const LineSpan = ({
   keyedLine,
@@ -99,7 +85,22 @@ const LineSpan = ({
   keyedLine: KeyedLine;
   showLineNumbers: boolean;
 }) => (
-  <span className={showLineNumbers ? LINE_NUMBER_CLASSES : "block"}>
+  <span
+    className={showLineNumbers
+      ? cn(
+          "block",
+          "before:content-[counter(line)]",
+          "before:inline-block",
+          "before:[counter-increment:line]",
+          "before:w-8",
+          "before:mr-4",
+          "before:text-right",
+          "before:text-muted-foreground/50",
+          "before:font-mono",
+          "before:select-none"
+        )
+      : "block"}
+  >
     {keyedLine.tokens.length === 0
       ? "\n"
       : keyedLine.tokens.map(({ token, key }) => (
