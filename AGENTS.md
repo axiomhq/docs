@@ -150,8 +150,8 @@ The design has gone through detailed browser review. Treat the following as prod
 
 ### Overall layout
 
-- Main article content must feel centered in the viewport, not merely centered in the area to the right of the sidebar.
-- The desktop article transform compensates for the fixed sidebar. Do not remove it without verifying 1440px, 1024px, and 768px viewport centering.
+- Pages without a table of contents center the article in the available main area to the right of the desktop sidebar; do not reserve or translate a synthetic right rail.
+- Pages with a table of contents keep the article viewport-centered while the TOC occupies its right-edge rail. Verify both cases at 1440px, 1024px, and 768px before changing their layout.
 - The sidebar’s first group heading aligns horizontally with the article breadcrumbs on initial load.
 - Protect tablet and small-screen margins; switch to the drawer navigation at the established breakpoint.
 - Avoid decorative shadows. Axiom surfaces use borders, small tonal shifts, and compact spacing.

@@ -29,7 +29,7 @@ export function HeadingAnchor({ as: Heading, children, id, className, ...props }
   if (!id) return <Heading className={className} {...props}>{children}</Heading>;
 
   return (
-    <Heading id={id} className={cn('anchor-heading relative scroll-mt-[88px]', className)} {...props}>
+    <Heading id={id} className={cn('anchor-heading relative scroll-mt-[32px]', className)} {...props}>
       <a href={`#${id}`} onClick={copyAnchor} title="Copy link to this section" className="no-underline!">
         {/* Link marker sits in the left gutter (absolute, so the heading never
             shifts) and reveals on hover/focus. Keyed off `.anchor-heading`

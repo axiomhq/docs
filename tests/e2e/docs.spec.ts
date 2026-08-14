@@ -64,7 +64,7 @@ test('shared icon cards match the www treatment with compact docs spacing', asyn
     name: 'All integrations',
     exact: true,
   });
-  await expect(allIntegrations).toHaveAttribute('href', '/docs/send-data/methods');
+  await expect(allIntegrations).toHaveAttribute('href', '/docs/apps/introduction');
   await expect(allIntegrations).toHaveCSS('font-weight', '400');
   await expect(sectionHeadings.nth(1).getByRole('link')).toHaveCount(0);
 
@@ -123,9 +123,23 @@ test('landing platform rows stay simple and contained across breakpoints', async
   await page.goto('/docs');
 
   const rows = page.locator('.platform-list > .platform-row');
+  const separators = page.locator('.platform-list > hr[data-slot="platform-row-separator"]');
   await expect(rows).toHaveCount(6);
+  await expect(separators).toHaveCount(5);
   await expect(rows.first()).toHaveAttribute('href', '/docs/send-data/methods');
   await expect(rows.last()).toHaveAttribute('href', '/docs/reference/datasets');
+  await expect(rows.first()).toHaveCSS('border-bottom-width', '0px');
+
+  const platformListBox = (await page.locator('.platform-list').boundingBox())!;
+  const separatorBox = (await separators.first().boundingBox())!;
+  expect(separatorBox.height).toBe(1);
+  expect(Math.abs(separatorBox.width - platformListBox.width * 0.8)).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      separatorBox.x -
+        (platformListBox.x + (platformListBox.width - separatorBox.width) / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
 
   const firstRow = rows.first();
   const title = firstRow.locator('[data-slot="platform-row-title"]');
@@ -149,7 +163,8 @@ test('landing platform rows stay simple and contained across breakpoints', async
     const restingBackground = await firstRow.evaluate((element) => getComputedStyle(element).backgroundColor);
     const restingArrowColor = await arrow.evaluate((element) => getComputedStyle(element).color);
     await firstRow.hover();
-    await expect(firstRow).toHaveCSS('background-color', restingBackground);
+    await expect.poll(() => firstRow.evaluate((element) => getComputedStyle(element).backgroundColor))
+      .not.toBe(restingBackground);
     await expect.poll(() => arrow.evaluate((element) => getComputedStyle(element).color))
       .not.toBe(restingArrowColor);
   }
@@ -165,6 +180,79 @@ test('landing platform rows stay simple and contained across breakpoints', async
   expect(mobileArrowBox!.x + mobileArrowBox!.width).toBeLessThanOrEqual(
     mobileRowBox!.x + mobileRowBox!.width + 1,
   );
+  expect(
+    await page.locator('.landing-content').evaluate((element) => element.scrollWidth - element.clientWidth),
+  ).toBeLessThanOrEqual(1);
+  const mobilePlatformListBox = (await page.locator('.platform-list').boundingBox())!;
+  const mobileSeparatorBox = (await separators.first().boundingBox())!;
+  expect(Math.abs(mobileSeparatorBox.width - mobilePlatformListBox.width * 0.8))
+    .toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      mobileSeparatorBox.x -
+        (mobilePlatformListBox.x + (mobilePlatformListBox.width - mobileSeparatorBox.width) / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
+});
+
+test('landing community and support cards link and stack cleanly', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/docs');
+
+  const platform = page.locator('.platform-index');
+  const community = page.getByRole('region', { name: 'Community and support' });
+  const cards = community.locator('[data-slot="community-support-card"]');
+  const discord = cards.first();
+  const support = cards.last();
+
+  await expect(community).toBeVisible();
+  await expect(cards).toHaveCount(2);
+  await expect(discord).toHaveAttribute('href', 'https://discord.gg/axiom-co');
+  await expect(discord).toHaveAttribute('target', '_blank');
+  await expect(discord).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(support).toHaveAttribute('href', 'https://axiom.co/support');
+  await expect(discord.locator('strong')).toHaveText('Build with the community');
+  await expect(discord.locator('strong')).toHaveCSS('font-weight', '500');
+  await expect(support.locator('strong')).toHaveText('Talk to our support team');
+  await expect(support.locator('strong')).toHaveCSS('font-weight', '500');
+  const icons = cards.locator('[data-slot="community-support-icon"]');
+  await expect(icons).toHaveCount(2);
+  await expect(icons.first()).toHaveAttribute('aria-hidden', 'true');
+  await expect(icons.last()).toHaveAttribute('aria-hidden', 'true');
+  await expect(discord).toHaveClass(/rounded-xl/);
+  await expect(discord).toHaveClass(/border-gray-3\/50/);
+  const iconCardRadius = await page.locator('.quick-card').first()
+    .evaluate((element) => getComputedStyle(element).borderRadius);
+  await expect(discord).toHaveCSS('border-radius', iconCardRadius);
+  await expect(discord).toHaveCSS('border-top-width', '1px');
+  await expect(discord).toHaveCSS('box-shadow', 'none');
+
+  const [platformBox, communityBox, discordBox, supportBox] = await Promise.all(
+    [platform, community, discord, support].map((locator) => locator.boundingBox()),
+  );
+  expect(communityBox!.y).toBeGreaterThan(platformBox!.y + platformBox!.height);
+  expect(Math.abs(discordBox!.y - supportBox!.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(discordBox!.height - supportBox!.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(discordBox!.width - supportBox!.width)).toBeLessThanOrEqual(1);
+  expect(supportBox!.x - (discordBox!.x + discordBox!.width)).toBeGreaterThanOrEqual(15);
+  await expect(support).toHaveCSS('border-left-width', '1px');
+  await expect(support).toHaveCSS('border-top-width', '1px');
+
+  await discord.focus();
+  await expect(discord).toHaveCSS('outline-width', '1px');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const [mobileCommunityBox, mobileDiscordBox, mobileSupportBox] = await Promise.all(
+    [community, discord, support].map((locator) => locator.boundingBox()),
+  );
+  expect(Math.abs(mobileDiscordBox!.x - mobileSupportBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(mobileDiscordBox!.width - mobileSupportBox!.width)).toBeLessThanOrEqual(1);
+  expect(mobileSupportBox!.y).toBeGreaterThanOrEqual(
+    mobileDiscordBox!.y + mobileDiscordBox!.height + 15,
+  );
+  expect(mobileDiscordBox!.width).toBeLessThanOrEqual(mobileCommunityBox!.width + 1);
+  await expect(support).toHaveCSS('border-left-width', '1px');
+  await expect(support).toHaveCSS('border-top-width', '1px');
   expect(
     await page.locator('.landing-content').evaluate((element) => element.scrollWidth - element.clientWidth),
   ).toBeLessThanOrEqual(1);
@@ -747,7 +835,7 @@ test('notice variants pair Carbon icons and labels with their accent rule', asyn
     await expect(heading).toContainText(label);
     await expect(icon).toHaveCount(1);
     await expect(icon).toHaveAttribute('aria-hidden', 'true');
-    await expect(icon).toHaveCSS('width', '18px');
+    await expect(icon).toHaveCSS('width', '16px');
 
     const colors = await notice.evaluate((element) => {
       const headingElement = element.querySelector('[data-slot="notice-heading"]')!;
@@ -853,7 +941,7 @@ test('article layout centers its real content group without synthetic rail space
   }
 });
 
-test('pages without a table of contents reserve no right rail', async ({ page }) => {
+test('pages without a table of contents center in the available main area', async ({ page }) => {
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }]) {
     await page.setViewportSize(viewport);
     await page.goto('/docs');
@@ -867,11 +955,17 @@ test('pages without a table of contents reserve no right rail', async ({ page })
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 768, height: 1024 }]) {
     await page.setViewportSize(viewport);
     await page.goto('/docs/apps/introduction');
+    const main = (await page.locator('.docs-main').boundingBox())!;
     const article = (await page.locator('.doc-article').boundingBox())!;
     const articleContent = page.locator('.article-content');
     await expect(articleContent).not.toHaveAttribute('data-has-toc');
     await expect(page.getByRole('complementary', { name: 'On this page' })).toHaveCount(0);
-    expect(Math.abs(article.x + article.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        article.x + article.width / 2 -
+          (main.x + main.width / 2),
+      ),
+    ).toBeLessThanOrEqual(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
 });
@@ -883,17 +977,24 @@ test('table-only query overview uses the full article width without page overflo
   const article = page.locator('.doc-article');
   const articleContent = page.locator('.article-content');
   const tableScroller = article.locator('.doc-prose > div.relative.overflow-auto:has(> table)');
-  const [articleBox, tableScrollerBox] = await Promise.all([
+  const [mainBox, articleBox, tableScrollerBox] = await Promise.all([
+    page.locator('.docs-main').boundingBox(),
     article.boundingBox(),
     tableScroller.boundingBox(),
   ]);
 
   await expect(articleContent).not.toHaveAttribute('data-has-toc');
   await expect(page.getByRole('complementary', { name: 'On this page' })).toHaveCount(0);
+  expect(mainBox).not.toBeNull();
   expect(articleBox).not.toBeNull();
   expect(tableScrollerBox).not.toBeNull();
   expect(articleBox!.width).toBe(768);
-  expect(Math.abs(articleBox!.x + articleBox!.width / 2 - 720)).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      articleBox!.x + articleBox!.width / 2 -
+        (mainBox!.x + mainBox!.width / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
   expect(Math.abs(tableScrollerBox!.width - articleBox!.width)).toBeLessThanOrEqual(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1440);
 
@@ -981,7 +1082,11 @@ test('table of contents tracks the active heading and keeps a transparent surfac
 
   await queryArchitecture.click();
   await expect(queryArchitecture).toHaveAttribute('aria-current', 'location');
-  await expect(page.getByRole('heading', { name: 'Query architecture', level: 2 })).toBeInViewport();
+  const queryArchitectureHeading = page.getByRole('heading', { name: 'Query architecture', level: 2 });
+  await expect(queryArchitectureHeading).toBeInViewport();
+  const headingBox = (await queryArchitectureHeading.boundingBox())!;
+  const scrollViewportBox = (await page.locator('.docs-scroll-viewport').boundingBox())!;
+  expect(Math.abs(headingBox.y - scrollViewportBox.y - 32)).toBeLessThanOrEqual(1);
   await expect(toc.locator('[data-slot="toc-position"]')).toHaveCount(0);
 
   const consoleExpander = page.locator('.nav-nested summary').filter({ hasText: 'Console' });
@@ -1531,7 +1636,7 @@ test('main document uses the shared scrollbar only while scrolling', async ({ pa
 
   await viewport.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
   const viewportBox = (await viewport.boundingBox())!;
-  const lastSectionBox = (await page.locator('.platform-index').boundingBox())!;
+  const lastSectionBox = (await page.locator('.community-support').boundingBox())!;
   expect(
     Math.round(
       viewportBox.y + viewportBox.height -
@@ -1651,11 +1756,11 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
   const noticeHeading = notice.locator('[data-slot="notice-heading"]');
   const noticeIcon = noticeHeading.locator('svg');
   await expect(notice).toBeVisible();
-  await expect(notice).toHaveAttribute('data-notice-type', 'info');
-  await expect(noticeHeading).toContainText('Info');
+  await expect(notice).toHaveAttribute('data-notice-type', 'idea');
+  await expect(noticeHeading).toContainText('Idea');
   await expect(noticeIcon).toHaveCount(1);
   await expect(noticeIcon).toHaveAttribute('aria-hidden', 'true');
-  await expect(noticeIcon).toHaveCSS('width', '18px');
+  await expect(noticeIcon).toHaveCSS('width', '16px');
   const noticeStyles = await notice.evaluate((element) => {
     const styles = getComputedStyle(element);
     const heading = element.querySelector('[data-slot="notice-heading"]')!;
@@ -1675,7 +1780,7 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
     };
   });
   expect(noticeStyles.background).not.toBe(noticeStyles.canvas);
-  expect(noticeStyles.borderLeft).toBe('3px');
+  expect(noticeStyles.borderLeft).toBe('2px');
   expect(noticeStyles.headingColor).toBe(noticeStyles.borderLeftColor);
   expect(noticeStyles.iconColor).toBe(noticeStyles.borderLeftColor);
   expect(noticeStyles.labelColor).toBe(noticeStyles.borderLeftColor);
@@ -1721,6 +1826,23 @@ test('article hierarchy and footer navigation follow the compact docs pattern', 
   await expect(pagination.getByRole('link', { name: /Next Agent-created organizations/ })).toHaveAttribute('href', '/docs/console/intelligence/agent-created-orgs');
 
   const helpful = page.getByRole('button', { name: 'Yes, this page was helpful' });
+  const unhelpful = page.getByRole('button', { name: 'No, this page was not helpful' });
+  const resolveBackground = (variable: string) => page.evaluate((cssVariable) => {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = `var(${cssVariable})`;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  }, variable);
+  await expect(helpful).toHaveCSS(
+    'background-color',
+    await resolveBackground('--interactive-selected'),
+  );
+  await expect(unhelpful).toHaveCSS(
+    'background-color',
+    await resolveBackground('--interactive-selected'),
+  );
   await helpful.click();
   await expect(helpful).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('status')).toHaveText('Thanks for the feedback.');
@@ -1737,54 +1859,11 @@ test('article hierarchy and footer navigation follow the compact docs pattern', 
   await page.getByRole('button', { name: 'Toggle color theme' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await expect(helpful).toHaveCSS('color', await resolveColor('--text-primary'));
+  await expect(unhelpful).toHaveCSS(
+    'background-color',
+    await resolveBackground('--interactive-selected'),
+  );
   await expect(page.getByRole('link', { name: 'Suggest edits on GitHub' })).toBeVisible();
-});
-
-test('article footer navigation uses compact responsive cards', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.emulateMedia({ colorScheme: 'dark' });
-  await page.goto('/docs/getting-started');
-
-  const pagination = page.getByRole('navigation', { name: 'Adjacent documentation pages' });
-  const previous = pagination.getByRole('link', { name: /Previous What is Axiom\?/ });
-  const next = pagination.getByRole('link', { name: /Next Architecture/ });
-
-  await page.evaluate(() => document.fonts.ready);
-  await pagination.scrollIntoViewIfNeeded();
-
-  await expect(previous).toHaveAttribute('href', '/docs/introduction');
-  await expect(next).toHaveAttribute('href', '/docs/platform-overview/architecture');
-  await expect(previous).toHaveCSS('border-radius', '4px');
-  await expect(previous).toHaveCSS('border-top-width', '1px');
-  await expect(previous).toHaveCSS('box-shadow', 'none');
-
-  const previousBox = (await previous.boundingBox())!;
-  const nextBox = (await next.boundingBox())!;
-  expect(previousBox.height).toBeGreaterThanOrEqual(72);
-  expect(previousBox.height).toBe(nextBox.height);
-  expect(previousBox.y).toBe(nextBox.y);
-  expect(previousBox.x + previousBox.width).toBeLessThan(nextBox.x);
-
-  for (const link of [previous, next]) {
-    const labelBox = (await link.locator('small').boundingBox())!;
-    const titleBox = (await link.locator('strong').boundingBox())!;
-    expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(titleBox.y);
-  }
-
-  await previous.focus();
-  await expect(previous).toHaveCSS('outline-width', '2px');
-  await expect(previous).toHaveCSS('outline-style', 'solid');
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  const mobilePaginationBox = (await pagination.boundingBox())!;
-  const mobilePreviousBox = (await previous.boundingBox())!;
-  const mobileNextBox = (await next.boundingBox())!;
-  expect(mobilePreviousBox.x).toBe(mobilePaginationBox.x);
-  expect(mobileNextBox.x).toBe(mobilePaginationBox.x);
-  expect(mobilePreviousBox.width).toBe(mobilePaginationBox.width);
-  expect(mobileNextBox.width).toBe(mobilePaginationBox.width);
-  expect(mobileNextBox.y).toBeGreaterThanOrEqual(mobilePreviousBox.y + mobilePreviousBox.height + 8);
-  expect(mobileNextBox.height).toBeGreaterThanOrEqual(72);
 });
 
 test('deep documentation pages cap the breadcrumb at the first two ancestors', async ({ page }, testInfo) => {
@@ -1936,7 +2015,7 @@ test('article copy keeps a distinct contrast hierarchy in both themes', async ({
 
   const bodyCopy = page.locator('.doc-article .prose > p').first();
   const heading = page.getByRole('heading', { name: 'Ingestion architecture', level: 2 });
-  const boldLabel = page.locator('.doc-article .prose strong').first();
+  const boldLabel = page.getByText('Regional Edge Layer:', { exact: true });
 
   // Body copy matches www's secondary foreground in each theme.
   await expect(bodyCopy).toHaveCSS('color', 'rgba(255, 255, 255, 0.6)');

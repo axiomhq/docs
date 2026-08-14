@@ -17,12 +17,14 @@ const noticeVariants = {
   idea: {
     label: "Idea",
     icon: Idea,
-    className: "doc-notice-idea [--notice-accent:var(--color-accent)]",
+    className:
+      "doc-notice-idea [--notice-accent:var(--color-accent)]",
   },
   warn: {
     label: "Warning",
     icon: WarningAlt,
-    className: "doc-notice-warn [--notice-accent:var(--color-warning)]",
+    className:
+      "doc-notice-warn [--notice-accent:var(--color-warning)]",
   },
   error: {
     label: "Error",
@@ -33,7 +35,8 @@ const noticeVariants = {
   success: {
     label: "Success",
     icon: CheckmarkOutline,
-    className: "doc-notice-success [--notice-accent:var(--color-success)]",
+    className:
+      "doc-notice-success [--notice-accent:var(--color-success)]",
   },
 } as const;
 
@@ -66,7 +69,7 @@ export function Notice({
     <aside
       data-notice-type={noticeType}
       className={cn(
-        "doc-notice my-6 mx-0 py-[15px] px-4 border-l-3 border-l-(--notice-accent) rounded-[3px] bg-card text-(--text-secondary) font-sans text-[14px] leading-[22px] font-[450] tracking-[-.005em] [&_:where(p,ul,ol)]:m-0! [&_:is(p,ul,ol)+:is(p,ul,ol)]:mt-[14px]!",
+        "doc-notice my-6 mx-0 p-3 border-l-2 border-l-(--notice-accent) rounded-sm rounded-l-none! bg-[color-mix(in_srgb,var(--notice-accent)_6%,var(--bg-canvas))] text-(--text-secondary) font-sans text-[14px] leading-[22px] font-[450] tracking-[-.005em] [&_:where(p,ul,ol)]:m-0! [&_:is(p,ul,ol)+:is(p,ul,ol)]:mt-[14px]!",
         variant.className,
       )}
     >
@@ -75,12 +78,12 @@ export function Notice({
         className="mb-2 flex items-center gap-2 text-(--notice-accent)"
       >
         {createElement(variant.icon, {
-          size: 18,
+          size: 16,
           className: "doc-notice-icon flex-none",
           "aria-hidden": true,
           focusable: "false",
         })}
-        <strong className="text-(--notice-accent)! font-medium">
+        <strong className="text-(--notice-accent)! font-medium text-[13px]">
           {title ?? defaultLabel}
         </strong>
       </div>

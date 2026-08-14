@@ -93,10 +93,6 @@ export default async function DocumentationPage({
             "article-content mx-auto grid w-full max-w-[768px] grid-cols-[minmax(0,768px)]",
             hasToc &&
               "xl:max-w-none xl:grid-cols-[minmax(2rem,1fr)_minmax(0,768px)_minmax(2rem,1fr)_18rem]",
-            // The desktop sidebar occupies 272px in normal flow. Without a TOC
-            // rail, centering inside `.docs-main` would therefore put the article
-            // 136px right of the viewport midpoint.
-            !hasToc && "xl:-translate-x-[136px]",
           )}
           data-has-toc={hasToc || undefined}
         >

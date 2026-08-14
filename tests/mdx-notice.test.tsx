@@ -25,8 +25,8 @@ describe("Notice", () => {
       "font-medium",
     );
     expect(icon).toHaveAttribute("aria-hidden", "true");
-    expect(icon).toHaveAttribute("width", "18");
-    expect(icon).toHaveAttribute("height", "18");
+    expect(icon).toHaveAttribute("width", "16");
+    expect(icon).toHaveAttribute("height", "16");
   });
 
   it("uses a custom title in place of the default label", () => {

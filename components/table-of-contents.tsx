@@ -157,7 +157,7 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
         // sub-pixel layout so hash navigation activates the target heading.
         // The main ScrollArea begins below the fixed header, so its top edge
         // is part of the document-space reading line.
-        const readingLine = (scrollViewport?.getBoundingClientRect().top ?? 0) + 116;
+        const readingLine = (scrollViewport?.getBoundingClientRect().top ?? 0) + 60;
         let current = headings[0].item.url;
 
         for (const heading of headings) {
@@ -194,7 +194,7 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
           On this page
         </strong>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto scroll-fade-t scroll-fade-b">
+      <div className="min-h-0 flex-1 overflow-auto scroll-fade-y">
         <div className="toc-trace relative py-0.5" ref={traceRef}>
           {trace.path ? (
             <svg

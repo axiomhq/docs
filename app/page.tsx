@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { ArrowRight, Forum, LogoDiscord } from "@carbon/icons-react";
 import { ScrollText, Waypoints, type LucideIcon } from "lucide-react";
+import { Fragment } from "react";
 import { cn } from "@/lib/utils";
 import { IntegrationIcon } from "@/components/integration-icons";
 import {
@@ -226,7 +228,7 @@ export default function DocsLandingPage() {
         <LandingSectionHeading
           title="Send data"
           trailingLink={{
-            href: "/docs/send-data/methods",
+            href: "/docs/apps/introduction",
             label: "All integrations",
           }}
           className="mb-5"
@@ -244,7 +246,10 @@ export default function DocsLandingPage() {
                   {slug ? (
                     <IntegrationIcon slug={slug} size={18} />
                   ) : Fallback ? (
-                    <Fallback size={18} className="text-(--text-secondary)" />
+                    <Fallback
+                      size={18}
+                      className="text-(--text-secondary)"
+                    />
                   ) : null}
                 </span>
                 <span className="flex min-w-0 flex-col gap-0.5">
@@ -267,42 +272,120 @@ export default function DocsLandingPage() {
           "mt-14",
         )}
       >
-        <LandingSectionHeading title="Explore the platform" className="mb-2" />
-        <nav className="platform-list" aria-label="Explore the platform">
-          {platformRows.map(([title, description, href]) => (
-            <Link
-              href={href}
-              prefetch={false}
-              key={title}
-              className={cn(
-                "platform-row grid grid-cols-[160px_minmax(0,1fr)_auto] items-center gap-x-5 px-2 py-4",
-                "border-b border-(--border-secondary) last:border-b-0",
-                "focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-(--color-accent)",
-                "max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:gap-x-3 max-sm:gap-y-1 max-sm:px-1",
+        <LandingSectionHeading
+          title="Explore the platform"
+          className="mb-2"
+        />
+        <nav
+          className="platform-list"
+          aria-label="Explore the platform"
+        >
+          {platformRows.map(([title, description, href], index) => (
+            <Fragment key={title}>
+              <Link
+                href={href}
+                prefetch={false}
+                className={cn(
+                  "platform-row grid grid-cols-[160px_minmax(0,1fr)_auto] items-center gap-x-5 px-2 py-4 hover:bg-card! rounded-md md:-mx-2!",
+                  "focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-(--color-accent)",
+                  "max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:gap-x-3 max-sm:gap-y-1 max-sm:px-1",
+                )}
+              >
+                <span
+                  data-slot="platform-row-title"
+                  className="min-w-0 font-sans text-[14px] leading-5 font-medium text-(--text-primary)"
+                >
+                  {title}
+                </span>
+                <span
+                  data-slot="platform-row-description"
+                  className="min-w-0 text-(--text-tertiary) font-sans text-[13px] leading-5 font-normal max-sm:col-span-2 max-sm:col-start-1 max-sm:row-start-2"
+                >
+                  {description}
+                </span>
+                <span
+                  aria-hidden="true"
+                  data-slot="platform-row-arrow"
+                  className="justify-self-end font-mono text-[15px] leading-none font-normal text-(--text-quaternary) [.platform-row:hover_&]:text-(--text-secondary) [.platform-row:focus-visible_&]:text-(--text-secondary) max-sm:col-start-2 max-sm:row-start-1"
+                >
+                  →
+                </span>
+              </Link>
+              {index < platformRows.length - 1 && (
+                <hr
+                  aria-hidden="true"
+                  data-slot="platform-row-separator"
+                  className="mx-auto my-0 h-px w-4/5 border-0 bg-(--border-secondary)"
+                />
               )}
-            >
-              <span
-                data-slot="platform-row-title"
-                className="min-w-0 font-sans text-[14px] leading-5 font-medium text-(--text-primary)"
-              >
-                {title}
-              </span>
-              <span
-                data-slot="platform-row-description"
-                className="min-w-0 text-(--text-tertiary) font-sans text-[13px] leading-5 font-normal max-sm:col-span-2 max-sm:col-start-1 max-sm:row-start-2"
-              >
-                {description}
-              </span>
-              <span
-                aria-hidden="true"
-                data-slot="platform-row-arrow"
-                className="justify-self-end font-mono text-[15px] leading-none font-normal text-(--text-quaternary) [.platform-row:hover_&]:text-(--text-secondary) [.platform-row:focus-visible_&]:text-(--text-secondary) max-sm:col-start-2 max-sm:row-start-1"
-              >
-                →
-              </span>
-            </Link>
+            </Fragment>
           ))}
         </nav>
+      </section>
+      <section
+        aria-label="Community and support"
+        className={cn(
+          "landing-section community-support relative z-10",
+          "w-[min(760px,100%)] mx-auto mt-12",
+          "grid grid-cols-2 gap-4",
+          "max-sm:grid-cols-1 max-sm:mt-10",
+        )}
+      >
+        <a
+          href="https://discord.gg/axiom-co"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-slot="community-support-card"
+          className={cn(
+            "group flex min-h-[220px] flex-col items-center justify-center rounded-xl border border-gray-3/50 bg-card px-8 py-8 text-center no-underline",
+            "hover:border-gray-4 hover:bg-interactive-hover focus-visible:z-10 focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-(--color-accent)",
+            "max-sm:min-h-[190px] max-sm:px-6 max-sm:py-7",
+          )}
+        >
+          <LogoDiscord
+            size={32}
+            aria-hidden="true"
+            data-slot="community-support-icon"
+            className="shrink-0 text-(--text-primary)"
+          />
+          <strong className="mt-5 font-sans text-[17px] leading-6 font-medium tracking-[-.01em] text-(--text-primary)">
+            Build with the community
+          </strong>
+          <span className="mt-2 max-w-[290px] font-sans text-[13px] leading-5 font-normal text-(--text-tertiary)">
+            Trade ideas, share projects, and learn from others using Axiom.
+          </span>
+          <span className="mt-5 inline-flex items-center gap-1.5 font-sans text-[13px] leading-5 font-medium text-(--text-secondary) group-hover:text-(--text-primary)">
+            Visit Discord
+            <ArrowRight size={14} aria-hidden="true" />
+          </span>
+        </a>
+        <a
+          href="https://axiom.co/support"
+          data-slot="community-support-card"
+          className={cn(
+            "group flex min-h-[220px] flex-col items-center justify-center rounded-xl border border-gray-3/50 bg-card px-8 py-8 text-center no-underline",
+            "hover:border-gray-4 hover:bg-interactive-hover focus-visible:z-10 focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-(--color-accent)",
+            "max-sm:min-h-[190px] max-sm:px-6 max-sm:py-7",
+          )}
+        >
+          <Forum
+            size={32}
+            aria-hidden="true"
+            data-slot="community-support-icon"
+            className="shrink-0 text-(--text-secondary)"
+          />
+          <strong className="mt-5 font-sans text-[17px] leading-6 font-medium tracking-[-.01em] text-(--text-primary)">
+            Talk to our support team
+          </strong>
+          <span className="mt-2 max-w-[290px] font-sans text-[13px] leading-5 font-normal text-(--text-tertiary)">
+            Get guidance on your workspace, data, or anything blocking your
+            progress.
+          </span>
+          <span className="mt-5 inline-flex items-center gap-1.5 font-sans text-[13px] leading-5 font-medium text-(--text-secondary) group-hover:text-(--text-primary)">
+            Contact support
+            <ArrowRight size={14} aria-hidden="true" />
+          </span>
+        </a>
       </section>
     </div>
   );
