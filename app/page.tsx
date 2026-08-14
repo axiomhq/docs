@@ -315,7 +315,7 @@ export default function DocsLandingPage() {
                 <hr
                   aria-hidden="true"
                   data-slot="platform-row-separator"
-                  className="mx-auto my-0 h-px w-4/5 border-0 bg-(--border-secondary)"
+                  className="mx-auto my-0 h-px w-[calc(100%-10px)] border-0 bg-(--border-secondary)"
                 />
               )}
             </Fragment>
