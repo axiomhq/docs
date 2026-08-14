@@ -35,7 +35,7 @@ const LazyAssistantPanel = dynamic(
       <section id="docs-assistant-panel" role="tabpanel" aria-labelledby="docs-assistant-tab" className="docs-assistant-panel min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas)">
         <div className="docs-assistant-messages min-h-0 h-full overflow-y-auto pt-[22px] px-6 pb-7 overscroll-contain max-sm:pt-[18px] max-sm:px-[14px] max-sm:pb-6">
           <div className="docs-assistant-working py-[7px] px-0 flex items-center gap-2 text-(--text-tertiary) font-mono text-[11px] leading-4 font-[450]" role="status">
-            <span className="size-1.5 flex-none border border-(--color-accent) animate-[docs-assistant-pulse_1s_ease-in-out_infinite] motion-reduce:animate-none motion-reduce:bg-(--color-accent)" /> Loading assistant…
+            <span className="size-1.5 flex-none border border-brand bg-brand/50 motion-safe:animate-pulse" /> Loading assistant…
           </div>
         </div>
       </section>
@@ -222,7 +222,7 @@ function SearchPanel() {
           }}
           onKeyDown={handleKeys}
         />
-        <kbd className="max-sm:hidden">ESC</kbd>
+        <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground max-sm:hidden">ESC</kbd>
       </div>
       <div
         className="docs-search-results min-h-0 overflow-y-auto overscroll-contain bg-(--bg-canvas) p-2 max-sm:p-1.5"
@@ -247,7 +247,7 @@ function SearchPanel() {
               className="cursor-pointer rounded-[3px] border-0 bg-(--bg-emph-tertiary) px-2 py-1.5 font-sans! text-[12px]! leading-4! font-medium! text-(--text-secondary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-(--bg-emph-secondary) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-primary) max-md:min-h-11 max-sm:text-[14px]!"
               onClick={() => handoff('search_empty_state')}
             >
-              Ask a question instead <kbd>⌘I</kbd>
+              Ask a question instead <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">⌘I</kbd>
             </button>
           </div>
         )}
@@ -277,13 +277,13 @@ function SearchPanel() {
         </div>
       </div>
       <footer className="docs-search-footer flex min-h-[38px] items-center gap-[14px] border-t border-(--border-primary) bg-(--bg-surface) px-3 py-[7px] font-mono text-[10px] leading-[14px] font-[450] text-(--text-tertiary) max-sm:justify-end">
-        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
-        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd>↵</kbd> Open</span>
+        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">↑</kbd><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">↓</kbd> Navigate</span>
+        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">↵</kbd> Open</span>
         <button
           type="button"
           className="ml-auto cursor-pointer border-0 bg-transparent p-0 font-sans! text-[11px]! leading-4! font-medium! text-(--text-tertiary) transition-[color] duration-(--duration-1) ease-(--ease-out) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:text-(--color-accent) max-md:min-h-11 max-sm:ml-0 max-sm:text-[13px]!"
           onClick={() => handoff('search_footer', search.trim())}
-        >Ask AI <kbd>⌘I</kbd></button>
+        >Ask AI <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">⌘I</kbd></button>
       </footer>
     </section>
   );

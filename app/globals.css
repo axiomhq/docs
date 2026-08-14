@@ -12,43 +12,20 @@
    Map shadcn's `dark:` variant onto that instead of its stock `.dark` class. */
 @custom-variant dark (&:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *));
 
-/* Element defaults live in @layer base so component utilities (@layer
-   utilities) can override them; unlayered they would always win. Only elements
-   with no owning component remain: `a` and `kbd` are authored directly in MDX
-   content. `html`/`body` are styled in app/layout.tsx; box-sizing and form
-   `font: inherit` come from Tailwind's preflight. */
+/* Element defaults live in @layer base so component utilities can override
+   them. Raw MDX links have no owning component; html/body and form defaults
+   come from app/layout.tsx and Tailwind's preflight. */
 @layer base {
     a {
         @apply text-inherit no-underline;
     }
-    kbd {
-        @apply py-px px-[5px] border border-(--border-primary) rounded-[3px] bg-(--bg-emph-tertiary) text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-[450];
-    }
-}
-
-/* Referenced by `animate-[docs-assistant-pulse_…]` in docs-assistant.tsx and
-   the docs-search.tsx loading fallback. */
-@keyframes docs-assistant-pulse {
-    50% {
-        background: var(--color-accent);
-        opacity: 0.45;
-    }
-}
-
-/* Inline glyphs in prose, e.g. <img className="inline-icon" src=".../share.svg">.
-   Authored as raw JSX in MDX content, so there is no component to carry
-   utilities. The Font Awesome assets are 576x512 with fill="currentColor",
-   which does not inherit through <img> — it paints black — so size them to the
-   text and invert on dark surfaces to keep them legible. */
-.inline-icon {
-    @apply w-[1.05em] h-[1.05em] my-0 mx-[.12em] inline-block align-[-.16em] object-contain dark:invert;
 }
 
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
-        @apply scroll-auto! duration-[.01ms]! [animation-duration:.01ms]!;
+        @apply scroll-auto! transition-none! animate-none!;
     }
 }
 
@@ -321,18 +298,6 @@
     --color-pink-10: var(--pink-10);
     --color-pink-11: var(--pink-11);
     --color-pink-12: var(--pink-12);
-}
-
-/* shadcn components assume `border` resolves to the theme border colour
-   (Tailwind v4 defaults it to currentColor). Scope that assumption to the
-   assistant subtree so no other docs surface is affected. */
-@layer base {
-    .docs-ai-surface,
-    .docs-ai-surface *,
-    .docs-ai-surface *::before,
-    .docs-ai-surface *::after {
-        border-color: var(--border);
-    }
 }
 
 /* Step lists (fumadocs Steps/Step). Stock markers are 32px circles centred

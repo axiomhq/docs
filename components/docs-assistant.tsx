@@ -141,7 +141,7 @@ export function DocsAssistantPanel({
       id="docs-assistant-panel"
       role="tabpanel"
       aria-labelledby="docs-assistant-tab"
-      className="docs-assistant-panel docs-ai-surface min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas)"
+      className="docs-assistant-panel min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas) [&_*]:border-border [&_*::before]:border-border [&_*::after]:border-border"
     >
       <MessageScrollerProvider autoScroll>
         <MessageScroller className="docs-assistant-scroller relative min-h-0">
@@ -189,7 +189,7 @@ export function DocsAssistantPanel({
                     className="docs-assistant-working py-[7px] px-0 flex items-center gap-2 text-(--text-tertiary) font-mono text-[11px] leading-4 font-[450]"
                     role="status"
                   >
-                    <span className="size-1.5 flex-none border border-(--color-accent) animate-[docs-assistant-pulse_1s_ease-in-out_infinite] motion-reduce:animate-none motion-reduce:bg-(--color-accent)" />
+                    <span className="size-1.5 flex-none border border-brand bg-brand/50 motion-safe:animate-pulse" />
                     <span className="shimmer shimmer-duration-1600">Searching Axiom Docs…</span>
                   </div>
                 </MessageScrollerItem>
@@ -309,7 +309,7 @@ function AssistantMessage({
             className="docs-assistant-working py-[7px] px-0 flex items-center gap-2 text-(--text-tertiary) font-mono text-[11px] leading-4 font-[450]"
             role="status"
           >
-            <span className="size-1.5 flex-none border border-(--color-accent) animate-[docs-assistant-pulse_1s_ease-in-out_infinite] motion-reduce:animate-none motion-reduce:bg-(--color-accent)" />
+            <span className="size-1.5 flex-none border border-brand bg-brand/50 motion-safe:animate-pulse" />
             <span className="shimmer shimmer-duration-1600">Composing answer…</span>
           </div>
         )}

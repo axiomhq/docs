@@ -37,10 +37,8 @@ function DocsLink({ href = '', children, className, ...props }: AnchorHTMLAttrib
   return <a href={target} className={className} {...props}>{children}</a>;
 }
 
-// NOTE: content authors write raw JSX <img> tags (118 of them), which MDX renders
-// directly and does NOT route through this override — so this only handles the single
-// file using markdown ![](…) syntax. Inline icons are sized by the .inline-icon rule
-// in globals.css, not here.
+// Raw JSX <img> tags in content bypass this override. This handles Markdown
+// image syntax and applies the docs base path before enabling zoom.
 function DocsImage(props: ImgHTMLAttributes<HTMLImageElement>) {
   const imageProps = props as ComponentProps<typeof ImageZoom>;
   const src = typeof imageProps.src === 'string' ? withDocsBasePath(imageProps.src) : imageProps.src;
