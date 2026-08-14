@@ -60,14 +60,14 @@ function isSyntaxReference(href?: string): boolean {
 // blocks include and that this component's own `matchMedia('(min-width: 80rem)')`
 // still treats as mobile.
 const navRow =
-  "flex min-h-[30px] m-0 -mx-2.5 cursor-pointer items-center gap-[7px] rounded-[4px] px-2.5 py-1.5 font-sans text-[14px] leading-[18px] tracking-[-.006em] max-xl:min-h-[40px] max-xl:py-2";
+  "flex min-h-[30px] m-0 -mx-2.5 cursor-pointer items-center gap-[7px] rounded-md px-2.5 py-1.5 font-sans text-[14px] leading-[18px] tracking-[-.006em] max-xl:min-h-[40px] max-xl:py-2";
 // `[&:hover]:` (not `hover:`) — v4 wraps `hover:` in `@media (hover: hover)`, which
 // would drop the tap-induced hover styling the original gave touch devices, i.e. the
 // drawer, which is the only place this list is reachable on a phone.
 // `text-*!` — globals.css keeps an UNLAYERED `a { color: inherit }`; unlayered rules
 // beat `@layer utilities` regardless of specificity, so link colours must be !important.
 const navRowIdle =
-  "text-(--text-tertiary)! font-[450] [&:hover]:bg-(--bg-emph-tertiary) [&:hover]:text-(--text-secondary)!";
+  "font-[450] text-secondary-foreground! [&:hover]:bg-sidebar-accent [&:hover]:text-sidebar-accent-foreground!";
 const truncateRow =
   "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap";
 
@@ -131,7 +131,7 @@ function NavItem({
         "sidebar-link",
         navRow,
         active &&
-          "active bg-(--bg-emph-primary) font-[450] [text-shadow:-0.2px_0_0_currentColor,0.2px_0_0_currentColor] text-(--text-primary)!",
+          "active bg-sidebar-accent font-[450] text-sidebar-accent-foreground! [text-shadow:-0.2px_0_0_currentColor,0.2px_0_0_currentColor]",
         !active && navRowIdle,
         syntaxReference && "syntax-reference-link",
       )}
@@ -170,20 +170,20 @@ function NavItem({
 // this call site is affected — the default `header-tabs` variant is untouched.
 const drawerSections = cn(
   "drawer-sections hidden",
-  "max-xl:m-0 max-xl:mb-5 max-xl:flex max-xl:flex-col max-xl:gap-px max-xl:border-b max-xl:border-b-(--border-primary) max-xl:pb-3",
+  "max-xl:m-0 max-xl:mb-5 max-xl:flex max-xl:flex-col max-xl:gap-px max-xl:border-b max-xl:border-sidebar-border max-xl:pb-3",
   // Bleed the divider across the drawer's own padding (px-6) so it runs
   // edge to edge; the matching inner padding keeps the links aligned.
   "max-xl:-mx-6 max-xl:px-6",
   // `-mx-2.5` mirrors navRow's gutter bleed so the pills and label column
   // align exactly with the nav rows below.
-  "max-xl:[&_a]:flex max-xl:[&_a]:min-h-[38px] max-xl:[&_a]:items-center max-xl:[&_a]:-mx-2.5 max-xl:[&_a]:rounded-[4px] max-xl:[&_a]:px-2.5 max-xl:[&_a]:py-0 max-xl:[&_a]:font-sans max-xl:[&_a]:text-[13px] max-xl:[&_a]:leading-[18px]",
-  "max-xl:[&_a:not(.active)]:font-medium max-xl:[&_a:not(.active)]:text-(--text-tertiary)!",
-  "max-xl:[&_a:not(.active):hover]:bg-(--bg-emph-tertiary) max-xl:[&_a:not(.active):hover]:text-(--text-secondary)!",
-  "max-xl:[&_a.active]:bg-(--bg-emph-secondary) max-xl:[&_a.active]:font-medium max-xl:[&_a.active]:[text-shadow:-0.2px_0_0_currentColor,0.2px_0_0_currentColor] max-xl:[&_a.active]:text-(--text-primary)!",
+  "max-xl:[&_a]:flex max-xl:[&_a]:min-h-[38px] max-xl:[&_a]:items-center max-xl:[&_a]:-mx-2.5 max-xl:[&_a]:rounded-md max-xl:[&_a]:px-2.5 max-xl:[&_a]:py-0 max-xl:[&_a]:font-sans max-xl:[&_a]:text-[13px] max-xl:[&_a]:leading-[18px]",
+  "max-xl:[&_a:not(.active)]:font-medium max-xl:[&_a:not(.active)]:text-secondary-foreground!",
+  "max-xl:[&_a:not(.active):hover]:bg-sidebar-accent max-xl:[&_a:not(.active):hover]:text-sidebar-accent-foreground!",
+  "max-xl:[&_a.active]:bg-sidebar-accent max-xl:[&_a.active]:font-medium max-xl:[&_a.active]:text-sidebar-accent-foreground! max-xl:[&_a.active]:[text-shadow:-0.2px_0_0_currentColor,0.2px_0_0_currentColor]",
 );
 
 const sidebarBase =
-  "sidebar fixed top-14 bottom-0 left-0 z-30 w-[260px] overflow-y-auto scroll-fade-t scroll-fade-b border-r border-r-(--border-primary) bg-(--bg-sidebar) pt-14 px-6 pb-12 [scrollbar-width:thin] max-xl:z-[70] max-xl:w-[min(300px,86vw)] max-xl:pt-4 max-xl:pb-[max(48px,env(safe-area-inset-bottom))] max-xl:shadow-[12px_0_48px_rgba(0,0,0,.35)] motion-reduce:[transition:none]!";
+  "sidebar sticky top-14 z-30 flex h-[calc(100svh-3.5rem)] w-64 flex-none flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground max-xl:fixed max-xl:bottom-0 max-xl:left-0 max-xl:z-[70] max-xl:h-auto max-xl:w-[min(300px,86vw)] max-xl:shadow-[12px_0_48px_rgba(0,0,0,.35)] motion-reduce:[transition:none]!";
 const sidebarClosed =
   "max-xl:invisible max-xl:[transform:translateX(-105%)] max-xl:[transition:transform_.2s_ease,visibility_0s_linear_.2s]";
 const sidebarOpen =
@@ -200,8 +200,7 @@ export function DocsShell({
   // active page and sidebar section are derived from the pathname instead of
   // per-page props. usePathname reports app-relative paths (no /docs basePath).
   const pathname = usePathname();
-  const landing = pathname === "/";
-  const activeHref = landing ? "/docs" : withDocsBasePath(pathname);
+  const activeHref = pathname === "/" ? "/docs" : withDocsBasePath(pathname);
   const navigation = navigations[sectionOf(activeHref)];
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
@@ -220,7 +219,9 @@ export function DocsShell({
     if (!drawerOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    drawerRef.current?.querySelector<HTMLAnchorElement>("a")?.focus();
+    drawerRef.current
+      ?.querySelector<HTMLAnchorElement>(".drawer-sections a")
+      ?.focus();
 
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -237,12 +238,12 @@ export function DocsShell({
   const closeDrawer = () => setDrawerOpen(false);
 
   return (
-    <div className="docs-app min-h-screen">
+    <div className="docs-app flex min-h-svh flex-col bg-background text-foreground">
       <SiteHeader
         drawerOpen={drawerOpen}
         onMenu={() => setDrawerOpen((open) => !open)}
       />
-      <div className="docs-grid grid min-h-screen grid-cols-[260px_minmax(0,1fr)] pt-14 max-xl:block">
+      <div className="docs-body flex min-h-0 flex-1">
         <aside
           id="docs-navigation-drawer"
           ref={drawerRef}
@@ -252,36 +253,38 @@ export function DocsShell({
               : `${sidebarBase} ${sidebarClosed}`
           }
         >
-          <DocumentationSections
-            className={drawerSections}
-            onNavigate={closeDrawer}
-          />
-          <nav aria-label="Page navigation">
-            {navigation.map((group) => (
-              <section
-                // 20px group gap on mobile matches the divider→first-heading
-                // gap above, so the drawer keeps one vertical rhythm.
-                className="sidebar-group m-0 mb-6 max-xl:mb-5"
-                key={group.title}
-              >
-                {/* Every utility that collides with the UNLAYERED `h1,h2,…` / `h2` element
+          <div className="sidebar-scroll scroll-fade-t scroll-fade-b min-h-0 flex-1 overflow-y-auto px-6 pt-14 pb-12 [scrollbar-width:thin] max-xl:pt-4 max-xl:pb-[max(48px,env(safe-area-inset-bottom))]">
+            <DocumentationSections
+              className={drawerSections}
+              onNavigate={closeDrawer}
+            />
+            <nav aria-label="Page navigation">
+              {navigation.map((group) => (
+                <section
+                  // 20px group gap on mobile matches the divider→first-heading
+                  // gap above, so the drawer keeps one vertical rhythm.
+                  className="sidebar-group m-0 mb-6 max-xl:mb-5"
+                  key={group.title}
+                >
+                  {/* Every utility that collides with the UNLAYERED `h1,h2,…` / `h2` element
                     rules in styles/tokens.css is !important: unlayered declarations beat
                     `@layer utilities` no matter the specificity, so without `!` these
                     headings fall back to 24px/28px sans. */}
-                <h2 className="m-0! mb-2! font-mono! text-[11px]! leading-[14px]! font-semibold! tracking-[.1em]! text-(--text-secondary)! uppercase">
-                  {group.title}
-                </h2>
-                {group.items.map((item) => (
-                  <NavItem
-                    key={item.href ?? item.title}
-                    item={item}
-                    activeHref={activeHref}
-                    onNavigate={closeDrawer}
-                  />
-                ))}
-              </section>
-            ))}
-          </nav>
+                  <h2 className="m-0! mb-2! font-mono! text-[11px]! leading-[14px]! font-semibold! tracking-[.1em]! text-secondary-foreground! uppercase">
+                    {group.title}
+                  </h2>
+                  {group.items.map((item) => (
+                    <NavItem
+                      key={item.href ?? item.title}
+                      item={item}
+                      activeHref={activeHref}
+                      onNavigate={closeDrawer}
+                    />
+                  ))}
+                </section>
+              ))}
+            </nav>
+          </div>
         </aside>
         {drawerOpen && (
           <button
@@ -291,13 +294,7 @@ export function DocsShell({
             onClick={closeDrawer}
           />
         )}
-        <main
-          className={
-            landing
-              ? "docs-main landing-main col-[2] min-w-0 pr-[260px] max-xl:pr-0"
-              : "docs-main col-[2] min-w-0"
-          }
-        >
+        <main className="docs-main min-w-0 flex-1">
           {children}
         </main>
       </div>

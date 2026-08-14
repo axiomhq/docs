@@ -14,10 +14,10 @@ import type { ReactNode } from 'react';
 // Hover uses `[&:hover]` rather than `hover:` so it is not gated behind
 // `@media (hover: hover)`, matching the unconditional rule it replaces.
 const TOC_LINK =
-  'relative block py-[5px] overflow-hidden font-sans text-[13px] leading-[17px] tracking-[-.006em] text-ellipsis whitespace-nowrap transition-[color] duration-150 ease-[ease] [&:hover]:text-(--text-primary)!';
-const TOC_LINK_IDLE = 'text-(--text-quaternary)! font-[450]';
+  'relative block py-[5px] overflow-hidden font-sans text-[13px] leading-[17px] tracking-[-.006em] text-ellipsis whitespace-nowrap transition-[color] duration-150 ease-[ease] [&:hover]:text-foreground!';
+const TOC_LINK_IDLE = 'text-muted-foreground! font-[450]';
 const TOC_LINK_ACTIVE =
-  "active text-(--text-primary)! font-[550] before:absolute before:left-px before:top-1/2 before:-translate-y-1/2 before:w-[5px] before:h-[9px] before:bg-current before:content-['']";
+  "active text-foreground! font-[550] before:absolute before:left-px before:top-1/2 before:-translate-y-1/2 before:w-[5px] before:h-[9px] before:bg-current before:content-['']";
 
 export type TocItem = {
   title: ReactNode;
@@ -66,12 +66,12 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
 
   return (
     <aside
-      className="floating-toc fixed right-8 top-[112px] z-20 flex w-[210px] max-h-[calc(100vh_-_144px)] flex-col p-0 bg-transparent max-xl:hidden [&_a_code]:text-inherit! [&_a_code]:[font-size:inherit]"
+      className="floating-toc sticky top-28 hidden h-fit max-h-[calc(100svh_-_144px)] w-[210px] self-start flex-col bg-transparent p-0 xl:flex [&_a_code]:text-inherit! [&_a_code]:[font-size:inherit]"
       aria-label="On this page"
     >
       {/* The heading stays outside the scroller so the scroll-fade mask never
           dims it — only the link list scrolls and fades at its edges. */}
-      <strong className="block mb-[9px] flex-none text-(--text-tertiary) font-mono text-[11px] leading-[14px] font-semibold tracking-[.08em] uppercase">On this page</strong>
+      <strong className="mb-[9px] block flex-none font-mono text-[11px] leading-[14px] font-semibold tracking-[.08em] text-secondary-foreground uppercase">On this page</strong>
       <div className="min-h-0 flex-1 overflow-auto scroll-fade-t scroll-fade-b">
         {items.map((item) => (
           <a

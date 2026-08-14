@@ -105,7 +105,7 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await expect(listResponseSchema.getByRole('row').filter({ hasText: /^└name/ }).first()).toHaveAttribute('data-depth', '1');
 });
 
-test('theme defaults to the system and persists an explicit local preference', async ({ page }) => {
+test('theme follows the system until toggled and persists explicit light and dark preferences', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/docs');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -113,17 +113,21 @@ test('theme defaults to the system and persists an explicit local preference', a
   expect(await page.locator('html').evaluate((element) => getComputedStyle(element).getPropertyValue('--radius-4xl').trim())).toMatch(/^calc\(0?\.475rem \* 2\.6\)$/);
   expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBeNull();
 
-  await page.getByRole('button', { name: 'Color theme: system' }).click();
-  await page.getByRole('menuitemradio', { name: 'Light' }).click();
+  const themeToggle = page.getByRole('button', { name: 'Toggle color theme' });
+  await expect(themeToggle.locator('.lucide-sun')).toBeVisible();
+  await expect(themeToggle.locator('.lucide-moon')).toBeHidden();
+  await expect(page.getByRole('menu', { name: 'Color theme' })).toHaveCount(0);
+  await themeToggle.click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(themeToggle.locator('.lucide-moon')).toBeVisible();
+  await expect(themeToggle.locator('.lucide-sun')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBe('light');
 
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await page.getByRole('button', { name: 'Color theme: light' }).click();
-  await page.getByRole('menuitemradio', { name: 'System' }).click();
+  await page.getByRole('button', { name: 'Toggle color theme' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBe('system');
+  expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBe('dark');
 });
 
 test('search and mobile navigation are keyboard and touch accessible', async ({ page }) => {
@@ -246,26 +250,36 @@ test('analytics is silent without a PostHog project token', async ({ page }) => 
   expect(analyticsRequests).toEqual([]);
 });
 
-test('article remains viewport-centered across desktop and tablet widths', async ({ page }) => {
+test('article layout centers its real content group without synthetic rail space', async ({ page }) => {
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 768, height: 1024 }]) {
     await page.setViewportSize(viewport);
     await page.goto('/docs/getting-started');
-    const articleLocator = page.locator('.doc-article');
-    await expect(articleLocator).toBeVisible();
-    const article = await articleLocator.boundingBox();
-    expect(article).not.toBeNull();
-    expect(Math.abs(article!.x + article!.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
+    const main = (await page.locator('.docs-main').boundingBox())!;
+    const content = (await page.locator('.article-content').boundingBox())!;
+    expect(Math.abs(content.x + content.width / 2 - (main.x + main.width / 2))).toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   }
 });
 
-test('landing content reserves the desktop table-of-contents rail', async ({ page }) => {
+test('pages without a table of contents reserve no right rail', async ({ page }) => {
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }]) {
     await page.setViewportSize(viewport);
     await page.goto('/docs');
 
+    const main = (await page.locator('.docs-main').boundingBox())!;
     const hero = (await page.locator('.landing-hero').boundingBox())!;
-    expect(Math.abs(hero.x + hero.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1);
+    expect(Math.abs(hero.x + hero.width / 2 - (main.x + main.width / 2))).toBeLessThanOrEqual(1);
+    await expect(page.getByRole('complementary', { name: 'On this page' })).toHaveCount(0);
   }
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/docs/apps/introduction');
+  const main = (await page.locator('.docs-main').boundingBox())!;
+  const article = (await page.locator('.doc-article').boundingBox())!;
+  const articleContent = page.locator('.article-content');
+  await expect(articleContent).not.toHaveAttribute('data-has-toc');
+  await expect(page.getByRole('complementary', { name: 'On this page' })).toHaveCount(0);
+  expect(Math.abs(article.x + article.width / 2 - (main.x + main.width / 2))).toBeLessThanOrEqual(1);
 });
 
 test('table of contents tracks the active heading and keeps a transparent surface', async ({ page }) => {
@@ -275,7 +289,11 @@ test('table of contents tracks the active heading and keeps a transparent surfac
   const toc = page.getByRole('complementary', { name: 'On this page' });
   const queryArchitecture = toc.getByRole('link', { name: 'Query architecture' });
   await expect(toc).toBeVisible();
+  await expect(toc).toHaveCSS('position', 'sticky');
   await expect.poll(() => toc.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  const articleBox = (await page.locator('.doc-article').boundingBox())!;
+  const tocBox = (await toc.boundingBox())!;
+  expect(tocBox.x).toBeGreaterThanOrEqual(articleBox.x + articleBox.width);
 
   await queryArchitecture.click();
   await expect(queryArchitecture).toHaveAttribute('aria-current', 'location');
@@ -353,13 +371,12 @@ test('query reference navigation and MDX components follow the compact interacti
 
   const relatedFunction = page.getByRole('link', { name: 'iff', exact: true }).last();
   await expect(relatedFunction).toHaveAttribute('href', '/docs/apl/scalar-functions/conditional-function/iff');
-  await expect(relatedFunction).toHaveCSS('font-family', /Mono/);
   await page.locator('.sidebar').getByRole('link', { name: 'iff', exact: true }).click();
   await expect(page).toHaveURL(/\/conditional-function\/iff$/, { timeout: 15_000 });
   await expect(page.locator('.nav-nested[open] > summary span')).toHaveText(['Functions', 'Scalar functions', 'Conditional functions']);
 });
 
-test('Axiom article chrome, callouts, and heading links follow the docs interaction model', async ({ page, context }) => {
+test('Axiom article chrome, callouts, and heading links follow the docs interaction model', async ({ page, context }, testInfo) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/docs/platform-overview/architecture');
@@ -375,13 +392,72 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
   const brand = page.getByRole('link', { name: 'Axiom documentation home' });
   await expect(brand.locator('.brand-mark')).toBeVisible();
   await expect(brand.locator('.brand-logo')).toHaveCount(0);
+  const headerBox = (await page.locator('.site-header').boundingBox())!;
+  const brandBox = (await brand.boundingBox())!;
+  const sectionTabsBox = (await page.getByRole('navigation', { name: 'Documentation sections' }).boundingBox())!;
+  const sidebarShellBox = (await page.locator('.sidebar').boundingBox())!;
+  expect(headerBox.x).toBe(0);
+  expect(headerBox.width).toBe(1440);
+  expect(sectionTabsBox.x - (brandBox.x + brandBox.width)).toBeGreaterThanOrEqual(29);
+  expect(sectionTabsBox.x - (brandBox.x + brandBox.width)).toBeLessThanOrEqual(31);
+  expect(sidebarShellBox.y).toBe(headerBox.y + headerBox.height);
   const badge = brand.locator('.brand-badge');
-  await expect(badge).toHaveCSS('font-size', '14px');
-  await expect(badge).toHaveCSS('border-left-color', 'rgb(218, 92, 43)');
+  await expect(brand.locator('.brand-mark')).toHaveCSS('width', '22px');
+  await expect(brand.locator('.brand-mark')).toHaveCSS('height', '19px');
+  await expect(badge).toHaveCSS('font-size', '15px');
+  const brandColor = await page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--brand)';
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+  const mediumRadius = await page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.borderRadius = 'var(--radius-md)';
+    document.body.append(probe);
+    const radius = getComputedStyle(probe).borderRadius;
+    probe.remove();
+    return radius;
+  });
+  await expect(badge).toHaveCSS('border-left-color', brandColor);
   await expect(badge).toHaveCSS('border-radius', '0px');
-  await expect(badge).toHaveCSS('font-weight', '600');
-  await expect(page.getByRole('navigation', { name: 'Documentation sections' }).getByRole('link', { name: 'Changelog' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Open console →' })).toBeVisible();
+  await expect(badge).toHaveCSS('font-weight', '500');
+  const sectionTabs = page.getByRole('navigation', { name: 'Documentation sections' });
+  const activeSectionTab = sectionTabs.getByRole('link', { name: 'Documentation', exact: true });
+  await expect(activeSectionTab).toHaveCSS('height', '30px');
+  await expect(activeSectionTab).toHaveCSS('border-radius', mediumRadius);
+  await expect(activeSectionTab).toHaveCSS('font-size', '13px');
+  const activeTabBackground = await activeSectionTab.evaluate((element) => getComputedStyle(element).backgroundColor);
+  await activeSectionTab.hover();
+  await expect(activeSectionTab).toHaveCSS('background-color', activeTabBackground);
+  const activeTabLine = await activeSectionTab.evaluate((element) => {
+    const styles = getComputedStyle(element, '::after');
+    return { color: styles.backgroundColor, height: styles.height };
+  });
+  expect(activeTabLine).toEqual({ color: brandColor, height: '1px' });
+  await expect(sectionTabs.getByRole('link', { name: 'Changelog' })).toHaveCount(0);
+  await expect(page.locator('.header-divider')).toHaveCount(2);
+  await expect(page.locator('.header-search')).toContainText('What are you looking for?');
+  const consoleButton = page.getByRole('link', { name: 'Open Console', exact: true });
+  await expect(consoleButton).toBeVisible();
+  await expect(consoleButton).toHaveCSS('height', '28px');
+  await expect(consoleButton).toHaveCSS('border-radius', mediumRadius);
+  await expect(consoleButton).toHaveCSS('font-size', '13px');
+  await expect(consoleButton).toHaveCSS('font-weight', '450');
+  await expect(consoleButton).toHaveCSS('background-color', brandColor);
+  const buttonArrows = consoleButton.locator('.button-arrow > span');
+  await expect(buttonArrows).toHaveCount(2);
+  if (testInfo.project.name === 'desktop-chromium') {
+    await consoleButton.hover();
+    await expect(buttonArrows.first()).toHaveCSS('opacity', '0');
+    await expect(buttonArrows.last()).toHaveCSS('opacity', '1');
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(buttonArrows.first()).toHaveCSS('transform', 'none');
+  await expect(buttonArrows.first()).toHaveCSS('opacity', '1');
+  await expect(buttonArrows.last()).toHaveCSS('display', 'none');
 
   const notice = page.locator('.doc-notice').first();
   await expect(notice).toBeVisible();
@@ -537,8 +613,7 @@ test('article copy keeps a distinct contrast hierarchy in both themes', async ({
   await expect(heading).toHaveCSS('color', 'rgb(250, 250, 250)');
   await expect(boldLabel).toHaveCSS('color', 'rgb(250, 250, 250)');
 
-  await page.getByRole('button', { name: 'Color theme: system' }).click();
-  await page.getByRole('menuitemradio', { name: 'Light' }).click();
+  await page.getByRole('button', { name: 'Toggle color theme' }).click();
   await expect(bodyCopy).toHaveCSS('color', 'rgb(18, 18, 18)');
   await expect(heading).toHaveCSS('color', 'rgb(10, 10, 10)');
   await expect(boldLabel).toHaveCSS('color', 'rgb(10, 10, 10)');

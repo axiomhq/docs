@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getApiOperation, resolveSchema, schemaExample } from '@/lib/openapi';
+import {
+  getApiOperation,
+  getApiOperationSections,
+  resolveSchema,
+  schemaExample,
+} from '@/lib/openapi';
 
 describe('OpenAPI migration', () => {
   it('resolves the legacy endpoint reference against the checked-in spec', () => {
@@ -35,5 +40,23 @@ describe('OpenAPI migration', () => {
     expect(responseSchema.type).toBe('array');
     expect(dashboard.properties.name.type).toBe('string');
     expect(dashboard.required).toContain('name');
+  });
+
+  it('builds the page TOC only from sections rendered by the operation', () => {
+    expect(getApiOperationSections('v2 get /dashboards')).toEqual([
+      { title: 'Parameters', url: '#parameters', depth: 2 },
+      { title: 'Request', url: '#example', depth: 2 },
+      { title: 'Response', url: '#response', depth: 2 },
+    ]);
+
+    expect(
+      getApiOperationSections('v1 post /datasets/{dataset_name}/ingest'),
+    ).toEqual([
+      { title: 'Parameters', url: '#parameters', depth: 2 },
+      { title: 'Body', url: '#body', depth: 2 },
+      { title: 'Request', url: '#example', depth: 2 },
+      { title: 'Response', url: '#response', depth: 2 },
+    ]);
+    expect(getApiOperationSections('missing get /nothing')).toEqual([]);
   });
 });
