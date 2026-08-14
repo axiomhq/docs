@@ -1,7 +1,8 @@
 'use client';
 
 import type { HTMLAttributes, MouseEvent, ReactNode } from 'react';
-import { Link as LinkIcon } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Check, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -9,6 +10,9 @@ import { copyToClipboard } from '@/lib/clipboard';
 type HeadingTag = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
 export function HeadingAnchor({ as: Heading, children, id, className, ...props }: HTMLAttributes<HTMLHeadingElement> & { as: HeadingTag; children?: ReactNode }) {
+  const [copied, setCopied] = useState(false);
+  const copiedTimeout = useRef(0);
+
   async function copyAnchor(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
     if (!id) return;
@@ -20,7 +24,9 @@ export function HeadingAnchor({ as: Heading, children, id, className, ...props }
     window.history.replaceState(null, '', url);
 
     if (await copyToClipboard(url.href)) {
-      toast.success('Link copied', { description: `#${id}` });
+      setCopied(true);
+      window.clearTimeout(copiedTimeout.current);
+      copiedTimeout.current = window.setTimeout(() => setCopied(false), 1600);
     } else {
       toast.error('Couldn’t copy link');
     }
@@ -37,10 +43,15 @@ export function HeadingAnchor({ as: Heading, children, id, className, ...props }
             `@media (hover: hover)`, which would drop it on coarse pointers.
             Hidden below sm where the gutter would clip off-screen. */}
         <span
-          className="anchor-hash absolute right-full top-1/2 -translate-y-1/2 mr-[10px] flex text-(--text-quaternary) opacity-0 translate-x-[3px] transition-[opacity,translate] duration-150 ease-[ease] [.anchor-heading:hover_&]:opacity-100 [.anchor-heading:hover_&]:translate-x-0 [.anchor-heading:has(a:focus-visible)_&]:opacity-100 [.anchor-heading:has(a:focus-visible)_&]:translate-x-0 max-sm:hidden"
+          className={cn(
+            'anchor-hash absolute right-full top-1/2 -translate-y-1/2 mr-[10px] flex text-(--text-quaternary) opacity-0 translate-x-[3px] transition-[opacity,translate] duration-150 ease-[ease] [.anchor-heading:hover_&]:opacity-100 [.anchor-heading:hover_&]:translate-x-0 [.anchor-heading:has(a:focus-visible)_&]:opacity-100 [.anchor-heading:has(a:focus-visible)_&]:translate-x-0 max-sm:hidden',
+            copied && 'opacity-100! translate-x-0! text-(--text-primary)',
+          )}
           aria-hidden="true"
         >
-          <LinkIcon className="size-[.6em]" strokeWidth={2.25} />
+          {copied
+            ? <Check className="size-[.75em]" strokeWidth={2.25} />
+            : <LinkIcon className="size-[.75em]" strokeWidth={2.25} />}
         </span>
         {children}
       </a>

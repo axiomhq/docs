@@ -217,7 +217,7 @@ export function DocsAssistantPanel({
       <div className="docs-assistant-footer bg-(--bg-surface)">
       <PromptInput
         className="docs-assistant-composer [box-shadow:none]"
-        inputGroupClassName="docs-assistant-input-wrap min-h-[64px] h-auto py-3 pr-3 pl-4 flex items-start gap-2 border-0 border-t border-(--border-strong) rounded-none has-[textarea]:rounded-none bg-transparent dark:bg-transparent [box-shadow:none] transition-[border-color] duration-(--duration-1) ease-(--ease-out) focus-within:border-(--color-accent) has-[[data-slot=input-group-control]:focus-visible]:border-(--color-accent) has-[[data-slot=input-group-control]:focus-visible]:ring-0 max-sm:pl-3"
+        inputGroupClassName="docs-assistant-input-wrap min-h-[64px] h-auto py-3 pr-3 pl-4 flex items-start gap-2 border-0 border-t border-(--border-primary) rounded-none has-[textarea]:rounded-none bg-transparent dark:bg-transparent [box-shadow:none] has-[[data-slot=input-group-control]:focus-visible]:border-(--border-primary) has-[[data-slot=input-group-control]:focus-visible]:ring-0 max-sm:pl-3"
         onSubmit={submit}
       >
         <PromptInputBody>

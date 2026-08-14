@@ -17,6 +17,14 @@ import {
 } from 'react';
 import { useDocsSearch as useFumadocsSearch } from 'fumadocs-core/search/client';
 import { fetchClient } from 'fumadocs-core/search/client/fetch';
+import {
+  ApiIntroductionIcon,
+  ArrowUpRightIcon,
+  ConsoleIcon,
+  MethodsIcon,
+  QueryIntroductionIcon,
+  QuickStartIcon,
+} from '@/assets/icons';
 import { useDocsSearchController } from '@/components/docs-search-provider';
 import {
   analyticsTimestamp,
@@ -43,6 +51,23 @@ const LazyAssistantPanel = dynamic(
   },
 );
 
+const SUGGESTED_PAGES = [
+  { title: 'Quickstart', section: 'Platform overview', href: '/getting-started', Icon: QuickStartIcon },
+  { title: 'Send data', section: 'Methods', href: '/send-data/methods', Icon: MethodsIcon },
+  { title: 'Query with APL', section: 'Query reference', href: '/apl/introduction', Icon: QueryIntroductionIcon },
+  { title: 'API reference', section: 'REST API', href: '/restapi/introduction', Icon: ApiIntroductionIcon },
+  { title: 'Explore data', section: 'Query data', href: '/query-data/explore', Icon: ConsoleIcon },
+];
+
+function SearchSectionHeading({ label, className = '' }: { label: string; className?: string }) {
+  return (
+    <div className={`flex items-center gap-2.5 px-[11px] pt-1 pb-2 ${className}`}>
+      <span className="shrink-0 font-mono text-[11px] leading-4 font-normal tracking-[0px] uppercase text-(--text-tertiary)">{label}</span>
+      <span aria-hidden="true" className="h-px min-w-0 flex-1 bg-[linear-gradient(to_right,transparent,var(--border-primary))]" />
+    </div>
+  );
+}
+
 export function DocsSearchDialog() {
   const { open, mode, close, setMode } = useDocsSearchController();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -66,7 +91,7 @@ export function DocsSearchDialog() {
   return (
     <dialog
       ref={dialogRef}
-      className="docs-search-dialog ph-no-capture m-auto h-[min(650px,calc(100dvh_-_64px))] w-[min(720px,calc(100vw_-_32px))] max-h-none max-w-none overflow-hidden rounded-md border border-(--border-strong) bg-(--bg-overlay) p-0 text-(--text-primary) shadow-[0_16px_48px_rgba(0,0,0,.36)] backdrop:bg-[rgba(0,0,0,.58)] backdrop:backdrop-blur-[2px] max-sm:h-[calc(100dvh_-_12px)] max-sm:w-[calc(100vw_-_12px)]"
+      className="docs-search-dialog ph-no-capture m-auto h-[min(650px,calc(100dvh_-_64px))] w-[min(720px,calc(100vw_-_32px))] max-h-none max-w-none overflow-hidden rounded-md border border-(--border-primary) bg-(--bg-overlay) p-0 text-(--text-primary) shadow-[0_16px_48px_rgba(0,0,0,.36)] backdrop:bg-[rgba(0,0,0,.58)] backdrop:backdrop-blur-[2px] max-sm:h-[calc(100dvh_-_12px)] max-sm:w-[calc(100vw_-_12px)]"
       aria-label="Search and ask Axiom Docs"
       data-ph-no-capture
       onCancel={(event) => {
@@ -84,7 +109,7 @@ export function DocsSearchDialog() {
               id="docs-search-tab"
               type="button"
               role="tab"
-              className="relative inline-flex cursor-pointer items-center gap-[7px] border-0 bg-transparent px-[9px] py-0 font-sans! text-[13px]! leading-4! font-medium! text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-secondary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-tertiary) aria-selected:bg-interactive-selected aria-selected:font-semibold! aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-0 aria-selected:after:-bottom-px aria-selected:after:left-0 aria-selected:after:h-0.5 aria-selected:after:bg-(--color-accent) aria-selected:after:content-[''] max-sm:min-h-11 max-sm:text-[14px]!"
+              className="relative inline-flex cursor-pointer items-center gap-[7px] border-0 bg-transparent px-[9px] py-0 font-sans! text-[13px]! leading-4! font-medium! text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-secondary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-tertiary) aria-selected:bg-interactive-selected aria-selected:font-semibold! aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-0 aria-selected:after:-bottom-px aria-selected:after:left-0 aria-selected:after:h-px aria-selected:after:bg-(--color-accent) aria-selected:after:content-[''] max-sm:min-h-11 max-sm:text-[14px]!"
               aria-selected={mode === 'search'}
               aria-controls="docs-search-panel"
               onClick={() => {
@@ -98,7 +123,7 @@ export function DocsSearchDialog() {
               id="docs-assistant-tab"
               type="button"
               role="tab"
-              className="relative inline-flex cursor-pointer items-center gap-[7px] border-0 bg-transparent px-[9px] py-0 font-sans! text-[13px]! leading-4! font-medium! text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-secondary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-tertiary) aria-selected:bg-interactive-selected aria-selected:font-semibold! aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-0 aria-selected:after:-bottom-px aria-selected:after:left-0 aria-selected:after:h-0.5 aria-selected:after:bg-(--color-accent) aria-selected:after:content-[''] max-sm:min-h-11 max-sm:text-[14px]!"
+              className="relative inline-flex cursor-pointer items-center gap-[7px] border-0 bg-transparent px-[9px] py-0 font-sans! text-[13px]! leading-4! font-medium! text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-secondary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-tertiary) aria-selected:bg-interactive-selected aria-selected:font-semibold! aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-0 aria-selected:after:-bottom-px aria-selected:after:left-0 aria-selected:after:h-px aria-selected:after:bg-(--color-accent) aria-selected:after:content-[''] max-sm:min-h-11 max-sm:text-[14px]!"
               aria-selected={mode === 'assistant'}
               aria-controls="docs-assistant-panel"
               onClick={() => {
@@ -201,7 +226,7 @@ function SearchPanel() {
       aria-labelledby="docs-search-tab"
       className="docs-search-panel grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]"
     >
-      <div className="docs-search-input-row flex h-[52px] items-center gap-2.5 border-b border-(--border-secondary) bg-(--bg-canvas) px-4 py-0 text-(--icon-secondary) max-sm:h-14 max-sm:px-[13px]">
+      <div className="docs-search-input-row flex h-[52px] items-center gap-2.5 bg-(--bg-canvas) px-4 py-0 text-(--icon-secondary) max-sm:h-14 max-sm:px-[13px]">
         <Search size={17} aria-hidden="true" />
         <input
           ref={inputRef}
@@ -239,15 +264,41 @@ function SearchPanel() {
           </button>
         )}
         {!search.trim() && (
-          <div className="docs-search-empty flex h-full min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center text-(--text-tertiary)">
-            <strong className="font-sans text-[15px] leading-5 font-semibold text-(--text-primary)">Find anything in Axiom Docs</strong>
-            <p className="mx-0 mt-[7px] mb-[18px] max-w-[390px] font-sans text-[13px] leading-5 font-normal">Search exact fields, API paths, APL and MPL functions, concepts, and guides.</p>
+          <div className="docs-search-empty flex flex-col pt-1.5 pb-1">
+            <SearchSectionHeading label="Suggested" />
+            {SUGGESTED_PAGES.map(({ title, section, href, Icon }) => (
+              <button
+                key={href}
+                type="button"
+                className="group/suggested flex min-h-[42px] w-full cursor-pointer items-center gap-2.5 rounded-md border-0 bg-transparent px-[11px] py-2 text-left text-(--text-secondary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-primary) focus-visible:shadow-[inset_0_0_0_1px_var(--color-accent)] focus-visible:outline-0 max-md:min-h-11"
+                onClick={() => {
+                  close();
+                  router.push(href);
+                }}
+              >
+                <span className="flex size-4 items-center justify-center text-(--icon-secondary) transition-colors duration-(--duration-1) ease-(--ease-out) group-hover/suggested:text-(--text-primary) [&>svg]:size-3.5">
+                  <Icon />
+                </span>
+                <span className="font-sans text-[13px] leading-[18px] font-[450] max-sm:text-[14px]">{title}</span>
+                <span className="ml-auto inline-flex items-center gap-2">
+                  <span className="font-mono text-[10px] leading-[14px] font-[450] text-(--text-tertiary) max-sm:hidden">{section}</span>
+                  <ArrowUpRightIcon aria-hidden="true" className="size-2.5 text-(--text-tertiary) opacity-0 transition-opacity duration-200 group-hover/suggested:opacity-100" />
+                </span>
+              </button>
+            ))}
+            <SearchSectionHeading label="Ask AI" className="mt-3" />
             <button
               type="button"
-              className="cursor-pointer rounded-[3px] border-0 bg-(--bg-emph-tertiary) px-2 py-1.5 font-sans! text-[12px]! leading-4! font-medium! text-(--text-secondary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-primary) max-md:min-h-11 max-sm:text-[14px]!"
+              className="group/suggested flex min-h-[42px] w-full cursor-pointer items-center gap-2.5 rounded-md border-0 bg-transparent px-[11px] py-2 text-left font-sans! text-[13px]! leading-[18px]! font-[450]! text-(--text-secondary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-primary) focus-visible:shadow-[inset_0_0_0_1px_var(--color-accent)] focus-visible:outline-0 max-md:min-h-11 max-sm:text-[14px]!"
               onClick={() => handoff('search_empty_state')}
             >
-              Ask a question instead <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">⌘I</kbd>
+              <span className="flex size-4 items-center justify-center text-(--icon-secondary) transition-colors duration-(--duration-1) ease-(--ease-out) group-hover/suggested:text-(--text-primary)">
+                <BookOpen size={15} />
+              </span>
+              Ask a question about Axiom
+              <span className="ml-auto inline-flex items-center gap-2">
+                <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">⌘I</kbd>
+              </span>
             </button>
           </div>
         )}
@@ -281,7 +332,7 @@ function SearchPanel() {
         <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">↵</kbd> Open</span>
         <button
           type="button"
-          className="ml-auto cursor-pointer border-0 bg-transparent p-0 font-sans! text-[11px]! leading-4! font-medium! text-(--text-tertiary) transition-[color] duration-(--duration-1) ease-(--ease-out) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:text-(--color-accent) max-md:min-h-11 max-sm:ml-0 max-sm:text-[13px]!"
+          className="ml-auto inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-sans! text-[11px]! leading-4! font-medium! text-(--text-tertiary) transition-[color] duration-(--duration-1) ease-(--ease-out) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:text-(--color-accent) max-md:min-h-11 max-sm:ml-0 max-sm:text-[13px]!"
           onClick={() => handoff('search_footer', search.trim())}
         >Ask AI <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">⌘I</kbd></button>
       </footer>

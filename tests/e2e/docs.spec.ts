@@ -788,15 +788,15 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
   await expect(assistantInput).toHaveValue('dataset retention', { timeout: 15_000 });
   await expect(assistantInput).toHaveAttribute('data-ph-no-capture', 'true');
   await expect(page.locator('.docs-assistant-composer')).toHaveCSS('box-shadow', 'none');
-  const accentColor = await page.evaluate(() => {
+  const composerBorderColor = await page.evaluate(() => {
     const probe = document.createElement('span');
-    probe.style.color = 'var(--color-accent)';
+    probe.style.color = 'var(--border-primary)';
     document.body.append(probe);
     const color = getComputedStyle(probe).color;
     probe.remove();
     return color;
   });
-  await expect(page.locator('.docs-assistant-input-wrap')).toHaveCSS('border-color', accentColor);
+  await expect(page.locator('.docs-assistant-input-wrap')).toHaveCSS('border-top-color', composerBorderColor);
   expect(await page.evaluate(() => Object.values(localStorage).includes('dataset retention'))).toBe(false);
 
   await page.keyboard.press('Escape');
