@@ -7,6 +7,9 @@ import {
   CarbonCode,
   CarbonRocket,
 } from "@/components/landing-icons";
+import { IconCard } from "@/components/icon-card";
+import { HeroFlaresShader } from "@/components/hero-flares-shader";
+import { LandingSectionHeading } from "@/components/landing-section-heading";
 import { ZoneLink as Link } from "@/components/zone-link";
 import { ogImage } from "@/lib/og";
 
@@ -22,7 +25,7 @@ const quickCards = [
     title: "Query with APL",
     description:
       "From count() to joins. Operators, functions, and worked examples.",
-    href: "/docs/apl/overview",
+    href: "/docs/apl/introduction",
     Icon: CarbonCode,
   },
   {
@@ -77,7 +80,7 @@ const integrations: Integration[] = [
   },
   {
     label: "AWS",
-    href: "/docs/send-data/cloudwatch",
+    href: "/docs/send-data/aws-overview",
     slug: "aws",
     blurb: "CloudWatch, Lambda, and S3.",
   },
@@ -101,7 +104,7 @@ const integrations: Integration[] = [
   },
   {
     label: "Syslog",
-    href: "/docs/send-data/syslog",
+    href: "/docs/send-data/syslog-proxy",
     fallback: ScrollText,
     blurb: "Streams from hosts and network gear.",
   },
@@ -128,12 +131,12 @@ const platformRows = [
   [
     "Explore data",
     "Search, filter, and inspect every event in real time.",
-    "/docs/query-data/explore",
+    "/docs/query-data/stream",
   ],
   [
     "Query with APL",
     "Transform and analyze data with Axiom Processing Language.",
-    "/docs/apl/overview",
+    "/docs/apl/introduction",
   ],
   [
     "Build dashboards",
@@ -178,69 +181,56 @@ export const metadata: Metadata = {
 
 export default function DocsLandingPage() {
   return (
-    <div className="landing-content pt-10 px-14 pb-0 max-lg:px-10 max-md:px-7 max-sm:pt-7 max-sm:px-5">
+    <div className="landing-content relative isolate overflow-x-clip px-14 pt-10 lg:pt-52 max-lg:px-10 max-md:px-7 max-sm:pt-7 max-sm:px-5">
+      <HeroFlaresShader className="hero-flares absolute -top-[340px] left-1/2 z-0 hidden w-[853px] max-w-none -translate-x-1/2 lg:block" />
       <section
         className={cn(
-          "landing-hero",
-          "w-[min(760px,100%)] mx-auto",
+          "landing-hero relative z-10",
+          "w-[min(760px,100%)] mx-auto text-center",
           "pt-6 px-0 pb-12 max-sm:pt-2",
         )}
       >
-        <h1 className="m-0! max-w-[700px] text-(--text-primary)! font-sans! text-[44px]! leading-12! font-semibold! tracking-[-.03em]! text-pretty max-sm:text-[36px]! max-sm:leading-10!">
+        <h1 className="m-0! mx-auto! max-w-[700px] text-(--text-primary)! font-sans! text-[44px]! leading-12! font-medium! tracking-[-.03em]! text-pretty max-sm:text-[36px]! max-sm:leading-10!">
           From first event to petabyte scale.
         </h1>
-        <p className="max-w-[560px] mt-[14px]! mx-0! mb-0! text-(--text-tertiary)! font-sans text-[16px] leading-[26px] font-normal tracking-[-.01em]">
+        <p className="max-w-[560px] mt-[14px]! mx-auto! mb-0! text-(--text-tertiary)! font-sans text-[16px] leading-[26px] font-normal tracking-[-.01em]">
           Send, store, and query logs, traces, metrics, and events.
           From first ingest to petabyte scale.
         </p>
       </section>
       <section
         className={cn(
-          "quick-grid",
+          "quick-grid relative z-10",
           "w-[min(760px,100%)] mx-auto",
           "grid grid-cols-3 gap-4 max-sm:grid-cols-1",
         )}
         aria-label="Popular starting points"
       >
         {quickCards.map(({ Icon, ...card }) => (
-          <Link
-            href={card.href}
-            prefetch={false}
-            className="quick-card p-5 flex flex-col gap-1.5 rounded-[6px] bg-(--bg-surface) transition-[background-color] duration-150 ease-[ease] [&:hover]:bg-(--bg-raised)"
+          <IconCard
+            {...card}
+            icon={<Icon size={22} />}
+            gap="md"
+            className="quick-card"
             key={card.title}
-          >
-            <span className="mb-2.5 text-(--text-tertiary) [.quick-card:hover_&]:text-(--text-primary) transition-colors duration-150 ease-[ease]">
-              <Icon size={22} />
-            </span>
-            <strong className="font-sans text-[15px] leading-5 font-semibold tracking-[-.01em]">
-              {card.title}
-            </strong>
-            <span className="text-(--text-tertiary) font-sans text-[13px] leading-5 font-normal">
-              {card.description}
-            </span>
-          </Link>
+          />
         ))}
       </section>
       <section
         className={cn(
-          "landing-section",
+          "landing-section relative z-10",
           "w-[min(760px,100%)] mx-auto",
           "mt-14",
         )}
       >
-        <div className="section-heading flex items-center gap-4 mb-5">
-          <h2 className="m-0! text-(--text-tertiary)! font-mono! text-[12px]! leading-4! tracking-[.08em]! uppercase">
-            Send data
-          </h2>
-          <span className="flex-1 border-t border-(--border-primary)" />
-          <Link
-            href="/docs/apps/introduction"
-            prefetch={false}
-            className="text-(--text-tertiary)! font-mono text-[12px] leading-4 font-[450]"
-          >
-            All integrations →
-          </Link>
-        </div>
+        <LandingSectionHeading
+          title="Send data"
+          trailingLink={{
+            href: "/docs/send-data/methods",
+            label: "All integrations",
+          }}
+          className="mb-5"
+        />
         <div className="integration-list grid grid-cols-3 gap-x-6 gap-y-1 max-md:grid-cols-2 max-sm:grid-cols-1">
           {integrations.map(
             ({ label, href, slug, blurb, fallback: Fallback }) => (
@@ -248,7 +238,7 @@ export default function DocsLandingPage() {
                 href={href}
                 prefetch={false}
                 key={label}
-                className="-mx-2.5 px-2.5 py-2.5 flex items-start gap-3 rounded-[6px] no-underline transition-[background-color] duration-150 ease-[ease] [&:hover]:bg-(--bg-inert)"
+                className="-mx-2.5 px-2.5 py-2.5 flex items-start gap-3 rounded-[6px] no-underline transition-[background-color] duration-150 ease-[ease] [&:hover]:bg-interactive-hover"
               >
                 <span className="flex-none mt-px">
                   {slug ? (
@@ -272,33 +262,47 @@ export default function DocsLandingPage() {
       </section>
       <section
         className={cn(
-          "landing-section platform-index",
+          "landing-section platform-index relative z-10",
           "w-[min(760px,100%)] mx-auto",
           "mt-14",
         )}
       >
-        <div className="section-heading flex items-center gap-4 mb-2">
-          <h2 className="m-0! text-(--text-tertiary)! font-mono! text-[12px]! leading-4! tracking-[.08em]! uppercase">
-            Explore the platform
-          </h2>
-          <span className="flex-1 border-t border-(--border-primary) text-(--text-tertiary) font-sans text-[13px] leading-5 font-normal" />
-        </div>
-        {platformRows.map(([title, description, href]) => (
-          <Link
-            href={href}
-            prefetch={false}
-            key={title}
-            className="py-4 px-1 flex items-baseline gap-3 border-b border-(--border-secondary) last:border-b-0 [&:hover]:bg-(--bg-emph-tertiary) [&:hover]:border-transparent [&:has(+_a:hover)]:border-transparent max-sm:items-start max-sm:flex-wrap"
-          >
-            <strong className="w-[180px] flex-none font-sans text-[14px] leading-5 font-semibold max-sm:w-full">
-              {title}
-            </strong>
-            <span className="flex-1 text-(--text-tertiary) font-sans text-[13px] leading-5 font-normal">
-              {description}
-            </span>
-            <b className="text-(--text-quaternary) font-mono font-normal">→</b>
-          </Link>
-        ))}
+        <LandingSectionHeading title="Explore the platform" className="mb-2" />
+        <nav className="platform-list" aria-label="Explore the platform">
+          {platformRows.map(([title, description, href]) => (
+            <Link
+              href={href}
+              prefetch={false}
+              key={title}
+              className={cn(
+                "platform-row grid grid-cols-[160px_minmax(0,1fr)_auto] items-center gap-x-5 px-2 py-4",
+                "border-b border-(--border-secondary) last:border-b-0",
+                "focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-(--color-accent)",
+                "max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:gap-x-3 max-sm:gap-y-1 max-sm:px-1",
+              )}
+            >
+              <span
+                data-slot="platform-row-title"
+                className="min-w-0 font-sans text-[14px] leading-5 font-medium text-(--text-primary)"
+              >
+                {title}
+              </span>
+              <span
+                data-slot="platform-row-description"
+                className="min-w-0 text-(--text-tertiary) font-sans text-[13px] leading-5 font-normal max-sm:col-span-2 max-sm:col-start-1 max-sm:row-start-2"
+              >
+                {description}
+              </span>
+              <span
+                aria-hidden="true"
+                data-slot="platform-row-arrow"
+                className="justify-self-end font-mono text-[15px] leading-none font-normal text-(--text-quaternary) [.platform-row:hover_&]:text-(--text-secondary) [.platform-row:focus-visible_&]:text-(--text-secondary) max-sm:col-start-2 max-sm:row-start-1"
+              >
+                →
+              </span>
+            </Link>
+          ))}
+        </nav>
       </section>
     </div>
   );

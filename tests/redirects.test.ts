@@ -1,7 +1,31 @@
 // @vitest-environment node
 
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { redirects } from '@/lib/redirects.mjs';
+
+function walk(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const target = path.join(directory, entry.name);
+    return entry.isDirectory() ? walk(target) : [target];
+  });
+}
+
+function documentationRoutes() {
+  const docsRoot = path.join(process.cwd(), 'content/docs');
+  return new Set(
+    walk(docsRoot)
+      .filter((file) => file.endsWith('.mdx'))
+      .map((file) =>
+        `/${path
+          .relative(docsRoot, file)
+          .replace(/^\([^/]+\)\//, '')
+          .replace(/\.mdx$/, '')
+          .replace(/\/index$/, '')}`,
+      ),
+  );
+}
 
 describe('legacy redirects', () => {
   // A floor, not a fixed count: adding redirects is routine, losing them breaks inbound links.
@@ -27,6 +51,44 @@ describe('legacy redirects', () => {
   it('translates wildcards to Next.js path parameters', () => {
     const wildcard = redirects.find((redirect) => redirect.source.includes(':path*'));
     expect(wildcard?.source.endsWith('/:path*')).toBe(true);
+  });
+
+  it('ultimately resolves every internal destination to a documentation page', () => {
+    const pages = documentationRoutes();
+    const pageRedirects = new Map(
+      redirects
+        .filter((redirect) => !redirect.source.endsWith('.md'))
+        .map((redirect) => [redirect.source, redirect.destination]),
+    );
+    const unresolved = [];
+
+    for (const [sourcePath, firstDestination] of pageRedirects) {
+      if (sourcePath.includes(':path*')) continue;
+      let destination = firstDestination;
+      const visited = new Set([sourcePath]);
+
+      while (
+        destination.startsWith('/') &&
+        !pages.has(destination) &&
+        destination !== '/'
+      ) {
+        if (visited.has(destination)) break;
+        visited.add(destination);
+        const next = pageRedirects.get(destination);
+        if (!next) break;
+        destination = next;
+      }
+
+      if (
+        destination.startsWith('/') &&
+        destination !== '/' &&
+        !pages.has(destination)
+      ) {
+        unresolved.push({ source: sourcePath, destination });
+      }
+    }
+
+    expect(unresolved).toEqual([]);
   });
 });
 

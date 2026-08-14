@@ -1,0 +1,16 @@
+import type { SVGProps } from "react";
+
+export function AiAgentsIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" {...props}>
+    <g id="Frame" clipPath="url(#clip0_0_22)">
+    <path id="Vector" d="M8.25 4.125V3.375H6.75V4.125H7.125V6.75H6.75V7.5H8.25V6.75H7.875V4.125H8.25ZM10.7318 9.73995L10.0855 8.44147C9.95839 8.18617 9.54165 8.18617 9.41456 8.44147L8.25 10.7811L7.83544 9.94815C7.77191 9.82054 7.64209 9.73995 7.5 9.73995H6V10.4933H7.26817L7.91453 11.7918C7.97805 11.9194 8.10788 12 8.24996 12C8.39205 12 8.52187 11.9194 8.5854 11.7918L9.74996 9.4521L10.1645 10.2851C10.2281 10.4127 10.3579 10.4933 10.5 10.4933H12V9.73995H10.7318ZM4.875 3.375H3.75L2.43877 7.5H3.18833L3.414 6.75H5.20579L5.43769 7.5H6.18769L4.875 3.375ZM3.63968 6.00004L4.25032 3.97084L4.34629 3.96994L4.97389 6.00004H3.63968ZM0.75 0.75H10.5V6.375H11.25V0H0V11.25H4.125V10.5H0.75V0.75Z" fill="currentColor"/>
+    </g>
+    <defs>
+    <clipPath id="clip0_0_22">
+    <rect width="12" height="12" fill="currentColor"/>
+    </clipPath>
+    </defs>
+    </svg>
+  );
+}

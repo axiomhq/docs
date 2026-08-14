@@ -84,7 +84,7 @@ export function DocsSearchDialog() {
               id="docs-search-tab"
               type="button"
               role="tab"
-              className="relative inline-flex cursor-pointer items-center gap-[7px] border-0 bg-transparent px-[9px] py-0 font-sans! text-[13px]! leading-4! font-medium! text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:text-(--text-secondary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-tertiary) aria-selected:font-semibold! aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-0 aria-selected:after:-bottom-px aria-selected:after:left-0 aria-selected:after:h-0.5 aria-selected:after:bg-(--color-accent) aria-selected:after:content-[''] max-sm:min-h-11 max-sm:text-[14px]!"
+              className="relative inline-flex cursor-pointer items-center gap-[7px] border-0 bg-transparent px-[9px] py-0 font-sans! text-[13px]! leading-4! font-medium! text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-secondary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-tertiary) aria-selected:bg-interactive-selected aria-selected:font-semibold! aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-0 aria-selected:after:-bottom-px aria-selected:after:left-0 aria-selected:after:h-0.5 aria-selected:after:bg-(--color-accent) aria-selected:after:content-[''] max-sm:min-h-11 max-sm:text-[14px]!"
               aria-selected={mode === 'search'}
               aria-controls="docs-search-panel"
               onClick={() => {
@@ -98,7 +98,7 @@ export function DocsSearchDialog() {
               id="docs-assistant-tab"
               type="button"
               role="tab"
-              className="relative inline-flex cursor-pointer items-center gap-[7px] border-0 bg-transparent px-[9px] py-0 font-sans! text-[13px]! leading-4! font-medium! text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:text-(--text-secondary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-tertiary) aria-selected:font-semibold! aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-0 aria-selected:after:-bottom-px aria-selected:after:left-0 aria-selected:after:h-0.5 aria-selected:after:bg-(--color-accent) aria-selected:after:content-[''] max-sm:min-h-11 max-sm:text-[14px]!"
+              className="relative inline-flex cursor-pointer items-center gap-[7px] border-0 bg-transparent px-[9px] py-0 font-sans! text-[13px]! leading-4! font-medium! text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-secondary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-tertiary) aria-selected:bg-interactive-selected aria-selected:font-semibold! aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-0 aria-selected:after:-bottom-px aria-selected:after:left-0 aria-selected:after:h-0.5 aria-selected:after:bg-(--color-accent) aria-selected:after:content-[''] max-sm:min-h-11 max-sm:text-[14px]!"
               aria-selected={mode === 'assistant'}
               aria-controls="docs-assistant-panel"
               onClick={() => {
@@ -111,7 +111,7 @@ export function DocsSearchDialog() {
           </div>
           <button
             type="button"
-            className="docs-search-close ml-auto inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-(--bg-emph-tertiary) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-secondary) max-md:h-11 max-md:w-11"
+            className="docs-search-close ml-auto inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-[3px] border-0 bg-transparent p-0 text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-secondary) max-md:h-11 max-md:w-11"
             aria-label="Close search"
             onClick={close}
           >
@@ -222,7 +222,7 @@ function SearchPanel() {
           }}
           onKeyDown={handleKeys}
         />
-        <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground max-sm:hidden">ESC</kbd>
+        <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none! max-sm:hidden">ESC</kbd>
       </div>
       <div
         className="docs-search-results min-h-0 overflow-y-auto overscroll-contain bg-(--bg-canvas) p-2 max-sm:p-1.5"
@@ -231,7 +231,7 @@ function SearchPanel() {
         {search.trim() && (
           <button
             type="button"
-            className="docs-search-ask-row mb-1.5 flex min-h-[42px] w-full cursor-pointer items-center justify-between gap-3 rounded-md border border-(--border-primary) bg-(--bg-inert) px-[11px] py-0 text-left font-sans! text-[13px]! leading-[18px]! font-medium! text-(--text-secondary) transition-[color,border-color,background] duration-(--duration-1) ease-(--ease-out) hover:border-(--border-strong) hover:bg-(--bg-raised) hover:text-(--text-primary) focus-visible:border-(--color-accent) focus-visible:bg-(--bg-raised) focus-visible:text-(--text-primary) focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-(--color-accent) active:bg-(--bg-emph-secondary) max-md:min-h-11 max-sm:text-[14px]!"
+            className="docs-search-ask-row mb-1.5 flex min-h-[42px] w-full cursor-pointer items-center justify-between gap-3 rounded-md border border-(--border-primary) bg-(--bg-inert) px-[11px] py-0 text-left font-sans! text-[13px]! leading-[18px]! font-medium! text-(--text-secondary) transition-[color,border-color,background] duration-(--duration-1) ease-(--ease-out) hover:border-(--border-strong) hover:bg-interactive-hover hover:text-(--text-primary) focus-visible:border-(--color-accent) focus-visible:bg-interactive-selected focus-visible:text-(--text-primary) focus-visible:outline-1 focus-visible:outline-offset-[-2px] focus-visible:outline-(--color-accent) active:bg-(--bg-emph-secondary) max-md:min-h-11 max-sm:text-[14px]!"
             onClick={() => handoff('search_handoff', search.trim())}
           >
             <span className="inline-flex min-w-0 items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap"><BookOpen size={15} /> Ask AI about “{search.trim()}”</span>
@@ -244,10 +244,10 @@ function SearchPanel() {
             <p className="mx-0 mt-[7px] mb-[18px] max-w-[390px] font-sans text-[13px] leading-5 font-normal">Search exact fields, API paths, APL and MPL functions, concepts, and guides.</p>
             <button
               type="button"
-              className="cursor-pointer rounded-[3px] border-0 bg-(--bg-emph-tertiary) px-2 py-1.5 font-sans! text-[12px]! leading-4! font-medium! text-(--text-secondary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-(--bg-emph-secondary) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-primary) max-md:min-h-11 max-sm:text-[14px]!"
+              className="cursor-pointer rounded-[3px] border-0 bg-(--bg-emph-tertiary) px-2 py-1.5 font-sans! text-[12px]! leading-4! font-medium! text-(--text-secondary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-primary) max-md:min-h-11 max-sm:text-[14px]!"
               onClick={() => handoff('search_empty_state')}
             >
-              Ask a question instead <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">⌘I</kbd>
+              Ask a question instead <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">⌘I</kbd>
             </button>
           </div>
         )}
@@ -265,7 +265,7 @@ function SearchPanel() {
               role="option"
               tabIndex={-1}
               aria-selected={activeIndex === index}
-              className="docs-search-result flex min-h-[58px] w-full cursor-pointer flex-col justify-center gap-[3px] rounded-md border-0 bg-transparent px-[11px] py-2 text-left text-(--text-secondary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-(--bg-emph-tertiary) hover:text-(--text-primary) hover:outline-0 focus-visible:shadow-[inset_0_0_0_1px_var(--color-accent)] aria-selected:bg-(--bg-emph-tertiary) aria-selected:text-(--text-primary) aria-selected:outline-0 max-sm:min-h-16"
+              className="docs-search-result flex min-h-[58px] w-full cursor-pointer flex-col justify-center gap-[3px] rounded-md border-0 bg-transparent px-[11px] py-2 text-left text-(--text-secondary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-primary) hover:outline-0 focus-visible:shadow-[inset_0_0_0_1px_var(--color-accent)] aria-selected:bg-interactive-selected aria-selected:text-(--text-primary) aria-selected:outline-0 max-sm:min-h-16"
               key={result.id}
               onMouseEnter={() => setSelectedIndex(index)}
               onClick={() => navigate(result.url, index + 1, 'pointer')}
@@ -277,13 +277,13 @@ function SearchPanel() {
         </div>
       </div>
       <footer className="docs-search-footer flex min-h-[38px] items-center gap-[14px] border-t border-(--border-primary) bg-(--bg-surface) px-3 py-[7px] font-mono text-[10px] leading-[14px] font-[450] text-(--text-tertiary) max-sm:justify-end">
-        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">↑</kbd><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">↓</kbd> Navigate</span>
-        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">↵</kbd> Open</span>
+        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">↑</kbd><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">↓</kbd> Navigate</span>
+        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">↵</kbd> Open</span>
         <button
           type="button"
           className="ml-auto cursor-pointer border-0 bg-transparent p-0 font-sans! text-[11px]! leading-4! font-medium! text-(--text-tertiary) transition-[color] duration-(--duration-1) ease-(--ease-out) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:text-(--color-accent) max-md:min-h-11 max-sm:ml-0 max-sm:text-[13px]!"
           onClick={() => handoff('search_footer', search.trim())}
-        >Ask AI <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">⌘I</kbd></button>
+        >Ask AI <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">⌘I</kbd></button>
       </footer>
     </section>
   );

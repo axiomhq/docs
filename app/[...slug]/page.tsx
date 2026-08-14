@@ -82,24 +82,38 @@ export default async function DocumentationPage({
           }),
         )}
       />
-      <div className="article-layout min-h-[calc(100svh_-_56px)] px-8 pt-14 pb-24 max-md:px-9 max-sm:px-5 max-sm:pt-9 max-sm:pb-18">
+      <div
+        className={cn(
+          "article-layout min-h-[calc(100svh_-_56px)] px-8 pt-14 max-md:px-9 max-sm:px-5 max-sm:pt-9",
+          hasToc && "xl:px-0",
+        )}
+      >
         <div
           className={cn(
-            "article-content mx-auto grid w-full max-w-md grid-cols-[minmax(0,768px)]",
+            "article-content mx-auto grid w-full max-w-[768px] grid-cols-[minmax(0,768px)]",
             hasToc &&
-              "xl:max-w-[1026px] xl:grid-cols-[minmax(0,768px)_210px] xl:gap-x-12",
+              "xl:max-w-none xl:grid-cols-[minmax(2rem,1fr)_minmax(0,768px)_minmax(2rem,1fr)_18rem]",
+            // The desktop sidebar occupies 272px in normal flow. Without a TOC
+            // rail, centering inside `.docs-main` would therefore put the article
+            // 136px right of the viewport midpoint.
+            !hasToc && "xl:-translate-x-[136px]",
           )}
           data-has-toc={hasToc || undefined}
         >
           <article
             className={cn(
               "doc-article min-w-0 w-full",
+              // The TOC rail is 16px wider than the desktop sidebar (288 vs
+              // 272), so the symmetric grid gutters leave the article 8px left
+              // of the viewport midpoint.
+              hasToc &&
+                "xl:col-start-2 xl:row-start-1 xl:translate-x-2",
               querySyntaxTitle && "query-syntax-article",
             )}
           >
             <div className="doc-topline mt-0 mx-0 mb-5 flex items-start justify-between gap-x-4 gap-y-2">
               <nav
-                className="doc-breadcrumbs m-0 min-h-[30px] flex flex-wrap items-center gap-x-2 gap-y-1 text-(--color-accent-text) font-mono text-[12px] leading-4 font-[550] max-sm:min-h-0"
+                className="doc-breadcrumbs m-0 min-h-[30px] flex flex-wrap items-center gap-x-2 gap-y-1 text-secondary-foreground! font-mono text-[12px] leading-4 font-normal max-sm:min-h-0"
                 aria-label="Breadcrumb"
               >
                 {visibleBreadcrumbs.map((item, index) => {
@@ -114,7 +128,7 @@ export default async function DocumentationPage({
                         <Link
                           href={item.href}
                           prefetch={false}
-                          className="[&:hover]:underline [&:hover]:underline-offset-[3px] [&:hover]:decoration-current"
+                          className="no-underline! hover:text-foreground! hover:no-underline!"
                         >
                           {item.title}
                         </Link>

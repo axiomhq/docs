@@ -6,13 +6,7 @@ import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { withDocsBasePath } from "@/lib/docs-paths";
 import { useTheme } from "next-themes";
-import {
-  Menu,
-  Moon,
-  Search,
-  Sun,
-  X,
-} from "lucide-react";
+import { Menu, Moon, Search, Sun, X } from "lucide-react";
 import { type CSSProperties } from "react";
 import { useDocsSearchController } from "@/components/docs-search-provider";
 import { captureDocsEvent } from "@/lib/docs-analytics";
@@ -109,8 +103,8 @@ export function DocumentationSections({
                 "relative flex h-[30px] items-center justify-center rounded-md font-medium px-2.5 font-sans text-[13px] leading-none text-foreground",
               headerTabs &&
                 (active
-                  ? "bg-secondary/50 after:absolute after:left-2.5 after:right-2.5 after:-bottom-[13px] after:h-px after:bg-brand after:content-['']"
-                  : "bg-transparent hover:bg-secondary/30"),
+                  ? "bg-interactive-selected after:absolute after:left-2.5 after:right-2.5 after:-bottom-[13px] after:h-px after:bg-brand after:content-['']"
+                  : "bg-transparent hover:bg-interactive-hover"),
             )}
             onClick={onNavigate}
           >
@@ -142,7 +136,7 @@ export function SiteHeader({
           the drawer breakpoint in docs-shell. */}
       <button
         id="docs-navigation-trigger"
-        className="header-icon mobile-menu-trigger hidden h-7 w-7 items-center justify-center gap-1.5 rounded-md border border-border bg-transparent text-secondary-foreground cursor-pointer hover:bg-secondary max-xl:inline-flex max-xl:h-10 max-xl:w-10 max-xl:border-transparent"
+        className="header-icon mobile-menu-trigger hidden h-7 w-7 items-center justify-center gap-1.5 rounded-md border border-border bg-transparent text-secondary-foreground cursor-pointer hover:bg-interactive-hover max-xl:inline-flex max-xl:h-10 max-xl:w-10 max-xl:border-transparent"
         aria-label={
           drawerOpen ? "Close navigation" : "Open navigation"
         }
@@ -156,7 +150,7 @@ export function SiteHeader({
       <DocumentationSections />
       <div className="header-actions ml-auto flex items-center gap-3 max-lg:gap-2 max-sm:gap-1.5">
         <button
-          className="header-search flex h-7 w-[260px] items-center gap-1.5 overflow-hidden rounded-md border border-border bg-transparent px-2 text-muted-foreground cursor-pointer max-lg:w-[34px] max-lg:justify-center"
+          className="header-search flex h-7 w-[260px] items-center gap-1.5 overflow-hidden rounded-md border border-border/50 bg-transparent px-2 text-muted-foreground cursor-pointer hover:bg-interactive-hover max-lg:w-[34px] max-lg:justify-center"
           aria-label="Search documentation and ask AI"
           onClick={() => openSearch("header")}
         >
@@ -197,7 +191,7 @@ export function SiteHeader({
           target="_blank"
           rel="noreferrer"
           variant="solid-color"
-          className="console-button h-7 rounded-md px-2 font-sans text-[13px] leading-none font-[450] focus-visible:ring-3 active:not-aria-[haspopup]:translate-y-0 active:not-aria-[haspopup]:scale-98 max-md:hidden"
+          className="console-button h-7 rounded-md px-2 font-sans text-[13px] leading-none font-[450] focus-visible:ring-3 active:not-aria-[haspopup]:scale-98 max-md:hidden"
           style={{ "--btn-accent": "var(--brand)" } as CSSProperties}
           onClick={() =>
             captureDocsEvent("docs_console_opened", {

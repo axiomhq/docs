@@ -157,7 +157,7 @@ export function DocsAssistantPanel({
                 <MessageScrollerItem>
                   <button
                     type="button"
-                    className="docs-search-clear ml-auto py-1 px-[7px] border-0 rounded-[3px] text-(--text-tertiary) bg-transparent font-sans text-[12px] leading-4 font-medium cursor-pointer hover:text-(--text-primary) hover:bg-(--bg-emph-tertiary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) max-md:min-h-11 max-sm:text-[14px]"
+                    className="docs-search-clear ml-auto py-1 px-[7px] border-0 rounded-[3px] text-(--text-tertiary) bg-transparent font-sans text-[12px] leading-4 font-medium cursor-pointer hover:text-(--text-primary) hover:bg-interactive-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) max-md:min-h-11 max-sm:text-[14px]"
                     onClick={() => chat.setMessages([])}
                   >
                     Clear conversation
@@ -335,7 +335,7 @@ function AssistantMessage({
               '[&_blockquote]:m-0 [&_blockquote]:mb-[11px] [&_blockquote]:ps-[11px] [&_blockquote]:border-l-2 [&_blockquote]:border-l-(--border-strong) [&_blockquote]:text-(--text-tertiary)',
               '[&_table]:w-full [&_table]:m-0 [&_table]:mb-3 [&_table]:border-collapse [&_table]:text-[12.5px]',
               '[&_:where(th,td)]:py-[5px] [&_:where(th,td)]:px-2 [&_:where(th,td)]:border [&_:where(th,td)]:border-(--border-secondary) [&_:where(th,td)]:text-left',
-              '[&_th]:text-(--text-primary) [&_th]:bg-(--bg-inert) [&_th]:font-semibold',
+              '[&_th]:text-(--text-primary) [&_th]:bg-(--bg-inert) [&_th]:font-normal',
               '[&_strong]:text-(--text-primary) [&_strong]:font-semibold',
               '[&_a]:text-(--text-primary) [&_a]:underline [&_a]:decoration-(--border-strong) [&_a]:underline-offset-[3px] [&_a:hover]:decoration-(--color-accent)',
               '[&_code:not(pre_code)]:py-px [&_code:not(pre_code)]:px-1 [&_code:not(pre_code)]:border [&_code:not(pre_code)]:border-(--border-primary) [&_code:not(pre_code)]:rounded-[3px] [&_code:not(pre_code)]:text-(--text-primary) [&_code:not(pre_code)]:bg-(--bg-inert) [&_code:not(pre_code)]:font-mono [&_code:not(pre_code)]:text-[12px] [&_code:not(pre_code)]:leading-[18px] [&_code:not(pre_code)]:font-[450]',
@@ -401,7 +401,7 @@ function AssistantSources({ sources }: { sources: AssistantSource[] }) {
                 href={source.url}
                 key={source.url}
                 title={source.title}
-                className="max-w-full px-1.5 py-0.5 inline-flex items-center gap-1 border border-(--border-primary) rounded-[3px] text-(--text-tertiary) bg-(--bg-inert) font-sans text-[10px] leading-[15px] font-medium hover:border-(--border-strong) hover:text-(--text-primary) hover:bg-(--bg-raised) max-md:min-h-[44px]"
+                className="max-w-full px-1.5 py-0.5 inline-flex items-center gap-1 border border-(--border-primary) rounded-[3px] text-(--text-tertiary) bg-(--bg-inert) font-sans text-[10px] leading-[15px] font-medium hover:border-(--border-strong) hover:text-(--text-primary) hover:bg-interactive-hover max-md:min-h-[44px]"
                 onClick={() => captureDocsEvent('docs_ai_source_opened', {
                   destination_path: safeDocsPath(source.url),
                   source_rank: index + 1,

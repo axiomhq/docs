@@ -10,6 +10,7 @@ import {
   type UIMessage,
 } from 'ai';
 import { z } from 'zod';
+import { normalizeDocsUrl } from '@/lib/docs-paths';
 import { readDocsPage, searchDocs } from '@/lib/docs-search';
 import { limitRequest } from '@/lib/request-rate-limit';
 
@@ -36,28 +37,6 @@ const searchDocsTool = tool({
   }),
   execute: ({ query, limit }) => searchDocs(query, limit),
 });
-
-// Models routinely hand back an absolute URL or drop the /docs prefix. Rejecting
-// those in the input schema turns a recoverable miss into a hard tool error, so
-// normalise here instead and let readDocsPage do the real validation — it only
-// resolves against source.getPages(), which is an allowlist by construction.
-export function normalizeDocsUrl(url: string) {
-  let path = url.trim();
-  if (/^https?:\/\//i.test(path)) {
-    try {
-      path = new URL(path).pathname;
-    } catch {
-      return null;
-    }
-  }
-  if (!path.startsWith('/')) path = `/${path}`;
-  if (!path.startsWith('/docs')) path = `/docs${path}`;
-  // Reject traversal outright rather than relying on the page lookup to miss.
-  // Containment is then self-evident here instead of an emergent property of
-  // readDocsPage's allowlist.
-  if (path.split('/').includes('..')) return null;
-  return path.startsWith('/docs') ? path : null;
-}
 
 const readDocsPageTool = tool({
   description: 'Read the processed Markdown for an Axiom documentation page returned by search_docs.',

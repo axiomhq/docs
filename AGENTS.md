@@ -184,7 +184,7 @@ The design has gone through detailed browser review. Treat the following as prod
 - The floating “On this page” control has no card background.
 - Its active item follows scroll position and uses a small terminal-like rectangular marker, not a dot.
 - Heading hashes appear on hover/focus. Clicking a heading copies the full anchor URL and shows a Sonner notification.
-- Notices use a colored left border, a subtly distinct background, no icon, and no shadow. Notice copy is monospace at the compact 12px/19px treatment.
+- Notices use a colored left border, a subtly distinct background, and no shadow. Each variant has a semantic Carbon icon and label whose color matches the border; a custom title replaces the default label while retaining the variant icon.
 - The article footer contains helpful/not-helpful feedback, previous/next pages, and “Suggest edits on GitHub”.
 
 ### Code, tabs, tables, and query examples

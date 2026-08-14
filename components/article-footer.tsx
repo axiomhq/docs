@@ -45,11 +45,11 @@ export function ArticleFooter({
         <div className="page-feedback flex items-center gap-3 text-(--text-tertiary) max-sm:flex-wrap">
           <span className="text-(--text-secondary) font-sans text-[13px] leading-4 font-[550] max-sm:w-full">Was this page helpful?</span>
           <div className="page-feedback-actions flex gap-1.5">
-            <button type="button" className="h-7 px-2.5 inline-flex items-center gap-1.5 border-0 rounded-md text-(--text-tertiary) bg-(--bg-emph-tertiary) font-sans text-[12px] leading-4 font-medium cursor-pointer transition-[background-color,color] duration-150 ease-[ease] [&:hover:not(:disabled)]:text-(--text-primary) [&:hover:not(:disabled)]:bg-(--bg-emph-secondary) aria-pressed:text-(--color-accent-text) aria-pressed:bg-[color-mix(in_srgb,var(--color-accent)_13%,transparent)] disabled:cursor-default disabled:aria-[pressed=false]:opacity-45" aria-label="Yes, this page was helpful" aria-pressed={feedback === 'yes'} disabled={feedback !== null} onClick={() => submitFeedback('yes')}>
+            <button type="button" className="h-7 px-2.5 inline-flex items-center gap-1.5 border-0 rounded-md text-(--text-tertiary) bg-(--bg-emph-tertiary) font-sans text-[12px] leading-4 font-medium cursor-pointer transition-[background-color,color] duration-150 ease-[ease] [&:hover:not(:disabled)]:text-(--text-primary) [&:hover:not(:disabled)]:bg-interactive-hover aria-pressed:text-(--text-primary) dark:aria-pressed:text-brand aria-pressed:bg-[color-mix(in_srgb,var(--brand)_13%,transparent)] disabled:cursor-default disabled:aria-[pressed=false]:opacity-45" aria-label="Yes, this page was helpful" aria-pressed={feedback === 'yes'} disabled={feedback !== null} onClick={() => submitFeedback('yes')}>
               <ThumbsUp size={12} aria-hidden="true" />
               Yes
             </button>
-            <button type="button" className="h-7 px-2.5 inline-flex items-center gap-1.5 border-0 rounded-md text-(--text-tertiary) bg-(--bg-emph-tertiary) font-sans text-[12px] leading-4 font-medium cursor-pointer transition-[background-color,color] duration-150 ease-[ease] [&:hover:not(:disabled)]:text-(--text-primary) [&:hover:not(:disabled)]:bg-(--bg-emph-secondary) aria-pressed:text-(--color-accent-text) aria-pressed:bg-[color-mix(in_srgb,var(--color-accent)_13%,transparent)] disabled:cursor-default disabled:aria-[pressed=false]:opacity-45" aria-label="No, this page was not helpful" aria-pressed={feedback === 'no'} disabled={feedback !== null} onClick={() => submitFeedback('no')}>
+            <button type="button" className="h-7 px-2.5 inline-flex items-center gap-1.5 border-0 rounded-md text-(--text-tertiary) bg-(--bg-emph-tertiary) font-sans text-[12px] leading-4 font-medium cursor-pointer transition-[background-color,color] duration-150 ease-[ease] [&:hover:not(:disabled)]:text-(--text-primary) [&:hover:not(:disabled)]:bg-interactive-hover aria-pressed:text-(--text-primary) dark:aria-pressed:text-brand aria-pressed:bg-[color-mix(in_srgb,var(--brand)_13%,transparent)] disabled:cursor-default disabled:aria-[pressed=false]:opacity-45" aria-label="No, this page was not helpful" aria-pressed={feedback === 'no'} disabled={feedback !== null} onClick={() => submitFeedback('no')}>
               <ThumbsDown size={12} aria-hidden="true" />
               No
             </button>
@@ -71,23 +71,27 @@ export function ArticleFooter({
       </div>
 
       {(previous || next) && (
-        <nav className="article-pagination mt-8 grid grid-cols-2 gap-6 max-sm:grid-cols-[1fr]" aria-label="Adjacent documentation pages">
+        <nav className="article-pagination mt-8 grid grid-cols-2 gap-3 max-sm:grid-cols-[1fr] max-sm:gap-2" aria-label="Adjacent documentation pages">
           {previous && (
-            <Link href={previous.href} prefetch={false} className={cn('article-previous items-start', 'min-w-0 -mx-3.5 px-3.5 py-3 flex flex-col-reverse gap-1.5 rounded-[6px] no-underline transition-[background-color] duration-150 ease-[ease] [&:hover]:bg-(--bg-inert)')}>
-              <small className="inline-flex items-center gap-1.5 text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-medium tracking-[.05em] uppercase transition-colors duration-150 ease-[ease] [.article-pagination_a:hover_&]:text-(--text-tertiary)">
-                <ArrowLeft size={11} aria-hidden="true" className={cn('flex-none transition-transform duration-150 ease-[ease]', '[.article-previous:hover_&]:-translate-x-0.5')} />
-                Previous
-              </small>
-              <strong className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-(--text-secondary) font-sans text-[15px] leading-[21px] font-[550] tracking-[-.008em] transition-colors duration-150 ease-[ease] [.article-pagination_a:hover_&]:text-(--text-primary)">{previous.title}</strong>
+            <Link href={previous.href} prefetch={false} className={cn('article-pagination-link article-previous', 'min-w-0 min-h-[76px] px-4 py-3.5 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border border-(--border-primary) rounded-[4px] bg-(--bg-surface) no-underline transition-[background-color,border-color] duration-(--duration-1) ease-(--ease-out) [&:hover]:border-(--border-strong) [&:hover]:bg-interactive-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-interactive-selected')}>
+              <ArrowLeft size={15} aria-hidden="true" className="article-pagination-arrow flex-none text-(--text-quaternary) transition-[color,transform] duration-(--duration-2) ease-(--ease-out) [.article-previous:hover_&]:-translate-x-0.5 [.article-previous:hover_&]:text-brand" />
+              <span className="min-w-0 flex flex-col items-start gap-1">
+                <small className="text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-medium tracking-[.06em] uppercase transition-colors duration-(--duration-1) ease-(--ease-out) [.article-previous:hover_&]:text-(--text-secondary)">
+                  Previous
+                </small>
+                <strong className="max-w-full text-(--text-primary) font-sans text-[15px] leading-5 font-[550] tracking-[-.008em] line-clamp-2">{previous.title}</strong>
+              </span>
             </Link>
           )}
           {next && (
-            <Link href={next.href} prefetch={false} className={cn('article-next col-[2] items-end text-right max-sm:col-[1]', 'min-w-0 -mx-3.5 px-3.5 py-3 flex flex-col-reverse gap-1.5 rounded-[6px] no-underline transition-[background-color] duration-150 ease-[ease] [&:hover]:bg-(--bg-inert)')}>
-              <small className="inline-flex items-center gap-1.5 text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-medium tracking-[.05em] uppercase transition-colors duration-150 ease-[ease] [.article-pagination_a:hover_&]:text-(--text-tertiary)">
-                Next
-                <ArrowRight size={11} aria-hidden="true" className={cn('flex-none transition-transform duration-150 ease-[ease]', '[.article-next:hover_&]:translate-x-0.5')} />
-              </small>
-              <strong className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-(--text-secondary) font-sans text-[15px] leading-[21px] font-[550] tracking-[-.008em] transition-colors duration-150 ease-[ease] [.article-pagination_a:hover_&]:text-(--text-primary)">{next.title}</strong>
+            <Link href={next.href} prefetch={false} className={cn('article-pagination-link article-next col-[2] max-sm:col-[1]', 'min-w-0 min-h-[76px] px-4 py-3.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border border-(--border-primary) rounded-[4px] bg-(--bg-surface) text-right no-underline transition-[background-color,border-color] duration-(--duration-1) ease-(--ease-out) [&:hover]:border-(--border-strong) [&:hover]:bg-interactive-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-interactive-selected')}>
+              <span className="min-w-0 flex flex-col items-end gap-1">
+                <small className="text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-medium tracking-[.06em] uppercase transition-colors duration-(--duration-1) ease-(--ease-out) [.article-next:hover_&]:text-(--text-secondary)">
+                  Next
+                </small>
+                <strong className="max-w-full text-(--text-primary) font-sans text-[15px] leading-5 font-[550] tracking-[-.008em] line-clamp-2">{next.title}</strong>
+              </span>
+              <ArrowRight size={15} aria-hidden="true" className="article-pagination-arrow flex-none text-(--text-quaternary) transition-[color,transform] duration-(--duration-2) ease-(--ease-out) [.article-next:hover_&]:translate-x-0.5 [.article-next:hover_&]:text-brand" />
             </Link>
           )}
         </nav>

@@ -7,12 +7,12 @@ export function SearchPrompt() {
   const { openSearch } = useDocsSearchController();
   return (
     <button
-      className="hero-search w-full h-10 mt-7 px-[14px] py-0 flex items-center gap-2.5 border border-(--border-strong) rounded-md text-(--text-tertiary) bg-(--bg-surface) cursor-pointer hover:bg-(--bg-raised)"
+      className="hero-search w-full h-10 mt-7 px-[14px] py-0 flex items-center gap-2.5 border border-(--border-strong) rounded-md text-(--text-tertiary) bg-(--bg-surface) cursor-pointer hover:bg-interactive-hover"
       onClick={() => openSearch('hero')}
     >
       <Search size={16} />
       <span className="flex-1 text-left font-sans text-[15px] leading-5 font-normal">Search the docs — or ask a question…</span>
-      <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-border bg-muted px-1.5 align-middle font-mono text-xs leading-none font-medium text-muted-foreground">⌘K</kbd>
+      <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">⌘K</kbd>
     </button>
   );
 }

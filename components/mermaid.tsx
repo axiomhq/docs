@@ -3,42 +3,67 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 
-// Diagrams are themed from the Axiom semantic tokens rather than mermaid's
+// Mermaid's bundled colour parser only understands legacy CSS colour formats.
+// Resolve modern token values (OKLCH, Lab, and color-mix) through the browser
+// into sRGB before handing them to Mermaid.
+function createColorResolver() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  const context = canvas.getContext('2d');
+
+  return (value: string) => {
+    if (!context) return value;
+
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = '#000';
+    context.fillStyle = value;
+    context.fillRect(0, 0, 1, 1);
+
+    const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+    if (alpha === 255) return `rgb(${red}, ${green}, ${blue})`;
+    return `rgba(${red}, ${green}, ${blue}, ${Number((alpha / 255).toFixed(3))})`;
+  };
+}
+
+// Diagrams are themed from the Axiom semantic tokens rather than Mermaid's
 // stock palettes, read off :root at render time so they follow data-theme.
 function axiomThemeVariables(dark: boolean) {
   const styles = getComputedStyle(document.documentElement);
   const token = (name: string) => styles.getPropertyValue(name).trim();
+  const resolveColor = createColorResolver();
+  const color = (name: string) => resolveColor(token(name));
   return {
     fontFamily: token('--font-mono'),
     fontSize: '12.5px',
-    background: token('--bg-canvas'),
+    background: color('--bg-canvas'),
     // Node boxes.
-    primaryColor: token('--bg-emph-tertiary'),
-    primaryBorderColor: token('--border-strong'),
-    primaryTextColor: token('--text-primary'),
-    mainBkg: token('--bg-emph-tertiary'),
-    nodeBorder: token('--border-strong'),
+    primaryColor: color('--bg-emph-tertiary'),
+    primaryBorderColor: color('--border-strong'),
+    primaryTextColor: color('--text-primary'),
+    mainBkg: color('--bg-emph-tertiary'),
+    nodeBorder: color('--border-strong'),
     // Subgraph containers sit one step quieter than nodes so the boxes read
     // as grouping, not as more nodes. No token this faint; keep it literal.
     clusterBkg: dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-    clusterBorder: token('--border-primary'),
-    titleColor: token('--text-quaternary'),
+    clusterBorder: color('--border-primary'),
+    titleColor: color('--text-quaternary'),
     // Edges and labels. Edges keep one literal grey across themes; it reads as
     // chrome on both canvases and matches the reviewed diagram style.
     lineColor: '#575757',
     signalColor: '#575757',
-    textColor: token('--text-secondary'),
-    edgeLabelBackground: token('--bg-canvas'),
+    textColor: color('--text-secondary'),
+    edgeLabelBackground: color('--bg-canvas'),
     // Sequence-diagram notes default to mermaid's yellow sticky; keep them on
     // the same quiet surfaces as everything else.
-    noteBkgColor: token('--bg-inert'),
-    noteBorderColor: token('--border-primary'),
-    noteTextColor: token('--text-secondary'),
+    noteBkgColor: color('--bg-inert'),
+    noteBorderColor: color('--border-primary'),
+    noteTextColor: color('--text-secondary'),
     // Secondary/tertiary shapes fall back to quiet surfaces.
-    secondaryColor: token('--bg-inert'),
-    secondaryBorderColor: token('--border-primary'),
-    tertiaryColor: token('--bg-inert'),
-    tertiaryBorderColor: token('--border-primary'),
+    secondaryColor: color('--bg-inert'),
+    secondaryBorderColor: color('--border-primary'),
+    tertiaryColor: color('--bg-inert'),
+    tertiaryBorderColor: color('--border-primary'),
   };
 }
 

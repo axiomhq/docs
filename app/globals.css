@@ -1,9 +1,16 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
 @import "fumadocs-ui/css/black.css";
 @import "fumadocs-ui/css/preset.css";
 @import "../styles/tokens.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+
+/* Keep Tailwind's scanner on authored UI and content. Generated Next.js and
+   test output can contain byte sequences that resemble arbitrary variants. */
+@source "../app/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../components/**/*.{js,ts,jsx,tsx}";
+@source "../content/**/*.mdx";
+@source "../lib/**/*.{js,ts,jsx,tsx}";
 
 /* Required for MessageResponse: Streamdown ships its own Tailwind classes. */
 @source '../node_modules/streamdown/dist/*.js';
@@ -18,6 +25,72 @@
 @layer base {
     a {
         @apply text-inherit no-underline;
+    }
+
+    /* Raw links, buttons, and disclosure controls retain their native focus
+       geometry, but use Axiom orange instead of the browser's blue default. */
+    :focus-visible {
+        outline-color: var(--brand);
+    }
+}
+
+@layer components {
+    .sidebar .method {
+        color: var(--method-badge-color, currentColor);
+        background-color: var(--method-badge-background, transparent);
+    }
+
+    .sidebar .method-get {
+        --method-badge-color: color-mix(
+            in srgb,
+            var(--green-11) 85%,
+            var(--green-12)
+        );
+        --method-badge-background: color-mix(
+            in srgb,
+            var(--color-success) 11%,
+            transparent
+        );
+    }
+
+    .sidebar .method-post {
+        --method-badge-color: color-mix(
+            in srgb,
+            var(--blue-11) 85%,
+            var(--blue-12)
+        );
+        --method-badge-background: color-mix(
+            in srgb,
+            var(--color-info) 11%,
+            transparent
+        );
+    }
+
+    .sidebar .method-put,
+    .sidebar .method-patch {
+        --method-badge-color: color-mix(
+            in srgb,
+            var(--amber-11) 85%,
+            var(--amber-12)
+        );
+        --method-badge-background: color-mix(
+            in srgb,
+            var(--color-warning) 11%,
+            transparent
+        );
+    }
+
+    .sidebar .method-delete {
+        --method-badge-color: color-mix(
+            in srgb,
+            var(--red-11) 85%,
+            var(--red-12)
+        );
+        --method-badge-background: color-mix(
+            in srgb,
+            var(--color-destructive) 11%,
+            transparent
+        );
     }
 }
 
@@ -51,11 +124,14 @@
     --primary-foreground: var(--text-on-inverse-primary);
     --secondary: var(--bg-raised);
     --secondary-foreground: var(--text-secondary);
+    --interactive-hover: color-mix(in srgb, var(--secondary) 30%, transparent);
+    --interactive-selected: color-mix(in srgb, var(--secondary) 50%, transparent);
     --muted: var(--bg-muted);
     --muted-foreground: var(--text-tertiary);
     --border: var(--border-primary);
     --input: var(--border-input);
-    --ring: var(--border-strong);
+    --ring: var(--brand);
+    --color-fd-ring: var(--brand);
     --radius: 0.475rem;
 
     /* Referenced by shadcn's sidebar-flavoured surfaces (AI Elements' code block
@@ -65,9 +141,19 @@
     --sidebar-border: var(--border-primary);
     --sidebar-accent: var(--bg-raised);
     --sidebar-accent-foreground: var(--text-primary);
-    --sidebar-ring: var(--border-strong);
+    --sidebar-connector: color-mix(
+        in srgb,
+        var(--border-strong) 60%,
+        var(--background)
+    );
+    --sidebar-ring: var(--brand);
     --sidebar-primary: var(--bg-emph-primary-inverse);
     --sidebar-primary-foreground: var(--text-on-inverse-primary);
+}
+
+:root[data-theme="light"] {
+    --interactive-hover: color-mix(in srgb, var(--foreground) 4%, transparent);
+    --interactive-selected: color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
 @theme inline {
@@ -85,6 +171,8 @@
     --color-primary-foreground: var(--primary-foreground);
     --color-secondary: var(--secondary);
     --color-secondary-foreground: var(--secondary-foreground);
+    --color-interactive-hover: var(--interactive-hover);
+    --color-interactive-selected: var(--interactive-selected);
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
     --color-border: var(--border);
@@ -97,6 +185,7 @@
     --color-sidebar-accent-foreground: var(
         --sidebar-accent-foreground
     );
+    --color-sidebar-connector: var(--sidebar-connector);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-primary-foreground: var(
