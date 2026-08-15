@@ -415,10 +415,10 @@ export function DocsShell({
                   "drawer-sections hidden",
                   "max-xl:m-0 max-xl:mb-5 max-xl:flex max-xl:flex-col max-xl:gap-0.5 max-xl:border-b max-xl:border-sidebar-border max-xl:pb-3",
                   "max-xl:-mx-4 max-xl:px-4",
-                  "max-xl:[&_a]:flex max-xl:[&_a]:min-h-[38px] max-xl:[&_a]:items-center max-xl:[&_a]:-mx-2.5 max-xl:[&_a]:rounded-md max-xl:[&_a]:px-2.5 max-xl:[&_a]:py-0 max-xl:[&_a]:font-sans max-xl:[&_a]:text-[13px] max-xl:[&_a]:leading-[18px]",
-                  "max-xl:[&_a:not(.active)]:font-medium max-xl:[&_a:not(.active)]:text-secondary-foreground!",
+                  "max-xl:[&_a]:flex max-xl:[&_a]:min-h-[38px] max-xl:[&_a]:items-center max-xl:[&_a]:gap-2 max-xl:[&_a]:rounded-md max-xl:[&_a]:px-2.5 max-xl:[&_a]:py-0 max-xl:[&_a]:font-sans max-xl:[&_a]:text-[13px] max-xl:[&_a]:leading-[18px] max-xl:[&_a]:font-normal",
+                  "max-xl:[&_a:not(.active)]:text-secondary-foreground!",
                   "max-xl:[&_a:not(.active):hover]:bg-interactive-hover max-xl:[&_a:not(.active):hover]:text-sidebar-accent-foreground!",
-                  "max-xl:[&_a.active]:bg-interactive-selected max-xl:[&_a.active]:font-medium max-xl:[&_a.active]:text-sidebar-accent-foreground! max-xl:[&_a.active]:[text-shadow:-0.2px_0_0_currentColor,0.2px_0_0_currentColor]",
+                  "max-xl:[&_a.active]:bg-interactive-selected max-xl:[&_a.active]:text-sidebar-accent-foreground! max-xl:[&_a.active]:[text-shadow:-0.2px_0_0_currentColor,0.2px_0_0_currentColor]",
                 )}
                 onNavigate={closeDrawer}
               />

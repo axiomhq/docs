@@ -7,6 +7,11 @@ import { usePathname } from "next/navigation";
 import { withDocsBasePath } from "@/lib/docs-paths";
 import { useTheme } from "next-themes";
 import { Menu, Moon, Search, Sun, X } from "lucide-react";
+import {
+  ApiIntroductionIcon,
+  QueryReferenceIcon,
+  WhatIsAxiomIcon,
+} from "@/assets/icons";
 import { type CSSProperties, useSyncExternalStore } from "react";
 import { useDocsSearchController } from "@/components/docs-search-provider";
 import { captureDocsEvent } from "@/lib/docs-analytics";
@@ -18,6 +23,9 @@ const tabs = [
   {
     label: "Documentation",
     href: "/docs",
+    // Each section's intro icon, shown only in the drawer instance so the
+    // tabs read like the sidebar items beneath them.
+    Icon: WhatIsAxiomIcon,
     match: (path: string) =>
       !path.startsWith("/docs/apl/") &&
       !path.startsWith("/docs/mpl/") &&
@@ -26,12 +34,14 @@ const tabs = [
   {
     label: "Query Reference",
     href: "/docs/apl/overview",
+    Icon: QueryReferenceIcon,
     match: (path: string) =>
       path.startsWith("/docs/apl/") || path.startsWith("/docs/mpl/"),
   },
   {
     label: "API Reference",
     href: "/docs/restapi/introduction",
+    Icon: ApiIntroductionIcon,
     match: (path: string) => path.startsWith("/docs/restapi/"),
   },
 ];
@@ -113,6 +123,14 @@ export function DocumentationSections({
             )}
             onClick={onNavigate}
           >
+            {!headerTabs && (
+              <tab.Icon
+                aria-hidden="true"
+                className="sidebar-item-icon flex-none"
+                width={14}
+                height={14}
+              />
+            )}
             {tab.label}
           </Link>
         );
@@ -145,31 +163,21 @@ export function SiteHeader({
 
   return (
     <header className="site-header sticky top-0 z-50 flex h-14 flex-none items-center gap-[30px] border-b border-border/50 bg-background pl-[22px] pr-4 backdrop-blur-[12px] max-xl:gap-3 max-md:px-4 max-sm:gap-2">
-      {/* Hidden on desktop; becomes the drawer toggle below xl, matching
-          the drawer breakpoint in docs-shell. */}
-      <button
-        id="docs-navigation-trigger"
-        className="header-icon mobile-menu-trigger hidden h-7 w-7 items-center justify-center gap-1.5 rounded-md border border-border bg-transparent text-secondary-foreground cursor-pointer hover:bg-interactive-hover max-xl:inline-flex max-xl:h-10 max-xl:w-10 max-xl:border-transparent"
-        aria-label={
-          drawerOpen ? "Close navigation" : "Open navigation"
-        }
-        aria-controls="docs-navigation-drawer"
-        aria-expanded={drawerOpen}
-        onClick={onMenu}
-      >
-        {drawerOpen ? <X size={16} /> : <Menu size={16} />}
-      </button>
       <AxiomDocsBrand />
       <DocumentationSections />
       <div className="header-actions ml-auto flex items-center gap-3 max-lg:gap-2 max-sm:gap-1.5">
         <button
-          className="header-search flex h-7 w-[260px] items-center gap-1.5 overflow-hidden rounded-md border border-border/50 bg-transparent px-2 text-muted-foreground cursor-pointer hover:bg-interactive-hover max-lg:w-[34px] max-lg:justify-center"
+          className="header-search flex h-7 w-[260px] items-center gap-1.5 overflow-hidden rounded-md border border-border/50 bg-transparent px-2 text-muted-foreground cursor-pointer hover:bg-interactive-hover max-lg:w-auto"
           aria-label="Search documentation and ask AI"
           onClick={() => openSearch("header")}
         >
           <Search size={12} />
           <span className="min-w-0 flex-1 truncate text-left font-sans text-[12px] leading-none font-normal max-lg:hidden">
             What are you looking for?
+          </span>
+          {/* Compact label for the icon-only breakpoint. */}
+          <span className="hidden font-sans text-[12px] leading-none font-normal max-lg:inline">
+            Search
           </span>
         </button>
         <span
@@ -215,6 +223,25 @@ export function SiteHeader({
         >
           Open Console
         </ButtonLink>
+        {/* Hidden on desktop; becomes the drawer toggle below xl, matching
+            the drawer breakpoint in docs-shell. Last in the row so it sits
+            at the far right on phones; Button's icon size matches the theme
+            toggle next to it. */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          id="docs-navigation-trigger"
+          className="mobile-menu-trigger xl:hidden"
+          aria-label={
+            drawerOpen ? "Close navigation" : "Open navigation"
+          }
+          aria-controls="docs-navigation-drawer"
+          aria-expanded={drawerOpen}
+          onClick={onMenu}
+        >
+          {drawerOpen ? <X /> : <Menu />}
+        </Button>
       </div>
     </header>
   );
