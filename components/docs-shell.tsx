@@ -206,7 +206,7 @@ function NestedNavItem({
           "list-none [&::-webkit-details-marker]:hidden",
         )}
         style={
-          depth > 0 ? { paddingLeft: 10 + depth * 20 } : undefined
+          depth > 0 ? { paddingLeft: 12 + depth * 20 } : undefined
         }
       >
         {icon && <SidebarIcon icon={icon} />}
@@ -308,7 +308,7 @@ function NavItem({
           "text-secondary-foreground! [&:hover]:bg-interactive-hover [&:hover]:text-sidebar-accent-foreground!",
         syntaxReference && "syntax-reference-link",
       )}
-      style={depth > 0 ? { paddingLeft: 10 + depth * 20 } : undefined}
+      style={depth > 0 ? { paddingLeft: 12 + depth * 20 } : undefined}
       onClick={onNavigate}
     >
       {icon && <SidebarIcon icon={icon} />}
