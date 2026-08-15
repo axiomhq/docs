@@ -602,8 +602,10 @@ test('selected navigation rows stay stronger than hover in both themes', async (
     const sections = page.getByRole('navigation', { name: 'Documentation sections' });
     const activeSection = sections.getByRole('link', { name: 'Documentation', exact: true });
     const inactiveSection = sections.getByRole('link', { name: 'Query Reference', exact: true });
-    await expect(activeSection).toHaveCSS('background-color', interactionColors.selected);
+    await expect(activeSection).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     if (testInfo.project.name === 'desktop-chromium') {
+      await activeSection.hover();
+      await expect(activeSection).toHaveCSS('background-color', interactionColors.hover);
       await inactiveSection.hover();
       await expect(inactiveSection).toHaveCSS('background-color', interactionColors.hover);
     }
@@ -1725,9 +1727,19 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
   await expect(activeSectionTab).toHaveCSS('height', '30px');
   await expect(activeSectionTab).toHaveCSS('border-radius', mediumRadius);
   await expect(activeSectionTab).toHaveCSS('font-size', '13px');
-  const activeTabBackground = await activeSectionTab.evaluate((element) => getComputedStyle(element).backgroundColor);
-  await activeSectionTab.hover();
-  await expect(activeSectionTab).toHaveCSS('background-color', activeTabBackground);
+  await expect(activeSectionTab).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  if (testInfo.project.name === 'desktop-chromium') {
+    const hoverBackground = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = 'var(--interactive-hover)';
+      document.body.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    });
+    await activeSectionTab.hover();
+    await expect(activeSectionTab).toHaveCSS('background-color', hoverBackground);
+  }
   const activeTabLine = await activeSectionTab.evaluate((element) => {
     const styles = getComputedStyle(element, '::after');
     return { color: styles.backgroundColor, height: styles.height };

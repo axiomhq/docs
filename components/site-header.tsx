@@ -100,11 +100,13 @@ export function DocumentationSections({
             className={cn(
               active && "active",
               headerTabs &&
-                "relative flex h-[30px] items-center justify-center rounded-md font-medium px-2.5 font-sans text-[13px] leading-none text-foreground",
+                "relative flex h-[30px] items-center justify-center rounded-md font-medium px-2.5 font-sans text-[13px] leading-none",
+              headerTabs &&
+                "bg-transparent hover:bg-interactive-hover hover:text-foreground",
               headerTabs &&
                 (active
-                  ? "bg-interactive-selected after:absolute after:left-2.5 after:right-2.5 after:-bottom-[13px] after:h-px after:bg-brand after:content-['']"
-                  : "bg-transparent hover:bg-interactive-hover"),
+                  ? "text-foreground after:absolute after:left-2.5 after:right-2.5 after:-bottom-[13px] after:h-px after:bg-brand after:content-['']"
+                  : "text-secondary-foreground"),
             )}
             onClick={onNavigate}
           >
