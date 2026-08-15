@@ -14,7 +14,7 @@ export function PlaygroundLink({
   return (
     <a
       {...props}
-      className={cn('playground-link ph-no-capture', 'w-fit min-h-6 px-[7px] py-0 inline-flex items-center gap-[5px] border border-(--border-primary) rounded-[3px] text-(--text-secondary)! bg-[color-mix(in_srgb,var(--bg-canvas)_88%,transparent)] font-mono text-[10px] leading-[14px] font-[550] no-underline! hover:border-(--border-strong) hover:text-(--text-primary)! hover:bg-(--bg-raised)', className)}
+      className={cn('playground-link ph-no-capture', 'w-fit min-h-6 px-[7px] py-0 inline-flex items-center gap-[5px] border border-(--border-primary) rounded-[3px] text-(--text-secondary)! bg-[color-mix(in_srgb,var(--bg-canvas)_88%,transparent)] font-mono text-[10px] leading-[14px] font-[550] no-underline! hover:border-(--border-strong) hover:text-(--text-primary)! hover:bg-interactive-hover', className)}
       target="_blank"
       rel="noreferrer"
       onClick={(event) => {

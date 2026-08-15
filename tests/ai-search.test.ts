@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { normalizeDocsUrl, POST } from '@/app/api/chat/route';
-import { docsApiPath, withDocsBasePath, withoutDocsBasePath } from '@/lib/docs-paths';
+import { POST } from '@/app/api/chat/route';
+import { docsApiPath, normalizeDocsUrl, withDocsBasePath, withoutDocsBasePath } from '@/lib/docs-paths';
 import { rankDocsSearchResults, sanitizeSearchSnippet } from '@/lib/docs-search-rank';
 import { hashRateLimitIdentifier, takeLocalRateLimit } from '@/lib/request-rate-limit';
 

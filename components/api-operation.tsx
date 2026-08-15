@@ -19,9 +19,6 @@ function schemaType(document: JsonObject, input: JsonObject | undefined): string
   return schema.format ? `${type}<${schema.format}>` : type;
 }
 
-// `.api-schema-description code, .api-section-copy code` in globals.css.
-const inlineCodeClass = 'py-px px-1 border border-(--border-secondary) rounded-[3px] bg-(--bg-inert) font-mono';
-
 // The dark palette sits at 1.9–2.5:1 on the light tints, so the light theme
 // repoints to darker text values that clear AA (>=4.5:1) on the same tints.
 const METHOD_COLORS: Record<string, string> = {
@@ -81,34 +78,27 @@ function schemaRows(document: JsonObject, input: JsonObject | undefined, require
   });
 }
 
-// `.api-section > h2` and `.api-section > h2 a` in globals.css.
-const sectionHeadingClass = 'm-0! p-0 border-0 text-(--text-primary) font-sans! text-[18px]! leading-6! font-semibold! tracking-[-.01em]';
-const sectionHeadingLinkClass = 'text-(--text-quaternary)! no-underline! font-mono text-[14px] leading-5 font-[450]';
-
-const schemaHeadCellClass = 'py-[7px] px-3 border-x-0! border-t-0! border-b! border-b-(--border-primary)! text-(--text-quaternary) bg-(--bg-inert) font-mono text-[10px] leading-[14px] font-medium tracking-[.06em] text-left uppercase';
-const schemaCellClass = 'h-[37px] py-2 px-3 border-x-0! border-t-0! border-b! border-b-(--border-tertiary)! align-middle';
-
 function SchemaTable({ document, rows, label }: { document: JsonObject; rows: SchemaRow[]; label: string }) {
   if (rows.length === 0) return null;
   const hasLocation = rows.some((row) => row.location);
   return (
-    <div className="api-schema-wrap mt-[14px] overflow-x-auto border border-(--border-primary) rounded-[4px] max-sm:-mr-2">
+    <div className="api-schema-wrap mt-[14px] overflow-x-auto border border-(--border-primary) rounded-md max-sm:-mr-2">
       {/* Corner cells carry the wrapper's inner radius — collapsed cell
           backgrounds paint square past an ancestor's rounded clip. */}
       <table className="api-schema-table w-full min-w-[620px] m-0! border-0! border-collapse table-fixed text-[12px]! [&_thead_th:first-child]:rounded-tl-[3px] [&_thead_th:last-child]:rounded-tr-[3px] [&_tbody_tr:last-child_td:first-child]:rounded-bl-[3px] [&_tbody_tr:last-child_td:last-child]:rounded-br-[3px]" data-has-location={hasLocation || undefined} aria-label={label}>
-        <thead><tr><th className={cn(schemaHeadCellClass, hasLocation ? 'w-[28%]' : 'w-[30%]')}>Property</th><th className={cn(schemaHeadCellClass, hasLocation ? 'w-[18%]' : 'w-[25%]')}>Type</th>{hasLocation && <th className={cn(schemaHeadCellClass, 'w-[14%]')}>Location</th>}<th className={schemaHeadCellClass}>Description</th></tr></thead>
+        <thead><tr><th className={cn('py-[7px] px-3 border-x-0! border-t-0! border-b! border-b-(--border-primary)! text-(--text-quaternary) bg-(--bg-inert) font-mono text-[10px] leading-[14px] font-normal tracking-[.06em] text-left uppercase', hasLocation ? 'w-[28%]' : 'w-[30%]')}>Property</th><th className={cn('py-[7px] px-3 border-x-0! border-t-0! border-b! border-b-(--border-primary)! text-(--text-quaternary) bg-(--bg-inert) font-mono text-[10px] leading-[14px] font-normal tracking-[.06em] text-left uppercase', hasLocation ? 'w-[18%]' : 'w-[25%]')}>Type</th>{hasLocation && <th className="py-[7px] px-3 border-x-0! border-t-0! border-b! border-b-(--border-primary)! text-(--text-quaternary) bg-(--bg-inert) font-mono text-[10px] leading-[14px] font-normal tracking-[.06em] text-left uppercase w-[14%]">Location</th>}<th className="py-[7px] px-3 border-x-0! border-t-0! border-b! border-b-(--border-primary)! text-(--text-quaternary) bg-(--bg-inert) font-mono text-[10px] leading-[14px] font-normal tracking-[.06em] text-left uppercase">Description</th></tr></thead>
         <tbody className="[&>tr:last-child>td]:border-b-0!">{rows.map((row) => (
           <tr className={row.hasChildren ? 'api-schema-object-row [&>td]:bg-(--bg-inert)' : undefined} data-depth={row.depth} key={row.key}>
-            <td className={cn('api-schema-name relative whitespace-nowrap', schemaCellClass)} style={{ paddingLeft: 12 + row.depth * 18 }}>
+            <td className="api-schema-name relative whitespace-nowrap h-[37px] py-2 px-3 border-x-0! border-t-0! border-b! border-b-(--border-tertiary)! align-middle" style={{ paddingLeft: 12 + row.depth * 18 }}>
               {row.depth > 0 && <span className="api-schema-branch mr-1.5 text-(--border-strong) font-mono text-[11px] leading-[14px] font-normal" aria-hidden="true">└</span>}
               <code className="p-0! border-0! bg-transparent! font-mono text-(--text-primary)! text-[12px]! font-[550]">{row.name}</code>
             </td>
-            <td className={cn('api-schema-type whitespace-nowrap', schemaCellClass)}>
+            <td className="api-schema-type whitespace-nowrap h-[37px] py-2 px-3 border-x-0! border-t-0! border-b! border-b-(--border-tertiary)! align-middle">
               <code className="mr-[7px] p-0! border-0! bg-transparent! text-(--text-quaternary)! font-mono! text-[10px]! leading-[14px]! font-[450]! tracking-[.04em] uppercase">{schemaType(document, row.field)}</code>
               {row.required && <b className="mr-[7px] text-(--color-warning-text)! font-mono! text-[10px]! leading-[14px]! font-[450]! tracking-[.04em] uppercase">Required</b>}
             </td>
-            {hasLocation && <td className={cn('api-schema-location', schemaCellClass)}><code className="p-0! border-0! text-(--text-tertiary)! bg-transparent! font-mono! text-[10px]! leading-[14px]! font-medium! tracking-[.05em] uppercase">{row.location}</code></td>}
-            <td className={cn('api-schema-description text-(--text-secondary)! font-sans text-[13px] leading-[19px] font-normal', schemaCellClass)}><PlainMarkdown value={row.description} codeClassName={inlineCodeClass} />{!row.description && <span aria-hidden="true">—</span>}</td>
+            {hasLocation && <td className="api-schema-location h-[37px] py-2 px-3 border-x-0! border-t-0! border-b! border-b-(--border-tertiary)! align-middle"><code className="p-0! border-0! text-(--text-tertiary)! bg-transparent! font-mono! text-[10px]! leading-[14px]! font-medium! tracking-[.05em] uppercase">{row.location}</code></td>}
+            <td className="api-schema-description text-(--text-secondary)! font-sans text-[13px] leading-[19px] font-normal h-[37px] py-2 px-3 border-x-0! border-t-0! border-b! border-b-(--border-tertiary)! align-middle"><PlainMarkdown value={row.description} codeClassName="py-px px-1 border border-(--border-secondary) rounded-[3px] bg-(--bg-inert) font-mono" />{!row.description && <span aria-hidden="true">—</span>}</td>
           </tr>
         ))}</tbody>
       </table>
@@ -227,17 +217,17 @@ export async function ApiOperation({ value, children }: { value: string; childre
   }));
 
   return <div className="api-operation">
-    <div className="endpoint-bar my-4 py-2.5 px-3 flex items-center gap-2.5 border border-(--border-primary) rounded-[4px] bg-(--bg-surface)">
-      <span className={cn('endpoint-method py-[3px] px-[7px] border border-(--border-primary) rounded-[4px] font-mono text-[10px] leading-4 font-semibold tracking-[.04em]', METHOD_COLORS[method] ?? 'method-' + method)}>{method.toUpperCase()}</span>
+    <div className="endpoint-bar my-4 py-2.5 px-3 flex items-center gap-2.5 border border-(--border-primary) rounded-md bg-(--bg-surface)">
+      <span className={cn('endpoint-method py-[3px] px-[7px] border border-(--border-primary) rounded-md font-mono text-[10px] leading-4 font-semibold tracking-[.04em]', METHOD_COLORS[method] ?? 'method-' + method)}>{method.toUpperCase()}</span>
       {/* `!` beats the prose inline-code chip styles this <code> sits inside. */}
       <code className="flex-1 overflow-x-auto text-(--text-secondary) bg-transparent! border-0! font-mono! text-[13px]! leading-[18px]! font-[450]! whitespace-nowrap">{displayPath}</code>
       <CopyButton value={displayPath} label="" analytics={{ codeKind: 'endpoint_path' }} />
     </div>
     {operation.description && <p className="endpoint-description mt-4 mb-6 text-(--text-tertiary) font-sans text-[16px] leading-[26px] font-normal"><PlainMarkdown value={operation.description} /></p>}
     {children}
-    {parameters.length > 0 && <section className="api-section mt-11" id="parameters"><h2 className={sectionHeadingClass}>Parameters <a className={sectionHeadingLinkClass} href="#parameters">#</a></h2><SchemaTable document={document} rows={parameterRows} label="Request parameters" /></section>}
-    {bodyContent && <section className="api-section mt-11" id="body"><h2 className={sectionHeadingClass}>Body <a className={sectionHeadingLinkClass} href="#body">#</a></h2><p className="api-section-copy mt-3 text-(--text-secondary) text-[15px] leading-[25px]"><PlainMarkdown value={resolveSchema(document, bodySchema)?.description ?? operation.requestBody?.description} codeClassName={inlineCodeClass} /></p><div className="media-types mt-3 flex flex-wrap gap-1.5">{Object.keys(bodyContent).map((type) => <code className="py-[3px] px-[7px] border border-(--border-primary) rounded-[3px] text-(--text-tertiary) bg-(--bg-inert) text-[10px]" key={type}>{type}</code>)}</div><SchemaTable document={document} rows={bodyRows} label="Request body schema" /></section>}
-    <section className="api-section mt-11" id="example"><h2 className={sectionHeadingClass}>Request <a className={sectionHeadingLinkClass} href="#example">#</a></h2><ApiCodeBlock samples={requestCodeSamples} /><ApiTryIt operation={value} method={method} parameters={tryParameters} serverVariables={serverVariables} bodyType={bodyType} bodyExample={bodyExample} /></section>
-    {responseEntries.length > 0 && <section className="api-section mt-11" id="response"><h2 className={sectionHeadingClass}>Response <a className={sectionHeadingLinkClass} href="#response">#</a></h2>{responseEntries.map(([code, response]) => <div className="api-response min-h-[43px] py-2.5 px-1 flex items-center gap-3 border-b border-b-(--border-tertiary) max-sm:items-start max-sm:flex-col" key={code}><div className="flex items-center gap-2"><span className={cn(/^2/.test(code) ? 'status-dot success bg-(--green-500)' : 'status-dot error bg-(--red-400)', 'size-2 inline-block rounded-[999px] text-(--text-tertiary) text-[12px]')} /><code className="p-0! border-0! bg-transparent! text-(--text-secondary)!">{code}</code><span className="text-(--text-tertiary) text-[12px]">{response.description}</span></div>{response.content && <small className="ml-auto text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-[450] uppercase max-sm:ml-4">{Object.keys(response.content).join(', ')}</small>}</div>)}{responseSchema && <SchemaTable document={document} rows={responseRows} label="Response schema" />}</section>}
+    {parameters.length > 0 && <section className="api-section mt-11" id="parameters"><h2 className="m-0! p-0 border-0 text-(--text-primary) font-sans! text-[18px]! leading-6! font-semibold! tracking-[-.01em]">Parameters <a className="text-(--text-quaternary)! no-underline! font-mono text-[14px] leading-5 font-[450]" href="#parameters">#</a></h2><SchemaTable document={document} rows={parameterRows} label="Request parameters" /></section>}
+    {bodyContent && <section className="api-section mt-11" id="body"><h2 className="m-0! p-0 border-0 text-(--text-primary) font-sans! text-[18px]! leading-6! font-semibold! tracking-[-.01em]">Body <a className="text-(--text-quaternary)! no-underline! font-mono text-[14px] leading-5 font-[450]" href="#body">#</a></h2><p className="api-section-copy mt-3 text-(--text-secondary) text-[15px] leading-[25px]"><PlainMarkdown value={resolveSchema(document, bodySchema)?.description ?? operation.requestBody?.description} codeClassName="py-px px-1 border border-(--border-secondary) rounded-[3px] bg-(--bg-inert) font-mono" /></p><div className="media-types mt-3 flex flex-wrap gap-1.5">{Object.keys(bodyContent).map((type) => <code className="py-[3px] px-[7px] border border-(--border-primary) rounded-[3px] text-(--text-tertiary) bg-(--bg-inert) text-[10px]" key={type}>{type}</code>)}</div><SchemaTable document={document} rows={bodyRows} label="Request body schema" /></section>}
+    <section className="api-section mt-11" id="example"><h2 className="m-0! p-0 border-0 text-(--text-primary) font-sans! text-[18px]! leading-6! font-semibold! tracking-[-.01em]">Request <a className="text-(--text-quaternary)! no-underline! font-mono text-[14px] leading-5 font-[450]" href="#example">#</a></h2><ApiCodeBlock samples={requestCodeSamples} /><ApiTryIt operation={value} method={method} parameters={tryParameters} serverVariables={serverVariables} bodyType={bodyType} bodyExample={bodyExample} /></section>
+    {responseEntries.length > 0 && <section className="api-section mt-11" id="response"><h2 className="m-0! p-0 border-0 text-(--text-primary) font-sans! text-[18px]! leading-6! font-semibold! tracking-[-.01em]">Response <a className="text-(--text-quaternary)! no-underline! font-mono text-[14px] leading-5 font-[450]" href="#response">#</a></h2>{responseEntries.map(([code, response]) => <div className="api-response min-h-[43px] py-2.5 px-1 flex items-center gap-3 border-b border-b-(--border-tertiary) max-sm:items-start max-sm:flex-col" key={code}><div className="flex items-center gap-2"><span className={cn(/^2/.test(code) ? 'status-dot success bg-(--green-500)' : 'status-dot error bg-(--red-400)', 'size-2 inline-block rounded-[999px] text-(--text-tertiary) text-[12px]')} /><code className="p-0! border-0! bg-transparent! text-(--text-secondary)!">{code}</code><span className="text-(--text-tertiary) text-[12px]">{response.description}</span></div>{response.content && <small className="ml-auto text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-[450] uppercase max-sm:ml-4">{Object.keys(response.content).join(', ')}</small>}</div>)}{responseSchema && <SchemaTable document={document} rows={responseRows} label="Response schema" />}</section>}
   </div>;
 }

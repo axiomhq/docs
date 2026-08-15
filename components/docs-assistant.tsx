@@ -39,48 +39,6 @@ type AssistantSource = {
   url: string;
 };
 
-// Styles for Streamdown's rendered markdown, expressed as descendant variants on
-// the wrapper because the elements themselves are Streamdown's to render.
-// Wrapper variants (`.x h1`) outrank the utility classes Streamdown puts on the
-// elements (`.text-3xl`), so no `!` is needed except against Shiki's inline
-// `background`/`color` styles on <pre>.
-const AI_MARKDOWN_CLASS = cn(
-  'docs-ai-markdown text-(--text-secondary) font-sans text-[14px] leading-[22px] font-normal',
-  '[&>:first-child]:mt-0! [&>:last-child]:mb-0!',
-  // Streamdown ships a full-page heading scale; inside a 700px panel it reads
-  // as oversized, so re-anchor headings to the Axiom docs scale.
-  '[&_:is(h1,h2,h3,h4,h5,h6)]:text-(--text-primary) [&_:is(h1,h2,h3,h4,h5,h6)]:font-sans [&_:is(h1,h2,h3,h4,h5,h6)]:font-medium [&_:is(h1,h2,h3,h4,h5,h6)]:tracking-[-.01em]',
-  '[&_h1]:mt-[22px] [&_h1]:mb-2 [&_h1]:text-[16px] [&_h1]:leading-6',
-  '[&_h2]:mt-[18px] [&_h2]:mb-[7px] [&_h2]:text-[14px] [&_h2]:leading-[21px]',
-  '[&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-[13px] [&_h3]:leading-5',
-  '[&_:is(h4,h5,h6)]:mt-[14px] [&_:is(h4,h5,h6)]:mb-[5px] [&_:is(h4,h5,h6)]:text-[12px] [&_:is(h4,h5,h6)]:leading-[18px]',
-  '[&_:is(h1,h2,h3):first-child]:mt-0',
-  '[&_:where(p,ul,ol)]:m-0 [&_:where(p,ul,ol)]:mb-[11px] [&_:where(ul,ol)]:ps-[18px]',
-  '[&_li]:my-[3px] [&_li]:ps-0.5 [&_li]:marker:text-(--text-quaternary) [&_li>p]:m-0 [&_li>p]:mb-1 [&_li:last-child]:mb-0',
-  '[&_:is(ul,ol)_:is(ul,ol)]:m-0 [&_:is(ul,ol)_:is(ul,ol)]:mt-[3px]',
-  '[&_hr]:my-4 [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-t-(--border-secondary)',
-  '[&_blockquote]:m-0 [&_blockquote]:mb-[11px] [&_blockquote]:ps-[11px] [&_blockquote]:border-l-2 [&_blockquote]:border-l-(--border-strong) [&_blockquote]:text-(--text-tertiary)',
-  '[&_table]:w-full [&_table]:m-0 [&_table]:mb-3 [&_table]:border-collapse [&_table]:text-[12.5px]',
-  '[&_:where(th,td)]:py-[5px] [&_:where(th,td)]:px-2 [&_:where(th,td)]:border [&_:where(th,td)]:border-(--border-secondary) [&_:where(th,td)]:text-left',
-  '[&_th]:text-(--text-primary) [&_th]:bg-(--bg-inert) [&_th]:font-semibold',
-  '[&_strong]:text-(--text-primary) [&_strong]:font-semibold',
-  '[&_a]:text-(--text-primary) [&_a]:underline [&_a]:decoration-(--border-strong) [&_a]:underline-offset-[3px] [&_a:hover]:decoration-(--color-accent)',
-  '[&_code:not(pre_code)]:py-px [&_code:not(pre_code)]:px-1 [&_code:not(pre_code)]:border [&_code:not(pre_code)]:border-(--border-primary) [&_code:not(pre_code)]:rounded-[3px] [&_code:not(pre_code)]:text-(--text-primary) [&_code:not(pre_code)]:bg-(--bg-inert) [&_code:not(pre_code)]:font-mono [&_code:not(pre_code)]:text-[12px] [&_code:not(pre_code)]:leading-[18px] [&_code:not(pre_code)]:font-[450]',
-  // Streamdown nests a bordered, rounded body inside an already-bordered,
-  // rounded shell, which reads as a double frame. Collapse it to a single Axiom
-  // surface. The header row and its buttons are left exactly as they are.
-  // The actions row overlays the header via -mt-10, which assumes Streamdown's
-  // h-8 header plus its gap-2. Keep that 8px gap intact and pad the header and
-  // body identically so the language label lines up with the code gutter.
-  "[&_[data-streamdown='code-block']]:my-3 [&_[data-streamdown='code-block']]:p-0 [&_[data-streamdown='code-block']]:gap-2 [&_[data-streamdown='code-block']]:overflow-hidden [&_[data-streamdown='code-block']]:border [&_[data-streamdown='code-block']]:border-(--border-primary) [&_[data-streamdown='code-block']]:rounded-[4px] [&_[data-streamdown='code-block']]:bg-(--bg-surface)",
-  "[&_[data-streamdown='code-block-header']]:py-0 [&_[data-streamdown='code-block-header']]:px-3 [&_[data-streamdown='code-block-header']]:text-(--text-tertiary) [&_[data-streamdown='code-block-header']]:font-mono [&_[data-streamdown='code-block-header']]:text-[11px] [&_[data-streamdown='code-block-header']]:leading-4 [&_[data-streamdown='code-block-header']]:font-[450]",
-  "[&_[data-streamdown='code-block-header']>span]:ms-0 [&_[data-streamdown='code-block-header']+div]:pe-2",
-  "[&_[data-streamdown='code-block-actions']]:border-(--border-secondary) [&_[data-streamdown='code-block-actions']]:bg-(--bg-raised)",
-  "[&_[data-streamdown='code-block-body']]:m-0 [&_[data-streamdown='code-block-body']]:pt-0 [&_[data-streamdown='code-block-body']]:px-3 [&_[data-streamdown='code-block-body']]:pb-3 [&_[data-streamdown='code-block-body']]:border-0 [&_[data-streamdown='code-block-body']]:rounded-none [&_[data-streamdown='code-block-body']]:bg-transparent",
-  '[&_pre]:m-0! [&_pre]:p-0 [&_pre]:bg-transparent!',
-  '[&_:is(pre,pre_code)]:font-mono [&_:is(pre,pre_code)]:text-[12px] [&_:is(pre,pre_code)]:leading-[19px] [&_:is(pre,pre_code)]:font-[450]',
-);
-
 type DocsAssistantPanelProps = {
   open: boolean;
   draft: string;
@@ -183,7 +141,7 @@ export function DocsAssistantPanel({
       id="docs-assistant-panel"
       role="tabpanel"
       aria-labelledby="docs-assistant-tab"
-      className="docs-assistant-panel docs-ai-surface min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas)"
+      className="docs-assistant-panel min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas)"
     >
       <MessageScrollerProvider autoScroll>
         <MessageScroller className="docs-assistant-scroller relative min-h-0">
@@ -199,7 +157,7 @@ export function DocsAssistantPanel({
                 <MessageScrollerItem>
                   <button
                     type="button"
-                    className="docs-search-clear ml-auto py-1 px-[7px] border-0 rounded-[3px] text-(--text-tertiary) bg-transparent font-sans text-[12px] leading-4 font-medium cursor-pointer hover:text-(--text-primary) hover:bg-(--bg-emph-tertiary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) max-md:min-h-11 max-sm:text-[14px]"
+                    className="docs-search-clear ml-auto py-1 px-[7px] border-0 rounded-[3px] text-(--text-tertiary) bg-transparent font-sans text-[12px] leading-4 font-medium cursor-pointer hover:text-(--text-primary) hover:bg-interactive-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) max-md:min-h-11 max-sm:text-[14px]"
                     onClick={() => chat.setMessages([])}
                   >
                     Clear conversation
@@ -231,7 +189,7 @@ export function DocsAssistantPanel({
                     className="docs-assistant-working py-[7px] px-0 flex items-center gap-2 text-(--text-tertiary) font-mono text-[11px] leading-4 font-[450]"
                     role="status"
                   >
-                    <span className="size-1.5 flex-none border border-(--color-accent) animate-[docs-assistant-pulse_1s_ease-in-out_infinite] motion-reduce:animate-none motion-reduce:bg-(--color-accent)" />
+                    <span className="size-1.5 flex-none border border-brand bg-brand/50 motion-safe:animate-pulse" />
                     <span className="shimmer shimmer-duration-1600">Searching Axiom Docs…</span>
                   </div>
                 </MessageScrollerItem>
@@ -239,7 +197,7 @@ export function DocsAssistantPanel({
               {chat.error && (
                 <MessageScrollerItem>
                   <div
-                    className="docs-assistant-error px-[11px] py-[10px] flex flex-col gap-1 border border-[color-mix(in_srgb,var(--color-destructive)_50%,transparent)] rounded-[4px] text-(--text-tertiary) bg-[color-mix(in_srgb,var(--color-destructive)_7%,transparent)] font-sans text-[12px] leading-[18px] font-[450]"
+                    className="docs-assistant-error px-[11px] py-[10px] flex flex-col gap-1 border border-[color-mix(in_srgb,var(--color-destructive)_50%,transparent)] rounded-md text-(--text-tertiary) bg-[color-mix(in_srgb,var(--color-destructive)_7%,transparent)] font-sans text-[12px] leading-[18px] font-[450]"
                     role="alert"
                   >
                     <strong className="text-(--text-primary) font-semibold">The assistant couldn’t answer.</strong>
@@ -259,7 +217,7 @@ export function DocsAssistantPanel({
       <div className="docs-assistant-footer bg-(--bg-surface)">
       <PromptInput
         className="docs-assistant-composer [box-shadow:none]"
-        inputGroupClassName="docs-assistant-input-wrap min-h-[64px] h-auto py-3 pr-3 pl-4 flex items-start gap-2 border-0 border-t border-(--border-strong) rounded-none has-[textarea]:rounded-none bg-transparent dark:bg-transparent [box-shadow:none] transition-[border-color] duration-(--duration-1) ease-(--ease-out) focus-within:border-(--color-accent) has-[[data-slot=input-group-control]:focus-visible]:border-(--color-accent) has-[[data-slot=input-group-control]:focus-visible]:ring-0 max-sm:pl-3"
+        inputGroupClassName="docs-assistant-input-wrap min-h-[64px] h-auto py-3 pr-3 pl-4 flex items-start gap-2 border-0 border-t border-(--border-primary) rounded-none has-[textarea]:rounded-none bg-transparent dark:bg-transparent [box-shadow:none] has-[[data-slot=input-group-control]:focus-visible]:border-(--border-primary) has-[[data-slot=input-group-control]:focus-visible]:ring-0 max-sm:pl-3"
         onSubmit={submit}
       >
         <PromptInputBody>
@@ -283,7 +241,7 @@ export function DocsAssistantPanel({
               // renders type="button" while streaming, so this half of the rule
               // never applied to the stop button. Gated to keep that behaviour.
               !isBusy &&
-                'flex-none size-8 p-0 inline-flex items-center justify-center border border-(--border-primary) focus-visible:border-(--border-primary) rounded-[4px] text-(--text-on-inverse-primary) bg-(--bg-emph-primary-inverse) hover:bg-(--bg-emph-primary-inverse) cursor-pointer transition-[opacity,background] duration-(--duration-1) ease-(--ease-out)',
+                'flex-none size-8 p-0 inline-flex items-center justify-center border border-(--border-primary) focus-visible:border-(--border-primary) rounded-md text-(--text-on-inverse-primary) bg-(--bg-emph-primary-inverse) hover:bg-(--bg-emph-primary-inverse) cursor-pointer transition-[opacity,background] duration-(--duration-1) ease-(--ease-out)',
             )}
             status={chat.status}
             onStop={stop}
@@ -321,7 +279,7 @@ function AssistantMessage({
     return (
       <Message from="user" className="docs-assistant-message user gap-[7px] max-w-[82%] max-sm:max-w-[92%] ml-auto items-end">
         <span className="text-(--text-tertiary) font-mono text-[10px] leading-[14px] font-semibold tracking-[.06em] uppercase">You</span>
-        <MessageContent className="docs-assistant-bubble border border-(--border-primary) group-[.is-user]:rounded-[4px] group-[.is-user]:px-3 group-[.is-user]:py-[10px] group-[.is-user]:text-(--text-secondary) group-[.is-user]:bg-(--bg-surface) font-sans text-[13px] leading-5 font-[450] whitespace-pre-wrap">{text}</MessageContent>
+        <MessageContent className="docs-assistant-bubble border border-(--border-primary) group-[.is-user]:rounded-md group-[.is-user]:px-3 group-[.is-user]:py-[10px] group-[.is-user]:text-(--text-secondary) group-[.is-user]:bg-(--bg-surface) font-sans text-[13px] leading-5 font-[450] whitespace-pre-wrap">{text}</MessageContent>
       </Message>
     );
   }
@@ -351,7 +309,7 @@ function AssistantMessage({
             className="docs-assistant-working py-[7px] px-0 flex items-center gap-2 text-(--text-tertiary) font-mono text-[11px] leading-4 font-[450]"
             role="status"
           >
-            <span className="size-1.5 flex-none border border-(--color-accent) animate-[docs-assistant-pulse_1s_ease-in-out_infinite] motion-reduce:animate-none motion-reduce:bg-(--color-accent)" />
+            <span className="size-1.5 flex-none border border-brand bg-brand/50 motion-safe:animate-pulse" />
             <span className="shimmer shimmer-duration-1600">Composing answer…</span>
           </div>
         )}
@@ -360,7 +318,37 @@ function AssistantMessage({
           // behind a confirmation modal. Every URL here comes from our own
           // search_docs/read_docs_page tools and is same-origin /docs, so keep
           // them as real anchors that navigate, as they did before.
-          <MessageResponse className={AI_MARKDOWN_CLASS} linkSafety={{ enabled: false }}>
+          <MessageResponse
+            className={cn(
+              'docs-ai-markdown text-(--text-secondary) font-sans text-[14px] leading-[22px] font-normal',
+              '[&>:first-child]:mt-0! [&>:last-child]:mb-0!',
+              '[&_:is(h1,h2,h3,h4,h5,h6)]:text-(--text-primary) [&_:is(h1,h2,h3,h4,h5,h6)]:font-sans [&_:is(h1,h2,h3,h4,h5,h6)]:font-medium [&_:is(h1,h2,h3,h4,h5,h6)]:tracking-[-.01em]',
+              '[&_h1]:mt-[22px] [&_h1]:mb-2 [&_h1]:text-[16px] [&_h1]:leading-6',
+              '[&_h2]:mt-[18px] [&_h2]:mb-[7px] [&_h2]:text-[14px] [&_h2]:leading-[21px]',
+              '[&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-[13px] [&_h3]:leading-5',
+              '[&_:is(h4,h5,h6)]:mt-[14px] [&_:is(h4,h5,h6)]:mb-[5px] [&_:is(h4,h5,h6)]:text-[12px] [&_:is(h4,h5,h6)]:leading-[18px]',
+              '[&_:is(h1,h2,h3):first-child]:mt-0',
+              '[&_:where(p,ul,ol)]:m-0 [&_:where(p,ul,ol)]:mb-[11px] [&_:where(ul,ol)]:ps-[18px]',
+              '[&_li]:my-[3px] [&_li]:ps-0.5 [&_li]:marker:text-(--text-quaternary) [&_li>p]:m-0 [&_li>p]:mb-1 [&_li:last-child]:mb-0',
+              '[&_:is(ul,ol)_:is(ul,ol)]:m-0 [&_:is(ul,ol)_:is(ul,ol)]:mt-[3px]',
+              '[&_hr]:my-4 [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-t-(--border-secondary)',
+              '[&_blockquote]:m-0 [&_blockquote]:mb-[11px] [&_blockquote]:ps-[11px] [&_blockquote]:border-l-2 [&_blockquote]:border-l-(--border-strong) [&_blockquote]:text-(--text-tertiary)',
+              '[&_table]:w-full [&_table]:m-0 [&_table]:mb-3 [&_table]:border-collapse [&_table]:text-[12.5px]',
+              '[&_:where(th,td)]:py-[5px] [&_:where(th,td)]:px-2 [&_:where(th,td)]:border [&_:where(th,td)]:border-(--border-secondary) [&_:where(th,td)]:text-left',
+              '[&_th]:text-(--text-primary) [&_th]:bg-(--bg-inert) [&_th]:font-normal',
+              '[&_strong]:text-(--text-primary) [&_strong]:font-semibold',
+              '[&_a]:text-(--text-primary) [&_a]:underline [&_a]:decoration-(--border-strong) [&_a]:underline-offset-[3px] [&_a:hover]:decoration-(--color-accent)',
+              '[&_code:not(pre_code)]:py-px [&_code:not(pre_code)]:px-1 [&_code:not(pre_code)]:border [&_code:not(pre_code)]:border-(--border-primary) [&_code:not(pre_code)]:rounded-[3px] [&_code:not(pre_code)]:text-(--text-primary) [&_code:not(pre_code)]:bg-(--bg-inert) [&_code:not(pre_code)]:font-mono [&_code:not(pre_code)]:text-[12px] [&_code:not(pre_code)]:leading-[18px] [&_code:not(pre_code)]:font-[450]',
+              "[&_[data-streamdown='code-block']]:my-3 [&_[data-streamdown='code-block']]:p-0 [&_[data-streamdown='code-block']]:gap-2 [&_[data-streamdown='code-block']]:overflow-hidden [&_[data-streamdown='code-block']]:border [&_[data-streamdown='code-block']]:border-(--border-primary) [&_[data-streamdown='code-block']]:rounded-md [&_[data-streamdown='code-block']]:bg-(--bg-surface)",
+              "[&_[data-streamdown='code-block-header']]:py-0 [&_[data-streamdown='code-block-header']]:px-3 [&_[data-streamdown='code-block-header']]:text-(--text-tertiary) [&_[data-streamdown='code-block-header']]:font-mono [&_[data-streamdown='code-block-header']]:text-[11px] [&_[data-streamdown='code-block-header']]:leading-4 [&_[data-streamdown='code-block-header']]:font-[450]",
+              "[&_[data-streamdown='code-block-header']>span]:ms-0 [&_[data-streamdown='code-block-header']+div]:pe-2",
+              "[&_[data-streamdown='code-block-actions']]:border-(--border-secondary) [&_[data-streamdown='code-block-actions']]:bg-(--bg-raised)",
+              "[&_[data-streamdown='code-block-body']]:m-0 [&_[data-streamdown='code-block-body']]:pt-0 [&_[data-streamdown='code-block-body']]:px-3 [&_[data-streamdown='code-block-body']]:pb-3 [&_[data-streamdown='code-block-body']]:border-0 [&_[data-streamdown='code-block-body']]:rounded-none [&_[data-streamdown='code-block-body']]:bg-transparent",
+              '[&_pre]:m-0! [&_pre]:p-0 [&_pre]:bg-transparent!',
+              '[&_:is(pre,pre_code)]:font-mono [&_:is(pre,pre_code)]:text-[12px] [&_:is(pre,pre_code)]:leading-[19px] [&_:is(pre,pre_code)]:font-[450]',
+            )}
+            linkSafety={{ enabled: false }}
+          >
             {text}
           </MessageResponse>
         )}
@@ -370,7 +358,7 @@ function AssistantMessage({
             reads as a hang. */}
         {!active && !text && (
           <div
-            className="docs-assistant-error px-[11px] py-[10px] flex flex-col gap-1 border border-[color-mix(in_srgb,var(--color-destructive)_50%,transparent)] rounded-[4px] text-(--text-tertiary) bg-[color-mix(in_srgb,var(--color-destructive)_7%,transparent)] font-sans text-[12px] leading-[18px] font-[450]"
+            className="docs-assistant-error px-[11px] py-[10px] flex flex-col gap-1 border border-[color-mix(in_srgb,var(--color-destructive)_50%,transparent)] rounded-md text-(--text-tertiary) bg-[color-mix(in_srgb,var(--color-destructive)_7%,transparent)] font-sans text-[12px] leading-[18px] font-[450]"
             role="alert"
           >
             <strong className="text-(--text-primary) font-semibold">The assistant didn’t finish this answer.</strong>
@@ -413,7 +401,7 @@ function AssistantSources({ sources }: { sources: AssistantSource[] }) {
                 href={source.url}
                 key={source.url}
                 title={source.title}
-                className="max-w-full px-1.5 py-0.5 inline-flex items-center gap-1 border border-(--border-primary) rounded-[3px] text-(--text-tertiary) bg-(--bg-inert) font-sans text-[10px] leading-[15px] font-medium hover:border-(--border-strong) hover:text-(--text-primary) hover:bg-(--bg-raised) max-md:min-h-[44px]"
+                className="max-w-full px-1.5 py-0.5 inline-flex items-center gap-1 border border-(--border-primary) rounded-[3px] text-(--text-tertiary) bg-(--bg-inert) font-sans text-[10px] leading-[15px] font-medium hover:border-(--border-strong) hover:text-(--text-primary) hover:bg-interactive-hover max-md:min-h-[44px]"
                 onClick={() => captureDocsEvent('docs_ai_source_opened', {
                   destination_path: safeDocsPath(source.url),
                   source_rank: index + 1,
