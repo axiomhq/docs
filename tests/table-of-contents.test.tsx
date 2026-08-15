@@ -24,7 +24,7 @@ describe('TableOfContents', () => {
     fireEvent.click(nested);
     expect(nested).toHaveAttribute('aria-current', 'location');
     expect(nested.querySelector('span')).toHaveClass('line-clamp-2');
-    expect(container.querySelector('[data-slot="toc-trace-progress"]')).toBeNull();
-    expect(container.querySelector('[data-slot="toc-trace-end"]')).toBeNull();
+    expect(container.querySelector('[data-slot="toc-trace-path"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="toc-cursor"]')).not.toBeNull();
   });
 });

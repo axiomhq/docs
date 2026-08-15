@@ -214,6 +214,9 @@ export default function DocsLandingPage() {
             icon={<Icon />}
             gap="md"
             className="quick-card"
+            // These cards precede the first LandingSectionHeading h2, so h3
+            // here would skip a level in the page outline.
+            titleAs="h2"
             key={card.title}
           />
         ))}
@@ -286,7 +289,7 @@ export default function DocsLandingPage() {
                 href={href}
                 prefetch={false}
                 className={cn(
-                  "platform-row grid grid-cols-[160px_minmax(0,1fr)_auto] items-center gap-x-5 px-2 py-4 hover:bg-card! rounded-md md:-mx-2!",
+                  "platform-row grid grid-cols-[160px_minmax(0,1fr)_auto] items-center gap-x-5 px-2 py-4 hover:bg-interactive-hover rounded-md md:-mx-2!",
                   "focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-(--color-accent)",
                   "max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:gap-x-3 max-sm:gap-y-1 max-sm:px-1",
                 )}

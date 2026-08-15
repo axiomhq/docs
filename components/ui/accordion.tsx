@@ -76,13 +76,18 @@ function AccordionContent({
   return (
     <AccordionPrimitive.Panel
       data-slot="accordion-content"
-      className="overflow-hidden text-xs/relaxed data-open:animate-accordion-down data-closed:animate-accordion-up"
+      // Base UI's documented open/close animation: transition the panel's
+      // height between 0 (data-starting/ending-style) and the measured
+      // --accordion-panel-height it publishes. The tw-animate accordion
+      // keyframes target Radix's --radix-accordion-content-height and snap
+      // here.
+      className="h-(--accordion-panel-height) overflow-hidden text-xs/relaxed transition-[height] duration-200 ease-out data-starting-style:h-0 data-ending-style:h-0"
       {...props}
     >
       <div
         data-slot="accordion-content-inner"
         className={cn(
-          "h-(--accordion-panel-height) pt-0 pb-4 data-ending-style:h-0 data-starting-style:h-0 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
+          "pt-0 pb-4 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
           className,
         )}
       >

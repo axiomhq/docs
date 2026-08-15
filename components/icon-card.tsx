@@ -7,6 +7,9 @@ type IconCardGap = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 type IconCardProps = {
   title: ReactNode;
+  /* Pick the level that keeps the page outline sequential — cards that sit
+     directly under the page h1 need h2, not the h3 default. */
+  titleAs?: 'h2' | 'h3';
   description?: ReactNode;
   lead?: ReactNode;
   icon?: ReactNode;
@@ -26,6 +29,7 @@ const GAP: Record<IconCardGap, string> = {
 
 export function IconCard({
   title,
+  titleAs: TitleTag = 'h3',
   description,
   lead,
   icon,
@@ -50,9 +54,9 @@ export function IconCard({
       </span>
       <div className="flex flex-col gap-1">
         {title && (
-          <h3 className="text-sm font-[450] text-foreground">
+          <TitleTag className="text-sm font-[450] text-foreground">
             {title}
-          </h3>
+          </TitleTag>
         )}
         {description && (
           <div className="text-xs text-gray-10 leading-4.5 [&_p]:m-0">

@@ -35,6 +35,8 @@ export function AppCard({
     <IconCard
       href={href}
       title={title}
+      // The apps index renders these straight under the page h1.
+      titleAs="h2"
       description={children}
       gap="md"
       icon={

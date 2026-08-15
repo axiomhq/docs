@@ -98,8 +98,10 @@ test('shared icon cards match the www treatment with compact docs spacing', asyn
   await expect(landingCards.first()).toHaveCSS('gap', '24px');
   await expect(landingCards.first().locator('.icon-card-icon')).toBeVisible();
   await expect(landingCards.first().locator('.icon-card-icon svg')).toHaveCSS('width', '20px');
-  await expect(landingCards.first().getByRole('heading', { level: 3 })).toHaveCSS('font-size', '14px');
-  await expect(landingCards.first().getByRole('heading', { level: 3 })).toHaveCSS('font-weight', '450');
+  // Quick cards sit above the first LandingSectionHeading h2, so their titles
+  // are h2 to keep the outline sequential.
+  await expect(landingCards.first().getByRole('heading', { level: 2 })).toHaveCSS('font-size', '14px');
+  await expect(landingCards.first().getByRole('heading', { level: 2 })).toHaveCSS('font-weight', '450');
   const arrow = landingCards.first().locator('svg[aria-hidden="true"]').last();
   await expect(arrow).toHaveCSS('opacity', '0');
   if (testInfo.project.name === 'desktop-chromium') {
@@ -263,13 +265,16 @@ test('landing flare respects reduced motion', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
   await page.goto('/docs');
 
+  // Screenshot comparison can't prove anything here: headless Chromium has no
+  // WebGL, so the canvas never paints in either motion mode. The shader
+  // surfaces its motion decision as data-animate instead.
   const flare = page.locator('canvas.hero-flares');
   await expect(flare).toBeVisible();
-  await page.waitForTimeout(150);
-  const firstFrame = await flare.screenshot();
-  await page.waitForTimeout(300);
-  const secondFrame = await flare.screenshot();
-  expect(firstFrame.equals(secondFrame)).toBe(true);
+  await expect(flare).toHaveAttribute('data-animate', 'false');
+
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'no-preference' });
+  await page.reload();
+  await expect(flare).toHaveAttribute('data-animate', 'true');
 });
 
 test('API reference sidebar icons stay on Get started and Edge links', async ({ page }) => {
@@ -1098,7 +1103,6 @@ test('table of contents tracks the active heading and keeps a transparent surfac
   const headingBox = (await queryArchitectureHeading.boundingBox())!;
   const scrollViewportBox = (await page.locator('.docs-scroll-viewport').boundingBox())!;
   expect(Math.abs(headingBox.y - scrollViewportBox.y - 32)).toBeLessThanOrEqual(1);
-  await expect(toc.locator('[data-slot="toc-position"]')).toHaveCount(0);
 
   const consoleExpander = page.locator('.nav-nested summary').filter({ hasText: 'Console' });
   await expect(consoleExpander.locator('span')).toHaveText('Console');
@@ -1139,8 +1143,6 @@ test('table of contents trace turns crisply with heading depth and the cursor fo
     height: 8,
   });
   await expect(cursor).toHaveCSS('border-radius', '0px');
-  await expect(toc.locator('[data-slot="toc-trace-progress"]')).toHaveCount(0);
-  await expect(toc.locator('[data-slot="toc-trace-end"]')).toHaveCount(0);
 
   const paddings = await Promise.all(
     [h2Link, h3Link, h4Link].map((link) => (
@@ -1827,10 +1829,12 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
   await expect(page).toHaveURL(/#ingestion-architecture$/);
   await expect(heading).toBeInViewport();
   expect((await heading.boundingBox())!.y).toBeGreaterThanOrEqual(56);
-  // Copy feedback is an inline checkmark swapped in for the chain icon for a
-  // short period; no toast is shown.
+  // Copy feedback at desktop widths is an inline checkmark swapped in for the
+  // chain icon for a short period plus a screen-reader announcement; the
+  // toast only appears below sm, where the gutter marker is hidden.
   await expect(heading.locator('.anchor-hash svg.lucide-check')).toBeVisible();
-  await expect(page.getByText('Link copied', { exact: true })).toHaveCount(0);
+  await expect(page.locator('#heading-anchor-live-region')).toHaveText('Link copied');
+  await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
   await expect(heading.locator('.anchor-hash svg.lucide-link')).toBeVisible({ timeout: 5000 });
 
   const indicator = page
@@ -2127,7 +2131,9 @@ test('MDX accordions are compact, keyboard accessible, and searchable', async ({
     innerPaddingLeft: '16px',
   });
   expect(closedStyles.triggerHeight).toBeGreaterThanOrEqual(44);
-  expect(closedStyles.boxShadow).not.toMatch(/rgb\((?!0 0 0 \/ 0|0, 0, 0, 0)/);
+  // Chromium serializes translucent shadows as rgba(...), fully opaque ones as
+  // rgb(...); catch both, allowing only a fully transparent black.
+  expect(closedStyles.boxShadow).not.toMatch(/rgba?\((?!0, 0, 0, 0\)|0 0 0 \/ 0\))/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
     await page.evaluate(() => document.documentElement.clientWidth),
   );

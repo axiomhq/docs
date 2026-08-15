@@ -13,7 +13,7 @@ const CONFIG = {
   orangeLineWidth: 0.1, // secondary orange lines
   grayLineWidth: 0.2, // faint gray background lines
   lineBrightness: 0.7, // resting brightness of the secondary orange lines (does not affect the shine sweep)
-  glowStrength: 0.6, // central glow cluster + main-line halo (1 = full)
+  glowStrength: 0.5, // central glow cluster + main-line halo (1 = full)
   sweepPeriod: 8, // seconds between shine sweeps
   sweepDelay: 2, // seconds until the first sweep fires
   sweepLength: 60, // along-line size of the traveling shine
@@ -212,74 +212,70 @@ export function HeroFlaresShader({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const gl = canvas.getContext("webgl", {
-      alpha: true,
-      antialias: false,
-      depth: false,
-      stencil: false,
-      premultipliedAlpha: true,
-      powerPreference: "low-power",
-    });
-    if (!gl) return;
-
     const reduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
+    // Surfaced for e2e: whether the shader clock advances. Reflects the
+    // motion decision even where WebGL is unavailable.
+    canvas.dataset.animate = reduced ? "false" : "true";
 
+    // Context creation, shader compile, and the synchronous link-status
+    // readback all wait for the first intersection, so a display:none canvas
+    // (the hero hides below lg) costs nothing.
+    let gl: WebGLRenderingContext | null = null;
     let uRes: WebGLUniformLocation | null = null;
     let uTime: WebGLUniformLocation | null = null;
     let uIntro: WebGLUniformLocation | null = null;
     let ok = false;
 
-    const setup = () => {
+    const setup = (g: WebGLRenderingContext) => {
       ok = false;
       const compile = (type: number, src: string) => {
-        const shader = gl.createShader(type);
+        const shader = g.createShader(type);
         if (!shader) return null;
-        gl.shaderSource(shader, src);
-        gl.compileShader(shader);
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-          console.warn("hero-flares-shader:", gl.getShaderInfoLog(shader));
-          gl.deleteShader(shader);
+        g.shaderSource(shader, src);
+        g.compileShader(shader);
+        if (!g.getShaderParameter(shader, g.COMPILE_STATUS)) {
+          console.warn(
+            "hero-flares-shader:",
+            g.getShaderInfoLog(shader),
+          );
+          g.deleteShader(shader);
           return null;
         }
         return shader;
       };
-      const vs = compile(gl.VERTEX_SHADER, VERT);
-      const fs = compile(gl.FRAGMENT_SHADER, FRAG);
+      const vs = compile(g.VERTEX_SHADER, VERT);
+      const fs = compile(g.FRAGMENT_SHADER, FRAG);
       if (!vs || !fs) return;
-      const program = gl.createProgram();
+      const program = g.createProgram();
       if (!program) return;
-      gl.attachShader(program, vs);
-      gl.attachShader(program, fs);
-      gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.warn("hero-flares-shader:", gl.getProgramInfoLog(program));
+      g.attachShader(program, vs);
+      g.attachShader(program, fs);
+      g.linkProgram(program);
+      if (!g.getProgramParameter(program, g.LINK_STATUS)) {
+        console.warn(
+          "hero-flares-shader:",
+          g.getProgramInfoLog(program),
+        );
         return;
       }
-      gl.useProgram(program);
-      const buffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(
-        gl.ARRAY_BUFFER,
+      g.useProgram(program);
+      const buffer = g.createBuffer();
+      g.bindBuffer(g.ARRAY_BUFFER, buffer);
+      g.bufferData(
+        g.ARRAY_BUFFER,
         new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
-        gl.STATIC_DRAW,
+        g.STATIC_DRAW,
       );
-      const aPosition = gl.getAttribLocation(program, "a_position");
-      gl.enableVertexAttribArray(aPosition);
-      gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
-      uRes = gl.getUniformLocation(program, "u_resolution");
-      uTime = gl.getUniformLocation(program, "u_time");
-      uIntro = gl.getUniformLocation(program, "u_intro");
+      const aPosition = g.getAttribLocation(program, "a_position");
+      g.enableVertexAttribArray(aPosition);
+      g.vertexAttribPointer(aPosition, 2, g.FLOAT, false, 0, 0);
+      uRes = g.getUniformLocation(program, "u_resolution");
+      uTime = g.getUniformLocation(program, "u_time");
+      uIntro = g.getUniformLocation(program, "u_intro");
       ok = true;
     };
-    if (!gl.isContextLost()) {
-      setup();
-      // Clear immediately so the buffer never shows uninitialized (white)
-      // content before the first real frame.
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
 
     let raf = 0;
     let running = false;
@@ -290,22 +286,26 @@ export function HeroFlaresShader({
     let last = 0;
 
     const draw = () => {
-      if (!ok) return;
-      const w = gl.drawingBufferWidth;
-      const h = gl.drawingBufferHeight;
+      const g = gl;
+      if (!g || !ok) return;
+      const w = g.drawingBufferWidth;
+      const h = g.drawingBufferHeight;
       if (w === 0 || h === 0) return;
-      gl.viewport(0, 0, w, h);
+      g.viewport(0, 0, w, h);
       const time = reduced ? 30000 : elapsed;
       const p = reduced
         ? 1
-        : Math.min(1, Math.max(0, (elapsed - INTRO_DELAY_MS) / INTRO_MS));
+        : Math.min(
+            1,
+            Math.max(0, (elapsed - INTRO_DELAY_MS) / INTRO_MS),
+          );
       const intro = 1 - Math.pow(1 - p, 3);
-      gl.uniform2f(uRes, w, h);
-      gl.uniform1f(uTime, time / 1000);
-      gl.uniform1f(uIntro, intro);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      g.uniform2f(uRes, w, h);
+      g.uniform1f(uTime, time / 1000);
+      g.uniform1f(uIntro, intro);
+      g.clearColor(0, 0, 0, 0);
+      g.clear(g.COLOR_BUFFER_BIT);
+      g.drawArrays(g.TRIANGLE_STRIP, 0, 4);
     };
 
     const frame = (now: number) => {
@@ -331,24 +331,36 @@ export function HeroFlaresShader({
       raf = requestAnimationFrame(frame);
     };
 
-    const io = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
-      if (visible) start();
-    });
-    io.observe(canvas);
+    const ensureGl = () => {
+      if (gl) return;
+      gl = canvas.getContext("webgl", {
+        alpha: true,
+        antialias: false,
+        depth: false,
+        stencil: false,
+        premultipliedAlpha: true,
+        powerPreference: "low-power",
+      });
+      const g = gl;
+      if (!g) return;
 
-    const ro = new ResizeObserver(() => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = Math.round(canvas.clientWidth * dpr);
-      const h = Math.round(canvas.clientHeight * dpr);
-      if (w > 0 && h > 0 && (canvas.width !== w || canvas.height !== h)) {
-        canvas.width = w;
-        canvas.height = h;
+      if (!g.isContextLost()) {
+        setup(g);
+        // Clear immediately so the buffer never shows uninitialized (white)
+        // content before the first real frame.
+        g.clearColor(0, 0, 0, 0);
+        g.clear(g.COLOR_BUFFER_BIT);
+      } else {
+        // Re-running on a cached canvas whose context got dropped while
+        // hidden: ask the browser for it back; onRestored re-runs setup.
+        g.getExtension("WEBGL_lose_context")?.restoreContext();
       }
-      draw();
-    });
-    ro.observe(canvas);
+    };
 
+    // Swap the loss handlers eagerly on every effect run (not inside
+    // ensureGl): a cached canvas can carry a context from a previous run, and
+    // leaving that run's handlers attached until the next intersection would
+    // let a loss/restore event revive the dead run's animation loop.
     const onLost = (e: Event) => {
       e.preventDefault();
       cancelAnimationFrame(raf);
@@ -356,23 +368,47 @@ export function HeroFlaresShader({
       ok = false;
     };
     const onRestored = () => {
-      setup();
+      const g = gl;
+      if (!g) return;
+      setup(g);
       if (visible) start();
     };
     const prev = glHandlers.get(canvas);
     if (prev) {
       canvas.removeEventListener("webglcontextlost", prev.lost);
-      canvas.removeEventListener("webglcontextrestored", prev.restored);
+      canvas.removeEventListener(
+        "webglcontextrestored",
+        prev.restored,
+      );
     }
     canvas.addEventListener("webglcontextlost", onLost);
     canvas.addEventListener("webglcontextrestored", onRestored);
     glHandlers.set(canvas, { lost: onLost, restored: onRestored });
 
-    // If this effect re-ran on a cached canvas whose context got dropped
-    // while hidden, ask the browser for it back; onRestored re-runs setup.
-    if (gl.isContextLost()) {
-      gl.getExtension("WEBGL_lose_context")?.restoreContext();
-    }
+    const io = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (visible) {
+        ensureGl();
+        start();
+      }
+    });
+    io.observe(canvas);
+
+    const ro = new ResizeObserver(() => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.round(canvas.clientWidth * dpr);
+      const h = Math.round(canvas.clientHeight * dpr);
+      if (
+        w > 0 &&
+        h > 0 &&
+        (canvas.width !== w || canvas.height !== h)
+      ) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      draw();
+    });
+    ro.observe(canvas);
 
     return () => {
       // Deliberately keep the context and its loss listeners alive — the

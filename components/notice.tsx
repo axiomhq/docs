@@ -24,7 +24,11 @@ const noticeVariants = {
     label: "Warning",
     icon: WarningAlt,
     className:
-      "doc-notice-warn [--notice-accent:var(--color-warning)]",
+      // warning-text, not warning: the accent colors the icon and 13px label,
+      // and amber-9 is 1.6:1 on the light card. amber-11 is the text-safe
+      // amber in both themes, while --color-warning keeps tinting the sidebar
+      // method badges.
+      "doc-notice-warn [--notice-accent:var(--color-warning-text)]",
   },
   error: {
     label: "Error",

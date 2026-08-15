@@ -1,7 +1,7 @@
 'use client';
 
 import type { HTMLAttributes, MouseEvent, ReactNode } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -9,9 +9,31 @@ import { copyToClipboard } from '@/lib/clipboard';
 
 type HeadingTag = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
+// One page-level live region shared by every heading anchor. It can't live
+// inside the heading (it would join the heading's accessible name) or as a
+// sibling (doc-prose spaces content with `h2 + p`-style rules), and it must
+// exist before the first copy so assistive tech reliably announces it.
+const LIVE_REGION_ID = 'heading-anchor-live-region';
+
+function ensureLiveRegion(): HTMLElement {
+  let region = document.getElementById(LIVE_REGION_ID);
+  if (!region) {
+    region = document.createElement('span');
+    region.id = LIVE_REGION_ID;
+    region.className = 'sr-only';
+    region.setAttribute('aria-live', 'polite');
+    document.body.append(region);
+  }
+  return region;
+}
+
 export function HeadingAnchor({ as: Heading, children, id, className, ...props }: HTMLAttributes<HTMLHeadingElement> & { as: HeadingTag; children?: ReactNode }) {
   const [copied, setCopied] = useState(false);
   const copiedTimeout = useRef(0);
+
+  useEffect(() => {
+    ensureLiveRegion();
+  }, []);
 
   async function copyAnchor(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
@@ -25,8 +47,23 @@ export function HeadingAnchor({ as: Heading, children, id, className, ...props }
 
     if (await copyToClipboard(url.href)) {
       setCopied(true);
+      // The gutter marker is hidden below sm (it would clip off-screen), so
+      // phones get the toast for visible confirmation instead.
+      if (window.matchMedia('(width < 40rem)').matches) {
+        toast.success('Link copied');
+      }
+      // The visual marker is aria-hidden; announce for assistive tech.
+      // Cleared first so back-to-back copies re-announce.
+      const region = ensureLiveRegion();
+      region.textContent = '';
+      requestAnimationFrame(() => {
+        region.textContent = 'Link copied';
+      });
       window.clearTimeout(copiedTimeout.current);
-      copiedTimeout.current = window.setTimeout(() => setCopied(false), 1600);
+      copiedTimeout.current = window.setTimeout(() => {
+        setCopied(false);
+        region.textContent = '';
+      }, 1600);
     } else {
       toast.error('Couldn’t copy link');
     }

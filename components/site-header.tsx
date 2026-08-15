@@ -7,9 +7,12 @@ import { usePathname } from "next/navigation";
 import { withDocsBasePath } from "@/lib/docs-paths";
 import { useTheme } from "next-themes";
 import { Menu, Moon, Search, Sun, X } from "lucide-react";
-import { type CSSProperties } from "react";
+import { type CSSProperties, useSyncExternalStore } from "react";
 import { useDocsSearchController } from "@/components/docs-search-provider";
 import { captureDocsEvent } from "@/lib/docs-analytics";
+
+// Store-less subscription for the useSyncExternalStore hydration idiom below.
+const emptySubscribe = () => () => {};
 
 const tabs = [
   {
@@ -126,6 +129,14 @@ export function SiteHeader({
   onMenu: () => void;
 }) {
   const { resolvedTheme, setTheme } = useTheme();
+  // The theme is unknowable during SSR, so aria-pressed appears after
+  // hydration; before that the button is a plain (state-less) toggle,
+  // matching the CSS-driven Moon/Sun swap.
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
   const { openSearch } = useDocsSearchController();
 
   function toggleTheme() {
@@ -170,6 +181,7 @@ export function SiteHeader({
           variant="ghost"
           size="icon"
           aria-label="Toggle color theme"
+          aria-pressed={mounted ? resolvedTheme === "dark" : undefined}
           onClick={toggleTheme}
         >
           <Moon

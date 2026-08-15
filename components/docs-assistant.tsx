@@ -141,7 +141,7 @@ export function DocsAssistantPanel({
       id="docs-assistant-panel"
       role="tabpanel"
       aria-labelledby="docs-assistant-tab"
-      className="docs-assistant-panel min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas) [&_*]:border-border [&_*::before]:border-border [&_*::after]:border-border"
+      className="docs-assistant-panel min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas)"
     >
       <MessageScrollerProvider autoScroll>
         <MessageScroller className="docs-assistant-scroller relative min-h-0">
