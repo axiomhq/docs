@@ -2,8 +2,11 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { CheckIcon, CopyIcon } from '@/assets/icons';
+import { CodeGlyphIcon, resolveCodeLanguage } from '@/components/ai/code-languages';
+import { useCopy } from '@/components/ai/use-copy';
+import { Button } from '@/components/ui/button';
 import { captureDocsEvent } from '@/lib/docs-analytics';
-import { CopyButton } from './copy-button';
 
 export type ApiCodeSample = {
   id: string;
@@ -15,10 +18,17 @@ export type ApiCodeSample = {
 const languagePreferenceKey = 'axiom-docs-api-language';
 const languagePreferenceEvent = 'axiom-docs-api-language-change';
 
+/**
+ * Request/response samples in the article code-field chrome (docs-code-block
+ * CSS carries the line numbers, gutter rule, and shiki theme mapping). The
+ * header holds sans language tabs instead of a single label when a request
+ * has several sample languages.
+ */
 export function ApiCodeBlock({ samples, label }: { samples: ApiCodeSample[]; label?: string }) {
   const availableIds = useMemo(() => new Set(samples.map((sample) => sample.id)), [samples]);
   const [selectedId, setSelectedId] = useState(samples[0]?.id ?? '');
   const selected = samples.find((sample) => sample.id === selectedId) ?? samples[0];
+  const { copied, copy } = useCopy();
 
   useEffect(() => {
     const stored = window.localStorage.getItem(languagePreferenceKey);
@@ -49,16 +59,23 @@ export function ApiCodeBlock({ samples, label }: { samples: ApiCodeSample[]; lab
     captureDocsEvent('docs_api_language_selected', { language: id });
   };
 
+  const single = resolveCodeLanguage(selected.id, selected.code);
+  const SingleIcon = single.Icon ?? CodeGlyphIcon;
+
   return (
-    <div className="api-code mt-4 overflow-hidden border border-(--border-primary) rounded-md bg-(--bg-inert)">
-      <div className="api-code-head min-h-[38px] pt-0 pr-2 pb-0 pl-2.5 flex items-center border-b border-b-(--border-primary) text-(--text-tertiary) font-mono text-[12px] leading-4 font-[450]">
+    <div className="docs-code-block not-fumadocs-codeblock api-code group mt-4 overflow-hidden rounded-md border border-(--border-primary) bg-(--bg-surface)">
+      <div className="flex h-8 items-center gap-[7px] border-b-[0.5px] border-(--border-primary) pr-1 pl-3">
         {samples.length > 1 ? (
-          <div className="api-code-tabs self-stretch flex items-stretch gap-0.5" role="tablist" aria-label="Request language">
+          <div
+            className="flex h-full items-stretch gap-0.5"
+            role="tablist"
+            aria-label="Request language"
+          >
             {samples.map((sample) => (
               <button
                 type="button"
                 role="tab"
-                className="relative px-2 py-0 border-0 text-(--text-quaternary) bg-transparent cursor-pointer font-mono! text-[11px]! leading-4! font-medium! hover:text-(--text-secondary) aria-selected:text-(--text-primary) aria-selected:after:content-[''] aria-selected:after:absolute aria-selected:after:right-2 aria-selected:after:-bottom-px aria-selected:after:left-2 aria-selected:after:h-0.5 aria-selected:after:bg-(--color-accent)"
+                className="relative cursor-pointer border-0 bg-transparent px-2 py-0 font-sans text-[13px] leading-[18px] font-medium whitespace-nowrap text-(--text-tertiary) transition-colors hover:text-(--text-primary) aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-2 aria-selected:after:-bottom-[0.5px] aria-selected:after:left-2 aria-selected:after:h-[1.5px] aria-selected:after:bg-(--color-accent) aria-selected:after:content-['']"
                 aria-selected={sample.id === selected.id}
                 key={sample.id}
                 onClick={() => selectLanguage(sample.id)}
@@ -67,16 +84,32 @@ export function ApiCodeBlock({ samples, label }: { samples: ApiCodeSample[]; lab
               </button>
             ))}
           </div>
-        ) : <span>{label ?? selected.label}</span>}
-        <CopyButton
-          value={selected.code}
-          analytics={{ codeKind: 'api_sample', language: selected.id }}
-        />
+        ) : (
+          <span className="inline-flex items-center gap-[7px] font-mono text-[11px] leading-none font-[450] text-(--text-primary)">
+            <SingleIcon className="size-3 flex-none text-(--text-tertiary)" aria-hidden="true" />
+            <span>{label ?? selected.label}</span>
+          </span>
+        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-code-copy
+          className="ml-auto h-6 w-6 rounded text-(--text-tertiary) active:scale-90 hover:text-(--text-primary) dark:hover:bg-[#232323]!"
+          aria-label={copied ? 'Copied' : 'Copy code'}
+          onClick={() => {
+            copy(selected.code);
+            captureDocsEvent('docs_code_copied', {
+              code_kind: 'api_sample',
+              language: selected.id,
+            });
+          }}
+        >
+          {copied ? <CheckIcon className="size-[11px]" /> : <CopyIcon className="size-[11px]" />}
+        </Button>
       </div>
-      {/* Shiki emits `background` and per-token colours as inline styles, so the
-          resets and the light/dark colour flips need `!` to beat them. */}
       <div
-        className="api-code-body [&_pre]:m-0! [&_pre]:py-[14px]! [&_pre]:px-4! [&_pre]:overflow-x-auto [&_pre]:border-0! [&_pre]:rounded-none! [&_pre]:bg-transparent! [&_pre]:text-(--shiki-light)! [&_pre]:font-mono! [&_pre]:text-[12px]! [&_pre]:leading-5! [&_pre]:font-normal! dark:[&_pre]:text-(--shiki-dark)! [&_pre_code]:block [&_pre_code]:p-0! [&_pre_code]:border-0! [&_pre_code]:rounded-none! [&_pre_code]:bg-transparent! [&_pre_code]:[font:inherit]! [&_pre_span]:text-(--shiki-light) dark:[&_pre_span]:text-(--shiki-dark)!"
+        className="docs-code-body relative overflow-x-auto py-2 pl-2.5 text-[13px] leading-[21px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="tabpanel"
         aria-label={`${selected.label} code example`}
       >
