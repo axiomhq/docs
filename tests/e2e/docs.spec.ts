@@ -379,7 +379,8 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/docs/restapi/endpoints/getToken');
 
-  const requestCode = page.locator('#example .api-code');
+  // Section ids live on the headings now (HeadingAnchor), not the sections.
+  const requestCode = page.locator('.api-section:has(#example) .api-code');
   await expect(requestCode.getByRole('tab', { name: 'cURL' })).toHaveAttribute('aria-selected', 'true');
   await expect(requestCode.getByRole('tab', { name: 'JavaScript' })).toBeVisible();
   await expect(requestCode.getByRole('tab', { name: 'Python' })).toBeVisible();
@@ -391,7 +392,7 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   ));
   expect(tokenColors.length).toBeGreaterThan(1);
   // axiom-dark default token colour (lib/code-theme.ts).
-  expect(tokenColors).toContain('rgb(184, 184, 184)');
+  expect(tokenColors).toContain('rgb(212, 207, 201)');
   await expect(requestCode.locator('pre code')).toHaveCSS('border-top-width', '0px');
 
   const parametersHeading = page.getByRole('heading', { name: 'Parameters', level: 2 });
@@ -426,7 +427,7 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await expect(orgIdInput).toHaveCount(0);
   await tryIt.getByRole('button', { name: 'Run GET request' }).click();
   await expect(tryIt.getByRole('alert')).toHaveText('Enter a value for id.');
-  await expect(page.locator('#response .api-code')).toHaveCount(0);
+  await expect(page.locator('.api-section:has(#response) .api-code')).toHaveCount(0);
 
   const responseSchema = page.getByRole('table', { name: 'Response schema' });
   const expiresRow = responseSchema.getByRole('row').filter({ hasText: 'expiresAt' });
@@ -448,7 +449,7 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await requestCode.getByRole('tab', { name: 'Python' }).click();
   await expect(requestCode.getByRole('tabpanel', { name: 'Python code example' })).toContainText('import requests');
   await page.goto('/docs/restapi/endpoints/createToken');
-  await expect(page.locator('#example').getByRole('tab', { name: 'Python' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.api-section:has(#example)').getByRole('tab', { name: 'Python' })).toHaveAttribute('aria-selected', 'true');
 
   await page.goto('/docs/restapi/endpoints/getDashboards');
   const listResponseSchema = page.getByRole('table', { name: 'Response schema' });
@@ -925,10 +926,11 @@ test('keyboard hints use restrained semantic keycap colors in both themes', asyn
         probe.style.color = value;
         return getComputedStyle(probe).color;
       };
+      // Keycaps share the inline-code chip treatment (doc-prose kbd rule).
       const resolved = {
-        background: resolve('var(--secondary)'),
-        border: resolve('var(--input)'),
-        foreground: resolve('var(--secondary-foreground)'),
+        background: resolve('var(--card)'),
+        border: resolve('var(--color-fd-border)'),
+        foreground: resolve('var(--text-primary)'),
       };
       probe.remove();
       return resolved;
@@ -1307,8 +1309,9 @@ test('query reference navigation and MDX components follow the compact interacti
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/docs/apl/scalar-functions/conditional-function/case');
 
+  // Query-reference titles dropped the mono treatment; they share the sans stack.
   const title = page.getByRole('heading', { name: 'case', exact: true, level: 1 });
-  await expect(title).toHaveCSS('font-family', /SF Mono|Menlo/);
+  await expect(title).toHaveCSS('font-family', /Geist/);
   const accentColor = await page.evaluate(() => {
     const probe = document.createElement('span');
     probe.style.backgroundColor = 'var(--color-accent)';
@@ -1960,7 +1963,7 @@ test('breadcrumbs align with the copy page control', async ({ page }) => {
   expect(breadcrumbTextBox).not.toBeNull();
   expect(copyPageBox).not.toBeNull();
   expect(Math.abs(breadcrumbTextBox!.y + breadcrumbTextBox!.height / 2 - (copyPageBox!.y + copyPageBox!.height / 2))).toBeLessThanOrEqual(1);
-  await expect(breadcrumbs).toHaveCSS('font-weight', '400');
+  await expect(breadcrumbs).toHaveCSS('font-weight', '300');
 });
 
 test('the copy page menu offers the Markdown surface and assistant links', async ({ page, context }) => {
@@ -2140,14 +2143,14 @@ test('MDX accordions are compact, keyboard accessible, and searchable', async ({
   });
 
   expect(closedStyles).toMatchObject({
-    borderRadius: '4px',
+    borderRadius: '6.08px',
     borderWidth: '1px',
-    triggerFontSize: '14px',
-    triggerPaddingLeft: '16px',
+    triggerFontSize: '13px',
+    triggerPaddingLeft: '12px',
     panelHeight: 0,
     panelPadding: '0px',
     panelBorder: '0px',
-    innerPaddingLeft: '16px',
+    innerPaddingLeft: '12px',
   });
   expect(closedStyles.triggerHeight).toBeGreaterThanOrEqual(44);
   // Chromium serializes translucent shadows as rgba(...), fully opaque ones as
@@ -2162,7 +2165,7 @@ test('MDX accordions are compact, keyboard accessible, and searchable', async ({
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
   await expect(panel).not.toHaveAttribute('hidden');
   await expect(panel).toBeVisible();
-  await expect(inner).toHaveCSS('padding-left', '16px');
+  await expect(inner).toHaveCSS('padding-left', '12px');
 
   await page.keyboard.press('Space');
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
