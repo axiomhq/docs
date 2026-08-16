@@ -1,11 +1,19 @@
 'use client';
 
-import { type ComponentProps, forwardRef, useRef } from 'react';
+import {
+  Children,
+  type ComponentProps,
+  forwardRef,
+  isValidElement,
+  type ReactNode,
+  useRef,
+} from 'react';
+import { Play } from 'lucide-react';
 import { CheckIcon, CopyIcon } from '@/assets/icons';
 import { CodeGlyphIcon, resolveCodeLanguage } from '@/components/ai/code-languages';
 import { useCopy } from '@/components/ai/use-copy';
-import { PlaygroundLink } from '@/components/playground-link';
 import { Button } from '@/components/ui/button';
+import { captureDocsEvent } from '@/lib/docs-analytics';
 import { cn } from '@/lib/utils';
 
 /**
@@ -25,6 +33,27 @@ export type DocsCodeBlockProps = Omit<ComponentProps<'pre'>, 'ref'> & {
 
 const LANGUAGE_CLASS = /language-([\w#+-]+)/;
 
+function textOf(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join('');
+  if (isValidElement<{ children?: ReactNode }>(node)) return textOf(node.props.children);
+  return '';
+}
+
+// addLanguageClass puts `language-*` on the code element, so the fence
+// language lives on a child rather than the pre itself.
+function findLanguage(children: ReactNode): string | undefined {
+  for (const child of Children.toArray(children)) {
+    if (!isValidElement(child)) continue;
+    const props = child.props as { className?: string; children?: ReactNode };
+    const match = props.className?.match(LANGUAGE_CLASS);
+    if (match) return match[1];
+    const nested = findLanguage(props.children);
+    if (nested) return nested;
+  }
+  return undefined;
+}
+
 export const DocsCodeBlock = forwardRef<HTMLDivElement, DocsCodeBlockProps>(
   function DocsCodeBlock(
     { icon, className, children, 'data-playground': playgroundHref, ...preProps },
@@ -32,8 +61,8 @@ export const DocsCodeBlock = forwardRef<HTMLDivElement, DocsCodeBlockProps>(
   ) {
     const preRef = useRef<HTMLPreElement>(null);
     const { copied, copy } = useCopy();
-    const lang = className?.match(LANGUAGE_CLASS)?.[1];
-    const { label, Icon } = resolveCodeLanguage(lang);
+    const lang = className?.match(LANGUAGE_CLASS)?.[1] ?? findLanguage(children);
+    const { label, Icon } = resolveCodeLanguage(lang, textOf(children));
 
     return (
       <div
@@ -52,11 +81,24 @@ export const DocsCodeBlock = forwardRef<HTMLDivElement, DocsCodeBlockProps>(
           ) : (
             <CodeGlyphIcon className="size-3 flex-none text-(--text-tertiary)" aria-hidden="true" />
           )}
-          {label}
+          <span className="capitalize">{label}</span>
           {playgroundHref && (
-            <PlaygroundLink href={playgroundHref} className="ml-auto">
-              Run in Playground
-            </PlaygroundLink>
+            <>
+              <a
+                href={playgroundHref}
+                target="_blank"
+                rel="noreferrer"
+                className="playground-link ph-no-capture ml-auto inline-flex h-6 cursor-pointer items-center gap-1.5 rounded px-1.5 font-mono text-[11px] leading-none font-[450] text-(--text-tertiary) no-underline! transition-colors hover:bg-interactive-hover hover:text-(--text-primary) dark:hover:bg-[#232323]!"
+                onClick={() => captureDocsEvent('docs_playground_opened', {})}
+              >
+                <Play size={11} aria-hidden="true" />
+                Run in Playground
+              </a>
+              <span
+                aria-hidden="true"
+                className="mx-0.5 h-3.5 w-px flex-none bg-(--border-primary)"
+              />
+            </>
           )}
           <Button
             type="button"
@@ -65,7 +107,7 @@ export const DocsCodeBlock = forwardRef<HTMLDivElement, DocsCodeBlockProps>(
             data-code-copy
             className={cn(
               'h-6 w-6 rounded text-(--text-tertiary) active:scale-90 hover:text-(--text-primary) dark:hover:bg-[#232323]!',
-              playgroundHref ? 'ml-0.5' : 'ml-auto',
+              !playgroundHref && 'ml-auto',
             )}
             aria-label={copied ? 'Copied' : 'Copy code'}
             // Copies the rendered text so placeholder substitutions

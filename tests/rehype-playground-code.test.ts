@@ -43,6 +43,15 @@ describe('rehypePlaygroundCode', () => {
     expect(tree.children.some((child) => child.type === 'element' && child.tagName === 'p')).toBe(false);
   });
 
+  it('resolves pres wrapped in shiki fragment roots, as rehype-code emits them', () => {
+    const block = pre();
+    const fragment = { type: 'root', children: [block] } as unknown as Element;
+    const tree: Root = { type: 'root', children: [fragment, playgroundParagraph()] };
+    run(tree);
+    expect(block.properties.dataPlayground).toBe(PLAY_URL);
+    expect(tree.children).toHaveLength(1);
+  });
+
   it('reaches blocks nested inside MDX JSX containers like <Tabs>', () => {
     const block = pre();
     const tree = {

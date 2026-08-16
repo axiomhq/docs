@@ -41,17 +41,17 @@ export function CodeGlyphIcon(props: SVGProps<SVGSVGElement>) {
 }
 
 const CODE_LANGUAGES: Record<string, CodeLanguage> = {
-  kusto: { label: 'apl', Icon: AxiomMarkIcon },
-  apl: { label: 'apl', Icon: AxiomMarkIcon },
-  sql: { label: 'sql', Icon: Database },
-  spl: { label: 'spl', Icon: Database },
-  splunk: { label: 'spl', Icon: Database },
-  json: { label: 'json', Icon: Braces },
-  jsonc: { label: 'json', Icon: Braces },
-  yaml: { label: 'yaml', Icon: List },
-  yml: { label: 'yaml', Icon: List },
-  toml: { label: 'toml', Icon: List },
-  ini: { label: 'ini', Icon: List },
+  kusto: { label: 'APL', Icon: AxiomMarkIcon },
+  apl: { label: 'APL', Icon: AxiomMarkIcon },
+  sql: { label: 'SQL', Icon: Database },
+  spl: { label: 'SPL', Icon: Database },
+  splunk: { label: 'SPL', Icon: Database },
+  json: { label: 'JSON', Icon: Braces },
+  jsonc: { label: 'JSON', Icon: Braces },
+  yaml: { label: 'YAML', Icon: List },
+  yml: { label: 'YAML', Icon: List },
+  toml: { label: 'TOML', Icon: List },
+  ini: { label: 'INI', Icon: List },
   bash: { label: 'shell' },
   sh: { label: 'shell' },
   shell: { label: 'shell' },
@@ -59,23 +59,37 @@ const CODE_LANGUAGES: Record<string, CodeLanguage> = {
   console: { label: 'shell' },
   curl: { label: 'shell' },
   ts: { label: 'typescript' },
-  tsx: { label: 'tsx' },
+  tsx: { label: 'TSX' },
   js: { label: 'javascript' },
-  jsx: { label: 'jsx' },
+  jsx: { label: 'JSX' },
   py: { label: 'python' },
   rb: { label: 'ruby' },
   cs: { label: 'csharp' },
   'c#': { label: 'csharp' },
   golang: { label: 'go' },
-  hcl: { label: 'hcl' },
-  tf: { label: 'hcl' },
-  http: { label: 'http' },
+  hcl: { label: 'HCL' },
+  tf: { label: 'HCL' },
+  http: { label: 'HTTP' },
   txt: { label: 'text' },
   plaintext: { label: 'text' },
 };
 
-export function resolveCodeLanguage(lang: string | undefined): CodeLanguage {
+/**
+ * MPL queries share the `kusto` fence with APL; their tell is the source
+ * line — a backtick-quoted `dataset`:`metric` pair, optionally preceded by
+ * `set …;` directives (see the MPL query-structure reference).
+ */
+const MPL_SOURCE = /^\s*(?:set\s+[^;\n]+;\s*)*`[^`\n]+`\s*:\s*`[^`\n]+`/;
+
+export function resolveCodeLanguage(
+  lang: string | undefined,
+  code?: string,
+): CodeLanguage {
   if (!lang) return { label: 'code' };
-  const entry = CODE_LANGUAGES[lang.toLowerCase()];
-  return entry ?? { label: lang.toLowerCase() };
+  const id = lang.toLowerCase();
+  if ((id === 'kusto' || id === 'apl' || id === 'mpl') && code && MPL_SOURCE.test(code)) {
+    return { label: 'MPL', Icon: AxiomMarkIcon };
+  }
+  const entry = CODE_LANGUAGES[id];
+  return entry ?? { label: id };
 }

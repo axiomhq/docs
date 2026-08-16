@@ -21,7 +21,7 @@ export function CodeBlock({
   className?: string;
 }) {
   const lines = code.split("\n");
-  const { label, Icon } = resolveCodeLanguage(lang);
+  const { label, Icon } = resolveCodeLanguage(lang, code);
   const LangIcon = Icon ?? CodeGlyphIcon;
 
   return (
@@ -37,7 +37,7 @@ export function CodeBlock({
             className="size-3 flex-none text-(--text-tertiary)"
             aria-hidden="true"
           />
-          <span className="font-mono text-[12.5px] leading-none text-(--text-primary)">
+          <span className="font-mono text-[12.5px] leading-none text-(--text-primary) capitalize">
             {label}
           </span>
         </span>
