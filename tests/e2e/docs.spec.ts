@@ -745,8 +745,13 @@ test('search and mobile navigation are keyboard and touch accessible', async ({ 
 });
 
 test('search stays private and hands off to the persistent assistant sidebar', async ({ page }, testInfo) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   await page.goto('/docs');
+  // CI runs a cold dev server: the first search request builds the whole
+  // index and the first chat hit compiles the route, either of which can eat
+  // an entire expect budget. Warm both so timeouts measure the product.
+  await page.request.get('/docs/api/search?query=warmup&v=2').catch(() => {});
+  await page.request.get('/docs/api/chat').catch(() => {});
 
   const dialog = page.getByRole('dialog', { name: 'Search Axiom Docs' });
   await expect.poll(async () => {
