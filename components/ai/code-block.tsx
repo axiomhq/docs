@@ -1,5 +1,6 @@
 'use client';
 
+import { CodeGlyphIcon, resolveCodeLanguage } from '@/components/ai/code-languages';
 import CopyButton from '@/components/ai/copy-button';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +18,8 @@ export function CodeBlock({
   className?: string;
 }) {
   const lines = code.split('\n');
+  const { label, Icon } = resolveCodeLanguage(lang);
+  const LangIcon = Icon ?? CodeGlyphIcon;
 
   return (
     <div
@@ -27,24 +30,9 @@ export function CodeBlock({
     >
       <div className="flex items-center gap-2 border-b border-(--border-primary) py-2.5 pr-3 pl-4">
         <span className="inline-flex items-center gap-[7px]">
-          <svg
-            viewBox="0 0 24 24"
-            width="15"
-            height="15"
-            className="block flex-none text-(--text-tertiary)"
-            aria-hidden="true"
-          >
-            <path
-              d="m8 6-6 6 6 6M16 6l6 6-6 6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <LangIcon className="size-3 flex-none text-(--text-tertiary)" aria-hidden="true" />
           <span className="font-mono text-[12.5px] leading-none text-(--text-primary)">
-            {lang}
+            {label}
           </span>
         </span>
         <CopyButton code={code} className="ml-auto [&_svg]:size-[13px]" />

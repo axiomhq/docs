@@ -248,8 +248,9 @@ function Tab({
             "query-example relative mt-[11px]",
             "[&>figure]:m-0!",
             "[&>p:has(>.playground-link)]:absolute [&>p:has(>.playground-link)]:z-2 [&>p:has(>.playground-link)]:top-[7px] [&>p:has(>.playground-link)]:right-2 [&>p:has(>.playground-link)]:m-0!",
-            "[&_figure>div:has(>button[aria-label='Copy_Text'])]:top-[7px]! [&_figure>div:has(>button[aria-label='Copy_Text'])]:right-[164px]! [&_figure>div:has(>button[aria-label='Copy_Text'])]:size-6",
-            "[&_figure_button[aria-label='Copy_Text']]:size-6 [&_figure_button[aria-label='Copy_Text']]:border [&_figure_button[aria-label='Copy_Text']]:border-(--border-primary) [&_figure_button[aria-label='Copy_Text']]:rounded-[3px] [&_figure_button[aria-label='Copy_Text']]:bg-[color-mix(in_srgb,var(--bg-canvas)_88%,transparent)]",
+            // The pill overlays the code-block header's right side; push the
+            // header copy button out from under it.
+            "[&_[data-code-copy]]:mr-[158px]",
           )}
           key={`query-${index}`}
         >

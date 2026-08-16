@@ -39,6 +39,9 @@ export default defineConfig({
     rehypeCodeOptions: {
       ...rehypeCodeDefaultOptions,
       themes: { light: axiomCodeLight, dark: axiomCodeDark },
+      // `language-*` lands on the pre so the code-block header can name the
+      // fence's language (components/docs-code-block.tsx).
+      addLanguageClass: true,
     },
   },
 });

@@ -467,13 +467,13 @@ test('theme follows the system until toggled and persists explicit light and dar
   expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBeNull();
 
   const themeToggle = page.getByRole('button', { name: 'Toggle color theme' });
-  await expect(themeToggle.locator('.lucide-sun')).toBeVisible();
-  await expect(themeToggle.locator('.lucide-moon')).toBeHidden();
+  await expect(themeToggle.locator('[data-theme-icon=sun]')).toBeVisible();
+  await expect(themeToggle.locator('[data-theme-icon=moon]')).toBeHidden();
   await expect(page.getByRole('menu', { name: 'Color theme' })).toHaveCount(0);
   await themeToggle.click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await expect(themeToggle.locator('.lucide-moon')).toBeVisible();
-  await expect(themeToggle.locator('.lucide-sun')).toBeHidden();
+  await expect(themeToggle.locator('[data-theme-icon=moon]')).toBeVisible();
+  await expect(themeToggle.locator('[data-theme-icon=sun]')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBe('light');
 
   await page.reload();
@@ -1353,7 +1353,7 @@ test('query reference navigation and MDX components follow the compact interacti
   const tabs = page.locator('.docs-tabs > div');
   await expect(tabs).toHaveCSS('border-radius', '4px');
   await expect(tabs.getByRole('tablist')).toHaveCSS('height', '38px');
-  await expect(tabs.locator('figure.shiki').first()).toHaveCSS('border-radius', '4px');
+  await expect(tabs.locator('.docs-code-block').first()).toHaveCSS('border-radius', '6.08px');
   const selectedPanel = tabs.getByRole('tabpanel');
   await expect(selectedPanel).toHaveCSS('font-size', '14px');
   await expect(selectedPanel).toHaveCSS('line-height', '22px');
@@ -1374,19 +1374,18 @@ test('query reference navigation and MDX components follow the compact interacti
   const playground = tabs.getByRole('link', { name: /Run in Playground/ }).first();
   await expect(playground).toHaveAttribute('target', '_blank');
   await expect(playground.locator('svg').last()).toHaveAttribute('aria-label', 'Opens in a new tab');
-  const queryFigure = tabs.locator('.query-example figure').first();
-  const copyButton = queryFigure.getByRole('button', { name: 'Copy Text' });
-  const copyControl = copyButton.locator('xpath=..');
-  await expect(copyControl).toHaveCSS('opacity', '0');
-  await queryFigure.hover();
-  await expect(copyControl).toHaveCSS('opacity', '1');
+  const queryBlock = tabs.locator('.query-example .docs-code-block').first();
+  const copyButton = queryBlock.getByRole('button', { name: 'Copy code' });
+  await expect(copyButton).toBeVisible();
   const playgroundBox = (await playground.boundingBox())!;
-  const queryBox = (await queryFigure.boundingBox())!;
+  const queryBox = (await queryBlock.boundingBox())!;
   const copyBox = (await copyButton.boundingBox())!;
   expect(playgroundBox.y).toBeGreaterThanOrEqual(queryBox.y);
   expect(playgroundBox.y + playgroundBox.height).toBeLessThan(queryBox.y + queryBox.height);
   expect(copyBox.x + copyBox.width).toBeLessThan(playgroundBox.x);
-  expect(Math.abs(copyBox.y - playgroundBox.y)).toBeLessThanOrEqual(1);
+  // Both sit on the block's header band.
+  expect(Math.abs(copyBox.y + copyBox.height / 2 - (playgroundBox.y + playgroundBox.height / 2)))
+    .toBeLessThanOrEqual(6);
 
   const outputTable = tabs.getByRole('table').first();
   await expect(outputTable.locator('xpath=..')).toHaveCSS('border-radius', '4px');
@@ -1424,7 +1423,7 @@ test('compact query examples stay contained on phone-width layouts', async ({ pa
   await expect(tabs.getByRole('tabpanel')).toContainText('unique services involved in traces');
 
   await logTab.click();
-  const queryFigure = tabs.locator('.query-example figure').first();
+  const queryFigure = tabs.locator('.query-example .docs-code-block').first();
   const playground = tabs.getByRole('link', { name: /Run in Playground/ }).first();
   const queryBox = (await queryFigure.boundingBox())!;
   const playgroundBox = (await playground.boundingBox())!;
@@ -2028,7 +2027,7 @@ test('placeholder forms update and copy every matching code example', async ({ p
   await page.goto('/docs/restapi/query');
 
   const form = page.locator('.placeholder-config').first();
-  const codeBlock = form.locator('xpath=preceding-sibling::figure[1]');
+  const codeBlock = form.locator('xpath=preceding-sibling::div[contains(@class,"docs-code-block")][1]');
   await form.locator('select').selectOption('us-east-1.aws.edge.axiom.co');
   await form.getByPlaceholder('xaat-api-token').fill('xaat-example-token');
   await form.getByPlaceholder('dataset-name').fill('example-dataset');
@@ -2038,7 +2037,7 @@ test('placeholder forms update and copy every matching code example', async ({ p
   await expect(codeBlock.locator('pre')).toContainText('"apl": "example-dataset | limit 10"');
   await expect(codeBlock.locator('pre')).not.toContainText(/AXIOM_DOMAIN|API_TOKEN|DATASET_NAME/);
 
-  await codeBlock.getByRole('button', { name: 'Copy Text' }).click();
+  await codeBlock.getByRole('button', { name: 'Copy code' }).click();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toContain('https://us-east-1.aws.edge.axiom.co/v1/query/_apl');
   expect(copied).toContain('Authorization: Bearer xaat-example-token');
@@ -2049,19 +2048,19 @@ test('placeholder forms update and copy every matching code example', async ({ p
   await expect(otherDatasetForms).toHaveCount(3);
   for (const otherForm of await otherDatasetForms.all()) {
     await expect(otherForm.getByPlaceholder('dataset-name')).toHaveValue('example-dataset');
-    await expect(otherForm.locator('xpath=preceding-sibling::figure[1]').locator('pre')).toContainText('example-dataset');
+    await expect(otherForm.locator('xpath=preceding-sibling::div[contains(@class,"docs-code-block")][1]').locator('pre')).toContainText('example-dataset');
   }
 
   await page.goto('/docs/getting-started');
   const persistedForm = page.locator('.placeholder-config').first();
   await expect(persistedForm.getByPlaceholder('xaat-api-token')).toHaveValue('xaat-example-token');
   await expect(persistedForm.getByPlaceholder('dataset-name')).toHaveValue('example-dataset');
-  const persistedCodeBlock = persistedForm.locator('xpath=preceding-sibling::figure[1]');
+  const persistedCodeBlock = persistedForm.locator('xpath=preceding-sibling::div[contains(@class,"docs-code-block")][1]');
   await expect(persistedCodeBlock.locator('pre')).toContainText('xaat-example-token');
   await expect(persistedCodeBlock.locator('pre')).toContainText('example-dataset');
 
   await page.goto('/docs/guides/opentelemetry-claude-code');
-  const compositeNameBlock = page.locator('figure').filter({ hasText: 'AXIOM_METRICS_DATASET' }).first();
+  const compositeNameBlock = page.locator('.docs-code-block').filter({ hasText: 'AXIOM_METRICS_DATASET' }).first();
   const compositeNameForm = compositeNameBlock.locator('xpath=following-sibling::div[contains(@class,"placeholder-config")][1]');
   await expect(compositeNameBlock.locator('pre')).toContainText('AXIOM_API_TOKEN="xaat-example-token"');
   await expect(compositeNameBlock.locator('pre')).toContainText('AXIOM_METRICS_DATASET="METRICS_DATASET_NAME"');

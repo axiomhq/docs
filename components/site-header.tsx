@@ -195,11 +195,13 @@ export function SiteHeader({
         >
           <Asleep
             size={14}
+            data-theme-icon="moon"
             className="hidden [html.light_&]:block"
             aria-hidden="true"
           />
           <Awake
             size={14}
+            data-theme-icon="sun"
             className="hidden [html.dark_&]:block"
             aria-hidden="true"
           />

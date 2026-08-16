@@ -2,8 +2,8 @@
 
 import { isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ChevronDown } from 'lucide-react';
-import type { ComponentProps, ReactNode } from 'react';
-import { CodeBlock, Pre } from 'fumadocs-ui/components/codeblock';
+import type { ReactNode } from 'react';
+import { DocsCodeBlock, type DocsCodeBlockProps } from '@/components/docs-code-block';
 import { captureDocsEvent } from '@/lib/docs-analytics';
 
 const storageKey = 'axiom-docs-placeholders';
@@ -56,13 +56,13 @@ function parseValues(snapshot: string): Values {
   try { return JSON.parse(snapshot) as Values; } catch { return {}; }
 }
 
-export function PlaceholderPre({ source: sourceProp, ...props }: ComponentProps<'pre'> & { source?: string }) {
+export function PlaceholderPre({ source: sourceProp, ...props }: DocsCodeBlockProps & { source?: string }) {
   const source = useMemo(() => sourceProp ?? textOf(props.children), [props.children, sourceProp]);
   const usedFields = useMemo(() => fieldKeys.filter((key) => new RegExp(`\\b${key}\\b`).test(source)), [source]);
   const valuesSnapshot = useSyncExternalStore(subscribeValues, getValuesSnapshot, getServerValuesSnapshot);
   const values = useMemo(() => parseValues(valuesSnapshot), [valuesSnapshot]);
   const [hydrated, setHydrated] = useState(false);
-  const codeBlockRef = useRef<HTMLElement>(null);
+  const codeBlockRef = useRef<HTMLDivElement>(null);
   const originalText = useRef(new WeakMap<Text, string>());
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export function PlaceholderPre({ source: sourceProp, ...props }: ComponentProps<
   }
 
   return <>
-    <CodeBlock ref={codeBlockRef} {...props}><Pre>{props.children}</Pre></CodeBlock>
+    <DocsCodeBlock ref={codeBlockRef} {...props} />
     {hydrated && usedFields.length > 0 && <div className="placeholder-config ph-no-capture mt-0 mx-0 mb-6 py-[14px] px-4 flex flex-col gap-2.5 border-x border-b border-(--border-primary) rounded-t-none rounded-b-[4px] bg-(--bg-inert)" aria-label="Customize this example" data-ph-no-capture>
       {usedFields.map((key) => {
         const field = fields[key];

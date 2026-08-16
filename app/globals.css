@@ -843,6 +843,50 @@
     font-size: inherit;
 }
 
+/* Article code blocks (components/docs-code-block.tsx): line numbers via CSS
+   counters over shiki's .line spans, with the same gutter rule as the
+   assistant's code chrome. Unlayered so these beat shiki/fumadocs utilities. */
+.docs-code-block pre {
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+}
+
+.docs-code-block code {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    counter-reset: line;
+}
+
+/* Shiki separates .line spans with literal newlines, so the spans stay
+   inline — block display would double every line break. */
+.docs-code-block code > .line::before {
+    counter-increment: line;
+    content: counter(line);
+    display: inline-block;
+    width: 18px;
+    margin-right: 10px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-align: right;
+}
+
+/* Shiki leaves a trailing empty line span on most fences. */
+.docs-code-block code > .line:last-child:empty {
+    display: none;
+}
+
+.docs-code-body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 33px;
+    width: 0.5px;
+    background: var(--border-primary);
+}
+
 /* Assistant conversation scrollbar: the message scroller must own its native
    scroll element (its autoscroll tracking binds to it), so the ScrollArea
    component can't wrap it — these rules give the native bar the same look:
