@@ -748,19 +748,19 @@ test('search stays private and hands off to the persistent assistant sidebar', a
   test.setTimeout(60_000);
   await page.goto('/docs');
 
-  const dialog = page.getByRole('dialog', { name: 'Search and ask Axiom Docs' });
+  const dialog = page.getByRole('dialog', { name: 'Search Axiom Docs' });
   await expect.poll(async () => {
     await page.keyboard.press('ControlOrMeta+KeyK');
     return dialog.isVisible();
   }, { timeout: 15_000 }).toBe(true);
   await expect(dialog).toHaveClass(/ph-no-capture/);
-  await expect(dialog).toHaveAttribute('data-ph-no-capture', 'true');
-  await expect(page.getByRole('tab', { name: 'Search' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('tab', { name: 'Search' })).toHaveCSS('padding-left', '9px');
+  await expect(dialog.locator('[data-slot="command"]')).toHaveAttribute('data-ph-no-capture', 'true');
+  // The mode tabs are gone — Ask AI is a button beside the input.
+  const inputRow = dialog.locator('[data-slot="command-input-wrapper"]');
+  await expect(inputRow.getByRole('button', { name: /Ask AI/ })).toBeVisible();
   const searchInput = page.getByRole('combobox', { name: 'Search documentation' });
   await expect(searchInput).toBeFocused();
   await expect(searchInput).toHaveAttribute('placeholder', 'Search pages, APIs, APL, and MPL…');
-  await expect(page.locator('.docs-search-input-row')).toHaveCSS('box-shadow', 'none');
   const searchRequests: string[] = [];
   page.on('request', (request) => {
     if (new URL(request.url()).pathname === '/docs/api/search') searchRequests.push(request.url());
@@ -783,23 +783,24 @@ test('search stays private and hands off to the persistent assistant sidebar', a
   await expect(contextualResult).toContainText(/…$/);
 
   await searchInput.fill('dataset retention');
-  const askFromSearch = page.getByRole('button', { name: /Ask AI about “dataset retention”/ });
+  const askFromSearch = dialog.getByRole('option', { name: /Ask AI about “dataset retention”/ });
   await expect(askFromSearch).toBeVisible();
-  expect(await askFromSearch.evaluate((element) => element.closest('[role="listbox"]') === null)).toBe(true);
-  await expect(firstSearchResult).toHaveAttribute('tabindex', '-1');
-  await searchInput.press('Tab');
-  await expect(askFromSearch).toBeFocused();
-  await askFromSearch.click();
+  // The ask row sits above the results but never steals the default selection.
+  await expect(firstSearchResult).toHaveAttribute('aria-selected', 'true', { timeout: 15_000 });
+  await searchInput.press('ArrowUp');
+  await expect(askFromSearch).toHaveAttribute('aria-selected', 'true');
+  await searchInput.press('Enter');
 
-  // The handoff closes the dialog and opens the persistent assistant sidebar
-  // with the query carried over as the draft.
+  // The handoff closes the dialog, opens the persistent assistant sidebar,
+  // and submits the question immediately.
   await expect(dialog).not.toBeVisible();
   const assistantSidebar = page.locator('.docs-assistant-sidebar');
   await expect(assistantSidebar).toBeVisible();
   await expect(assistantSidebar).toHaveClass(/ph-no-capture/);
   await expect(assistantSidebar).toHaveAttribute('data-ph-no-capture', 'true');
   const assistantInput = page.getByRole('textbox', { name: 'Ask Axiom Docs' });
-  await expect(assistantInput).toHaveValue('dataset retention', { timeout: 15_000 });
+  const submittedQuestion = assistantSidebar.locator('.docs-assistant-message.user');
+  await expect(submittedQuestion).toContainText('dataset retention', { timeout: 15_000 });
   await expect(assistantInput).toHaveAttribute('data-ph-no-capture', 'true');
   await expect(page.locator('.ai-prompt-frame')).toBeVisible();
   expect(await page.evaluate(() => Object.values(localStorage).includes('dataset retention'))).toBe(false);
@@ -812,12 +813,12 @@ test('search stays private and hands off to the persistent assistant sidebar', a
     await page.getByRole('link', { name: 'Quickstart' }).first().click();
     await expect(page).toHaveURL(/getting-started/);
     await expect(assistantSidebar).toBeVisible();
-    await expect(assistantInput).toHaveValue('dataset retention');
+    await expect(submittedQuestion).toContainText('dataset retention');
     await expect(page.locator('.floating-toc')).toBeHidden();
   }
 
   // Escape inside the sidebar closes it; ⌘I reopens it without losing the
-  // draft, and the TOC returns while it is closed.
+  // conversation, and the TOC returns while it is closed.
   await assistantInput.press('Escape');
   await expect(assistantSidebar).not.toBeVisible();
   if (testInfo.project.name === 'desktop-chromium') {
@@ -826,7 +827,7 @@ test('search stays private and hands off to the persistent assistant sidebar', a
   await page.keyboard.press('ControlOrMeta+KeyI');
   await expect(assistantSidebar).toBeVisible();
   await expect(assistantInput).toBeFocused();
-  await expect(assistantInput).toHaveValue('dataset retention');
+  await expect(submittedQuestion).toContainText('dataset retention');
 
   // The open flag persists to localStorage, so a refresh keeps the sidebar
   // (the conversation itself is not persisted yet).
