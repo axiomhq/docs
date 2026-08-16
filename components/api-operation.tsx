@@ -597,7 +597,7 @@ export async function ApiOperation({
           {responseEntries.map(([code, response], index) => (
             <div
               className={cn(
-                "api-response min-h-[43px] py-2.5 px-1 flex items-start gap-3 border-b border-b-(--border-tertiary) max-sm:flex-col",
+                "api-response py-3 px-1 flex items-start gap-3 border-b border-b-(--border-tertiary) max-sm:flex-col",
                 index === responseEntries.length - 1 && "border-b-0!",
               )}
               key={code}
