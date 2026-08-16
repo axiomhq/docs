@@ -13,7 +13,6 @@ import type {
 } from "react";
 import type { MDXComponents } from "mdx/types";
 import defaultComponents from "fumadocs-ui/mdx";
-import { Card, Cards } from "fumadocs-ui/components/card";
 import { Step, Steps } from "fumadocs-ui/components/steps";
 import {
   Tab as FumaTab,
@@ -32,6 +31,11 @@ import { HeadingAnchor } from "./heading-anchor";
 import { LanguageComparisons } from "./language-comparisons";
 import { Mermaid } from "./mermaid";
 import { AppCard, AppCards } from "./app-cards";
+import { IconCard } from "./icon-card";
+import {
+  INTEGRATION_ICONS,
+  IntegrationIcon,
+} from "./integration-icons";
 import { Notice } from "./notice";
 import { Accordion, AccordionGroup } from "./mdx-accordion";
 
@@ -181,6 +185,44 @@ function QueryLanguageComparisons({
   );
 }
 
+// Content cards reuse the landing quick-card (IconCard), same as AppCard.
+// The Font Awesome icon names content passes resolve brand marks first, then
+// lucide — a bare string would otherwise render as literal text in the chip.
+function Card({
+  title,
+  icon,
+  href,
+  children,
+}: {
+  title?: ReactNode;
+  icon?: string;
+  href?: string;
+  children?: ReactNode;
+}) {
+  const brand = Boolean(icon && icon in INTEGRATION_ICONS);
+  const glyph = !brand ? resolveDocIcon(icon) : undefined;
+  return (
+    <IconCard
+      className="not-prose"
+      title={title}
+      href={href}
+      description={children}
+      gap="md"
+      icon={
+        brand ? (
+          <IntegrationIcon slug={icon!} size={20} />
+        ) : glyph ? (
+          createElement(glyph, {
+            size: 20,
+            strokeWidth: DOC_ICON_STROKE_WIDTH,
+            "aria-hidden": true,
+          })
+        ) : undefined
+      }
+    />
+  );
+}
+
 // Restyled by the unlayered `.docs-tabs` rules in globals.css: the shell,
 // tab strip, and panel mirror the article code-field chrome.
 function Tabs({ children }: { children: ReactNode }) {
@@ -312,8 +354,8 @@ export const mdxComponents: MDXComponents = {
   Steps,
   Step,
   Card,
-  CardGroup: Cards,
-  Cards,
+  CardGroup: AppCards,
+  Cards: AppCards,
   Frame,
   Icon,
   Info,
