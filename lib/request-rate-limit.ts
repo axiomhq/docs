@@ -85,7 +85,11 @@ export async function limitRequest(kind: RateLimitKind, request: Request): Promi
   const identifier = clientIdentifier(request);
   const remote = getRemoteLimiters();
   if (!remote) {
-    if (process.env.NODE_ENV === 'production') {
+    // Failing closed is the right default for a real Redis-less deployment,
+    // but e2e runs the production build locally — the explicit opt-in keeps
+    // those on the bounded in-memory limiter instead.
+    const optedIn = process.env.RATE_LIMIT_LOCAL_FALLBACK === '1';
+    if (process.env.NODE_ENV === 'production' && !optedIn) {
       return { allowed: false, retryAfterSeconds: 0, unavailable: true };
     }
     return takeLocalRateLimit(kind, identifier);
