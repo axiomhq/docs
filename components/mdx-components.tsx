@@ -138,13 +138,13 @@ function Frame({
   caption?: ReactNode;
 }) {
   return (
-    <figure className="doc-frame my-6 mx-0 p-0 [&_img]:w-full [&_img]:rounded-md [&_video]:w-full [&_video]:rounded-md">
+    <figure className="doc-frame my-6 mx-0 p-0 [&_img]:w-full [&_img]:rounded-md [&_img]:border [&_img]:border-(--border-primary) [&_video]:w-full [&_video]:rounded-md [&_video]:border [&_video]:border-(--border-primary)">
       {children}
       {caption && (
-        <figcaption className="mt-2 flex items-start gap-1.5 pl-1 text-(--text-quaternary) font-sans text-[12px] leading-[17px]">
+        <figcaption className="mt-2 flex items-start gap-1.5 pl-1 text-(--text-quaternary) font-mono text-[13px]">
           <span
             aria-hidden="true"
-            className="flex-none font-mono leading-[15px]"
+            className="flex-none leading-[18px]"
           >
             └
           </span>
