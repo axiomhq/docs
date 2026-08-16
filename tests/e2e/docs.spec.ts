@@ -743,7 +743,7 @@ test('search and mobile navigation are keyboard and touch accessible', async ({ 
   await expect(drawer).not.toBeVisible();
 });
 
-test('search and the docs assistant share one private, keyboard-accessible dialog', async ({ page }) => {
+test('search stays private and hands off to the persistent assistant sidebar', async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   await page.goto('/docs');
 
@@ -790,32 +790,53 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
   await expect(askFromSearch).toBeFocused();
   await askFromSearch.click();
 
-  await expect(page.getByRole('tab', { name: 'Ask AI' })).toHaveAttribute('aria-selected', 'true');
+  // The handoff closes the dialog and opens the persistent assistant sidebar
+  // with the query carried over as the draft.
+  await expect(dialog).not.toBeVisible();
+  const assistantSidebar = page.locator('.docs-assistant-sidebar');
+  await expect(assistantSidebar).toBeVisible();
+  await expect(assistantSidebar).toHaveClass(/ph-no-capture/);
+  await expect(assistantSidebar).toHaveAttribute('data-ph-no-capture', 'true');
   const assistantInput = page.getByRole('textbox', { name: 'Ask Axiom Docs' });
   await expect(assistantInput).toHaveValue('dataset retention', { timeout: 15_000 });
   await expect(assistantInput).toHaveAttribute('data-ph-no-capture', 'true');
-  await expect(page.locator('.docs-assistant-composer')).toHaveCSS('box-shadow', 'none');
-  const composerBorderColor = await page.evaluate(() => {
-    const probe = document.createElement('span');
-    probe.style.color = 'var(--border-primary)';
-    document.body.append(probe);
-    const color = getComputedStyle(probe).color;
-    probe.remove();
-    return color;
-  });
-  await expect(page.locator('.docs-assistant-input-wrap')).toHaveCSS('border-top-color', composerBorderColor);
+  await expect(page.locator('.ai-prompt-frame')).toBeVisible();
   expect(await page.evaluate(() => Object.values(localStorage).includes('dataset retention'))).toBe(false);
 
-  await page.keyboard.press('Escape');
-  await expect(dialog).not.toBeVisible();
-  await expect.poll(async () => {
-    await page.keyboard.press('ControlOrMeta+KeyI');
-    return dialog.isVisible();
-  }, { timeout: 15_000 }).toBe(true);
-  await expect(page.getByRole('tab', { name: 'Ask AI' })).toHaveAttribute('aria-selected', 'true');
+  // The sidebar lives in the layout, so client navigation keeps it open and
+  // the draft intact, while the floating TOC yields the right rail to it.
+  // Desktop only: the navigation sidebar is a closed drawer on mobile and the
+  // floating TOC never renders there.
+  if (testInfo.project.name === 'desktop-chromium') {
+    await page.getByRole('link', { name: 'Quickstart' }).first().click();
+    await expect(page).toHaveURL(/getting-started/);
+    await expect(assistantSidebar).toBeVisible();
+    await expect(assistantInput).toHaveValue('dataset retention');
+    await expect(page.locator('.floating-toc')).toBeHidden();
+  }
+
+  // Escape inside the sidebar closes it; ⌘I reopens it without losing the
+  // draft, and the TOC returns while it is closed.
+  await assistantInput.press('Escape');
+  await expect(assistantSidebar).not.toBeVisible();
+  if (testInfo.project.name === 'desktop-chromium') {
+    await expect(page.locator('.floating-toc')).toBeVisible();
+  }
+  await page.keyboard.press('ControlOrMeta+KeyI');
+  await expect(assistantSidebar).toBeVisible();
   await expect(assistantInput).toBeFocused();
+  await expect(assistantInput).toHaveValue('dataset retention');
+
+  // The open flag persists to localStorage, so a refresh keeps the sidebar
+  // (the conversation itself is not persisted yet).
+  await page.reload();
+  await expect(assistantSidebar).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => {
+    await page.keyboard.press('ControlOrMeta+KeyK');
+    return dialog.isVisible();
+  }, { timeout: 15_000 }).toBe(true);
   const box = await dialog.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.width).toBeLessThanOrEqual(390);

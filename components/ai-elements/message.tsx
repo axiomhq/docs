@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { cjk } from "@streamdown/cjk";
-import { code } from "@streamdown/code";
+import { createCodePlugin } from "@streamdown/code";
+import { CheckIcon, CopyIcon } from "@/assets/icons";
+import { axiomCodeDark, axiomCodeLight } from "@/lib/code-theme";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import type { UIMessage } from "ai";
@@ -321,7 +323,22 @@ export const MessageBranchPage = ({
 
 export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
-const streamdownPlugins = { cjk, code, math, mermaid };
+// The branded Shiki themes the docs code blocks use (grayscale +
+// brand-orange accents), instead of streamdown's stock github themes.
+const streamdownPlugins = {
+  cjk,
+  code: createCodePlugin({ themes: [axiomCodeLight, axiomCodeDark] }),
+  math,
+  mermaid,
+};
+
+// The www copy/check icons, matching components/ai/copy-button.tsx; code
+// download and table controls are cut so answers stay quiet chrome-wise.
+const streamdownIcons = { CheckIcon, CopyIcon };
+const streamdownControls = {
+  code: { copy: true, download: false },
+  table: false,
+} as const;
 
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
@@ -331,6 +348,8 @@ export const MessageResponse = memo(
         className
       )}
       plugins={streamdownPlugins}
+      icons={streamdownIcons}
+      controls={streamdownControls}
       {...props}
     />
   ),

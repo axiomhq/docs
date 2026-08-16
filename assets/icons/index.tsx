@@ -13,7 +13,9 @@ import {
   ApiTagsIcon,
 } from "./api-reference";
 import { ArchitectureIcon } from "./architecture";
+import { CheckIcon } from "./check-icon";
 import { ChevronIcon } from "./chevron";
+import { CopyIcon } from "./copy-icon";
 import { ConsoleIcon } from "./console";
 import { FaqsIcon } from "./faqs";
 import { FeaturesIcon } from "./features";
@@ -56,7 +58,9 @@ export {
   ApiSendDataIcon,
   ApiTagsIcon,
   ArchitectureIcon,
+  CheckIcon,
   ChevronIcon,
+  CopyIcon,
   ConsoleIcon,
   FaqsIcon,
   FeaturesIcon,

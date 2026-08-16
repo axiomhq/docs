@@ -636,3 +636,362 @@
     line-height: 1.125rem;
     font-weight: 700;
 }
+
+/* Assistant code blocks: the aicss.dev Code Block chrome layered over
+   streamdown's shiki-highlighted output (components/ai/code-block.tsx is the
+   standalone equivalent). Deliberately unlayered so these beat streamdown's
+   own utility classes without per-property `!`. */
+/* A real border, not the aicss shadow ring: the ring paints outside the
+   border box, so ancestors with overflow clipping shaved it off. */
+.docs-ai-markdown [data-streamdown="code-block"] {
+    position: relative;
+    margin: 12px 0;
+    padding: 0;
+    gap: 0;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    box-shadow: none;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-header"] {
+    height: 32px;
+    padding: 0 8px 0 12px;
+    border-bottom: 0.5px solid var(--border-primary);
+    color: var(--text-primary);
+    font: 450 11px/1 var(--font-code);
+}
+
+.docs-ai-markdown [data-streamdown="code-block-header"] > span {
+    margin-left: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-header"] > span::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    flex: none;
+    background: var(--text-tertiary);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m8 6-6 6 6 6M16 6l6 6-6 6' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+}
+
+/* Streamdown floats the action row over the code with sticky + negative
+   margin, which drifts off-center near the scrollport top. Pin it inside
+   the header instead so the copy button is always row-centered. */
+.docs-ai-markdown [data-streamdown="code-block-header"] + div {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    margin: 0;
+    height: 32px;
+    padding-right: 6px;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-actions"] {
+    padding: 0;
+    gap: 2px;
+    border: 0;
+    background: transparent;
+    backdrop-filter: none;
+}
+
+/* Matches components/ai/copy-button.tsx (h-6 w-6 rounded ghost with a
+   press scale); the download button is disabled via Streamdown controls. */
+.docs-ai-markdown [data-streamdown="code-block-copy-button"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 4px;
+    color: var(--text-tertiary);
+    transition:
+        color 150ms ease,
+        background 150ms ease,
+        transform 150ms ease;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-copy-button"]:hover {
+    color: var(--text-primary);
+    background: var(--bg-emph-tertiary);
+}
+
+.docs-ai-markdown [data-streamdown="code-block-copy-button"]:active {
+    transform: scale(0.9);
+}
+
+.docs-ai-markdown [data-streamdown="code-block-copy-button"] svg {
+    width: 11px;
+    height: 11px;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-body"] {
+    position: relative;
+    margin: 0;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    /* Scrolls without a visible bar, like the aicss source. */
+    scrollbar-width: none;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-body"]::-webkit-scrollbar {
+    display: none;
+}
+
+/* Gutter rule between the line numbers and the code, like the aicss body. */
+.docs-ai-markdown [data-streamdown="code-block-body"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 33px;
+    width: 0.5px;
+    background: var(--border-primary);
+}
+
+/* Compact number column: streamdown defaults to a 24px column + 16px gap. */
+.docs-ai-markdown [data-streamdown="code-block-body"] code > span::before {
+    width: 18px;
+    margin-right: 10px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+/* Assistant markdown tables: the docs-site table treatment (doc-prose.css),
+   sized down a step for the sidebar. Streamdown wraps tables in a padded
+   card with an action row — both are stripped so the table reads like the
+   rest of the documentation. */
+.docs-ai-markdown [data-streamdown="table-wrapper"] {
+    margin: 12px 0;
+    padding: 0;
+    gap: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.docs-ai-markdown [data-streamdown="table-wrapper"] > div:has(> table) {
+    overflow: auto;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: transparent;
+}
+
+.docs-ai-markdown [data-streamdown="table"] {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+}
+
+.docs-ai-markdown [data-streamdown="table"] :is(thead, tbody, tr) {
+    border: 0;
+}
+
+/* Streamdown gives thead its own fill, which showed through the translucent
+   --bg-inert on the th cells and lightened the header vs the docs tables. */
+.docs-ai-markdown [data-streamdown="table-header"] {
+    background: transparent;
+}
+
+.docs-ai-markdown [data-streamdown="table-header-cell"] {
+    padding: 8px 10px;
+    border: 0;
+    border-right: 1px solid var(--border-primary);
+    border-bottom: 1px solid var(--border-primary);
+    color: var(--text-secondary);
+    background: var(--bg-inert);
+    font: 400 12px/18px var(--font-code);
+    text-align: left;
+}
+
+.docs-ai-markdown [data-streamdown="table-cell"] {
+    padding: 8px 10px;
+    border: 0;
+    border-right: 1px solid var(--border-tertiary);
+    border-bottom: 1px solid var(--border-tertiary);
+    color: var(--text-secondary);
+    font: 400 12.5px/20px var(--font-sans);
+    text-align: left;
+    vertical-align: top;
+}
+
+.docs-ai-markdown [data-streamdown="table"] :is(th, td):last-child {
+    border-right: 0;
+}
+
+.docs-ai-markdown [data-streamdown="table"] tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Inline code in cells reads as an identifier via the mono face alone. */
+.docs-ai-markdown [data-streamdown="table"] :is(th, td) code {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: inherit;
+}
+
+/* Agent activity orb (components/ai/orb.tsx): a brand diamond core that
+   breathes while a square sonar ping expands and fades around it. */
+.ai-orb {
+    position: relative;
+    display: inline-block;
+    flex: none;
+    width: 14px;
+    height: 14px;
+}
+
+.ai-orb::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    background: var(--brand);
+    transform: rotate(45deg) scale(0.85);
+    animation: ai-orb-core 1.8s cubic-bezier(0.66, 0, 0.34, 1) infinite;
+}
+
+.ai-orb::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 1px solid var(--brand);
+    opacity: 0;
+    animation: ai-orb-ping 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes ai-orb-core {
+    0%,
+    100% {
+        transform: rotate(45deg) scale(0.85);
+        opacity: 0.75;
+    }
+    50% {
+        transform: rotate(45deg) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes ai-orb-ping {
+    0% {
+        transform: rotate(45deg) scale(0.9);
+        opacity: 0.9;
+    }
+    70%,
+    100% {
+        transform: rotate(45deg) scale(2.1);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ai-orb::before {
+        animation: none;
+        opacity: 1;
+    }
+    .ai-orb::after {
+        display: none;
+    }
+}
+
+/* Shared shimmering-label treatment for the components/ai family (thinking
+   state, web search). background-clip: text can't be expressed as Tailwind
+   utilities. The gradient reads currentColor, so the element's text color
+   sets the shimmer tone; -webkit-text-fill-color hides the painted glyphs
+   without zeroing currentColor the way `color: transparent` would. */
+.ai-shimmer-text {
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, currentColor 45%, transparent) 0%,
+        currentColor 44%,
+        color-mix(in srgb, currentColor 45%, transparent) 80%
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: ai-shimmer 2.7s linear infinite;
+}
+
+@keyframes ai-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Entry used by web-search result rows. */
+@keyframes ai-enter {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ai-shimmer-text {
+        background: none;
+        animation: none;
+        -webkit-text-fill-color: currentColor;
+    }
+}
+
+/* react-resizable-panels applies the Panel `className` prop to an inner
+   content div, not the outer flex-item panel element — so the collapsed and
+   below-xl overrides target the outer panels by id here instead. !important
+   is required regardless: the library sizes panels with inline styles. */
+.docs-app:not([data-assistant-open]) #docs-main-panel {
+    flex: 1 1 auto !important;
+}
+
+.docs-app:not([data-assistant-open]) #docs-assistant-panel {
+    flex: 0 0 0px !important;
+    overflow: hidden;
+}
+
+/* Below xl the assistant aside is a fixed overlay, so its panel never takes
+   part in the row regardless of open state. */
+@media (width < 80rem) {
+    .docs-app #docs-main-panel {
+        flex: 1 1 auto !important;
+    }
+
+    .docs-app #docs-assistant-panel {
+        flex: 0 0 0px !important;
+        overflow: hidden;
+    }
+}
+
+/* While the Ask AI sidebar is open (data-assistant-open on the shell root),
+   the floating TOC yields the right edge: hide it, release its 18rem grid
+   rail, and undo the article's TOC-compensating nudge. Deliberately unlayered
+   so these beat the `xl:*` utilities they reverse (unlayered declarations win
+   over @layer utilities regardless of specificity). 80rem matches Tailwind's
+   `xl` breakpoint used by those utilities. */
+.docs-app[data-assistant-open] .floating-toc {
+    display: none;
+}
+
+@media (min-width: 80rem) {
+    .docs-app[data-assistant-open] .article-content[data-has-toc] {
+        grid-template-columns:
+            minmax(2rem, 1fr) minmax(0, 768px) minmax(2rem, 1fr);
+    }
+
+    .docs-app[data-assistant-open] .doc-article {
+        transform: none;
+    }
+}

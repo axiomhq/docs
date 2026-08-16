@@ -6,7 +6,6 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
   type KeyboardEvent as ReactKeyboardEvent,
@@ -35,22 +34,6 @@ import {
 import { docsApiPath, withoutDocsBasePath } from '@/lib/docs-paths';
 import { sanitizeSearchSnippet } from '@/lib/docs-search-rank';
 
-const LazyAssistantPanel = dynamic(
-  () => import('@/components/docs-assistant').then((module) => module.DocsAssistantPanel),
-  {
-    ssr: false,
-    loading: () => (
-      <section id="docs-assistant-panel" role="tabpanel" aria-labelledby="docs-assistant-tab" className="docs-assistant-panel min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas)">
-        <div className="docs-assistant-messages min-h-0 h-full overflow-y-auto pt-[22px] px-6 pb-7 overscroll-contain max-sm:pt-[18px] max-sm:px-[14px] max-sm:pb-6">
-          <div className="docs-assistant-working py-[7px] px-0 flex items-center gap-2 text-(--text-tertiary) font-mono text-[11px] leading-4 font-[450]" role="status">
-            <span className="size-1.5 flex-none border border-brand bg-brand/50 motion-safe:animate-pulse" /> Loading assistant…
-          </div>
-        </div>
-      </section>
-    ),
-  },
-);
-
 const SUGGESTED_PAGES = [
   { title: 'Quickstart', section: 'Platform overview', href: '/getting-started', Icon: QuickStartIcon },
   { title: 'Send data', section: 'Methods', href: '/send-data/methods', Icon: MethodsIcon },
@@ -69,7 +52,7 @@ function SearchSectionHeading({ label, className = '' }: { label: string; classN
 }
 
 export function DocsSearchDialog() {
-  const { open, mode, close, setMode } = useDocsSearchController();
+  const { open, close, openAssistant } = useDocsSearchController();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -110,12 +93,8 @@ export function DocsSearchDialog() {
               type="button"
               role="tab"
               className="relative inline-flex cursor-pointer items-center gap-[7px] border-0 bg-transparent px-[9px] py-0 font-sans! text-[13px]! leading-4! font-medium! text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-secondary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-tertiary) aria-selected:bg-interactive-selected aria-selected:font-semibold! aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-0 aria-selected:after:-bottom-px aria-selected:after:left-0 aria-selected:after:h-px aria-selected:after:bg-(--color-accent) aria-selected:after:content-[''] max-sm:min-h-11 max-sm:text-[14px]!"
-              aria-selected={mode === 'search'}
+              aria-selected
               aria-controls="docs-search-panel"
-              onClick={() => {
-                captureDocsEvent('docs_search_opened', { entry_point: 'mode_tab' });
-                setMode('search');
-              }}
             >
               <Search size={14} /> Search
             </button>
@@ -124,12 +103,11 @@ export function DocsSearchDialog() {
               type="button"
               role="tab"
               className="relative inline-flex cursor-pointer items-center gap-[7px] border-0 bg-transparent px-[9px] py-0 font-sans! text-[13px]! leading-4! font-medium! text-(--text-tertiary) transition-[color,background] duration-(--duration-1) ease-(--ease-out) hover:bg-interactive-hover hover:text-(--text-secondary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:bg-(--bg-emph-tertiary) aria-selected:bg-interactive-selected aria-selected:font-semibold! aria-selected:text-(--text-primary) aria-selected:after:absolute aria-selected:after:right-0 aria-selected:after:-bottom-px aria-selected:after:left-0 aria-selected:after:h-px aria-selected:after:bg-(--color-accent) aria-selected:after:content-[''] max-sm:min-h-11 max-sm:text-[14px]!"
-              aria-selected={mode === 'assistant'}
-              aria-controls="docs-assistant-panel"
-              onClick={() => {
-                captureDocsEvent('docs_ai_opened', { entry_point: 'mode_tab' });
-                setMode('assistant');
-              }}
+              aria-selected={false}
+              // Hands the dialog off to the persistent assistant sidebar; the
+              // provider captures the docs_ai_opened event and closes this
+              // dialog as part of openAssistant.
+              onClick={() => openAssistant('', 'mode_tab')}
             >
               <BookOpen size={14} /> Ask AI
             </button>
@@ -143,7 +121,7 @@ export function DocsSearchDialog() {
             <X size={16} />
           </button>
         </header>
-        {mode === 'search' ? <SearchPanel /> : <AssistantPanel />}
+        <SearchPanel />
       </div>
     </dialog>
   );
@@ -247,7 +225,7 @@ function SearchPanel() {
           }}
           onKeyDown={handleKeys}
         />
-        <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none! max-sm:hidden">ESC</kbd>
+        <kbd className="max-sm:hidden">ESC</kbd>
       </div>
       <div
         className="docs-search-results min-h-0 overflow-y-auto overscroll-contain bg-(--bg-canvas) p-2 max-sm:p-1.5"
@@ -296,8 +274,9 @@ function SearchPanel() {
                 <BookOpen size={15} />
               </span>
               Ask a question about Axiom
-              <span className="ml-auto inline-flex items-center gap-2">
-                <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">⌘I</kbd>
+              <span className="ml-auto inline-flex items-center gap-1">
+                <kbd className="kbd-cmd">⌘</kbd>
+                <kbd>I</kbd>
               </span>
             </button>
           </div>
@@ -328,13 +307,13 @@ function SearchPanel() {
         </div>
       </div>
       <footer className="docs-search-footer flex min-h-[38px] items-center gap-[14px] border-t border-(--border-primary) bg-(--bg-surface) px-3 py-[7px] font-mono text-[10px] leading-[14px] font-[450] text-(--text-tertiary) max-sm:justify-end">
-        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">↑</kbd><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">↓</kbd> Navigate</span>
-        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">↵</kbd> Open</span>
+        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+        <span className="inline-flex items-center gap-1 max-sm:hidden"><kbd>↵</kbd> Open</span>
         <button
           type="button"
           className="ml-auto inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-sans! text-[11px]! leading-4! font-medium! text-(--text-tertiary) transition-[color] duration-(--duration-1) ease-(--ease-out) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:text-(--color-accent) max-md:min-h-11 max-sm:ml-0 max-sm:text-[13px]!"
           onClick={() => handoff('search_footer', search.trim())}
-        >Ask AI <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">⌘I</kbd></button>
+        >Ask AI <span className="inline-flex items-center gap-1"><kbd className="kbd-cmd">⌘</kbd><kbd>I</kbd></span></button>
       </footer>
     </section>
   );
@@ -364,17 +343,5 @@ function SearchBreadcrumbs({ items = [] }: { items?: string[] }) {
     >
       {compactPath}
     </span>
-  );
-}
-
-function AssistantPanel() {
-  const { open, assistantDraft, setAssistantDraft, setMode } = useDocsSearchController();
-  return (
-    <LazyAssistantPanel
-      open={open}
-      draft={assistantDraft}
-      onDraftChange={setAssistantDraft}
-      onUseSearch={() => setMode('search')}
-    />
   );
 }

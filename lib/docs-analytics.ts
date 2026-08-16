@@ -2,7 +2,12 @@
 
 import posthog from 'posthog-js';
 
-export type SearchEntryPoint = 'header' | 'hero' | 'shortcut' | 'mode_tab';
+export type SearchEntryPoint =
+  | 'header'
+  | 'hero'
+  | 'shortcut'
+  | 'mode_tab'
+  | 'assistant_handoff';
 export type AssistantEntryPoint =
   | 'floating'
   | 'hero'

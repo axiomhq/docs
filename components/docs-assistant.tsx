@@ -1,22 +1,22 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { ArrowUpRight, RefreshCw, Search } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { type RefObject, useEffect, useRef } from 'react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import {
   Message,
   MessageContent,
   MessageResponse,
 } from '@/components/ai-elements/message';
-import { Source, Sources, SourcesContent, SourcesTrigger } from '@/components/ai-elements/sources';
+import { InlineCitations } from '@/components/ai/inline-citations';
+import { AiPromptInput } from '@/components/ai/prompt-input';
+import { WebSearch, type WebSearchItem } from '@/components/ai/web-search';
 import {
-  PromptInput,
-  PromptInputBody,
-  type PromptInputMessage,
-  PromptInputSubmit,
-  PromptInputTextarea,
-} from '@/components/ai-elements/prompt-input';
+  MethodsIcon,
+  QueryIntroductionIcon,
+  WhatIsAxiomIcon,
+} from '@/assets/icons';
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -42,9 +42,30 @@ type AssistantSource = {
 type DocsAssistantPanelProps = {
   open: boolean;
   draft: string;
+  /** Receives the clear-conversation action so the sidebar header (which
+      renders outside this lazy chunk) can trigger it. */
+  clearRef?: RefObject<(() => void) | null>;
   onDraftChange: (value: string) => void;
   onUseSearch: () => void;
 };
+
+const SUGGESTED_QUESTIONS = [
+  {
+    label: 'How do I send data?',
+    prompt: 'How do I send data to Axiom?',
+    Icon: MethodsIcon,
+  },
+  {
+    label: 'Query with APL',
+    prompt: 'How do I write queries in APL?',
+    Icon: QueryIntroductionIcon,
+  },
+  {
+    label: 'What is Axiom?',
+    prompt: 'What is Axiom and what can I use it for?',
+    Icon: WhatIsAxiomIcon,
+  },
+];
 
 const chatTransport = new DefaultChatTransport<UIMessage>({
   api: docsApiPath('/chat'),
@@ -63,10 +84,19 @@ const chatTransport = new DefaultChatTransport<UIMessage>({
 export function DocsAssistantPanel({
   open,
   draft,
+  clearRef,
   onDraftChange,
   onUseSearch,
 }: DocsAssistantPanelProps) {
   const chat = useChat<UIMessage>({ id: 'axiom-docs-assistant', transport: chatTransport });
+
+  useEffect(() => {
+    if (!clearRef) return;
+    clearRef.current = () => chat.setMessages([]);
+    return () => {
+      clearRef.current = null;
+    };
+  }, [chat, clearRef]);
   const requestStartedAt = useRef<number | null>(null);
   const isBusy = chat.status === 'submitted' || chat.status === 'streaming';
   const messages = chat.messages.filter((message) => message.role !== 'system');
@@ -101,8 +131,8 @@ export function DocsAssistantPanel({
     });
   }, [chat.messages, chat.status]);
 
-  const submit = (message: PromptInputMessage) => {
-    const question = (message.text ?? '').trim();
+  const submit = (text: string) => {
+    const question = text.trim();
     if (!question || isBusy) return;
     requestStartedAt.current = analyticsTimestamp();
     captureDocsEvent('docs_ai_question_submitted', {
@@ -139,37 +169,44 @@ export function DocsAssistantPanel({
   return (
     <section
       id="docs-assistant-panel"
-      role="tabpanel"
-      aria-labelledby="docs-assistant-tab"
+      aria-label="AI assistant"
       className="docs-assistant-panel min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas)"
     >
       <MessageScrollerProvider autoScroll>
         <MessageScroller className="docs-assistant-scroller relative min-h-0">
           <MessageScrollerViewport
-            className="docs-assistant-messages scroll-fade-t min-h-0 h-full overflow-y-auto pt-[22px] px-6 pb-7 overscroll-contain max-sm:pt-[18px] max-sm:px-[14px] max-sm:pb-6"
+            className="docs-assistant-messages scroll-fade-t min-h-0 h-full overflow-y-auto pt-[22px] px-3 pb-7 overscroll-contain max-sm:pt-[18px] max-sm:pb-6"
             aria-label="AI assistant conversation"
           >
             <MessageScrollerContent
               className="docs-assistant-thread min-h-full flex flex-col gap-[22px]"
               aria-busy={isBusy}
             >
-              {messages.length > 0 && (
-                <MessageScrollerItem>
-                  <button
-                    type="button"
-                    className="docs-search-clear ml-auto py-1 px-[7px] border-0 rounded-[3px] text-(--text-tertiary) bg-transparent font-sans text-[12px] leading-4 font-medium cursor-pointer hover:text-(--text-primary) hover:bg-interactive-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) max-md:min-h-11 max-sm:text-[14px]"
-                    onClick={() => chat.setMessages([])}
-                  >
-                    Clear conversation
-                  </button>
-                </MessageScrollerItem>
-              )}
               {messages.length === 0 ? (
                 <MessageScrollerItem className="docs-assistant-empty-item flex flex-auto shrink items-center justify-center">
                   <div className="docs-assistant-empty flex flex-col items-center justify-center text-center">
-                    <strong className="text-(--text-primary) font-sans text-[18px] leading-6 font-semibold tracking-[-.01em]">Ask Axiom Docs</strong>
-                    <p className="max-w-[420px] m-0 mt-2 text-(--text-tertiary) font-sans text-[13px] leading-5 font-normal">Get an answer assembled from the documentation, with links to the pages used.</p>
-                    <p className="docs-assistant-note max-w-[460px] m-0 mt-5 text-(--text-quaternary) font-mono text-[11px] leading-[17px] font-[450]">The assistant searches public documentation only. Don’t include tokens or sensitive data.</p>
+                    <svg
+                      className="h-[22px] w-[25px] fill-brand drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
+                      viewBox="0 0 358 309"
+                      aria-hidden="true"
+                    >
+                      <path d="M354.75 215.609 278.412 87.847c-3.501-5.872-12.127-10.676-19.17-10.676h-47.659c-11.077 0-15.618-7.548-10.093-16.772l26.136-43.627c2.074-3.463 2.069-7.725-.011-11.183C225.534 2.13 221.691 0 217.533 0h-66.485c-7.044 0-15.688 4.793-19.212 10.652L2.645 225.448c-3.525 5.859-3.526 15.447-.006 21.307l33.243 55.325c5.539 9.217 14.622 9.228 20.184.023l25.974-42.98c5.564-9.205 14.645-9.195 20.185.023l23.548 39.192c3.521 5.86 12.164 10.654 19.207 10.654h153.633c7.04 0 15.685-4.794 19.206-10.654l36.892-61.397c3.521-5.86 3.538-15.459.039-21.332Zm-103.096-6.149c5.505 9.236.945 16.794-10.132 16.794H122.021c-11.077 0-15.609-7.542-10.07-16.76l59.796-99.517c5.539-9.218 14.602-9.217 20.141.001l59.766 99.482Z" />
+                    </svg>
+                    <strong className="mt-3.5 text-(--text-primary) font-sans text-[15px] leading-5 font-semibold tracking-[-.01em]">Ask Axiom Docs</strong>
+                    <p className="m-0 mt-1.5 max-w-[420px] text-(--text-tertiary) font-sans text-[13px] leading-5 font-normal">Ask anything — answers come from the documentation.</p>
+                    <div className="mt-5 flex max-w-[320px] flex-wrap items-center justify-center gap-2">
+                      {SUGGESTED_QUESTIONS.map(({ label, prompt, Icon }) => (
+                        <button
+                          key={prompt}
+                          type="button"
+                          className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-(--border-primary) bg-(--bg-surface) px-3 font-sans text-[12.5px] leading-none font-[450] text-(--text-secondary) transition-colors hover:bg-interactive-hover hover:text-(--text-primary)"
+                          onClick={() => submit(prompt)}
+                        >
+                          <Icon className="size-3.5 flex-none text-(--text-tertiary)" aria-hidden="true" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </MessageScrollerItem>
               ) : (
@@ -183,14 +220,15 @@ export function DocsAssistantPanel({
                   </MessageScrollerItem>
                 ))
               )}
+              {/* Same WebSearch header as the in-message search list, so the
+                  pre-search state morphs into it without changing style. */}
               {chat.status === 'submitted' && (
                 <MessageScrollerItem>
                   <div
-                    className="docs-assistant-working py-[7px] px-0 flex items-center gap-2 text-(--text-tertiary) font-mono text-[11px] leading-4 font-[450]"
+                    className="docs-assistant-working flex items-center px-0 py-[3px]"
                     role="status"
                   >
-                    <span className="size-1.5 flex-none border border-brand bg-brand/50 motion-safe:animate-pulse" />
-                    <span className="shimmer shimmer-duration-1600">Searching Axiom Docs…</span>
+                    <WebSearch items={[]} pending />
                   </div>
                 </MessageScrollerItem>
               )}
@@ -214,43 +252,19 @@ export function DocsAssistantPanel({
           <MessageScrollerButton className="docs-assistant-scroll-button absolute right-4 bottom-3 data-[direction=end]:bottom-3 z-[2]" />
         </MessageScroller>
       </MessageScrollerProvider>
-      <div className="docs-assistant-footer bg-(--bg-surface)">
-      <PromptInput
-        className="docs-assistant-composer [box-shadow:none]"
-        inputGroupClassName="docs-assistant-input-wrap min-h-[64px] h-auto py-3 pr-3 pl-4 flex items-start gap-2 border-0 border-t border-(--border-primary) rounded-none has-[textarea]:rounded-none bg-transparent dark:bg-transparent [box-shadow:none] has-[[data-slot=input-group-control]:focus-visible]:border-(--border-primary) has-[[data-slot=input-group-control]:focus-visible]:ring-0 max-sm:pl-3"
-        onSubmit={submit}
-      >
-        <PromptInputBody>
-          <PromptInputTextarea
-            id="docs-assistant-input"
-            className="w-full max-h-[128px] min-h-[44px] py-0.5 px-0 resize-none border-0 outline-0 text-(--text-primary) bg-transparent dark:bg-transparent font-sans text-[14px] md:text-[14px] leading-[21px] font-[450] placeholder:text-(--text-tertiary) placeholder:opacity-100"
-            value={draft}
-            maxLength={4_000}
-            aria-label="Ask Axiom Docs"
-            placeholder={isBusy ? 'Answering from the documentation…' : 'Ask a question about Axiom…'}
-            data-ph-no-capture
-            onChange={(event) => onDraftChange(event.currentTarget.value)}
-          />
-          <PromptInputSubmit
-            className={cn(
-              // `.docs-assistant-input-wrap button` — matched every button, both
-              // states. outline-solid is required: Button's base `outline-none`
-              // sets --tw-outline-style: none, which outline-2 alone inherits.
-              'hover:not-disabled:opacity-[.88] active:not-disabled:opacity-[.72] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-(--color-accent) focus-visible:outline-offset-2 disabled:text-(--text-quaternary) disabled:bg-(--bg-emph-tertiary) disabled:cursor-default max-md:size-11',
-              // `.docs-assistant-input-wrap button[type='submit']` — PromptInputSubmit
-              // renders type="button" while streaming, so this half of the rule
-              // never applied to the stop button. Gated to keep that behaviour.
-              !isBusy &&
-                'flex-none size-8 p-0 inline-flex items-center justify-center border border-(--border-primary) focus-visible:border-(--border-primary) rounded-md text-(--text-on-inverse-primary) bg-(--bg-emph-primary-inverse) hover:bg-(--bg-emph-primary-inverse) cursor-pointer transition-[opacity,background] duration-(--duration-1) ease-(--ease-out)',
-            )}
-            status={chat.status}
-            onStop={stop}
-            disabled={!isBusy && !draft.trim()}
-            aria-label={isBusy ? 'Stop answer' : 'Send question'}
-          />
-        </PromptInputBody>
-      </PromptInput>
-        <small className="docs-assistant-disclaimer block mt-2 px-4 pb-2.5 text-(--text-tertiary) font-mono text-[10px] leading-[14px] font-[450] max-sm:px-3">Generated from Axiom documentation. Verify critical details.</small>
+      <div className="docs-assistant-footer bg-(--bg-canvas) px-3 pt-1">
+        <AiPromptInput
+          id="docs-assistant-input"
+          value={draft}
+          busy={isBusy}
+          maxLength={4_000}
+          aria-label="Ask Axiom Docs"
+          placeholder={isBusy ? 'Answering from the documentation…' : 'Ask a question about Axiom…'}
+          onChange={onDraftChange}
+          onSubmit={submit}
+          onStop={stop}
+        />
+        <small className="docs-assistant-disclaimer block mt-2 px-1.5 pb-2.5 text-center font-mono text-[10px] leading-[14px] font-light text-(--text-tertiary)">Generated from the docs. Verify details.</small>
       </div>
     </section>
   );
@@ -272,47 +286,22 @@ function AssistantMessage({
   const text = message.role === 'assistant' ? stripPseudoToolCalls(rawText) : rawText;
   const hadPseudoToolCalls = message.role === 'assistant' && rawText !== '' && text === '';
   const toolParts = message.parts.filter((part) => part.type.startsWith('tool-'));
-  const chips = toolChips(toolParts);
+  const searches = toolSearches(toolParts);
   const sources = assistantSources(message);
 
   if (message.role === 'user') {
     return (
       <Message from="user" className="docs-assistant-message user gap-[7px] max-w-[82%] max-sm:max-w-[92%] ml-auto items-end">
-        <span className="text-(--text-tertiary) font-mono text-[10px] leading-[14px] font-semibold tracking-[.06em] uppercase">You</span>
-        <MessageContent className="docs-assistant-bubble border border-(--border-primary) group-[.is-user]:rounded-md group-[.is-user]:px-3 group-[.is-user]:py-[10px] group-[.is-user]:text-(--text-secondary) group-[.is-user]:bg-(--bg-surface) font-sans text-[13px] leading-5 font-[450] whitespace-pre-wrap">{text}</MessageContent>
+        <span className="font-mono text-[10px] leading-[14px] text-(--text-tertiary)">You</span>
+        <MessageContent className="docs-assistant-bubble group-[.is-user]:rounded-md group-[.is-user]:px-3 group-[.is-user]:py-[10px] group-[.is-user]:text-(--text-primary) group-[.is-user]:bg-(--bg-surface) font-sans text-[13px] leading-5 font-[450] whitespace-pre-wrap">{text}</MessageContent>
       </Message>
     );
   }
 
   return (
     <Message from="assistant" className="docs-assistant-message assistant gap-[7px] max-w-[670px]">
-      <span className="text-(--text-tertiary) font-mono text-[10px] leading-[14px] font-semibold tracking-[.06em] uppercase">Axiom Docs</span>
       <MessageContent>
-        {chips.map((chip) => (
-          <div
-            className={cn(
-              'docs-assistant-tool w-fit px-[7px] py-1 inline-flex items-center gap-1.5 border border-(--border-secondary) rounded-[3px] text-(--text-tertiary) bg-(--bg-inert) font-mono text-[10px] leading-[14px] font-[450]',
-              chip.failed && 'error text-(--text-destructive)',
-            )}
-            key={chip.key}
-          >
-            <Search size={12} />
-            {/* In-flight lookups shimmer so a slow tool call reads as progress. */}
-            <span className={chip.failed ? undefined : 'shimmer shimmer-duration-1600'}>{chip.label}</span>
-          </div>
-        ))}
-        {/* Tool chips disappear once their call resolves, so without this the
-            message sits empty between the last tool finishing and the first
-            text delta — which looked like nothing was happening. */}
-        {active && !text && chips.length === 0 && (
-          <div
-            className="docs-assistant-working py-[7px] px-0 flex items-center gap-2 text-(--text-tertiary) font-mono text-[11px] leading-4 font-[450]"
-            role="status"
-          >
-            <span className="size-1.5 flex-none border border-brand bg-brand/50 motion-safe:animate-pulse" />
-            <span className="shimmer shimmer-duration-1600">Composing answer…</span>
-          </div>
-        )}
+        {searches.length > 0 && <WebSearch items={searches} />}
         {text && (
           // linkSafety defaults to enabled, which renders citations as <button>s
           // behind a confirmation modal. Every URL here comes from our own
@@ -333,19 +322,17 @@ function AssistantMessage({
               '[&_:is(ul,ol)_:is(ul,ol)]:m-0 [&_:is(ul,ol)_:is(ul,ol)]:mt-[3px]',
               '[&_hr]:my-4 [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-t-(--border-secondary)',
               '[&_blockquote]:m-0 [&_blockquote]:mb-[11px] [&_blockquote]:ps-[11px] [&_blockquote]:border-l-2 [&_blockquote]:border-l-(--border-strong) [&_blockquote]:text-(--text-tertiary)',
-              '[&_table]:w-full [&_table]:m-0 [&_table]:mb-3 [&_table]:border-collapse [&_table]:text-[12.5px]',
-              '[&_:where(th,td)]:py-[5px] [&_:where(th,td)]:px-2 [&_:where(th,td)]:border [&_:where(th,td)]:border-(--border-secondary) [&_:where(th,td)]:text-left',
-              '[&_th]:text-(--text-primary) [&_th]:bg-(--bg-inert) [&_th]:font-normal',
+              // Table chrome lives in globals.css (`.docs-ai-markdown
+              // [data-streamdown='table']` rules) — the docs-site table
+              // treatment from doc-prose.css.
               '[&_strong]:text-(--text-primary) [&_strong]:font-semibold',
               '[&_a]:text-(--text-primary) [&_a]:underline [&_a]:decoration-(--border-strong) [&_a]:underline-offset-[3px] [&_a:hover]:decoration-(--color-accent)',
               '[&_code:not(pre_code)]:py-px [&_code:not(pre_code)]:px-1 [&_code:not(pre_code)]:border [&_code:not(pre_code)]:border-(--border-primary) [&_code:not(pre_code)]:rounded-[3px] [&_code:not(pre_code)]:text-(--text-primary) [&_code:not(pre_code)]:bg-(--bg-inert) [&_code:not(pre_code)]:font-mono [&_code:not(pre_code)]:text-[12px] [&_code:not(pre_code)]:leading-[18px] [&_code:not(pre_code)]:font-[450]',
-              "[&_[data-streamdown='code-block']]:my-3 [&_[data-streamdown='code-block']]:p-0 [&_[data-streamdown='code-block']]:gap-2 [&_[data-streamdown='code-block']]:overflow-hidden [&_[data-streamdown='code-block']]:border [&_[data-streamdown='code-block']]:border-(--border-primary) [&_[data-streamdown='code-block']]:rounded-md [&_[data-streamdown='code-block']]:bg-(--bg-surface)",
-              "[&_[data-streamdown='code-block-header']]:py-0 [&_[data-streamdown='code-block-header']]:px-3 [&_[data-streamdown='code-block-header']]:text-(--text-tertiary) [&_[data-streamdown='code-block-header']]:font-mono [&_[data-streamdown='code-block-header']]:text-[11px] [&_[data-streamdown='code-block-header']]:leading-4 [&_[data-streamdown='code-block-header']]:font-[450]",
-              "[&_[data-streamdown='code-block-header']>span]:ms-0 [&_[data-streamdown='code-block-header']+div]:pe-2",
-              "[&_[data-streamdown='code-block-actions']]:border-(--border-secondary) [&_[data-streamdown='code-block-actions']]:bg-(--bg-raised)",
-              "[&_[data-streamdown='code-block-body']]:m-0 [&_[data-streamdown='code-block-body']]:pt-0 [&_[data-streamdown='code-block-body']]:px-3 [&_[data-streamdown='code-block-body']]:pb-3 [&_[data-streamdown='code-block-body']]:border-0 [&_[data-streamdown='code-block-body']]:rounded-none [&_[data-streamdown='code-block-body']]:bg-transparent",
+              // Code block chrome lives in globals.css (`.docs-ai-markdown
+              // [data-streamdown='code-block']` rules) — the aicss.dev Code
+              // Block design over streamdown's shiki output.
               '[&_pre]:m-0! [&_pre]:p-0 [&_pre]:bg-transparent!',
-              '[&_:is(pre,pre_code)]:font-mono [&_:is(pre,pre_code)]:text-[12px] [&_:is(pre,pre_code)]:leading-[19px] [&_:is(pre,pre_code)]:font-[450]',
+              '[&_:is(pre,pre_code)]:font-mono [&_:is(pre,pre_code)]:text-[12.5px] [&_:is(pre,pre_code)]:leading-5 [&_:is(pre,pre_code)]:font-[450]',
             )}
             linkSafety={{ enabled: false }}
           >
@@ -375,71 +362,50 @@ function AssistantMessage({
           </div>
         )}
       </MessageContent>
-      {sources.length > 0 && <AssistantSources sources={sources} />}
+      {/* Citations mount only once the answer has finished rendering, so
+          they fade in after the stream completes. */}
+      {!active && sources.length > 0 && (
+        <InlineCitations
+          className="animate-in fade-in duration-500"
+          citations={sources}
+          onOpen={(citation, rank) => captureDocsEvent('docs_ai_source_opened', {
+            destination_path: safeDocsPath(citation.url),
+            source_rank: rank,
+          })}
+        />
+      )}
     </Message>
   );
 }
 
-function AssistantSources({ sources }: { sources: AssistantSource[] }) {
-  // Controlled: Base UI warns when an uncontrolled Collapsible's default open
-  // state changes after init, which it does here as sources stream in.
-  const [open, setOpen] = useState(true);
-
-  return (
-    <Sources
-      className="docs-assistant-sources mt-1 mb-0 pt-[11px] block border-t border-(--border-secondary)"
-      open={open}
-      onOpenChange={setOpen}
-    >
-          <SourcesTrigger
-            count={sources.length}
-            className="mb-2 p-0 border-0 text-(--text-tertiary) bg-transparent font-mono text-[10px] leading-[14px] font-semibold tracking-[.06em] uppercase cursor-pointer hover:text-(--text-primary) [&_p]:[font:inherit] [&_p]:[letter-spacing:inherit]"
-          />
-          <SourcesContent className="docs-assistant-sources-list w-full max-w-full mt-0 flex flex-row flex-wrap gap-[5px]">
-            {sources.map((source, index) => (
-              <Source
-                href={source.url}
-                key={source.url}
-                title={source.title}
-                className="max-w-full px-1.5 py-0.5 inline-flex items-center gap-1 border border-(--border-primary) rounded-[3px] text-(--text-tertiary) bg-(--bg-inert) font-sans text-[10px] leading-[15px] font-medium hover:border-(--border-strong) hover:text-(--text-primary) hover:bg-interactive-hover max-md:min-h-[44px]"
-                onClick={() => captureDocsEvent('docs_ai_source_opened', {
-                  destination_path: safeDocsPath(source.url),
-                  source_rank: index + 1,
-                })}
-              >
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap">{source.title}</span><ArrowUpRight size={9} className="flex-none size-[9px] opacity-75" />
-              </Source>
-            ))}
-      </SourcesContent>
-    </Sources>
-  );
-}
-
-type ToolChip = { key: string; label: string; failed: boolean };
-
-// Every tool failure is reported with the same generic server-side message, so
-// several failing calls in one turn would otherwise stack identical chips.
-function toolChips(parts: UIMessage['parts']): ToolChip[] {
-  const chips: ToolChip[] = [];
+// Every tool call becomes a row in the WebSearch block: in-flight lookups
+// shimmer with a spinning globe, resolved ones settle into a check. Failures
+// all share the same generic server-side message, so identical labels are
+// collapsed to avoid stacking duplicates.
+function toolSearches(parts: UIMessage['parts']): WebSearchItem[] {
+  const searches: WebSearchItem[] = [];
   const seen = new Set<string>();
 
   parts.forEach((part, index) => {
     const invocation = part as unknown as { state?: string; input?: { query?: string }; errorText?: string };
-    if (invocation.state?.startsWith('output') && invocation.state !== 'output-error') return;
-
     const failed = invocation.state === 'output-error' || invocation.state === 'output-denied';
+    const done = !failed && Boolean(invocation.state?.startsWith('output'));
     const label = failed
       ? invocation.errorText ?? 'Documentation search failed'
       : invocation.input?.query
-        ? `Searching “${invocation.input.query}”`
+        ? `“${invocation.input.query}”`
         : 'Searching documentation';
 
     if (seen.has(label)) return;
     seen.add(label);
-    chips.push({ key: `${part.type}-${index}`, label, failed });
+    searches.push({
+      id: `${part.type}-${index}`,
+      label,
+      state: failed ? 'error' : done ? 'done' : 'loading',
+    });
   });
 
-  return chips;
+  return searches;
 }
 
 // Some models (currently z-ai/glm-5.2 via OpenRouter) intermittently emit their
