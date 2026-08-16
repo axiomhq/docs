@@ -144,12 +144,8 @@ export function WebSearch({
         style={EASE}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="relative flex items-stretch gap-1.5">
-            <span
-              className="ml-[5.5px] w-px flex-none self-stretch border-l border-(--border-primary)"
-              aria-hidden="true"
-            />
-            <ul className="m-0 flex min-w-0 flex-1 list-none flex-col gap-1.5 py-1 pr-0 pl-1.5">
+          <div className="relative flex items-stretch">
+            <ul className="m-0 flex min-w-0 flex-1 list-none flex-col gap-1.5 py-1 pr-0 pl-0">
               {items.map((item) => (
                 <li
                   key={item.id}
@@ -169,7 +165,7 @@ export function WebSearch({
                     </span>
                     <span
                       className={cn(
-                        'inline-flex size-[5px] rounded-full bg-brand transition-[opacity,transform] delay-75 duration-300',
+                        'inline-flex size-[6px] rounded-full bg-brand transition-[opacity,transform] delay-75 duration-300',
                         item.state === 'done'
                           ? 'scale-100 opacity-100'
                           : 'scale-50 opacity-0',
