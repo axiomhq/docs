@@ -61,7 +61,7 @@ export const DocsCodeBlock = forwardRef<HTMLDivElement, DocsCodeBlockProps>(
             {copied ? <CheckIcon className="size-[11px]" /> : <CopyIcon className="size-[11px]" />}
           </Button>
         </div>
-        <div className="docs-code-body relative overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="docs-code-body relative overflow-x-auto py-2 pl-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <pre ref={preRef} className={cn(className, 'm-0! bg-transparent! p-0')} {...preProps}>
             {children}
           </pre>
