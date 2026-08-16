@@ -41,6 +41,31 @@ const METHOD_COLORS: Record<string, string> = {
     "method-delete text-[#f87171] bg-[rgba(239,68,68,.11)] [:root[data-theme=light]_&]:text-[#b91c1c] [:root[data-theme=light]_&]:bg-[rgba(239,68,68,.12)]",
 };
 
+// Specs are inconsistent about response descriptions: some omit them
+// entirely (403/404 on several endpoints) and some carry a literal
+// "(empty)" placeholder — fall back to the HTTP reason phrase.
+const STATUS_TEXT: Record<string, string> = {
+  "200": "OK",
+  "201": "Created",
+  "202": "Accepted",
+  "204": "No Content",
+  "400": "Bad Request",
+  "401": "Unauthorized",
+  "403": "Forbidden",
+  "404": "Not Found",
+  "409": "Conflict",
+  "412": "Precondition Failed",
+  "422": "Unprocessable Entity",
+  "429": "Too Many Requests",
+  "500": "Internal Server Error",
+  "503": "Service Unavailable",
+};
+
+function responseDescription(code: string, description?: string) {
+  if (description && description !== "(empty)") return description;
+  return STATUS_TEXT[code] ?? "";
+}
+
 function PlainMarkdown({
   value,
   codeClassName,
@@ -590,7 +615,7 @@ export async function ApiOperation({
                   {code}
                 </code>
                 <span className="text-(--text-tertiary) text-[12px]">
-                  {response.description}
+                  {responseDescription(code, response.description)}
                 </span>
               </div>
               {response.content && (
