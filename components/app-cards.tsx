@@ -4,7 +4,7 @@ import {
   INTEGRATION_ICONS,
   IntegrationIcon,
 } from "@/components/integration-icons";
-import { docIconStrokeWidth, resolveDocIcon } from "@/lib/doc-icons";
+import { DOC_ICON_STROKE_WIDTH, resolveDocIcon } from "@/lib/doc-icons";
 
 // Extensions/apps catalog cards, styled like the landing quick-cards: brand
 // glyph top-left (INTEGRATION_ICONS, lucide fallback for brands simple-icons
@@ -45,7 +45,7 @@ export function AppCard({
         ) : lucide ? (
           createElement(lucide, {
             size: 20,
-            strokeWidth: docIconStrokeWidth(undefined),
+            strokeWidth: DOC_ICON_STROKE_WIDTH,
             "aria-hidden": true,
           })
         ) : undefined

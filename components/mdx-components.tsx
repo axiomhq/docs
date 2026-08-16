@@ -21,7 +21,7 @@ import {
   Tabs as FumaTabs,
 } from "fumadocs-ui/components/tabs";
 import { ImageZoom } from "fumadocs-ui/components/image-zoom";
-import { docIconStrokeWidth, resolveDocIcon } from "@/lib/doc-icons";
+import { DOC_ICON_STROKE_WIDTH, resolveDocIcon } from "@/lib/doc-icons";
 import { ZoneLink } from "@/components/zone-link";
 import { PlaygroundLink } from "@/components/playground-link";
 import {
@@ -295,9 +295,10 @@ function Field({
   );
 }
 
+// `iconType` (Font Awesome weight) is still accepted from content but no
+// longer varies the stroke — every icon renders at the shared hairline width.
 export function Icon({
   icon,
-  iconType,
 }: {
   icon?: string;
   iconType?: string;
@@ -317,8 +318,8 @@ export function Icon({
 
   return createElement(glyph, {
     className:
-      "doc-icon w-[1.05em] h-[1.05em] my-0 mx-[.1em] inline-block align-[-.16em] flex-none text-(--text-secondary)",
-    strokeWidth: docIconStrokeWidth(iconType),
+      "doc-icon w-[1.05em] h-[1.05em] my-0 mx-[.1em] inline-block align-[-.16em] flex-none text-(--text-primary)",
+    strokeWidth: DOC_ICON_STROKE_WIDTH,
     "aria-hidden": true,
     focusable: "false",
   });

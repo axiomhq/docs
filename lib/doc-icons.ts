@@ -49,9 +49,7 @@ export function resolveDocIcon(icon: string | undefined): LucideIcon | undefined
   return LucideIcons[FA_TO_LUCIDE[icon as DocIconName]] as LucideIcon;
 }
 
-// Lucide ships a single outline weight, so Font Awesome's weights become stroke widths.
-export function docIconStrokeWidth(iconType: string | undefined) {
-  if (iconType === 'solid') return 2.25;
-  if (iconType?.includes('light')) return 1.5;
-  return 1.75;
-}
+// One weight for every icon, whatever Font Awesome weight the content named:
+// at the ~1.05em render size the 24-unit viewBox scales 1.5 down to a ~1px
+// stroke, matching the hairline look of the doc-asset glyphs.
+export const DOC_ICON_STROKE_WIDTH = 1.5;
