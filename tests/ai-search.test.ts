@@ -67,6 +67,7 @@ describe('documentation icon mapping', () => {
     const { readdirSync, readFileSync, statSync } = await import('node:fs');
     const { join } = await import('node:path');
     const { FA_TO_LUCIDE, resolveDocIcon } = await import('@/lib/doc-icons');
+    const { INTEGRATION_ICONS } = await import('@/components/integration-icons');
 
     const files: string[] = [];
     const walk = (dir: string) => {
@@ -80,7 +81,8 @@ describe('documentation icon mapping', () => {
 
     const used = new Set<string>();
     for (const file of files) {
-      for (const match of readFileSync(file, 'utf8').matchAll(/<Icon[^>]*\bicon="([^"]+)"/g)) {
+      // Card icon names resolve through the same map (mdx-components Card).
+      for (const match of readFileSync(file, 'utf8').matchAll(/<(?:Icon|Card)[^>]*\bicon="([^"]+)"/g)) {
         used.add(match[1]);
       }
     }
@@ -88,7 +90,10 @@ describe('documentation icon mapping', () => {
     expect(used.size).toBeGreaterThan(20);
     // A name with no mapping renders nothing at all, silently dropping the glyph the
     // surrounding sentence refers to — so an unmapped name must fail CI, not ship.
-    expect([...used].filter((name) => !resolveDocIcon(name))).toEqual([]);
+    // Brand names (discord, slack) resolve through INTEGRATION_ICONS instead.
+    expect(
+      [...used].filter((name) => !resolveDocIcon(name) && !(name in INTEGRATION_ICONS)),
+    ).toEqual([]);
     // And no mapping should point at a lucide export that does not exist.
     expect(Object.keys(FA_TO_LUCIDE).filter((name) => !resolveDocIcon(name))).toEqual([]);
   });

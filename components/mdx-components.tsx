@@ -4,7 +4,6 @@ import {
   createElement,
   isValidElement,
 } from "react";
-import { cn } from "@/lib/utils";
 import type {
   AnchorHTMLAttributes,
   ComponentProps,
@@ -14,14 +13,13 @@ import type {
 } from "react";
 import type { MDXComponents } from "mdx/types";
 import defaultComponents from "fumadocs-ui/mdx";
-import { Card, Cards } from "fumadocs-ui/components/card";
 import { Step, Steps } from "fumadocs-ui/components/steps";
 import {
   Tab as FumaTab,
   Tabs as FumaTabs,
 } from "fumadocs-ui/components/tabs";
 import { ImageZoom } from "fumadocs-ui/components/image-zoom";
-import { docIconStrokeWidth, resolveDocIcon } from "@/lib/doc-icons";
+import { DOC_ICON_STROKE_WIDTH, resolveDocIcon } from "@/lib/doc-icons";
 import { ZoneLink } from "@/components/zone-link";
 import { PlaygroundLink } from "@/components/playground-link";
 import {
@@ -33,6 +31,11 @@ import { HeadingAnchor } from "./heading-anchor";
 import { LanguageComparisons } from "./language-comparisons";
 import { Mermaid } from "./mermaid";
 import { AppCard, AppCards } from "./app-cards";
+import { IconCard } from "./icon-card";
+import {
+  INTEGRATION_ICONS,
+  IntegrationIcon,
+} from "./integration-icons";
 import { Notice } from "./notice";
 import { Accordion, AccordionGroup } from "./mdx-accordion";
 
@@ -138,13 +141,13 @@ function Frame({
   caption?: ReactNode;
 }) {
   return (
-    <figure className="doc-frame my-6 mx-0 p-0 [&_img]:w-full [&_img]:rounded-md [&_video]:w-full [&_video]:rounded-md">
+    <figure className="doc-frame my-6 mx-0 p-0 [&_img]:w-full [&_img]:rounded-md [&_img]:border [&_img]:border-(--border-primary) [&_video]:w-full [&_video]:rounded-md [&_video]:border [&_video]:border-(--border-primary)">
       {children}
       {caption && (
-        <figcaption className="mt-2 flex items-start gap-1.5 pl-1 text-(--text-quaternary) font-sans text-[12px] leading-[17px]">
+        <figcaption className="mt-2 flex items-start gap-1.5 pl-1 text-(--text-quaternary) font-mono text-[13px]">
           <span
             aria-hidden="true"
-            className="flex-none font-mono leading-[15px]"
+            className="flex-none leading-[18px]"
           >
             └
           </span>
@@ -182,10 +185,46 @@ function QueryLanguageComparisons({
   );
 }
 
-// Restyles fumadocs' Tabs internals. The `!` markers mirror the rules this
-// replaces: fumadocs styles the same properties with data/aria variants.
-// Hover is scoped to :not([aria-selected=true]) because the hover and selected
-// colour rules tie on specificity — unscoped, emit order would decide.
+// Content cards reuse the landing quick-card (IconCard), same as AppCard.
+// The Font Awesome icon names content passes resolve brand marks first, then
+// lucide — a bare string would otherwise render as literal text in the chip.
+function Card({
+  title,
+  icon,
+  href,
+  children,
+}: {
+  title?: ReactNode;
+  icon?: string;
+  href?: string;
+  children?: ReactNode;
+}) {
+  const brand = Boolean(icon && icon in INTEGRATION_ICONS);
+  const glyph = !brand ? resolveDocIcon(icon) : undefined;
+  return (
+    <IconCard
+      className="not-prose"
+      title={title}
+      href={href}
+      description={children}
+      gap="md"
+      icon={
+        brand ? (
+          <IntegrationIcon slug={icon!} size={20} />
+        ) : glyph ? (
+          createElement(glyph, {
+            size: 20,
+            strokeWidth: DOC_ICON_STROKE_WIDTH,
+            "aria-hidden": true,
+          })
+        ) : undefined
+      }
+    />
+  );
+}
+
+// Restyled by the unlayered `.docs-tabs` rules in globals.css: the shell,
+// tab strip, and panel mirror the article code-field chrome.
 function Tabs({ children }: { children: ReactNode }) {
   const tabs = Children.toArray(children).filter(
     isValidElement,
@@ -194,21 +233,7 @@ function Tabs({ children }: { children: ReactNode }) {
     (tab, index) => tab.props.title ?? `Tab ${index + 1}`,
   );
   return (
-    <div
-      className={cn(
-        "docs-tabs my-5 mx-0",
-        "[&>div]:m-0! [&>div]:overflow-hidden [&>div]:border! [&>div]:border-(--border-primary)! [&>div]:rounded-[4px]! [&>div]:bg-(--bg-surface)!",
-        "[&>div>[role='tablist']]:min-h-[38px] [&>div>[role='tablist']]:overflow-x-auto [&>div>[role='tablist']]:py-0! [&>div>[role='tablist']]:px-2.5! [&>div>[role='tablist']]:items-stretch [&>div>[role='tablist']]:gap-0.5! [&>div>[role='tablist']]:border-b [&>div>[role='tablist']]:border-b-(--border-primary) [&>div>[role='tablist']]:bg-(--bg-emph-tertiary) max-sm:[&>div>[role='tablist']]:min-h-11",
-        "[&>div>[role='tablist']>[role='tab']]:relative [&>div>[role='tablist']>[role='tab']]:shrink-0 [&>div>[role='tablist']>[role='tab']]:py-0! [&>div>[role='tablist']>[role='tab']]:px-2! [&>div>[role='tablist']>[role='tab']]:border-0! [&>div>[role='tablist']>[role='tab']]:text-(--text-secondary)! [&>div>[role='tablist']>[role='tab']]:font-mono! [&>div>[role='tablist']>[role='tab']]:text-[11px]! [&>div>[role='tablist']>[role='tab']]:leading-4! [&>div>[role='tablist']>[role='tab']]:font-medium! max-sm:[&>div>[role='tablist']>[role='tab']]:min-h-11",
-        "[&>div>[role='tablist']>[role='tab']:hover:not([aria-selected='true'])]:text-(--text-primary)!",
-        "[&>div>[role='tablist']>[role='tab'][aria-selected='true']]:text-(--text-primary)!",
-        "[&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:absolute [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:right-2 [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:-bottom-px [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:left-2 [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:h-0.5 [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:bg-(--color-accent) [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:content-['']",
-        "[&>div>[role='tabpanel']]:p-3! [&>div>[role='tabpanel']]:rounded-none! [&>div>[role='tabpanel']]:bg-(--bg-surface)! [&>div>[role='tabpanel']]:text-[14px]! [&>div>[role='tabpanel']]:leading-[22px]!",
-        "[&>div>[role='tabpanel']>*]:my-0! [&>div>[role='tabpanel']>*+*]:mt-[10px]!",
-        "[&>div>[role='tabpanel']_:is(figure[data-rehype-pretty-code-figure],figure.shiki)]:rounded-[4px]! [&>div>[role='tabpanel']_:is(figure[data-rehype-pretty-code-figure],figure.shiki)]:shadow-none!",
-        "[&>div>[role='tabpanel']>div.relative.overflow-auto:has(>table)]:mt-[10px]! [&>div>[role='tabpanel']>div.relative.overflow-auto:has(>table)]:mb-0! [&>div>[role='tabpanel']>div.relative.overflow-auto:has(>table)]:rounded-[4px]!",
-      )}
-    >
+    <div className="docs-tabs my-5 mx-0">
       <FumaTabs items={items}>
         {tabs.map((tab, index) =>
           cloneElement(tab, { ...tab.props, value: items[index] }),
@@ -218,18 +243,9 @@ function Tabs({ children }: { children: ReactNode }) {
   );
 }
 
-function containsPlaygroundLink(node: ReactNode): boolean {
-  if (!isValidElement(node)) return false;
-  const props = node.props as { children?: ReactNode; href?: string };
-  if (props.href && isPlaygroundQueryLink(props.href)) return true;
-  return Children.toArray(props.children).some(
-    containsPlaygroundLink,
-  );
-}
-
-// Overlays the "Run in Playground" pill and the copy button on the code block's
-// top-right corner; the copy button sits left of the pill and gets a backdrop
-// so it stays legible over code.
+// Playground pills live inside the code-block header itself — the
+// rehype-playground-code plugin hoists adjacent links onto the pre at
+// compile time — so tabs need no special pairing.
 function Tab({
   children,
   value,
@@ -238,30 +254,7 @@ function Tab({
   title?: string;
   value?: string;
 }) {
-  const content: ReactNode[] = [];
-  Children.toArray(children).forEach((child, index) => {
-    if (containsPlaygroundLink(child) && content.length > 0) {
-      const query = content.pop();
-      content.push(
-        <div
-          className={cn(
-            "query-example relative mt-[11px]",
-            "[&>figure]:m-0!",
-            "[&>p:has(>.playground-link)]:absolute [&>p:has(>.playground-link)]:z-2 [&>p:has(>.playground-link)]:top-[7px] [&>p:has(>.playground-link)]:right-2 [&>p:has(>.playground-link)]:m-0!",
-            "[&_figure>div:has(>button[aria-label='Copy_Text'])]:top-[7px]! [&_figure>div:has(>button[aria-label='Copy_Text'])]:right-[164px]! [&_figure>div:has(>button[aria-label='Copy_Text'])]:size-6",
-            "[&_figure_button[aria-label='Copy_Text']]:size-6 [&_figure_button[aria-label='Copy_Text']]:border [&_figure_button[aria-label='Copy_Text']]:border-(--border-primary) [&_figure_button[aria-label='Copy_Text']]:rounded-[3px] [&_figure_button[aria-label='Copy_Text']]:bg-[color-mix(in_srgb,var(--bg-canvas)_88%,transparent)]",
-          )}
-          key={`query-${index}`}
-        >
-          {query}
-          {child}
-        </div>,
-      );
-      return;
-    }
-    content.push(child);
-  });
-  return <FumaTab value={value}>{content}</FumaTab>;
+  return <FumaTab value={value}>{children}</FumaTab>;
 }
 
 function Field({
@@ -295,9 +288,10 @@ function Field({
   );
 }
 
+// `iconType` (Font Awesome weight) is still accepted from content but no
+// longer varies the stroke — every icon renders at the shared hairline width.
 export function Icon({
   icon,
-  iconType,
 }: {
   icon?: string;
   iconType?: string;
@@ -317,8 +311,8 @@ export function Icon({
 
   return createElement(glyph, {
     className:
-      "doc-icon w-[1.05em] h-[1.05em] my-0 mx-[.1em] inline-block align-[-.16em] flex-none text-(--text-secondary)",
-    strokeWidth: docIconStrokeWidth(iconType),
+      "doc-icon w-[1.05em] h-[1.05em] my-0 mx-[.1em] inline-block align-[-.16em] flex-none text-(--text-primary)",
+    strokeWidth: DOC_ICON_STROKE_WIDTH,
     "aria-hidden": true,
     focusable: "false",
   });
@@ -360,8 +354,8 @@ export const mdxComponents: MDXComponents = {
   Steps,
   Step,
   Card,
-  CardGroup: Cards,
-  Cards,
+  CardGroup: AppCards,
+  Cards: AppCards,
   Frame,
   Icon,
   Info,

@@ -27,6 +27,14 @@ import type {
   NavigationGroup,
   NavigationItem,
 } from "@/lib/navigation";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { AskAiButton } from "./ask-ai-button";
+import { DocsAssistantSidebar } from "./docs-assistant-sidebar";
+import { useDocsSearchController } from "./docs-search-provider";
 import { DocumentationSections, SiteHeader } from "./site-header";
 
 type Section = "documentation" | "query" | "api" | "changelog";
@@ -83,15 +91,6 @@ function containsActive(
     item.children?.some((child) =>
       containsActive(child, activeHref),
     ) ?? false
-  );
-}
-
-function isSyntaxReference(href?: string): boolean {
-  return Boolean(
-    href &&
-    /\/(?:scalar-functions|aggregation-functions|operators)\//.test(
-      href,
-    ),
   );
 }
 
@@ -292,7 +291,6 @@ function NavItem({
   }
 
   const active = item.href === activeHref;
-  const syntaxReference = isSyntaxReference(item.href);
 
   return (
     <Link
@@ -306,20 +304,12 @@ function NavItem({
           "active bg-interactive-selected text-sidebar-accent-foreground!",
         !active &&
           "text-secondary-foreground! [&:hover]:bg-interactive-hover [&:hover]:text-sidebar-accent-foreground!",
-        syntaxReference && "syntax-reference-link",
       )}
       style={depth > 0 ? { paddingLeft: 12 + depth * 20 } : undefined}
       onClick={onNavigate}
     >
       {icon && <SidebarIcon icon={icon} />}
-      <span
-        className={cn(
-          "sidebar-link-label",
-          "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap",
-          syntaxReference &&
-            "font-(family-name:--font-query) tracking-[0]",
-        )}
-      >
+      <span className="sidebar-link-label min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
         {item.title}
       </span>
       {item.method && (
@@ -353,6 +343,7 @@ export function DocsShell({
   const activeSection = sectionOf(activeHref);
   const navigation = navigations[activeSection];
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { assistantOpen } = useDocsSearchController();
   const drawerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -388,7 +379,12 @@ export function DocsShell({
   const closeDrawer = () => setDrawerOpen(false);
 
   return (
-    <div className="docs-app flex h-svh overflow-hidden flex-col bg-background text-foreground">
+    <div
+      className="docs-app flex h-svh overflow-hidden flex-col bg-background text-foreground"
+      // globals.css keys off this to collapse the floating TOC and its grid
+      // rail while the Ask AI sidebar occupies the right edge.
+      data-assistant-open={assistantOpen || undefined}
+    >
       <SiteHeader
         drawerOpen={drawerOpen}
         onMenu={() => setDrawerOpen((open) => !open)}
@@ -466,15 +462,42 @@ export function DocsShell({
             onClick={closeDrawer}
           />
         )}
-        <ScrollArea
-          key={pathname}
-          className="docs-main-scroll min-w-0 flex-1"
-          viewportClassName="docs-scroll-viewport overscroll-contain"
-          scrollbarClassName="opacity-0 transition-opacity duration-150 data-[scrolling]:opacity-100"
+        <ResizablePanelGroup
+          orientation="horizontal"
+          className="docs-main-panels min-h-0 min-w-0 flex-1"
         >
-          <main className="docs-main min-w-0 pb-14">{children}</main>
-        </ScrollArea>
+          {/* The collapsed/mobile flex overrides for these two panels live in
+              globals.css, keyed on the panel ids — the library applies
+              `className` to an inner div, not the sized panel element. */}
+          <ResizablePanel id="docs-main-panel" className="min-w-0">
+            <ScrollArea
+              key={pathname}
+              className="docs-main-scroll h-full min-w-0"
+              viewportClassName="docs-scroll-viewport overscroll-contain"
+              scrollbarClassName="opacity-0 transition-opacity duration-150 data-[scrolling]:opacity-100"
+            >
+              <main className="docs-main min-w-0 pb-14">{children}</main>
+            </ScrollArea>
+          </ResizablePanel>
+          <ResizableHandle
+            className={cn(
+              // The library flags pointer proximity via data-separator (CSS
+              // :hover rarely fires — the panels overlap the 1px line).
+              "bg-border/50 transition-colors data-[separator=hover]:bg-brand/70 data-[separator=active]:bg-brand max-xl:hidden",
+              !assistantOpen && "hidden",
+            )}
+          />
+          <ResizablePanel
+            id="docs-assistant-panel"
+            defaultSize={360}
+            minSize={320}
+            maxSize={440}
+          >
+            <DocsAssistantSidebar />
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
+      <AskAiButton />
     </div>
   );
 }

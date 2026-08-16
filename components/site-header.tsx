@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { withDocsBasePath } from "@/lib/docs-paths";
 import { useTheme } from "next-themes";
-import { Menu, Moon, Search, Sun, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import { Asleep, Awake, Search } from "@carbon/icons-react";
 import {
   ApiIntroductionIcon,
   QueryReferenceIcon,
@@ -192,13 +193,15 @@ export function SiteHeader({
           aria-pressed={mounted ? resolvedTheme === "dark" : undefined}
           onClick={toggleTheme}
         >
-          <Moon
+          <Asleep
             size={14}
+            data-theme-icon="moon"
             className="hidden [html.light_&]:block"
             aria-hidden="true"
           />
-          <Sun
+          <Awake
             size={14}
+            data-theme-icon="sun"
             className="hidden [html.dark_&]:block"
             aria-hidden="true"
           />

@@ -13,7 +13,9 @@ import {
   ApiTagsIcon,
 } from "./api-reference";
 import { ArchitectureIcon } from "./architecture";
+import { CheckIcon } from "./check-icon";
 import { ChevronIcon } from "./chevron";
+import { CopyIcon } from "./copy-icon";
 import { ConsoleIcon } from "./console";
 import { FaqsIcon } from "./faqs";
 import { FeaturesIcon } from "./features";
@@ -39,6 +41,7 @@ import {
 import { ReferenceArchitecturesIcon } from "./reference-architectures";
 import { RoadmapIcon } from "./roadmap";
 import { SecurityIcon } from "./security";
+import { SparkleIcon } from "./sparkle";
 import { SplunkIcon } from "./splunk";
 import { WhatIsAxiomIcon } from "./what-is-axiom";
 
@@ -55,7 +58,9 @@ export {
   ApiSendDataIcon,
   ApiTagsIcon,
   ArchitectureIcon,
+  CheckIcon,
   ChevronIcon,
+  CopyIcon,
   ConsoleIcon,
   FaqsIcon,
   FeaturesIcon,
@@ -79,6 +84,7 @@ export {
   ReferenceArchitecturesIcon,
   RoadmapIcon,
   SecurityIcon,
+  SparkleIcon,
   SplunkIcon,
   WhatIsAxiomIcon,
 };

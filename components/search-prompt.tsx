@@ -12,7 +12,10 @@ export function SearchPrompt() {
     >
       <Search size={16} />
       <span className="flex-1 text-left font-sans text-[15px] leading-5 font-normal">Search the docs — or ask a question…</span>
-      <kbd className="inline-flex h-5 items-center justify-center rounded-sm border border-input bg-secondary px-1.5 align-middle font-mono text-xs leading-none font-medium text-secondary-foreground shadow-none!">⌘K</kbd>
+      <span className="inline-flex items-center gap-1">
+        <kbd className="kbd-cmd">⌘</kbd>
+        <kbd>K</kbd>
+      </span>
     </button>
   );
 }

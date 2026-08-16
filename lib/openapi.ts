@@ -68,7 +68,7 @@ export function getApiOperationSections(value: string): ApiOperationSection[] {
     ...(pathItem.parameters ?? []),
     ...(operation.parameters ?? []),
   ].length;
-  const hasBody = Object.keys(operation.requestBody?.content ?? {}).length > 0;
+  const hasBody = Object.keys(resolveSchema(data.document, operation.requestBody)?.content ?? {}).length > 0;
   const hasResponses = Object.keys(operation.responses ?? {}).length > 0;
 
   return [

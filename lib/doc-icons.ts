@@ -12,24 +12,36 @@ import type { LucideIcon } from 'lucide-react';
 export const FA_TO_LUCIDE = {
   'arrow-down': 'ArrowDown',
   'arrow-up': 'ArrowUp',
+  bell: 'Bell',
   'brackets-curly': 'Braces',
+  brain: 'Brain',
   'calendar-clock': 'CalendarClock',
   'calendar-days': 'CalendarDays',
+  'chart-line': 'ChartLine',
+  // Font Awesome's chart-mixed is bars + a trend line — lucide's combined chart.
+  'chart-mixed': 'ChartNoAxesCombined',
   'chart-scatter': 'ChartScatter',
   'chevron-down': 'ChevronDown',
   clock: 'Clock',
   'clock-rotate-left': 'History',
+  coins: 'Coins',
   diamond: 'Diamond',
   'ellipsis-vertical': 'EllipsisVertical',
+  envelope: 'Mail',
   function: 'SquareFunction',
   gear: 'Settings',
+  globe: 'Globe',
   hexagon: 'Hexagon',
   house: 'House',
+  language: 'Languages',
+  // Magnifier-over-chart; lucide's closest inspect glyph.
+  'magnifying-glass-chart': 'ScanSearch',
   'pen-to-square': 'SquarePen',
   pencil: 'Pencil',
   percent: 'Percent',
   plus: 'Plus',
   scissors: 'Scissors',
+  server: 'Server',
   'sidebar-flip': 'PanelRight',
   // Two tracks with round knobs — lucide Settings2, not SlidersHorizontal (three tracks
   // with rectangular ticks). Checked against the real Font Awesome light asset.
@@ -49,9 +61,7 @@ export function resolveDocIcon(icon: string | undefined): LucideIcon | undefined
   return LucideIcons[FA_TO_LUCIDE[icon as DocIconName]] as LucideIcon;
 }
 
-// Lucide ships a single outline weight, so Font Awesome's weights become stroke widths.
-export function docIconStrokeWidth(iconType: string | undefined) {
-  if (iconType === 'solid') return 2.25;
-  if (iconType?.includes('light')) return 1.5;
-  return 1.75;
-}
+// One weight for every icon, whatever Font Awesome weight the content named:
+// at the ~1.05em render size the 24-unit viewBox scales 1.5 down to a ~1px
+// stroke, matching the hairline look of the doc-asset glyphs.
+export const DOC_ICON_STROKE_WIDTH = 1.5;

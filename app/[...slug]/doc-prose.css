@@ -44,7 +44,8 @@
             table,
             figure,
             hr,
-            .fd-codeblock
+            .fd-codeblock,
+            .docs-code-block
         )
         + :where(
             p,
@@ -54,7 +55,8 @@
             table,
             figure,
             hr,
-            .fd-codeblock
+            .fd-codeblock,
+            .docs-code-block
         ) {
         @apply mt-(--docs-type-flow);
     }
@@ -105,7 +107,7 @@
     }
 
     & a {
-        @apply decoration-(--border-strong) underline-offset-[3px];
+        @apply decoration-(--border-strong) decoration-1 underline-offset-[3px];
     }
     & :where(p, li, td, dd) a:not(.playground-link) {
         @apply text-(--text-primary) underline decoration-[color-mix(in_oklab,var(--text-primary)_30%,transparent)];
@@ -179,5 +181,40 @@
         & :is(th, td) code {
             @apply p-0 border-0 rounded-none bg-transparent text-[length:inherit];
         }
+    }
+
+    /* Inline icons in copy ("click <img/> Settings"): the typography styles'
+       2em vertical image margins otherwise beat the icons' own my-0 utility
+       and shove them out of their line box. -0.15em centres a 1em icon on
+       the text's optical band (align-text-bottom leaves it riding low). */
+    & img.inline-block {
+        @apply my-0 align-[-0.15em];
+    }
+
+    /* Code blocks nested in list items sit outside the root-level flow
+       rules, so they'd otherwise touch the copy around them. */
+    & li .docs-code-block {
+        @apply mt-2 mb-3;
+    }
+    & li .docs-code-block:last-child {
+        @apply mb-0;
+    }
+    /* A block with an attached placeholder form stays flush against it; the
+       form carries the pair's bottom spacing instead. */
+    & li .docs-code-block:has(+ .placeholder-config) {
+        @apply mb-0;
+    }
+    & li .placeholder-config {
+        @apply mb-3;
+    }
+    & li .placeholder-config:last-child {
+        @apply mb-0;
+    }
+
+    /* The typography styles' own kbd treatment (lighter fill, muted text)
+       otherwise beats the global rule; keep article kbds on the shared
+       inline-code-chip look from styles/tokens.css. */
+    & kbd {
+        @apply inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-(--color-fd-border) bg-card px-1.5 align-[-0.16em] font-mono text-xs leading-none font-normal tracking-normal text-(--text-primary) shadow-none;
     }
 }

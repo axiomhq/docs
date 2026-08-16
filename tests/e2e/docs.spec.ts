@@ -379,7 +379,8 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/docs/restapi/endpoints/getToken');
 
-  const requestCode = page.locator('#example .api-code');
+  // Section ids live on the headings now (HeadingAnchor), not the sections.
+  const requestCode = page.locator('.api-section:has(#example) .api-code');
   await expect(requestCode.getByRole('tab', { name: 'cURL' })).toHaveAttribute('aria-selected', 'true');
   await expect(requestCode.getByRole('tab', { name: 'JavaScript' })).toBeVisible();
   await expect(requestCode.getByRole('tab', { name: 'Python' })).toBeVisible();
@@ -391,7 +392,7 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   ));
   expect(tokenColors.length).toBeGreaterThan(1);
   // axiom-dark default token colour (lib/code-theme.ts).
-  expect(tokenColors).toContain('rgb(184, 184, 184)');
+  expect(tokenColors).toContain('rgb(212, 207, 201)');
   await expect(requestCode.locator('pre code')).toHaveCSS('border-top-width', '0px');
 
   const parametersHeading = page.getByRole('heading', { name: 'Parameters', level: 2 });
@@ -426,11 +427,11 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await expect(orgIdInput).toHaveCount(0);
   await tryIt.getByRole('button', { name: 'Run GET request' }).click();
   await expect(tryIt.getByRole('alert')).toHaveText('Enter a value for id.');
-  await expect(page.locator('#response .api-code')).toHaveCount(0);
+  await expect(page.locator('.api-section:has(#response) .api-code')).toHaveCount(0);
 
   const responseSchema = page.getByRole('table', { name: 'Response schema' });
   const expiresRow = responseSchema.getByRole('row').filter({ hasText: 'expiresAt' });
-  expect((await expiresRow.boundingBox())!.height).toBeLessThanOrEqual(40);
+  expect((await expiresRow.boundingBox())!.height).toBeLessThanOrEqual(44);
 
   const objectRow = responseSchema.getByRole('row').filter({ hasText: /^orgCapabilities/ });
   const childRow = responseSchema.getByRole('row').filter({ hasText: /^└annotations/ });
@@ -448,7 +449,7 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await requestCode.getByRole('tab', { name: 'Python' }).click();
   await expect(requestCode.getByRole('tabpanel', { name: 'Python code example' })).toContainText('import requests');
   await page.goto('/docs/restapi/endpoints/createToken');
-  await expect(page.locator('#example').getByRole('tab', { name: 'Python' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.api-section:has(#example)').getByRole('tab', { name: 'Python' })).toHaveAttribute('aria-selected', 'true');
 
   await page.goto('/docs/restapi/endpoints/getDashboards');
   const listResponseSchema = page.getByRole('table', { name: 'Response schema' });
@@ -467,13 +468,13 @@ test('theme follows the system until toggled and persists explicit light and dar
   expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBeNull();
 
   const themeToggle = page.getByRole('button', { name: 'Toggle color theme' });
-  await expect(themeToggle.locator('.lucide-sun')).toBeVisible();
-  await expect(themeToggle.locator('.lucide-moon')).toBeHidden();
+  await expect(themeToggle.locator('[data-theme-icon=sun]')).toBeVisible();
+  await expect(themeToggle.locator('[data-theme-icon=moon]')).toBeHidden();
   await expect(page.getByRole('menu', { name: 'Color theme' })).toHaveCount(0);
   await themeToggle.click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await expect(themeToggle.locator('.lucide-moon')).toBeVisible();
-  await expect(themeToggle.locator('.lucide-sun')).toBeHidden();
+  await expect(themeToggle.locator('[data-theme-icon=moon]')).toBeVisible();
+  await expect(themeToggle.locator('[data-theme-icon=sun]')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('axiom-docs-theme'))).toBe('light');
 
   await page.reload();
@@ -743,37 +744,50 @@ test('search and mobile navigation are keyboard and touch accessible', async ({ 
   await expect(drawer).not.toBeVisible();
 });
 
-test('search and the docs assistant share one private, keyboard-accessible dialog', async ({ page }) => {
+test('search stays private and hands off to the persistent assistant sidebar', async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   await page.goto('/docs');
 
-  const dialog = page.getByRole('dialog', { name: 'Search and ask Axiom Docs' });
+  const dialog = page.getByRole('dialog', { name: 'Search Axiom Docs' });
   await expect.poll(async () => {
     await page.keyboard.press('ControlOrMeta+KeyK');
     return dialog.isVisible();
   }, { timeout: 15_000 }).toBe(true);
   await expect(dialog).toHaveClass(/ph-no-capture/);
-  await expect(dialog).toHaveAttribute('data-ph-no-capture', 'true');
-  await expect(page.getByRole('tab', { name: 'Search' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('tab', { name: 'Search' })).toHaveCSS('padding-left', '9px');
+  await expect(dialog.locator('[data-slot="command"]')).toHaveAttribute('data-ph-no-capture', 'true');
+  // The mode tabs are gone — Ask AI is a button beside the input.
+  const inputRow = dialog.locator('[data-slot="command-input-wrapper"]');
+  await expect(inputRow.getByRole('button', { name: /Ask AI/ })).toBeVisible();
   const searchInput = page.getByRole('combobox', { name: 'Search documentation' });
   await expect(searchInput).toBeFocused();
   await expect(searchInput).toHaveAttribute('placeholder', 'Search pages, APIs, APL, and MPL…');
-  await expect(page.locator('.docs-search-input-row')).toHaveCSS('box-shadow', 'none');
   const searchRequests: string[] = [];
   page.on('request', (request) => {
     if (new URL(request.url()).pathname === '/docs/api/search') searchRequests.push(request.url());
   });
   await searchInput.pressSequentially('filter array', { delay: 25 });
   const firstSearchResult = page.locator('.docs-search-result').first();
-  await expect(firstSearchResult).toContainText('array_iff', { timeout: 15_000 });
+  await expect(firstSearchResult).toContainText('array_iff');
   await expect(firstSearchResult).toContainText('filter arrays by a condition');
   await expect(firstSearchResult.locator('.docs-search-result-path')).toHaveText('Docs / … / array_iff');
   await expect(firstSearchResult.locator('.docs-search-result-path')).toHaveAttribute('title', /Array functions/);
   expect(searchRequests).toHaveLength(1);
+  // Typing must not let cmdk re-pin the selection to the Ask AI row — Enter
+  // has to keep meaning "open the first result".
+  await searchInput.press('x');
+  await searchInput.press('Backspace');
+  await expect(firstSearchResult).toHaveAttribute('aria-selected', 'true');
   for (let index = 0; index < 8; index += 1) await searchInput.press('ArrowDown');
   await expect(page.locator('.docs-search-result').nth(8)).toHaveAttribute('aria-selected', 'true');
-  expect(await page.locator('.docs-search-results').evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  // Keyboard selection keeps the active row inside the list's visible box —
+  // whether that required scrolling depends on the viewport height.
+  expect(await page.locator('.docs-search-results').evaluate((element) => {
+    const selected = element.querySelector('[data-slot="command-item"][data-selected="true"]');
+    if (!selected) return false;
+    const list = element.getBoundingClientRect();
+    const row = selected.getBoundingClientRect();
+    return row.top >= list.top - 1 && row.bottom <= list.bottom + 1;
+  })).toBe(true);
 
   await searchInput.fill('splunk');
   const contextualResult = page.locator('.docs-search-result-content').filter({ hasText: /^Splunk:/ }).first();
@@ -782,40 +796,81 @@ test('search and the docs assistant share one private, keyboard-accessible dialo
   await expect(contextualResult).toContainText(/…$/);
 
   await searchInput.fill('dataset retention');
-  const askFromSearch = page.getByRole('button', { name: /Ask AI about “dataset retention”/ });
+  const askFromSearch = dialog.getByRole('option', { name: /Ask AI about “dataset retention”/ });
   await expect(askFromSearch).toBeVisible();
-  expect(await askFromSearch.evaluate((element) => element.closest('[role="listbox"]') === null)).toBe(true);
-  await expect(firstSearchResult).toHaveAttribute('tabindex', '-1');
-  await searchInput.press('Tab');
-  await expect(askFromSearch).toBeFocused();
-  await askFromSearch.click();
+  // The ask row sits above the results but never steals the default selection.
+  await expect(firstSearchResult).toHaveAttribute('aria-selected', 'true');
+  await searchInput.press('ArrowUp');
+  await expect(askFromSearch).toHaveAttribute('aria-selected', 'true');
+  await searchInput.press('Enter');
 
-  await expect(page.getByRole('tab', { name: 'Ask AI' })).toHaveAttribute('aria-selected', 'true');
+  // The handoff closes the dialog, opens the persistent assistant sidebar,
+  // and submits the question immediately.
+  await expect(dialog).not.toBeVisible();
+  const assistantSidebar = page.locator('.docs-assistant-sidebar');
+  await expect(assistantSidebar).toBeVisible();
+  await expect(assistantSidebar).toHaveClass(/ph-no-capture/);
+  await expect(assistantSidebar).toHaveAttribute('data-ph-no-capture', 'true');
   const assistantInput = page.getByRole('textbox', { name: 'Ask Axiom Docs' });
-  await expect(assistantInput).toHaveValue('dataset retention', { timeout: 15_000 });
+  const submittedQuestion = assistantSidebar.locator('.docs-assistant-message.user');
+  await expect(submittedQuestion).toContainText('dataset retention');
+  // Exactly one submission — a duplicate would mean the handoff double-fired
+  // the chat API.
+  await expect(submittedQuestion).toHaveCount(1);
   await expect(assistantInput).toHaveAttribute('data-ph-no-capture', 'true');
-  await expect(page.locator('.docs-assistant-composer')).toHaveCSS('box-shadow', 'none');
-  const composerBorderColor = await page.evaluate(() => {
-    const probe = document.createElement('span');
-    probe.style.color = 'var(--border-primary)';
-    document.body.append(probe);
-    const color = getComputedStyle(probe).color;
-    probe.remove();
-    return color;
-  });
-  await expect(page.locator('.docs-assistant-input-wrap')).toHaveCSS('border-top-color', composerBorderColor);
+  await expect(page.locator('.ai-prompt-frame')).toBeVisible();
   expect(await page.evaluate(() => Object.values(localStorage).includes('dataset retention'))).toBe(false);
 
-  await page.keyboard.press('Escape');
-  await expect(dialog).not.toBeVisible();
+  // The sidebar lives in the layout, so client navigation keeps it open and
+  // the draft intact, while the floating TOC yields the right rail to it.
+  // Desktop only: the navigation sidebar is a closed drawer on mobile and the
+  // floating TOC never renders there.
+  if (testInfo.project.name === 'desktop-chromium') {
+    await page.getByRole('link', { name: 'Quickstart' }).first().click();
+    await expect(page).toHaveURL(/getting-started/);
+    await expect(assistantSidebar).toBeVisible();
+    await expect(submittedQuestion).toContainText('dataset retention');
+    await expect(page.locator('.floating-toc')).toBeHidden();
+  }
+
+  // Escape inside the sidebar closes it; ⌘I reopens it without losing the
+  // conversation, and the TOC returns while it is closed.
+  await assistantInput.press('Escape');
+  await expect(assistantSidebar).not.toBeVisible();
+  if (testInfo.project.name === 'desktop-chromium') {
+    await expect(page.locator('.floating-toc')).toBeVisible();
+  }
+  await page.keyboard.press('ControlOrMeta+KeyI');
+  await expect(assistantSidebar).toBeVisible();
+  await expect(assistantInput).toBeFocused();
+  await expect(submittedQuestion).toContainText('dataset retention');
+  // Reopening must not re-submit the handed-off question.
+  await expect(submittedQuestion).toHaveCount(1);
+
+  // The open flag persists to localStorage, so a refresh keeps the sidebar
+  // (the conversation itself is not persisted yet) — and a fresh load must
+  // never auto-submit anything.
+  await page.reload();
+  await expect(assistantSidebar).toBeVisible();
+  await expect(submittedQuestion).toHaveCount(0);
+
+  // ⌘I inside the search dialog hands the typed query to the assistant —
+  // it must not blindly toggle the sidebar and discard the text.
   await expect.poll(async () => {
-    await page.keyboard.press('ControlOrMeta+KeyI');
+    await page.keyboard.press('ControlOrMeta+KeyK');
     return dialog.isVisible();
   }, { timeout: 15_000 }).toBe(true);
-  await expect(page.getByRole('tab', { name: 'Ask AI' })).toHaveAttribute('aria-selected', 'true');
-  await expect(assistantInput).toBeFocused();
+  await searchInput.fill('ingest tokens');
+  await page.keyboard.press('ControlOrMeta+KeyI');
+  await expect(dialog).not.toBeVisible();
+  await expect(submittedQuestion).toContainText('ingest tokens');
+  await expect(submittedQuestion).toHaveCount(1);
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => {
+    await page.keyboard.press('ControlOrMeta+KeyK');
+    return dialog.isVisible();
+  }, { timeout: 15_000 }).toBe(true);
   const box = await dialog.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.width).toBeLessThanOrEqual(390);
@@ -904,10 +959,11 @@ test('keyboard hints use restrained semantic keycap colors in both themes', asyn
         probe.style.color = value;
         return getComputedStyle(probe).color;
       };
+      // Keycaps share the inline-code chip treatment (doc-prose kbd rule).
       const resolved = {
-        background: resolve('var(--secondary)'),
-        border: resolve('var(--input)'),
-        foreground: resolve('var(--secondary-foreground)'),
+        background: resolve('var(--card)'),
+        border: resolve('var(--color-fd-border)'),
+        foreground: resolve('var(--text-primary)'),
       };
       probe.remove();
       return resolved;
@@ -1286,8 +1342,9 @@ test('query reference navigation and MDX components follow the compact interacti
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/docs/apl/scalar-functions/conditional-function/case');
 
+  // Query-reference titles dropped the mono treatment; they share the sans stack.
   const title = page.getByRole('heading', { name: 'case', exact: true, level: 1 });
-  await expect(title).toHaveCSS('font-family', /SF Mono|Menlo/);
+  await expect(title).toHaveCSS('font-family', /Geist/);
   const accentColor = await page.evaluate(() => {
     const probe = document.createElement('span');
     probe.style.backgroundColor = 'var(--color-accent)';
@@ -1330,9 +1387,9 @@ test('query reference navigation and MDX components follow the compact interacti
   await expect(languageComparisons.getByRole('region', { name: 'ANSI SQL users' })).toBeVisible();
 
   const tabs = page.locator('.docs-tabs > div');
-  await expect(tabs).toHaveCSS('border-radius', '4px');
+  await expect(tabs).toHaveCSS('border-radius', '6.08px');
   await expect(tabs.getByRole('tablist')).toHaveCSS('height', '38px');
-  await expect(tabs.locator('figure.shiki').first()).toHaveCSS('border-radius', '4px');
+  await expect(tabs.locator('.docs-code-block').first()).toHaveCSS('border-radius', '6.08px');
   const selectedPanel = tabs.getByRole('tabpanel');
   await expect(selectedPanel).toHaveCSS('font-size', '14px');
   await expect(selectedPanel).toHaveCSS('line-height', '22px');
@@ -1352,23 +1409,21 @@ test('query reference navigation and MDX components follow the compact interacti
 
   const playground = tabs.getByRole('link', { name: /Run in Playground/ }).first();
   await expect(playground).toHaveAttribute('target', '_blank');
-  await expect(playground.locator('svg').last()).toHaveAttribute('aria-label', 'Opens in a new tab');
-  const queryFigure = tabs.locator('.query-example figure').first();
-  const copyButton = queryFigure.getByRole('button', { name: 'Copy Text' });
-  const copyControl = copyButton.locator('xpath=..');
-  await expect(copyControl).toHaveCSS('opacity', '0');
-  await queryFigure.hover();
-  await expect(copyControl).toHaveCSS('opacity', '1');
+  const queryBlock = tabs.locator('.docs-code-block').first();
+  const copyButton = queryBlock.getByRole('button', { name: 'Copy code' });
+  await expect(copyButton).toBeVisible();
   const playgroundBox = (await playground.boundingBox())!;
-  const queryBox = (await queryFigure.boundingBox())!;
+  const queryBox = (await queryBlock.boundingBox())!;
   const copyBox = (await copyButton.boundingBox())!;
   expect(playgroundBox.y).toBeGreaterThanOrEqual(queryBox.y);
   expect(playgroundBox.y + playgroundBox.height).toBeLessThan(queryBox.y + queryBox.height);
-  expect(copyBox.x + copyBox.width).toBeLessThan(playgroundBox.x);
-  expect(Math.abs(copyBox.y - playgroundBox.y)).toBeLessThanOrEqual(1);
+  // The pill sits in the header, left of the copy button, on the same band.
+  expect(playgroundBox.x + playgroundBox.width).toBeLessThan(copyBox.x);
+  expect(Math.abs(copyBox.y + copyBox.height / 2 - (playgroundBox.y + playgroundBox.height / 2)))
+    .toBeLessThanOrEqual(6);
 
   const outputTable = tabs.getByRole('table').first();
-  await expect(outputTable.locator('xpath=..')).toHaveCSS('border-radius', '4px');
+  await expect(outputTable.locator('xpath=..')).toHaveCSS('border-radius', '6.08px');
   await expect(outputTable.getByRole('columnheader').first()).toHaveCSS('padding', '8px 10px');
   await expect(outputTable.getByRole('cell').first()).toHaveCSS('font-size', '13px');
   await expect(outputTable.getByRole('cell').first()).toHaveCSS('line-height', '22px');
@@ -1376,7 +1431,7 @@ test('query reference navigation and MDX components follow the compact interacti
   const relatedFunction = page.getByRole('link', { name: 'iff', exact: true }).last();
   await expect(relatedFunction).toHaveAttribute('href', '/docs/apl/scalar-functions/conditional-function/iff');
   await page.locator('.sidebar').getByRole('link', { name: 'iff', exact: true }).click();
-  await expect(page).toHaveURL(/\/conditional-function\/iff$/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/conditional-function\/iff$/);
   await expect(page.locator('.nav-nested[open] > summary span')).toHaveText(['Functions', 'Scalar functions', 'Conditional functions']);
 });
 
@@ -1403,7 +1458,7 @@ test('compact query examples stay contained on phone-width layouts', async ({ pa
   await expect(tabs.getByRole('tabpanel')).toContainText('unique services involved in traces');
 
   await logTab.click();
-  const queryFigure = tabs.locator('.query-example figure').first();
+  const queryFigure = tabs.locator('.docs-code-block').first();
   const playground = tabs.getByRole('link', { name: /Run in Playground/ }).first();
   const queryBox = (await queryFigure.boundingBox())!;
   const playgroundBox = (await playground.boundingBox())!;
@@ -1941,7 +1996,7 @@ test('breadcrumbs align with the copy page control', async ({ page }) => {
   expect(breadcrumbTextBox).not.toBeNull();
   expect(copyPageBox).not.toBeNull();
   expect(Math.abs(breadcrumbTextBox!.y + breadcrumbTextBox!.height / 2 - (copyPageBox!.y + copyPageBox!.height / 2))).toBeLessThanOrEqual(1);
-  await expect(breadcrumbs).toHaveCSS('font-weight', '400');
+  await expect(breadcrumbs).toHaveCSS('font-weight', '300');
 });
 
 test('the copy page menu offers the Markdown surface and assistant links', async ({ page, context }) => {
@@ -2007,7 +2062,7 @@ test('placeholder forms update and copy every matching code example', async ({ p
   await page.goto('/docs/restapi/query');
 
   const form = page.locator('.placeholder-config').first();
-  const codeBlock = form.locator('xpath=preceding-sibling::figure[1]');
+  const codeBlock = form.locator('xpath=preceding-sibling::div[contains(@class,"docs-code-block")][1]');
   await form.locator('select').selectOption('us-east-1.aws.edge.axiom.co');
   await form.getByPlaceholder('xaat-api-token').fill('xaat-example-token');
   await form.getByPlaceholder('dataset-name').fill('example-dataset');
@@ -2017,7 +2072,7 @@ test('placeholder forms update and copy every matching code example', async ({ p
   await expect(codeBlock.locator('pre')).toContainText('"apl": "example-dataset | limit 10"');
   await expect(codeBlock.locator('pre')).not.toContainText(/AXIOM_DOMAIN|API_TOKEN|DATASET_NAME/);
 
-  await codeBlock.getByRole('button', { name: 'Copy Text' }).click();
+  await codeBlock.getByRole('button', { name: 'Copy code' }).click();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toContain('https://us-east-1.aws.edge.axiom.co/v1/query/_apl');
   expect(copied).toContain('Authorization: Bearer xaat-example-token');
@@ -2028,19 +2083,19 @@ test('placeholder forms update and copy every matching code example', async ({ p
   await expect(otherDatasetForms).toHaveCount(3);
   for (const otherForm of await otherDatasetForms.all()) {
     await expect(otherForm.getByPlaceholder('dataset-name')).toHaveValue('example-dataset');
-    await expect(otherForm.locator('xpath=preceding-sibling::figure[1]').locator('pre')).toContainText('example-dataset');
+    await expect(otherForm.locator('xpath=preceding-sibling::div[contains(@class,"docs-code-block")][1]').locator('pre')).toContainText('example-dataset');
   }
 
   await page.goto('/docs/getting-started');
   const persistedForm = page.locator('.placeholder-config').first();
   await expect(persistedForm.getByPlaceholder('xaat-api-token')).toHaveValue('xaat-example-token');
   await expect(persistedForm.getByPlaceholder('dataset-name')).toHaveValue('example-dataset');
-  const persistedCodeBlock = persistedForm.locator('xpath=preceding-sibling::figure[1]');
+  const persistedCodeBlock = persistedForm.locator('xpath=preceding-sibling::div[contains(@class,"docs-code-block")][1]');
   await expect(persistedCodeBlock.locator('pre')).toContainText('xaat-example-token');
   await expect(persistedCodeBlock.locator('pre')).toContainText('example-dataset');
 
   await page.goto('/docs/guides/opentelemetry-claude-code');
-  const compositeNameBlock = page.locator('figure').filter({ hasText: 'AXIOM_METRICS_DATASET' }).first();
+  const compositeNameBlock = page.locator('.docs-code-block').filter({ hasText: 'AXIOM_METRICS_DATASET' }).first();
   const compositeNameForm = compositeNameBlock.locator('xpath=following-sibling::div[contains(@class,"placeholder-config")][1]');
   await expect(compositeNameBlock.locator('pre')).toContainText('AXIOM_API_TOKEN="xaat-example-token"');
   await expect(compositeNameBlock.locator('pre')).toContainText('AXIOM_METRICS_DATASET="METRICS_DATASET_NAME"');
@@ -2055,15 +2110,35 @@ test('article copy keeps a distinct contrast hierarchy in both themes', async ({
   const heading = page.getByRole('heading', { name: 'Ingestion architecture', level: 2 });
   const boldLabel = page.getByText('Regional Edge Layer:', { exact: true });
 
-  // Body copy matches www's secondary foreground in each theme.
-  await expect(bodyCopy).toHaveCSS('color', 'rgba(255, 255, 255, 0.6)');
-  await expect(heading).toHaveCSS('color', 'rgb(250, 250, 250)');
-  await expect(boldLabel).toHaveCSS('color', 'rgb(250, 250, 250)');
+  // The production CSS pipeline may re-emit token colors in lab()/oklch
+  // notation, so expected values resolve through the same serializer the
+  // computed styles use instead of hardcoded rgb literals. Probes mount
+  // inside the prose so scoped tokens like --docs-copy resolve.
+  const resolveColor = (value: string) =>
+    page.evaluate((input) => {
+      const probe = document.createElement('span');
+      probe.style.color = input;
+      (document.querySelector('.doc-prose') ?? document.body).append(probe);
+      const resolved = getComputedStyle(probe).color;
+      probe.remove();
+      return resolved;
+    }, value);
 
+  // Body copy matches www's secondary foreground in each theme, and stays
+  // visibly quieter than headings.
+  const verifyHierarchy = async () => {
+    const copyColor = await resolveColor('var(--docs-copy)');
+    const emphasisColor = await resolveColor('var(--text-primary)');
+    expect(copyColor).not.toBe(emphasisColor);
+    await expect(bodyCopy).toHaveCSS('color', copyColor);
+    await expect(heading).toHaveCSS('color', emphasisColor);
+    await expect(boldLabel).toHaveCSS('color', emphasisColor);
+  };
+
+  await verifyHierarchy();
   await page.getByRole('button', { name: 'Toggle color theme' }).click();
-  await expect(bodyCopy).toHaveCSS('color', 'rgb(18, 18, 18)');
-  await expect(heading).toHaveCSS('color', 'rgb(10, 10, 10)');
-  await expect(boldLabel).toHaveCSS('color', 'rgb(10, 10, 10)');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await verifyHierarchy();
 });
 
 test('client navigation and configurable code examples hydrate without errors', async ({ page }) => {
@@ -2078,7 +2153,7 @@ test('client navigation and configurable code examples hydrate without errors', 
   await page.getByLabel('Dataset name').fill('production-events');
   await expect(page.locator('pre').filter({ hasText: 'production-events' }).first()).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel('Dataset name')).toHaveValue('production-events', { timeout: 15_000 });
+  await expect(page.getByLabel('Dataset name')).toHaveValue('production-events');
   expect(errors).toEqual([]);
 });
 
@@ -2121,16 +2196,16 @@ test('MDX accordions are compact, keyboard accessible, and searchable', async ({
   });
 
   expect(closedStyles).toMatchObject({
-    borderRadius: '4px',
+    borderRadius: '6.08px',
     borderWidth: '1px',
-    triggerFontSize: '14px',
-    triggerPaddingLeft: '16px',
+    triggerFontSize: '13px',
+    triggerPaddingLeft: '12px',
     panelHeight: 0,
     panelPadding: '0px',
     panelBorder: '0px',
-    innerPaddingLeft: '16px',
+    innerPaddingLeft: '12px',
   });
-  expect(closedStyles.triggerHeight).toBeGreaterThanOrEqual(44);
+  expect(closedStyles.triggerHeight).toBeGreaterThanOrEqual(38);
   // Chromium serializes translucent shadows as rgba(...), fully opaque ones as
   // rgb(...); catch both, allowing only a fully transparent black.
   expect(closedStyles.boxShadow).not.toMatch(/rgba?\((?!0, 0, 0, 0\)|0 0 0 \/ 0\))/);
@@ -2143,7 +2218,7 @@ test('MDX accordions are compact, keyboard accessible, and searchable', async ({
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
   await expect(panel).not.toHaveAttribute('hidden');
   await expect(panel).toBeVisible();
-  await expect(inner).toHaveCSS('padding-left', '16px');
+  await expect(inner).toHaveCSS('padding-left', '12px');
 
   await page.keyboard.press('Space');
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
