@@ -63,12 +63,16 @@ type DocsSearchContextValue = {
   closeAssistant: () => void;
   assistantDraft: string;
   setAssistantDraft: (value: string) => void;
+  /** One-shot question handed off with openAssistant — the panel submits it
+      immediately instead of leaving it sitting in the input. */
+  pendingQuestion: string;
+  clearPendingQuestion: () => void;
 };
 
 const DocsSearchContext = createContext<DocsSearchContextValue | null>(null);
 
 const LazyDocsSearchDialog = dynamic(
-  () => import('@/components/docs-search').then((module) => module.DocsSearchDialog),
+  () => import('@/components/ui/cmdk/docs-search-command').then((module) => module.DocsSearchDialog),
   { ssr: false },
 );
 
@@ -80,6 +84,7 @@ export function DocsSearchProvider({ children }: { children: ReactNode }) {
     () => false,
   );
   const [assistantDraft, setAssistantDraft] = useState('');
+  const [pendingQuestion, setPendingQuestion] = useState('');
 
   const openSearch = useCallback((entryPoint: SearchEntryPoint = 'header') => {
     captureDocsEvent('docs_search_opened', { entry_point: entryPoint });
@@ -87,17 +92,23 @@ export function DocsSearchProvider({ children }: { children: ReactNode }) {
   }, []);
   // The assistant lives in a persistent sidebar, so opening it must not reset
   // conversation state; an empty draft leaves whatever the user already typed.
+  // A non-empty draft is a question the user already committed to (search
+  // handoffs), so it queues for immediate submission.
   const openAssistant = useCallback((
     draft = '',
     entryPoint: AssistantEntryPoint = 'hero',
   ) => {
     captureDocsEvent('docs_ai_opened', { entry_point: entryPoint });
-    if (draft) setAssistantDraft(draft);
+    if (draft) {
+      setAssistantDraft(draft);
+      setPendingQuestion(draft);
+    }
     setOpen(false);
     writeAssistantOpen(true);
   }, []);
   const close = useCallback(() => setOpen(false), []);
   const closeAssistant = useCallback(() => writeAssistantOpen(false), []);
+  const clearPendingQuestion = useCallback(() => setPendingQuestion(''), []);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -127,8 +138,10 @@ export function DocsSearchProvider({ children }: { children: ReactNode }) {
       closeAssistant,
       assistantDraft,
       setAssistantDraft,
+      pendingQuestion,
+      clearPendingQuestion,
     }),
-    [assistantDraft, assistantOpen, close, closeAssistant, open, openAssistant, openSearch],
+    [assistantDraft, assistantOpen, clearPendingQuestion, close, closeAssistant, open, openAssistant, openSearch, pendingQuestion],
   );
 
   return (

@@ -29,6 +29,8 @@ export function DocsAssistantSidebar() {
     assistantDraft,
     setAssistantDraft,
     openSearch,
+    pendingQuestion,
+    clearPendingQuestion,
   } = useDocsSearchController();
   const router = useRouter();
   // Filled in by the assistant panel once it loads; clears the conversation.
@@ -112,6 +114,8 @@ export function DocsAssistantSidebar() {
         open={assistantOpen}
         draft={assistantDraft}
         clearRef={clearConversationRef}
+        pendingQuestion={pendingQuestion}
+        onPendingQuestionConsumed={clearPendingQuestion}
         onDraftChange={setAssistantDraft}
         onUseSearch={() => openSearch('assistant_handoff')}
       />

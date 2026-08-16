@@ -45,6 +45,10 @@ type DocsAssistantPanelProps = {
   /** Receives the clear-conversation action so the sidebar header (which
       renders outside this lazy chunk) can trigger it. */
   clearRef?: RefObject<(() => void) | null>;
+  /** Question handed off from search — submitted on arrival, not just typed
+      into the input. */
+  pendingQuestion?: string;
+  onPendingQuestionConsumed?: () => void;
   onDraftChange: (value: string) => void;
   onUseSearch: () => void;
 };
@@ -85,6 +89,8 @@ export function DocsAssistantPanel({
   open,
   draft,
   clearRef,
+  pendingQuestion,
+  onPendingQuestionConsumed,
   onDraftChange,
   onUseSearch,
 }: DocsAssistantPanelProps) {
@@ -165,6 +171,22 @@ export function DocsAssistantPanel({
     }
     void chat.stop();
   };
+
+  // Search handoffs submit right away. The ref latches per question so strict
+  // double-invocation can't send twice; if an answer is mid-stream the text
+  // stays in the input (the draft already carries it) instead of queueing.
+  const consumedQuestion = useRef('');
+  useEffect(() => {
+    if (!pendingQuestion) {
+      consumedQuestion.current = '';
+      return;
+    }
+    if (!open || consumedQuestion.current === pendingQuestion) return;
+    consumedQuestion.current = pendingQuestion;
+    if (!isBusy) submit(pendingQuestion);
+    onPendingQuestionConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, pendingQuestion]);
 
   return (
     <section
