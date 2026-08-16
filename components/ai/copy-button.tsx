@@ -1,8 +1,8 @@
 "use client";
 
 import { CheckIcon, CopyIcon } from "@/assets/icons";
+import { useCopy } from "@/components/ai/use-copy";
 import { Button } from "@/components/ui/button";
-import { useClipboard } from "@mantine/hooks";
 import { cn } from "@/lib/utils";
 
 const CopyButton = ({
@@ -14,7 +14,7 @@ const CopyButton = ({
   withBlurBg?: boolean;
   className?: string;
 }) => {
-  const { copied, copy } = useClipboard({ timeout: 1000 });
+  const { copied, copy } = useCopy();
 
   return (
     <Button

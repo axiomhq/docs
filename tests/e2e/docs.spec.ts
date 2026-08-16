@@ -1374,7 +1374,7 @@ test('query reference navigation and MDX components follow the compact interacti
   const playground = tabs.getByRole('link', { name: /Run in Playground/ }).first();
   await expect(playground).toHaveAttribute('target', '_blank');
   await expect(playground.locator('svg').last()).toHaveAttribute('aria-label', 'Opens in a new tab');
-  const queryBlock = tabs.locator('.query-example .docs-code-block').first();
+  const queryBlock = tabs.locator('.docs-code-block').first();
   const copyButton = queryBlock.getByRole('button', { name: 'Copy code' });
   await expect(copyButton).toBeVisible();
   const playgroundBox = (await playground.boundingBox())!;
@@ -1382,8 +1382,8 @@ test('query reference navigation and MDX components follow the compact interacti
   const copyBox = (await copyButton.boundingBox())!;
   expect(playgroundBox.y).toBeGreaterThanOrEqual(queryBox.y);
   expect(playgroundBox.y + playgroundBox.height).toBeLessThan(queryBox.y + queryBox.height);
-  expect(copyBox.x + copyBox.width).toBeLessThan(playgroundBox.x);
-  // Both sit on the block's header band.
+  // The pill sits in the header, left of the copy button, on the same band.
+  expect(playgroundBox.x + playgroundBox.width).toBeLessThan(copyBox.x);
   expect(Math.abs(copyBox.y + copyBox.height / 2 - (playgroundBox.y + playgroundBox.height / 2)))
     .toBeLessThanOrEqual(6);
 
@@ -1423,7 +1423,7 @@ test('compact query examples stay contained on phone-width layouts', async ({ pa
   await expect(tabs.getByRole('tabpanel')).toContainText('unique services involved in traces');
 
   await logTab.click();
-  const queryFigure = tabs.locator('.query-example .docs-code-block').first();
+  const queryFigure = tabs.locator('.docs-code-block').first();
   const playground = tabs.getByRole('link', { name: /Run in Playground/ }).first();
   const queryBox = (await queryFigure.boundingBox())!;
   const playgroundBox = (await playground.boundingBox())!;

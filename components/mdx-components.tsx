@@ -218,18 +218,9 @@ function Tabs({ children }: { children: ReactNode }) {
   );
 }
 
-function containsPlaygroundLink(node: ReactNode): boolean {
-  if (!isValidElement(node)) return false;
-  const props = node.props as { children?: ReactNode; href?: string };
-  if (props.href && isPlaygroundQueryLink(props.href)) return true;
-  return Children.toArray(props.children).some(
-    containsPlaygroundLink,
-  );
-}
-
-// Overlays the "Run in Playground" pill and the copy button on the code block's
-// top-right corner; the copy button sits left of the pill and gets a backdrop
-// so it stays legible over code.
+// Playground pills live inside the code-block header itself — the
+// rehype-playground-code plugin hoists adjacent links onto the pre at
+// compile time — so tabs need no special pairing.
 function Tab({
   children,
   value,
@@ -238,31 +229,7 @@ function Tab({
   title?: string;
   value?: string;
 }) {
-  const content: ReactNode[] = [];
-  Children.toArray(children).forEach((child, index) => {
-    if (containsPlaygroundLink(child) && content.length > 0) {
-      const query = content.pop();
-      content.push(
-        <div
-          className={cn(
-            "query-example relative mt-[11px]",
-            "[&>figure]:m-0!",
-            "[&>p:has(>.playground-link)]:absolute [&>p:has(>.playground-link)]:z-2 [&>p:has(>.playground-link)]:top-[7px] [&>p:has(>.playground-link)]:right-2 [&>p:has(>.playground-link)]:m-0!",
-            // The pill overlays the code-block header's right side; push the
-            // header copy button out from under it.
-            "[&_[data-code-copy]]:mr-[158px]",
-          )}
-          key={`query-${index}`}
-        >
-          {query}
-          {child}
-        </div>,
-      );
-      return;
-    }
-    content.push(child);
-  });
-  return <FumaTab value={value}>{content}</FumaTab>;
+  return <FumaTab value={value}>{children}</FumaTab>;
 }
 
 function Field({
