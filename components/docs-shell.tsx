@@ -27,6 +27,7 @@ import type {
   NavigationGroup,
   NavigationItem,
 } from "@/lib/navigation";
+import { AskAiButton } from "./ask-ai-button";
 import { DocumentationSections, SiteHeader } from "./site-header";
 
 type Section = "documentation" | "query" | "api" | "changelog";
@@ -475,6 +476,7 @@ export function DocsShell({
           <main className="docs-main min-w-0 pb-14">{children}</main>
         </ScrollArea>
       </div>
+      <AskAiButton />
     </div>
   );
 }

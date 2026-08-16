@@ -39,6 +39,7 @@ import {
 import { ReferenceArchitecturesIcon } from "./reference-architectures";
 import { RoadmapIcon } from "./roadmap";
 import { SecurityIcon } from "./security";
+import { SparkleIcon } from "./sparkle";
 import { SplunkIcon } from "./splunk";
 import { WhatIsAxiomIcon } from "./what-is-axiom";
 
@@ -79,6 +80,7 @@ export {
   ReferenceArchitecturesIcon,
   RoadmapIcon,
   SecurityIcon,
+  SparkleIcon,
   SplunkIcon,
   WhatIsAxiomIcon,
 };

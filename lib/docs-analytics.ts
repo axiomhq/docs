@@ -4,6 +4,7 @@ import posthog from 'posthog-js';
 
 export type SearchEntryPoint = 'header' | 'hero' | 'shortcut' | 'mode_tab';
 export type AssistantEntryPoint =
+  | 'floating'
   | 'hero'
   | 'shortcut'
   | 'mode_tab'
