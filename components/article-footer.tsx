@@ -78,7 +78,7 @@ export function ArticleFooter({
                 <ArrowLeft size={11} aria-hidden="true" className={cn('flex-none transition-transform duration-150 ease-[ease]', '[.article-previous:hover_&]:-translate-x-0.5')} />
                 Previous
               </small>
-              <strong className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-(--text-secondary) font-sans text-[15px] leading-[21px] font-[550] tracking-[-.008em] transition-colors duration-150 ease-[ease] [.article-pagination_a:hover_&]:text-(--text-primary)">{previous.title}</strong>
+              <strong className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-(--text-secondary) font-sans text-[15px] leading-[21px] font-medium tracking-[-.008em] transition-colors duration-150 ease-[ease] [.article-pagination_a:hover_&]:text-(--text-primary)">{previous.title}</strong>
             </Link>
           )}
           {next && (
@@ -87,7 +87,7 @@ export function ArticleFooter({
                 Next
                 <ArrowRight size={11} aria-hidden="true" className={cn('flex-none transition-transform duration-150 ease-[ease]', '[.article-next:hover_&]:translate-x-0.5')} />
               </small>
-              <strong className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-(--text-secondary) font-sans text-[15px] leading-[21px] font-[550] tracking-[-.008em] transition-colors duration-150 ease-[ease] [.article-pagination_a:hover_&]:text-(--text-primary)">{next.title}</strong>
+              <strong className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-(--text-secondary) font-sans text-[15px] leading-[21px] font-medium tracking-[-.008em] transition-colors duration-150 ease-[ease] [.article-pagination_a:hover_&]:text-(--text-primary)">{next.title}</strong>
             </Link>
           )}
         </nav>
