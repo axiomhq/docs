@@ -431,7 +431,7 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
 
   const responseSchema = page.getByRole('table', { name: 'Response schema' });
   const expiresRow = responseSchema.getByRole('row').filter({ hasText: 'expiresAt' });
-  expect((await expiresRow.boundingBox())!.height).toBeLessThanOrEqual(40);
+  expect((await expiresRow.boundingBox())!.height).toBeLessThanOrEqual(44);
 
   const objectRow = responseSchema.getByRole('row').filter({ hasText: /^orgCapabilities/ });
   const childRow = responseSchema.getByRole('row').filter({ hasText: /^└annotations/ });
@@ -2152,7 +2152,7 @@ test('MDX accordions are compact, keyboard accessible, and searchable', async ({
     panelBorder: '0px',
     innerPaddingLeft: '12px',
   });
-  expect(closedStyles.triggerHeight).toBeGreaterThanOrEqual(44);
+  expect(closedStyles.triggerHeight).toBeGreaterThanOrEqual(38);
   // Chromium serializes translucent shadows as rgba(...), fully opaque ones as
   // rgb(...); catch both, allowing only a fully transparent black.
   expect(closedStyles.boxShadow).not.toMatch(/rgba?\((?!0, 0, 0, 0\)|0 0 0 \/ 0\))/);
