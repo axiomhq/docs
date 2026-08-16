@@ -32,7 +32,7 @@ export const DocsCodeBlock = forwardRef<HTMLDivElement, DocsCodeBlockProps>(
     return (
       <div
         ref={ref}
-        className="docs-code-block group my-0 overflow-hidden rounded-md border border-(--border-primary) bg-(--bg-surface) [&:has(+.placeholder-config)]:rounded-b-none"
+        className="docs-code-block not-fumadocs-codeblock group my-0 overflow-hidden rounded-md border border-(--border-primary) bg-(--bg-surface) [&:has(+.placeholder-config)]:rounded-b-none"
       >
         <div className="flex h-8 items-center gap-[7px] border-b-[0.5px] border-(--border-primary) pr-1.5 pl-3 font-mono text-[11px] leading-none font-[450] text-(--text-primary)">
           {Icon ? (
