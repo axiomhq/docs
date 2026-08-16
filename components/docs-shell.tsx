@@ -94,15 +94,6 @@ function containsActive(
   );
 }
 
-function isSyntaxReference(href?: string): boolean {
-  return Boolean(
-    href &&
-    /\/(?:scalar-functions|aggregation-functions|operators)\//.test(
-      href,
-    ),
-  );
-}
-
 function SidebarIcon({
   icon,
   className,
@@ -300,7 +291,6 @@ function NavItem({
   }
 
   const active = item.href === activeHref;
-  const syntaxReference = isSyntaxReference(item.href);
 
   return (
     <Link
@@ -314,20 +304,12 @@ function NavItem({
           "active bg-interactive-selected text-sidebar-accent-foreground!",
         !active &&
           "text-secondary-foreground! [&:hover]:bg-interactive-hover [&:hover]:text-sidebar-accent-foreground!",
-        syntaxReference && "syntax-reference-link",
       )}
       style={depth > 0 ? { paddingLeft: 12 + depth * 20 } : undefined}
       onClick={onNavigate}
     >
       {icon && <SidebarIcon icon={icon} />}
-      <span
-        className={cn(
-          "sidebar-link-label",
-          "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap",
-          syntaxReference &&
-            "font-(family-name:--font-query) tracking-[0]",
-        )}
-      >
+      <span className="sidebar-link-label min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
         {item.title}
       </span>
       {item.method && (

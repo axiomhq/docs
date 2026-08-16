@@ -54,10 +54,6 @@ export default async function DocumentationPage({
   // first two ancestor groups — never the page itself, whose title sits directly
   // below — so deep sections can't produce long trails.
   const visibleBreadcrumbs = breadcrumbs.slice(0, -1).slice(0, 2);
-  const querySyntaxTitle =
-    section === "query" &&
-    slug?.at(-1) !== "overview" &&
-    slug?.some((segment) => /(?:function|operator)s?$/.test(segment));
   const Body = page.data.body;
   const tocItems: TocItem[] = page.data.openapi
     ? getApiOperationSections(page.data.openapi)
@@ -104,12 +100,11 @@ export default async function DocumentationPage({
               // of the viewport midpoint.
               hasToc &&
                 "xl:col-start-2 xl:row-start-1 xl:translate-x-2",
-              querySyntaxTitle && "query-syntax-article",
             )}
           >
             <div className="doc-topline mt-0 mx-0 mb-5 flex items-start justify-between gap-x-4 gap-y-2">
               <nav
-                className="doc-breadcrumbs m-0 min-h-[30px] flex flex-wrap items-center gap-x-2 gap-y-1 text-secondary-foreground! font-mono text-[12px] leading-4 font-normal max-sm:min-h-0"
+                className="doc-breadcrumbs m-0 min-h-[30px] flex flex-wrap items-center gap-x-2 gap-y-1 text-secondary-foreground! font-mono text-[12px] leading-4 font-light max-sm:min-h-0"
                 aria-label="Breadcrumb"
               >
                 {visibleBreadcrumbs.map((item, index) => {
@@ -134,7 +129,7 @@ export default async function DocumentationPage({
                       {!last && (
                         <b
                           aria-hidden="true"
-                          className="text-(--border-strong) font-normal"
+                          className="text-(--border-strong) font-light"
                         >
                           /
                         </b>
@@ -147,13 +142,7 @@ export default async function DocumentationPage({
                 <CopyPageMenu markdownPath={`${href}.md`} />
               )}
             </div>
-            <DocsTitle
-              className={
-                querySyntaxTitle
-                  ? "query-syntax-title m-0 font-(family-name:--font-query) text-[32px] leading-10 font-semibold tracking-normal text-foreground text-balance [font-variant-ligatures:none]"
-                  : "m-0 font-sans text-[34px] leading-[42px] font-semibold tracking-[-.03em] text-foreground text-balance"
-              }
-            >
+            <DocsTitle className="m-0 font-sans text-[34px] leading-[42px] font-semibold tracking-[-.03em] text-foreground text-balance">
               {page.data.title}
             </DocsTitle>
             <DocsDescription className="mt-1.5 mx-0 mb-[34px] max-w-[640px] font-sans text-[16px] leading-7 font-normal tracking-[-.006em] text-secondary-foreground text-pretty">
