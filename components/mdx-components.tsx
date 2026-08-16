@@ -4,7 +4,6 @@ import {
   createElement,
   isValidElement,
 } from "react";
-import { cn } from "@/lib/utils";
 import type {
   AnchorHTMLAttributes,
   ComponentProps,
@@ -182,10 +181,8 @@ function QueryLanguageComparisons({
   );
 }
 
-// Restyles fumadocs' Tabs internals. The `!` markers mirror the rules this
-// replaces: fumadocs styles the same properties with data/aria variants.
-// Hover is scoped to :not([aria-selected=true]) because the hover and selected
-// colour rules tie on specificity — unscoped, emit order would decide.
+// Restyled by the unlayered `.docs-tabs` rules in globals.css: the shell,
+// tab strip, and panel mirror the article code-field chrome.
 function Tabs({ children }: { children: ReactNode }) {
   const tabs = Children.toArray(children).filter(
     isValidElement,
@@ -194,21 +191,7 @@ function Tabs({ children }: { children: ReactNode }) {
     (tab, index) => tab.props.title ?? `Tab ${index + 1}`,
   );
   return (
-    <div
-      className={cn(
-        "docs-tabs my-5 mx-0",
-        "[&>div]:m-0! [&>div]:overflow-hidden [&>div]:border! [&>div]:border-(--border-primary)! [&>div]:rounded-[4px]! [&>div]:bg-(--bg-surface)!",
-        "[&>div>[role='tablist']]:min-h-[38px] [&>div>[role='tablist']]:overflow-x-auto [&>div>[role='tablist']]:py-0! [&>div>[role='tablist']]:px-2.5! [&>div>[role='tablist']]:items-stretch [&>div>[role='tablist']]:gap-0.5! [&>div>[role='tablist']]:border-b [&>div>[role='tablist']]:border-b-(--border-primary) [&>div>[role='tablist']]:bg-(--bg-emph-tertiary) max-sm:[&>div>[role='tablist']]:min-h-11",
-        "[&>div>[role='tablist']>[role='tab']]:relative [&>div>[role='tablist']>[role='tab']]:shrink-0 [&>div>[role='tablist']>[role='tab']]:py-0! [&>div>[role='tablist']>[role='tab']]:px-2! [&>div>[role='tablist']>[role='tab']]:border-0! [&>div>[role='tablist']>[role='tab']]:text-(--text-secondary)! [&>div>[role='tablist']>[role='tab']]:font-mono! [&>div>[role='tablist']>[role='tab']]:text-[11px]! [&>div>[role='tablist']>[role='tab']]:leading-4! [&>div>[role='tablist']>[role='tab']]:font-medium! max-sm:[&>div>[role='tablist']>[role='tab']]:min-h-11",
-        "[&>div>[role='tablist']>[role='tab']:hover:not([aria-selected='true'])]:text-(--text-primary)!",
-        "[&>div>[role='tablist']>[role='tab'][aria-selected='true']]:text-(--text-primary)!",
-        "[&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:absolute [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:right-2 [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:-bottom-px [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:left-2 [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:h-0.5 [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:bg-(--color-accent) [&>div>[role='tablist']>[role='tab'][aria-selected='true']]:after:content-['']",
-        "[&>div>[role='tabpanel']]:p-3! [&>div>[role='tabpanel']]:rounded-none! [&>div>[role='tabpanel']]:bg-(--bg-surface)! [&>div>[role='tabpanel']]:text-[14px]! [&>div>[role='tabpanel']]:leading-[22px]!",
-        "[&>div>[role='tabpanel']>*]:my-0! [&>div>[role='tabpanel']>*+*]:mt-[10px]!",
-        "[&>div>[role='tabpanel']_:is(figure[data-rehype-pretty-code-figure],figure.shiki)]:rounded-[4px]! [&>div>[role='tabpanel']_:is(figure[data-rehype-pretty-code-figure],figure.shiki)]:shadow-none!",
-        "[&>div>[role='tabpanel']>div.relative.overflow-auto:has(>table)]:mt-[10px]! [&>div>[role='tabpanel']>div.relative.overflow-auto:has(>table)]:mb-0! [&>div>[role='tabpanel']>div.relative.overflow-auto:has(>table)]:rounded-[4px]!",
-      )}
-    >
+    <div className="docs-tabs my-5 mx-0">
       <FumaTabs items={items}>
         {tabs.map((tab, index) =>
           cloneElement(tab, { ...tab.props, value: items[index] }),

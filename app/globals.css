@@ -157,7 +157,7 @@
     --sidebar-accent-foreground: var(--text-primary);
     --sidebar-connector: color-mix(
         in srgb,
-        var(--border-strong) 45%,
+        var(--border-strong) 30%,
         var(--background)
     );
     --sidebar-ring: var(--brand);
@@ -670,6 +670,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
+    text-transform: capitalize;
 }
 
 .docs-ai-markdown [data-streamdown="code-block-header"] > span::before {
@@ -763,9 +764,15 @@
 /* Compact number column: streamdown defaults to a 24px column + 16px gap. */
 .docs-ai-markdown [data-streamdown="code-block-body"] code > span::before {
     width: 18px;
-    margin-right: 10px;
+    margin-right: 13px;
     font-size: 11px;
     color: var(--text-tertiary);
+}
+
+/* Scroll containers swallow their right padding for overflowing content, so
+   the breathing room at the end of long lines lives on the lines. */
+.docs-ai-markdown [data-streamdown="code-block-body"] code > span {
+    padding-right: 12px;
 }
 
 /* Assistant markdown tables: the docs-site table treatment (doc-prose.css),
@@ -890,7 +897,7 @@
     content: counter(line);
     display: inline-block;
     width: 18px;
-    margin-right: 10px;
+    margin-right: 13px;
     font-size: 11px;
     color: var(--text-tertiary);
     text-align: right;
@@ -909,6 +916,115 @@
     left: 33px;
     width: 0.5px;
     background: var(--border-primary);
+}
+
+/* Article tabs (components/mdx-components.tsx Tabs): the code-field chrome —
+   a rounded-md shell on --bg-surface with a 32px hairline strip of mono
+   labels, active tab underlined in the accent. Unlayered so these outrank
+   fumadocs' utility classes without per-property `!` markers. */
+.docs-tabs > div {
+    margin: 0;
+    overflow: clip;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+}
+
+.docs-tabs [role="tablist"] {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    height: 38px;
+    padding: 0 12px;
+    border-bottom: 0.5px solid var(--border-primary);
+    background: transparent;
+    overflow-y: hidden;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.docs-tabs [role="tablist"]::-webkit-scrollbar {
+    display: none;
+}
+
+.docs-tabs [role="tab"] {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    margin: 0;
+    padding: 0 8px;
+    border: 0;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.12s ease;
+}
+
+.docs-tabs [role="tab"]:hover,
+.docs-tabs [role="tab"][aria-selected="true"] {
+    color: var(--text-primary);
+}
+
+.docs-tabs [role="tab"]:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+    border-radius: 4px;
+}
+
+.docs-tabs [role="tab"][aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    bottom: -0.5px;
+    left: 8px;
+    height: 1.5px;
+    background: var(--color-accent);
+}
+
+.docs-tabs [role="tabpanel"] {
+    padding: 12px;
+    border-radius: 0;
+    background: var(--bg-surface);
+    font-size: 14px;
+    line-height: 22px;
+    outline: none;
+}
+
+/* Full margin reset (not just block) so fumadocs' figure:only-child -m-4
+   bleed can't push media past the panel edges. */
+.docs-tabs [role="tabpanel"] > * {
+    margin: 0;
+}
+
+.docs-tabs [role="tabpanel"] > * + * {
+    margin-top: 10px;
+}
+
+/* The doc-prose table-container rule carries `!`, so these two need it too. */
+.docs-tabs [role="tabpanel"] > div.relative.overflow-auto:has(> table) {
+    margin: 0 !important;
+}
+
+.docs-tabs [role="tabpanel"] > * + div.relative.overflow-auto:has(> table) {
+    margin-top: 10px !important;
+}
+
+/* Labels stay 11px; the strip grows to a comfortable touch target. */
+@media (max-width: 639px) {
+    .docs-tabs [role="tablist"] {
+        height: auto;
+        min-height: 44px;
+    }
+
+    .docs-tabs [role="tab"] {
+        min-height: 44px;
+    }
 }
 
 /* Assistant conversation scrollbar: the message scroller must own its native

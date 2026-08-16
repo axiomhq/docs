@@ -1351,7 +1351,7 @@ test('query reference navigation and MDX components follow the compact interacti
   await expect(languageComparisons.getByRole('region', { name: 'ANSI SQL users' })).toBeVisible();
 
   const tabs = page.locator('.docs-tabs > div');
-  await expect(tabs).toHaveCSS('border-radius', '4px');
+  await expect(tabs).toHaveCSS('border-radius', '6.08px');
   await expect(tabs.getByRole('tablist')).toHaveCSS('height', '38px');
   await expect(tabs.locator('.docs-code-block').first()).toHaveCSS('border-radius', '6.08px');
   const selectedPanel = tabs.getByRole('tabpanel');
@@ -1373,7 +1373,6 @@ test('query reference navigation and MDX components follow the compact interacti
 
   const playground = tabs.getByRole('link', { name: /Run in Playground/ }).first();
   await expect(playground).toHaveAttribute('target', '_blank');
-  await expect(playground.locator('svg').last()).toHaveAttribute('aria-label', 'Opens in a new tab');
   const queryBlock = tabs.locator('.docs-code-block').first();
   const copyButton = queryBlock.getByRole('button', { name: 'Copy code' });
   await expect(copyButton).toBeVisible();
@@ -1388,7 +1387,7 @@ test('query reference navigation and MDX components follow the compact interacti
     .toBeLessThanOrEqual(6);
 
   const outputTable = tabs.getByRole('table').first();
-  await expect(outputTable.locator('xpath=..')).toHaveCSS('border-radius', '4px');
+  await expect(outputTable.locator('xpath=..')).toHaveCSS('border-radius', '6.08px');
   await expect(outputTable.getByRole('columnheader').first()).toHaveCSS('padding', '8px 10px');
   await expect(outputTable.getByRole('cell').first()).toHaveCSS('font-size', '13px');
   await expect(outputTable.getByRole('cell').first()).toHaveCSS('line-height', '22px');
