@@ -168,7 +168,8 @@ export function DocsAssistantPanel({
 
   return (
     <section
-      id="docs-assistant-panel"
+      // No id here: #docs-assistant-panel belongs to the resizable panel
+      // wrapper, whose collapse rules in globals.css must not hit this section.
       aria-label="AI assistant"
       className="docs-assistant-panel min-h-0 flex-1 grid grid-rows-[minmax(0,1fr)_auto] bg-(--bg-canvas)"
     >
