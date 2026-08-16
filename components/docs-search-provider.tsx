@@ -49,8 +49,17 @@ function writeAssistantOpen(value: boolean) {
 
 function subscribeAssistantOpen(listener: () => void) {
   assistantOpenListeners.add(listener);
+  // The snapshot reads localStorage, so the subscription must cover writes
+  // from other tabs too — otherwise a re-render in this tab silently adopts
+  // the other tab's state without a store notification (and closes the
+  // sidebar mid-typing).
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === ASSISTANT_OPEN_KEY) listener();
+  };
+  window.addEventListener('storage', onStorage);
   return () => {
     assistantOpenListeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
   };
 }
 
@@ -67,6 +76,9 @@ type DocsSearchContextValue = {
       immediately instead of leaving it sitting in the input. */
   pendingQuestion: string;
   clearPendingQuestion: () => void;
+  /** True only for user-initiated opens — a sidebar restored from
+      localStorage on page load must not steal keyboard focus. */
+  assistantAutoFocus: boolean;
 };
 
 const DocsSearchContext = createContext<DocsSearchContextValue | null>(null);
@@ -85,6 +97,7 @@ export function DocsSearchProvider({ children }: { children: ReactNode }) {
   );
   const [assistantDraft, setAssistantDraft] = useState('');
   const [pendingQuestion, setPendingQuestion] = useState('');
+  const [assistantAutoFocus, setAssistantAutoFocus] = useState(false);
 
   const openSearch = useCallback((entryPoint: SearchEntryPoint = 'header') => {
     captureDocsEvent('docs_search_opened', { entry_point: entryPoint });
@@ -103,11 +116,21 @@ export function DocsSearchProvider({ children }: { children: ReactNode }) {
       setAssistantDraft(draft);
       setPendingQuestion(draft);
     }
+    setAssistantAutoFocus(true);
     setOpen(false);
     writeAssistantOpen(true);
   }, []);
   const close = useCallback(() => setOpen(false), []);
-  const closeAssistant = useCallback(() => writeAssistantOpen(false), []);
+  const closeAssistant = useCallback(() => {
+    // Hiding the aside would otherwise blur focus to <body>; hand it back to
+    // the floating trigger — but only when focus was actually inside.
+    const hadFocus = document.activeElement?.closest('.docs-assistant-sidebar');
+    setAssistantAutoFocus(false);
+    writeAssistantOpen(false);
+    if (hadFocus) {
+      window.setTimeout(() => document.getElementById('ask-ai-button')?.focus(), 0);
+    }
+  }, []);
   const clearPendingQuestion = useCallback(() => setPendingQuestion(''), []);
 
   useEffect(() => {
@@ -140,8 +163,9 @@ export function DocsSearchProvider({ children }: { children: ReactNode }) {
       setAssistantDraft,
       pendingQuestion,
       clearPendingQuestion,
+      assistantAutoFocus,
     }),
-    [assistantDraft, assistantOpen, clearPendingQuestion, close, closeAssistant, open, openAssistant, openSearch, pendingQuestion],
+    [assistantAutoFocus, assistantDraft, assistantOpen, clearPendingQuestion, close, closeAssistant, open, openAssistant, openSearch, pendingQuestion],
   );
 
   return (

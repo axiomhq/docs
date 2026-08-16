@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  useEffect,
   useRef,
   useState,
 } from 'react';
@@ -31,6 +32,7 @@ export function DocsAssistantSidebar() {
     openSearch,
     pendingQuestion,
     clearPendingQuestion,
+    assistantAutoFocus,
   } = useDocsSearchController();
   const router = useRouter();
   // Filled in by the assistant panel once it loads; clears the conversation.
@@ -39,6 +41,24 @@ export function DocsAssistantSidebar() {
   // survives close/reopen.
   const [everOpened, setEverOpened] = useState(false);
   if (assistantOpen && !everOpened) setEverOpened(true);
+
+  // Below sm the aside covers the whole viewport; the article behind must
+  // leave the tab order and accessibility tree while it is up.
+  useEffect(() => {
+    if (!assistantOpen) return;
+    const media = window.matchMedia('(width < 40rem)');
+    const main = document.getElementById('docs-main-panel');
+    const apply = () => {
+      if (media.matches) main?.setAttribute('inert', '');
+      else main?.removeAttribute('inert');
+    };
+    apply();
+    media.addEventListener('change', apply);
+    return () => {
+      media.removeEventListener('change', apply);
+      main?.removeAttribute('inert');
+    };
+  }, [assistantOpen]);
 
   if (!assistantOpen && !everOpened) return null;
 
@@ -62,6 +82,9 @@ export function DocsAssistantSidebar() {
     if (!href?.startsWith('/docs')) return;
     event.preventDefault();
     router.push(withoutDocsBasePath(href));
+    // Below sm the overlay covers the article — following a citation without
+    // closing would navigate invisibly behind it.
+    if (window.matchMedia('(width < 40rem)').matches) closeAssistant();
   };
   const handleEscape = (event: ReactKeyboardEvent<HTMLElement>) => {
     if (event.key !== 'Escape') return;
@@ -112,6 +135,7 @@ export function DocsAssistantSidebar() {
       </header>
       <DocsAssistantPanel
         open={assistantOpen}
+        autoFocus={assistantAutoFocus}
         draft={assistantDraft}
         clearRef={clearConversationRef}
         pendingQuestion={pendingQuestion}

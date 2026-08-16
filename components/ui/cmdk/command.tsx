@@ -50,7 +50,7 @@ function CommandDialog({
         <DialogPrimitive.Popup
           data-slot="command-dialog"
           className={cn(
-            'fixed top-[18%] left-1/2 z-50 flex max-h-[min(560px,calc(100dvh-64px))] w-[min(640px,calc(100vw-32px))] -translate-x-1/2 flex-col overflow-hidden rounded-md border border-(--border-primary) bg-(--bg-overlay) text-(--text-primary) shadow-[0_16px_48px_rgba(0,0,0,.36)] outline-none duration-100 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[.98] data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[.98] max-sm:top-1.5 max-sm:h-[calc(100dvh-12px)] max-sm:max-h-none max-sm:w-[calc(100vw-12px)]',
+            'fixed top-[18%] left-1/2 z-50 flex max-h-[min(560px,calc(82dvh-32px))] w-[min(640px,calc(100vw-32px))] -translate-x-1/2 flex-col overflow-hidden rounded-md border border-(--border-primary) bg-(--bg-overlay) text-(--text-primary) shadow-[0_16px_48px_rgba(0,0,0,.36)] outline-none duration-100 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[.98] data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[.98] max-sm:top-1.5 max-sm:h-[calc(100dvh-12px)] max-sm:max-h-none max-sm:w-[calc(100vw-12px)]',
             className,
           )}
         >

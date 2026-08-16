@@ -59,14 +59,20 @@ export function DocsSearchDialog() {
   // cmdk fires the same onSelect for clicks and Enter; a pointerdown latch
   // keeps the analytics input_method distinction the old dialog reported.
   const pointerSelect = useRef(false);
-  const results = Array.isArray(query.data) ? query.data : [];
+  // A failed request must not leave the previous query's rows standing as
+  // the answer to the new one.
+  const hasError = Boolean(query.error);
+  const results = !hasError && Array.isArray(query.data) ? query.data : [];
   const hasQuery = Boolean(search.trim());
+  // fumadocs keeps data === 'empty' until the first request resolves; a real
+  // zero-hit response is an actual empty array.
+  const searched = Array.isArray(query.data);
 
   // Keep Enter meaning "open the first result": the Ask AI row sits above the
   // results but must not steal the default selection when results land.
   useEffect(() => {
     setValue(results[0] ? `result:${results[0].id}` : hasQuery ? ASK_VALUE : `suggested:${SUGGESTED_PAGES[0].href}`);
-  }, [hasQuery, query.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasQuery, query.data, query.error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (query.isLoading) {
@@ -78,10 +84,10 @@ export function DocsSearchDialog() {
     searchWasLoading.current = false;
     captureDocsEvent('docs_search_completed', {
       duration_bucket: durationBucket(analyticsTimestamp() - searchStartedAt.current),
-      outcome: results.length > 0 ? 'results' : 'empty',
+      outcome: hasError ? 'error' : results.length > 0 ? 'results' : 'empty',
       result_count: results.length,
     });
-  }, [query.data, query.isLoading, results.length, search]);
+  }, [hasError, query.data, query.isLoading, results.length, search]);
 
   const inputMethod = () => {
     const method = pointerSelect.current ? 'pointer' : 'keyboard';
@@ -107,6 +113,23 @@ export function DocsSearchDialog() {
     });
     openAssistant(draft, entryPoint);
   };
+
+  // The dialog advertises ⌘I on its own controls, so it must claim the chord
+  // before the provider's global listener — which would otherwise toggle the
+  // sidebar and throw the typed query away.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.key.toLowerCase() !== 'i' && event.code !== 'KeyI') return;
+      event.preventDefault();
+      event.stopPropagation();
+      handoff('search_footer', search.trim());
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, search, results.length]);
 
   return (
     <CommandDialog
@@ -145,7 +168,7 @@ export function DocsSearchDialog() {
             <button
               type="button"
               className="inline-flex flex-none cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-sans text-[11px] leading-4 font-medium text-(--text-tertiary) transition-[color] duration-(--duration-1) ease-(--ease-out) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent) active:text-(--color-accent)"
-              onClick={() => openAssistant(search.trim(), 'mode_tab')}
+              onClick={() => handoff('search_footer', search.trim())}
             >
               Ask AI
               <span className="inline-flex items-center gap-1">
@@ -155,19 +178,13 @@ export function DocsSearchDialog() {
             </button>
           }
         />
-        <CommandList className="docs-search-results" aria-busy={query.isLoading}>
-          {hasQuery && (
-            <CommandItem
-              value={ASK_VALUE}
-              className="docs-search-ask-row mb-1.5 justify-between gap-3 border border-(--border-primary) bg-(--bg-inert) font-medium data-[selected=true]:border-(--border-strong)"
-              onSelect={() => handoff('search_handoff', search.trim())}
-            >
-              <span className="inline-flex min-w-0 items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
-                <BookOpen size={15} /> Ask AI about “{search.trim()}”
-              </span>
-              <ArrowUpRight size={14} />
-            </CommandItem>
-          )}
+        <CommandList
+          // The sizer becomes a flex column so the Ask AI row can sit last in
+          // DOM (cmdk's auto-select then lands on the first result) while
+          // rendering visually on top via order-first.
+          className="docs-search-results [&_[cmdk-list-sizer]]:flex [&_[cmdk-list-sizer]]:flex-col"
+          aria-busy={query.isLoading}
+        >
           {!hasQuery && (
             <CommandGroup heading="Suggested">
               {SUGGESTED_PAGES.map(({ title, section, href, Icon }) => (
@@ -195,11 +212,14 @@ export function DocsSearchDialog() {
               ))}
             </CommandGroup>
           )}
-          {hasQuery && query.isLoading && results.length === 0 && (
+          {hasQuery && !hasError && results.length === 0 && (query.isLoading || !searched) && (
             <div className="docs-search-status px-3 py-[38px] text-center font-mono text-[12px] leading-[18px] font-[450] text-(--text-tertiary)" role="status">Searching documentation…</div>
           )}
-          {hasQuery && !query.isLoading && results.length === 0 && query.data === 'empty' && (
+          {hasQuery && !hasError && !query.isLoading && results.length === 0 && searched && (
             <div className="docs-search-status px-3 py-[38px] text-center font-mono text-[12px] leading-[18px] font-[450] text-(--text-tertiary)" role="status">No matching documentation found.</div>
+          )}
+          {hasQuery && hasError && (
+            <div className="docs-search-status px-3 py-[38px] text-center font-mono text-[12px] leading-[18px] font-[450] text-(--text-tertiary)" role="status">Search is unavailable right now. Try again, or ask AI instead.</div>
           )}
           {results.map((result, index) => (
             <CommandItem
@@ -214,6 +234,20 @@ export function DocsSearchDialog() {
               </span>
             </CommandItem>
           ))}
+          {hasQuery && (
+            <CommandItem
+              value={ASK_VALUE}
+              // DOM-last so cmdk's first-item auto-selection lands on the top
+              // result; order-first keeps it visually above the list.
+              className="docs-search-ask-row order-first mb-1.5 justify-between gap-3 border border-(--border-primary) bg-(--bg-inert) font-medium data-[selected=true]:border-(--border-strong)"
+              onSelect={() => handoff('search_handoff', search.trim())}
+            >
+              <span className="inline-flex min-w-0 items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                <BookOpen size={15} /> Ask AI about “{search.trim()}”
+              </span>
+              <ArrowUpRight size={14} />
+            </CommandItem>
+          )}
         </CommandList>
         <footer className="docs-search-footer flex min-h-[34px] flex-none items-center gap-[14px] border-t border-(--border-primary) bg-(--bg-surface) px-3 py-1.5 font-mono text-[10px] leading-[14px] font-[450] text-(--text-tertiary) max-sm:hidden">
           <span className="inline-flex items-center gap-1"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>

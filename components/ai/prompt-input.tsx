@@ -51,6 +51,9 @@ export function AiPromptInput({
   }, [value]);
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    // The Enter that commits an IME candidate must never submit — CJK users
+    // could otherwise not compose a question without firing a request.
+    if (event.nativeEvent.isComposing) return;
     if (event.key !== 'Enter' || event.shiftKey) return;
     event.preventDefault();
     if (canSend) onSubmit(value);

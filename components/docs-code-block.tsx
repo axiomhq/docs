@@ -112,7 +112,7 @@ export const DocsCodeBlock = forwardRef<HTMLDivElement, DocsCodeBlockProps>(
             aria-label={copied ? 'Copied' : 'Copy code'}
             // Copies the rendered text so placeholder substitutions
             // (AXIOM_DOMAIN → the reader's value) come along.
-            onClick={() => copy(preRef.current?.innerText ?? '')}
+            onClick={() => void copy(preRef.current?.innerText ?? '')}
           >
             {copied ? <CheckIcon className="size-[11px]" /> : <CopyIcon className="size-[11px]" />}
           </Button>

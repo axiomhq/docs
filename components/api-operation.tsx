@@ -310,7 +310,9 @@ function requestSamples(
     `    '${upperMethod}',`,
     `    '${requestUrl}',`,
     `    headers={'Authorization': 'Bearer API_TOKEN'${bodyType ? `, 'Content-Type': '${bodyType}'` : ""}},`,
-    ...(json ? [`    json=json.loads('''${json}'''),`] : []),
+    // Raw string: a plain triple-quote would collapse JSON's \" escapes
+    // before json.loads parses them.
+    ...(json ? [`    json=json.loads(r'''${json}'''),`] : []),
     `)`,
     `response.raise_for_status()`,
     `data = response.json()`,
@@ -403,7 +405,10 @@ export async function ApiOperation({
     ...(pathItem.parameters ?? []),
     ...(operation.parameters ?? []),
   ].map((item: JsonObject) => resolveSchema(document, item) ?? item);
-  const bodyContent = operation.requestBody?.content as
+  // Several v2 operations reference their body via $ref — read it through
+  // the resolver like every other spec read, or those pages document no body.
+  const requestBody = resolveSchema(document, operation.requestBody);
+  const bodyContent = requestBody?.content as
     | Record<string, JsonObject>
     | undefined;
   const bodyType = bodyContent
@@ -545,7 +550,7 @@ export async function ApiOperation({
             <PlainMarkdown
               value={
                 resolveSchema(document, bodySchema)?.description ??
-                operation.requestBody?.description
+                requestBody?.description
               }
               codeClassName="py-px px-1 border border-(--border-secondary) rounded-[3px] bg-(--bg-inert) font-mono"
             />

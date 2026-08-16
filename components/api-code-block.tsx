@@ -97,8 +97,9 @@ export function ApiCodeBlock({ samples, label }: { samples: ApiCodeSample[]; lab
           data-code-copy
           className="ml-auto h-6 w-6 rounded text-(--text-tertiary) active:scale-90 hover:text-(--text-primary) dark:hover:bg-[#232323]!"
           aria-label={copied ? 'Copied' : 'Copy code'}
-          onClick={() => {
-            copy(selected.code);
+          onClick={async () => {
+            // Only report copies that actually reached the clipboard.
+            if (!(await copy(selected.code))) return;
             captureDocsEvent('docs_code_copied', {
               code_kind: 'api_sample',
               language: selected.id,

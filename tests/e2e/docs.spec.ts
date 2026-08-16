@@ -772,6 +772,11 @@ test('search stays private and hands off to the persistent assistant sidebar', a
   await expect(firstSearchResult.locator('.docs-search-result-path')).toHaveText('Docs / … / array_iff');
   await expect(firstSearchResult.locator('.docs-search-result-path')).toHaveAttribute('title', /Array functions/);
   expect(searchRequests).toHaveLength(1);
+  // Typing must not let cmdk re-pin the selection to the Ask AI row — Enter
+  // has to keep meaning "open the first result".
+  await searchInput.press('x');
+  await searchInput.press('Backspace');
+  await expect(firstSearchResult).toHaveAttribute('aria-selected', 'true');
   for (let index = 0; index < 8; index += 1) await searchInput.press('ArrowDown');
   await expect(page.locator('.docs-search-result').nth(8)).toHaveAttribute('aria-selected', 'true');
   expect(await page.locator('.docs-search-results').evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
@@ -801,6 +806,9 @@ test('search stays private and hands off to the persistent assistant sidebar', a
   const assistantInput = page.getByRole('textbox', { name: 'Ask Axiom Docs' });
   const submittedQuestion = assistantSidebar.locator('.docs-assistant-message.user');
   await expect(submittedQuestion).toContainText('dataset retention', { timeout: 15_000 });
+  // Exactly one submission — a duplicate would mean the handoff double-fired
+  // the chat API.
+  await expect(submittedQuestion).toHaveCount(1);
   await expect(assistantInput).toHaveAttribute('data-ph-no-capture', 'true');
   await expect(page.locator('.ai-prompt-frame')).toBeVisible();
   expect(await page.evaluate(() => Object.values(localStorage).includes('dataset retention'))).toBe(false);
@@ -828,11 +836,27 @@ test('search stays private and hands off to the persistent assistant sidebar', a
   await expect(assistantSidebar).toBeVisible();
   await expect(assistantInput).toBeFocused();
   await expect(submittedQuestion).toContainText('dataset retention');
+  // Reopening must not re-submit the handed-off question.
+  await expect(submittedQuestion).toHaveCount(1);
 
   // The open flag persists to localStorage, so a refresh keeps the sidebar
-  // (the conversation itself is not persisted yet).
+  // (the conversation itself is not persisted yet) — and a fresh load must
+  // never auto-submit anything.
   await page.reload();
   await expect(assistantSidebar).toBeVisible();
+  await expect(submittedQuestion).toHaveCount(0);
+
+  // ⌘I inside the search dialog hands the typed query to the assistant —
+  // it must not blindly toggle the sidebar and discard the text.
+  await expect.poll(async () => {
+    await page.keyboard.press('ControlOrMeta+KeyK');
+    return dialog.isVisible();
+  }, { timeout: 15_000 }).toBe(true);
+  await searchInput.fill('ingest tokens');
+  await page.keyboard.press('ControlOrMeta+KeyI');
+  await expect(dialog).not.toBeVisible();
+  await expect(submittedQuestion).toContainText('ingest tokens', { timeout: 15_000 });
+  await expect(submittedQuestion).toHaveCount(1);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(async () => {

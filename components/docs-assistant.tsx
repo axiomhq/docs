@@ -41,6 +41,9 @@ type AssistantSource = {
 
 type DocsAssistantPanelProps = {
   open: boolean;
+  /** Focus the input only on user-initiated opens — never when the sidebar
+      is merely restored from localStorage on page load. */
+  autoFocus?: boolean;
   draft: string;
   /** Receives the clear-conversation action so the sidebar header (which
       renders outside this lazy chunk) can trigger it. */
@@ -87,6 +90,7 @@ const chatTransport = new DefaultChatTransport<UIMessage>({
 
 export function DocsAssistantPanel({
   open,
+  autoFocus = true,
   draft,
   clearRef,
   pendingQuestion,
@@ -95,23 +99,29 @@ export function DocsAssistantPanel({
   onUseSearch,
 }: DocsAssistantPanelProps) {
   const chat = useChat<UIMessage>({ id: 'axiom-docs-assistant', transport: chatTransport });
+  const requestStartedAt = useRef<number | null>(null);
 
   useEffect(() => {
     if (!clearRef) return;
-    clearRef.current = () => chat.setMessages([]);
+    // Abort before emptying: a live stream would otherwise push its answer
+    // back into the cleared thread and leave the composer locked busy.
+    clearRef.current = () => {
+      void chat.stop();
+      requestStartedAt.current = null;
+      chat.setMessages([]);
+    };
     return () => {
       clearRef.current = null;
     };
   }, [chat, clearRef]);
-  const requestStartedAt = useRef<number | null>(null);
   const isBusy = chat.status === 'submitted' || chat.status === 'streaming';
   const messages = chat.messages.filter((message) => message.role !== 'system');
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !autoFocus) return;
     const timeout = window.setTimeout(() => document.getElementById('docs-assistant-input')?.focus(), 0);
     return () => window.clearTimeout(timeout);
-  }, [open]);
+  }, [autoFocus, open]);
   useEffect(() => {
     const startedAt = requestStartedAt.current;
     if (startedAt === null) return;

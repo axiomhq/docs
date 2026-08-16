@@ -19,6 +19,8 @@ export function AskAiButton() {
   return (
     <Button
       type="button"
+      // Focus lands back here when the sidebar closes while holding focus.
+      id="ask-ai-button"
       variant="outline"
       className="ask-ai-button fixed right-5 bottom-[max(20px,env(safe-area-inset-bottom))] z-40 h-8 rounded-md bg-background pl-3 pr-1.5 font-sans text-[13px] leading-none font-[450] shadow-lg"
       onClick={() => openAssistant("", "floating")}
