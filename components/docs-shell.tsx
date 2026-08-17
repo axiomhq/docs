@@ -12,6 +12,7 @@ import {
 import { ZoneLink as Link } from "@/components/zone-link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  SidebarHoverConnector,
   SidebarNestedConnector,
   useSidebarConnectorPoints,
 } from "@/components/sidebar-connector";
@@ -150,42 +151,11 @@ function NestedNavItem({
       containsActive(child, activeHref),
     ),
   );
-  const [hoveredChild, setHoveredChild] = useState<{
-    index: number;
-    continues: boolean;
-  } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const connectorPoints = useSidebarConnectorPoints(
     listRef,
     item.children?.length ?? 0,
   );
-
-  const updateHoveredChild = (target: EventTarget | null) => {
-    const list = listRef.current;
-    if (!list || !(target instanceof Node)) return;
-
-    const children = Array.from(
-      list.querySelectorAll<HTMLElement>(
-        ":scope > [data-sidebar-child]",
-      ),
-    );
-    const index = children.findIndex((child) => child.contains(target));
-    if (index < 0) return;
-
-    const row = children[index]?.querySelector<HTMLElement>(
-      ":scope > [data-sidebar-row], :scope > details > [data-sidebar-row]",
-    );
-    const next = {
-      index,
-      continues: Boolean(row && !row.contains(target)),
-    };
-    setHoveredChild((current) =>
-      current?.index === next.index &&
-      current.continues === next.continues
-        ? current
-        : next,
-    );
-  };
 
   return (
     <details
@@ -216,26 +186,15 @@ function NestedNavItem({
       </summary>
       <div
         ref={listRef}
-        data-active-child-index={activeChildIndex}
-        className="relative flex flex-col gap-0.5"
-        onMouseOver={(event) => updateHoveredChild(event.target)}
-        onMouseLeave={() => setHoveredChild(null)}
-        onFocusCapture={(event) => updateHoveredChild(event.target)}
-        onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) {
-            setHoveredChild(null);
-          }
-        }}
+        className="relative mt-px flex flex-col gap-px"
       >
         <SidebarNestedConnector
           points={connectorPoints}
           activeIndex={activeChildIndex}
           activeContinues={activeContinues}
           branchDepth={depth}
-          hoveredIndex={hoveredChild?.index ?? null}
-          hoverContinues={hoveredChild?.continues ?? false}
         />
-        {item.children?.map((child) => (
+        {item.children?.map((child, index) => (
           <div
             data-sidebar-child
             key={child.href ?? child.title}
@@ -247,6 +206,14 @@ function NestedNavItem({
               depth={depth + 1}
               iconSection={iconSection}
             />
+            {connectorPoints[index] && (
+              <SidebarHoverConnector
+                point={connectorPoints[index]}
+                branchDepth={depth}
+                elbow={index !== activeChildIndex}
+                continuation={Boolean(child.children)}
+              />
+            )}
           </div>
         ))}
       </div>

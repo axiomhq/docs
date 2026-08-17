@@ -69,7 +69,7 @@ export function AiPromptInput({
         colorVariant="sunset"
         staticColors
         saturation={0.85}
-        strength={0.55}
+        strength={0.35}
         active={busy}
         theme={resolvedTheme === 'light' ? 'light' : 'dark'}
         className="w-full"

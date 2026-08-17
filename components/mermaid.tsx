@@ -64,6 +64,25 @@ function axiomThemeVariables(dark: boolean) {
     secondaryBorderColor: color('--border-primary'),
     tertiaryColor: color('--bg-inert'),
     tertiaryBorderColor: color('--border-primary'),
+    // Pie slices otherwise inherit the quiet-surface palette and become
+    // indistinguishable; use the product colour scales so adjacent slices
+    // separate, and pull the pie typography down to the diagram scale.
+    pie1: color('--color-accent'),
+    pie2: color('--green-9'),
+    pie3: color('--blue-9'),
+    pie4: color('--purple-9'),
+    pie5: color('--amber-9'),
+    pie6: color('--red-9'),
+    pie7: '#8f8f8f',
+    pieOpacity: '0.8',
+    pieTitleTextSize: '14px',
+    pieTitleTextColor: color('--text-primary'),
+    pieSectionTextSize: '12.5px',
+    pieSectionTextColor: color('--text-primary'),
+    pieLegendTextSize: '12.5px',
+    pieLegendTextColor: color('--text-secondary'),
+    pieStrokeColor: color('--bg-canvas'),
+    pieOuterStrokeColor: color('--bg-canvas'),
   };
 }
 
@@ -88,6 +107,18 @@ function themeCss(dark: boolean) {
   .cluster-label span, .cluster-label .nodeLabel, .cluster-label text {
     text-transform: uppercase; font-size: 10px; font-weight: 600; letter-spacing: .09em;
   }
+  /* Renderer patches for colours the theme variables don't reach. */
+  /* ER attribute rows: the odd zebra band ships near-white regardless of
+     theme (fill inlined on the path, hence !important). */
+  .row-rect-odd path, .row-rect-odd rect { fill: var(--bg-inert) !important; }
+  /* ER cardinality markers: the "zero or one" circle is fill="white". */
+  marker circle { fill: var(--bg-canvas); }
+  /* Edge labels across the dagre diagram types (state, class, flowchart):
+     pad the canvas-coloured chip so a line crossing under the label never
+     strikes through the glyphs, and let foreignObjects paint the full text
+     instead of clipping descenders. */
+  foreignObject { overflow: visible; }
+  .edgeLabel .labelBkg, .edgeLabel span.edgeLabel { padding: 1px 5px; }
   /* Scoped to normal edges so ==> thick links keep their weight. */
   .edgePaths path { stroke-linecap: round; }
   .edgePaths path.edge-thickness-normal { stroke-width: 1.25px; }
@@ -466,15 +497,31 @@ export function Mermaid({ chart }: { chart: string }) {
 
     void (async () => {
       const { default: mermaid } = await import('mermaid');
+      // Mermaid sizes boxes by measuring label text in the live DOM. Wait for
+      // webfonts so those metrics come from the same glyphs the SVG will
+      // render with — a fallback-font measurement undershoots the mono stack.
+      await document.fonts.ready;
+      if (cancelled) return;
       // useId's delimiters aren't valid in the CSS selectors mermaid builds.
       const id = `mermaid-${rawId.replace(/[^a-zA-Z0-9-]/g, '')}`;
       try {
         const dark = resolvedTheme !== 'light';
+        const themeVariables = axiomThemeVariables(dark);
         mermaid.initialize({
           startOnLoad: false,
           theme: 'base',
           darkMode: dark,
-          themeVariables: axiomThemeVariables(dark),
+          // Mermaid sizes boxes from text it measures itself, so the fonts it
+          // measures with must be the fonts diagrams render with. Which config
+          // surface the renderer consults varies by version and diagram type —
+          // 11.16's sequence renderer reads the ROOT fontSize/fontFamily and
+          // ignores the sequence.* font keys — so the same mono 12.5px is
+          // pinned at every level: root config here, themeVariables for the
+          // svg-scoped CSS, and the sequence block below. Never let these
+          // drift apart, or labels overflow their measured boxes again.
+          fontFamily: themeVariables.fontFamily,
+          fontSize: 12.5,
+          themeVariables,
           themeCSS: themeCss(dark),
           flowchart: {
             // Plain polylines that orthogonalizeEdges can parse and re-route.
@@ -490,9 +537,26 @@ export function Mermaid({ chart }: { chart: string }) {
             // Clear the uppercase title off the first node row.
             subGraphTitleMargin: { top: 8, bottom: 16 },
           },
-          // Actor boxes are sized from mermaid's own font metrics, which run
-          // narrower than the mono stack; widen so names don't overflow.
-          sequence: { width: 180 },
+          // `width` is only an aesthetic minimum for short actor names; long
+          // ones grow from measurement (see the root font comment above). The
+          // font keys are dead in 11.16 but kept pinned so a version that
+          // resurrects them still measures with the rendered fonts.
+          sequence: {
+            // Mermaid pads the drawing with 50px of empty margin per side by
+            // default; the article column supplies the whitespace, so keep
+            // just enough to not clip the outer actors' 1px strokes. Less
+            // margin also means the same container width renders the actual
+            // diagram larger.
+            diagramMarginX: 2,
+            diagramMarginY: 8,
+            width: 180,
+            actorFontFamily: themeVariables.fontFamily,
+            actorFontSize: 12.5,
+            messageFontFamily: themeVariables.fontFamily,
+            messageFontSize: 12.5,
+            noteFontFamily: themeVariables.fontFamily,
+            noteFontSize: 12.5,
+          },
         });
         const rendered = await mermaid.render(id, chart.replaceAll('\\n', '\n'));
         if (cancelled) return;

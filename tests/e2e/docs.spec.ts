@@ -559,6 +559,31 @@ test('Mermaid diagrams render with semantic theme colors', async ({ page }) => {
   await expect(page.locator('.doc-mermaid-source')).toHaveCount(0);
 });
 
+test('Mermaid labels stay inside their boxes', async ({ page }) => {
+  // Guards the measure/render font alignment in components/mermaid.tsx:
+  // mermaid sizes boxes from its own text measurement, and any drift between
+  // the fonts it measures with and the fonts the page renders shows up as
+  // labels spilling past their box borders.
+  await page.goto('/docs/splunk/portal/observability-cloud');
+  const diagram = page.locator('.doc-mermaid[data-rendered]');
+  await expect(diagram.locator('svg')).toBeVisible();
+
+  const overflows = await page.evaluate(() => {
+    const out: string[] = [];
+    for (const text of document.querySelectorAll('.doc-mermaid svg text.actor')) {
+      const rect = text.closest('g')?.querySelector('rect.actor');
+      if (!rect) continue;
+      const textBox = text.getBoundingClientRect();
+      const rectBox = rect.getBoundingClientRect();
+      if (textBox.left < rectBox.left - 1 || textBox.right > rectBox.right + 1) {
+        out.push(text.textContent?.trim() ?? '');
+      }
+    }
+    return out;
+  });
+  expect(overflows).toEqual([]);
+});
+
 test('table headers use normal font weight', async ({ page }) => {
   await page.goto('/docs/reference/system-requirements');
   await expect(page.locator('.doc-article table thead th').filter({ hasText: 'Android' })).toHaveCSS(
@@ -1492,7 +1517,9 @@ test('nested sidebar connectors distinguish the active and hovered rows', async 
   const activePath = await activeConnector.getAttribute('d');
 
   await fundamentals.getByRole('link', { name: 'Limits', exact: true }).hover();
-  const hoverConnector = fundamentals.locator('[data-slot="sidebar-hover-connector"]').first();
+  // Hover paths are pre-rendered per child and revealed by CSS, so assert
+  // on the visible one rather than on DOM presence.
+  const hoverConnector = fundamentals.locator('[data-slot="sidebar-hover-connector"]:visible').first();
   await expect(hoverConnector).toHaveAttribute('stroke-dasharray', '4 4');
   const connectorStyles = await Promise.all(
     [activeConnector, hoverConnector].map((connector) =>
@@ -1517,7 +1544,7 @@ test('nested sidebar connectors distinguish the active and hovered rows', async 
   await expect(hoverConnector).not.toHaveAttribute('d', limitsHoverPath!);
 
   await fundamentals.getByRole('link', { name: 'Datasets', exact: true }).hover();
-  await expect(fundamentals.locator('[data-slot="sidebar-hover-connector"]')).toHaveCount(0);
+  await expect(fundamentals.locator('[data-slot="sidebar-hover-connector"]:visible')).toHaveCount(0);
   await expect(activeConnector).toHaveAttribute('d', activePath!);
 
   await page.goto('/docs/reference/limits');
@@ -1531,7 +1558,7 @@ test('nested sidebar connectors distinguish the active and hovered rows', async 
     .getByRole('link', { name: 'Edge deployments', exact: true })
     .hover();
   await expect(
-    fundamentalsWithLaterSelection.locator('[data-slot="sidebar-hover-connector"]'),
+    fundamentalsWithLaterSelection.locator('[data-slot="sidebar-hover-connector"]:visible'),
   ).toHaveAttribute('d', /^M15\.5 0V/);
 });
 
@@ -1579,7 +1606,7 @@ test('nested sidebar connector remains continuous through active parent rows', a
   await expect(nestedActiveConnector).toHaveAttribute('d', /H46\.5$/);
   await skills.getByRole('link', { name: 'Axiom alerting', exact: true }).hover();
   await expect(
-    nestedConnector.locator('[data-slot="sidebar-hover-connector"]'),
+    skills.locator(':scope > div > [data-sidebar-child] > svg > [data-slot="sidebar-hover-connector"]:visible'),
   ).toHaveAttribute('d', /H46\.5$/);
   await expect(
     nestedConnector.locator('[data-slot="sidebar-active-continuation"]'),
@@ -1613,19 +1640,23 @@ test('nested sidebar hover connector remains continuous through intermediate par
   await skills.locator(':scope > summary').click();
   await skills.getByRole('link', { name: 'Build dashboards', exact: true }).hover();
 
-  const outerConnector = aiAgents.locator(
-    ':scope > div > [data-slot="sidebar-nested-connector"]',
-  );
-  const hoverContinuation = outerConnector.locator(
-    '[data-slot="sidebar-hover-continuation"]',
-  );
+  // The continuation is a zero-width vertical line, which Playwright's
+  // :visible heuristic rejects (empty bounding box), so scope to the child
+  // wrapping Skills and assert the CSS reveal on computed display instead.
+  const hoverContinuation = aiAgents
+    .locator(':scope > div > [data-sidebar-child]')
+    .filter({ has: page.locator('details > summary', { hasText: 'Skills' }) })
+    .locator(':scope > svg > [data-slot="sidebar-hover-continuation"]');
   const nestedHoverConnector = skills.locator(
-    ':scope > div > [data-slot="sidebar-nested-connector"] > [data-slot="sidebar-hover-connector"]',
+    ':scope > div > [data-sidebar-child] > svg > [data-slot="sidebar-hover-connector"]:visible',
   );
+  await expect(hoverContinuation).toHaveCSS('display', 'inline');
   await expect(hoverContinuation).toHaveAttribute('d', /^M15\.5 0V/);
   await expect(hoverContinuation).toHaveAttribute('stroke-dasharray', '4 4');
   await expect(
-    outerConnector.locator('[data-slot="sidebar-hover-connector"]'),
+    aiAgents.locator(
+      ':scope > div > [data-sidebar-child] > svg > [data-slot="sidebar-hover-connector"]:visible',
+    ),
   ).toHaveCount(0);
   await expect(nestedHoverConnector).toHaveAttribute('d', /H46\.5$/);
 
@@ -1857,17 +1888,18 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
       shadow: styles.boxShadow,
     };
   });
-  // Notices sit on the shared card surface (which matches the canvas in the
-  // light theme); the icon, label, and left rule carry the differentiation.
-  const cardColor = await page.evaluate(() => {
+  // Light-theme notices are tinted with their accent at 5% (notice.tsx);
+  // the icon, label, and left rule carry the rest of the differentiation.
+  // Dark mode keeps the shared card surface instead.
+  const expectedBackground = await notice.evaluate((element) => {
     const probe = document.createElement('span');
-    probe.style.color = 'var(--card)';
-    document.body.append(probe);
-    const color = getComputedStyle(probe).color;
+    probe.style.backgroundColor = 'color-mix(in oklab, var(--notice-accent) 5%, transparent)';
+    element.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
     probe.remove();
     return color;
   });
-  expect(noticeStyles.background).toBe(cardColor);
+  expect(noticeStyles.background).toBe(expectedBackground);
   expect(noticeStyles.borderLeft).toBe('2px');
   expect(noticeStyles.headingColor).toBe(noticeStyles.borderLeftColor);
   expect(noticeStyles.iconColor).toBe(noticeStyles.borderLeftColor);
