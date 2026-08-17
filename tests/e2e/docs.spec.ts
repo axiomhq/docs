@@ -1888,17 +1888,18 @@ test('Axiom article chrome, callouts, and heading links follow the docs interact
       shadow: styles.boxShadow,
     };
   });
-  // Notices sit on the shared card surface (which matches the canvas in the
-  // light theme); the icon, label, and left rule carry the differentiation.
-  const cardColor = await page.evaluate(() => {
+  // Light-theme notices are tinted with their accent at 5% (notice.tsx);
+  // the icon, label, and left rule carry the rest of the differentiation.
+  // Dark mode keeps the shared card surface instead.
+  const expectedBackground = await notice.evaluate((element) => {
     const probe = document.createElement('span');
-    probe.style.color = 'var(--card)';
-    document.body.append(probe);
-    const color = getComputedStyle(probe).color;
+    probe.style.backgroundColor = 'color-mix(in oklab, var(--notice-accent) 5%, transparent)';
+    element.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
     probe.remove();
     return color;
   });
-  expect(noticeStyles.background).toBe(cardColor);
+  expect(noticeStyles.background).toBe(expectedBackground);
   expect(noticeStyles.borderLeft).toBe('2px');
   expect(noticeStyles.headingColor).toBe(noticeStyles.borderLeftColor);
   expect(noticeStyles.iconColor).toBe(noticeStyles.borderLeftColor);
