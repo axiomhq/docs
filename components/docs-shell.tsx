@@ -217,7 +217,7 @@ function NestedNavItem({
       <div
         ref={listRef}
         data-active-child-index={activeChildIndex}
-        className="relative flex flex-col gap-0.5"
+        className="relative mt-px flex flex-col gap-0.5"
         onMouseOver={(event) => updateHoveredChild(event.target)}
         onMouseLeave={() => setHoveredChild(null)}
         onFocusCapture={(event) => updateHoveredChild(event.target)}

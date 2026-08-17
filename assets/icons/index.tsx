@@ -93,150 +93,98 @@ export type SidebarIconComponent = ComponentType<
   SVGProps<SVGSVGElement>
 >;
 
+const SIDEBAR_ICON_SIZE = 14;
+
 export type SidebarIconAsset = {
   icon: SidebarIconComponent;
-  size: 14;
+  size: typeof SIDEBAR_ICON_SIZE;
 };
+
+const sidebarIcon = (
+  icon: SidebarIconComponent,
+): SidebarIconAsset => ({ icon, size: SIDEBAR_ICON_SIZE });
 
 export const documentationSidebarPageIcons: Readonly<
   Record<string, SidebarIconAsset>
 > = {
-  "/docs/introduction": { icon: WhatIsAxiomIcon, size: 14 },
-  "/docs/getting-started": { icon: QuickStartIcon, size: 14 },
-  "/docs/platform-overview/architecture": {
-    icon: ArchitectureIcon,
-    size: 14,
-  },
-  "/docs/platform-overview/features": {
-    icon: FeaturesIcon,
-    size: 14,
-  },
-  "/docs/platform-overview/security": {
-    icon: SecurityIcon,
-    size: 14,
-  },
-  "/docs/platform-overview/roadmap": {
-    icon: RoadmapIcon,
-    size: 14,
-  },
-  "/docs/send-data/reference-architectures": {
-    icon: ReferenceArchitecturesIcon,
-    size: 14,
-  },
-  "/docs/send-data/methods": { icon: MethodsIcon, size: 14 },
-  "/docs/getting-started-guide/observability": {
-    icon: ObservabilityIcon,
-    size: 14,
-  },
-  "/docs/getting-started-guide/product-analytics": {
-    icon: ProductAnalyticsIcon,
-    size: 14,
-  },
-  "/docs/get-help/faq": { icon: FaqsIcon, size: 14 },
+  "/docs/introduction": sidebarIcon(WhatIsAxiomIcon),
+  "/docs/getting-started": sidebarIcon(QuickStartIcon),
+  "/docs/platform-overview/architecture":
+    sidebarIcon(ArchitectureIcon),
+  "/docs/platform-overview/features": sidebarIcon(FeaturesIcon),
+  "/docs/platform-overview/security": sidebarIcon(SecurityIcon),
+  "/docs/platform-overview/roadmap": sidebarIcon(RoadmapIcon),
+  "/docs/send-data/reference-architectures": sidebarIcon(
+    ReferenceArchitecturesIcon,
+  ),
+  "/docs/send-data/methods": sidebarIcon(MethodsIcon),
+  "/docs/getting-started-guide/observability":
+    sidebarIcon(ObservabilityIcon),
+  "/docs/getting-started-guide/product-analytics": sidebarIcon(
+    ProductAnalyticsIcon,
+  ),
+  "/docs/get-help/faq": sidebarIcon(FaqsIcon),
 };
 
 export const documentationSidebarGroupIcons: Readonly<
   Record<string, SidebarIconAsset>
 > = {
-  Fundamentals: { icon: FundamentalsIcon, size: 14 },
-  Console: { icon: ConsoleIcon, size: 14 },
-  "AI agents": { icon: AiAgentsIcon, size: 14 },
-  Splunk: { icon: SplunkIcon, size: 14 },
-  "LLM observability": { icon: LlmObservabilityIcon, size: 14 },
-  LLMs: { icon: LlmsIcon, size: 14 },
-  Legal: { icon: LegalIcon, size: 14 },
+  Fundamentals: sidebarIcon(FundamentalsIcon),
+  Console: sidebarIcon(ConsoleIcon),
+  "AI agents": sidebarIcon(AiAgentsIcon),
+  Splunk: sidebarIcon(SplunkIcon),
+  "LLM observability": sidebarIcon(LlmObservabilityIcon),
+  LLMs: sidebarIcon(LlmsIcon),
+  Legal: sidebarIcon(LegalIcon),
 };
 
 export const querySidebarPageIcons: Readonly<
   Record<string, SidebarIconAsset>
 > = {
-  "/docs/apl/overview": { icon: QueryOverviewIcon, size: 14 },
-  "/docs/apl/introduction": {
-    icon: QueryIntroductionIcon,
-    size: 14,
-  },
-  "/docs/apl/tutorial": { icon: SampleQueriesIcon, size: 14 },
-  "/docs/apl/apl-features": { icon: QueryFeaturesIcon, size: 14 },
-  "/docs/mpl/introduction": { icon: MplFeaturesIcon, size: 14 },
-  "/docs/mpl/sample-queries": {
-    icon: SampleQueriesIcon,
-    size: 14,
-  },
-  "/docs/mpl/migrate-metrics": {
-    icon: QueryMigrateIcon,
-    size: 14,
-  },
+  "/docs/apl/overview": sidebarIcon(QueryOverviewIcon),
+  "/docs/apl/introduction": sidebarIcon(QueryIntroductionIcon),
+  "/docs/apl/tutorial": sidebarIcon(SampleQueriesIcon),
+  "/docs/apl/apl-features": sidebarIcon(QueryFeaturesIcon),
+  "/docs/mpl/introduction": sidebarIcon(MplFeaturesIcon),
+  "/docs/mpl/sample-queries": sidebarIcon(SampleQueriesIcon),
+  "/docs/mpl/migrate-metrics": sidebarIcon(QueryMigrateIcon),
 };
 
 export const querySidebarGroupIcons: Readonly<
   Record<string, SidebarIconAsset>
 > = {
-  Functions: { icon: QueryFunctionsIcon, size: 14 },
-  Operators: { icon: QueryOperatorsIcon, size: 14 },
-  Reference: { icon: QueryReferenceIcon, size: 14 },
-  Migrate: { icon: QueryMigrateIcon, size: 14 },
+  Functions: sidebarIcon(QueryFunctionsIcon),
+  Operators: sidebarIcon(QueryOperatorsIcon),
+  Reference: sidebarIcon(QueryReferenceIcon),
+  Migrate: sidebarIcon(QueryMigrateIcon),
 };
 
 export const apiSidebarPageIcons: Readonly<
   Record<string, SidebarIconAsset>
 > = {
-  "/docs/restapi/introduction": {
-    icon: ApiIntroductionIcon,
-    size: 14,
-  },
-  "/docs/restapi/ingest": { icon: ApiSendDataIcon, size: 14 },
-  "/docs/restapi/query": { icon: ApiQueryDataIcon, size: 14 },
-  "/docs/restapi/pagination": {
-    icon: ApiPaginationIcon,
-    size: 14,
-  },
-  "/docs/restapi/api-limits": { icon: ApiLimitsIcon, size: 14 },
-  "/docs/restapi/endpoints/ingestToDataset": {
-    icon: ApiSendDataIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/ingestHecEvent": {
-    icon: ApiSendDataIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/ingestHecRaw": {
-    icon: ApiSendDataIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/getHecHealth": {
-    icon: ApiHealthIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/queryEdge": {
-    icon: ApiQueryDataIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/queryBatch": {
-    icon: ApiQueryDataIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/queryMetrics": {
-    icon: ApiQueryDataIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/getDatasetMetrics": {
-    icon: ApiMetricsIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/getDatasetMetricTags": {
-    icon: ApiTagsIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/getDatasetMetricTagValues": {
-    icon: ApiTagsIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/getDatasetTags": {
-    icon: ApiTagsIcon,
-    size: 14,
-  },
-  "/docs/restapi/endpoints/getDatasetTagValues": {
-    icon: ApiTagsIcon,
-    size: 14,
-  },
+  "/docs/restapi/introduction": sidebarIcon(ApiIntroductionIcon),
+  "/docs/restapi/ingest": sidebarIcon(ApiSendDataIcon),
+  "/docs/restapi/query": sidebarIcon(ApiQueryDataIcon),
+  "/docs/restapi/pagination": sidebarIcon(ApiPaginationIcon),
+  "/docs/restapi/api-limits": sidebarIcon(ApiLimitsIcon),
+  "/docs/restapi/endpoints/ingestToDataset":
+    sidebarIcon(ApiSendDataIcon),
+  "/docs/restapi/endpoints/ingestHecEvent":
+    sidebarIcon(ApiSendDataIcon),
+  "/docs/restapi/endpoints/ingestHecRaw":
+    sidebarIcon(ApiSendDataIcon),
+  "/docs/restapi/endpoints/getHecHealth": sidebarIcon(ApiHealthIcon),
+  "/docs/restapi/endpoints/queryEdge": sidebarIcon(ApiQueryDataIcon),
+  "/docs/restapi/endpoints/queryBatch": sidebarIcon(ApiQueryDataIcon),
+  "/docs/restapi/endpoints/queryMetrics":
+    sidebarIcon(ApiQueryDataIcon),
+  "/docs/restapi/endpoints/getDatasetMetrics":
+    sidebarIcon(ApiMetricsIcon),
+  "/docs/restapi/endpoints/getDatasetMetricTags":
+    sidebarIcon(ApiTagsIcon),
+  "/docs/restapi/endpoints/getDatasetMetricTagValues":
+    sidebarIcon(ApiTagsIcon),
+  "/docs/restapi/endpoints/getDatasetTags": sidebarIcon(ApiTagsIcon),
+  "/docs/restapi/endpoints/getDatasetTagValues":
+    sidebarIcon(ApiTagsIcon),
 };
