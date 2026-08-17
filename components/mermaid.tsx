@@ -64,6 +64,25 @@ function axiomThemeVariables(dark: boolean) {
     secondaryBorderColor: color('--border-primary'),
     tertiaryColor: color('--bg-inert'),
     tertiaryBorderColor: color('--border-primary'),
+    // Pie slices otherwise inherit the quiet-surface palette and become
+    // indistinguishable; use the product colour scales so adjacent slices
+    // separate, and pull the pie typography down to the diagram scale.
+    pie1: color('--color-accent'),
+    pie2: color('--green-9'),
+    pie3: color('--blue-9'),
+    pie4: color('--purple-9'),
+    pie5: color('--amber-9'),
+    pie6: color('--red-9'),
+    pie7: '#8f8f8f',
+    pieOpacity: '0.8',
+    pieTitleTextSize: '14px',
+    pieTitleTextColor: color('--text-primary'),
+    pieSectionTextSize: '12.5px',
+    pieSectionTextColor: color('--text-primary'),
+    pieLegendTextSize: '12.5px',
+    pieLegendTextColor: color('--text-secondary'),
+    pieStrokeColor: color('--bg-canvas'),
+    pieOuterStrokeColor: color('--bg-canvas'),
   };
 }
 
@@ -88,6 +107,18 @@ function themeCss(dark: boolean) {
   .cluster-label span, .cluster-label .nodeLabel, .cluster-label text {
     text-transform: uppercase; font-size: 10px; font-weight: 600; letter-spacing: .09em;
   }
+  /* Renderer patches for colours the theme variables don't reach. */
+  /* ER attribute rows: the odd zebra band ships near-white regardless of
+     theme (fill inlined on the path, hence !important). */
+  .row-rect-odd path, .row-rect-odd rect { fill: var(--bg-inert) !important; }
+  /* ER cardinality markers: the "zero or one" circle is fill="white". */
+  marker circle { fill: var(--bg-canvas); }
+  /* Edge labels across the dagre diagram types (state, class, flowchart):
+     pad the canvas-coloured chip so a line crossing under the label never
+     strikes through the glyphs, and let foreignObjects paint the full text
+     instead of clipping descenders. */
+  foreignObject { overflow: visible; }
+  .edgeLabel .labelBkg, .edgeLabel span.edgeLabel { padding: 1px 5px; }
   /* Scoped to normal edges so ==> thick links keep their weight. */
   .edgePaths path { stroke-linecap: round; }
   .edgePaths path.edge-thickness-normal { stroke-width: 1.25px; }
