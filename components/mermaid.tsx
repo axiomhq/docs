@@ -511,6 +511,13 @@ export function Mermaid({ chart }: { chart: string }) {
           // font keys are dead in 11.16 but kept pinned so a version that
           // resurrects them still measures with the rendered fonts.
           sequence: {
+            // Mermaid pads the drawing with 50px of empty margin per side by
+            // default; the article column supplies the whitespace, so keep
+            // just enough to not clip the outer actors' 1px strokes. Less
+            // margin also means the same container width renders the actual
+            // diagram larger.
+            diagramMarginX: 2,
+            diagramMarginY: 8,
             width: 180,
             actorFontFamily: themeVariables.fontFamily,
             actorFontSize: 12.5,
