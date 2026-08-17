@@ -289,7 +289,10 @@ export default function DocsLandingPage() {
                 href={href}
                 prefetch={false}
                 className={cn(
-                  "platform-row grid grid-cols-[160px_minmax(0,1fr)_auto] items-center gap-x-5 px-2 py-4 hover:bg-interactive-hover rounded-md md:-mx-2!",
+                  // relative lifts the row above the separators, which overlap
+                  // the row edges by 1px — a hovered row's background covers
+                  // the adjacent lines instead of showing them as card borders.
+                  "platform-row relative grid grid-cols-[160px_minmax(0,1fr)_auto] items-center gap-x-5 px-2 py-4 hover:bg-interactive-hover rounded-md md:-mx-2!",
                   "focus-visible:outline-1 focus-visible:outline-offset-[-1px] focus-visible:outline-(--color-accent)",
                   "max-sm:grid-cols-[minmax(0,1fr)_auto] max-sm:gap-x-3 max-sm:gap-y-1 max-sm:px-1",
                 )}
@@ -318,7 +321,7 @@ export default function DocsLandingPage() {
                 <hr
                   aria-hidden="true"
                   data-slot="platform-row-separator"
-                  className="mx-auto my-0 h-px w-[calc(100%-10px)] border-0 bg-(--border-secondary)"
+                  className="mx-auto -my-px h-px w-[calc(100%-10px)] border-0 bg-(--border-secondary)"
                 />
               )}
             </Fragment>
