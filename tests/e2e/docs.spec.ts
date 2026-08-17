@@ -559,6 +559,31 @@ test('Mermaid diagrams render with semantic theme colors', async ({ page }) => {
   await expect(page.locator('.doc-mermaid-source')).toHaveCount(0);
 });
 
+test('Mermaid labels stay inside their boxes', async ({ page }) => {
+  // Guards the measure/render font alignment in components/mermaid.tsx:
+  // mermaid sizes boxes from its own text measurement, and any drift between
+  // the fonts it measures with and the fonts the page renders shows up as
+  // labels spilling past their box borders.
+  await page.goto('/docs/splunk/portal/observability-cloud');
+  const diagram = page.locator('.doc-mermaid[data-rendered]');
+  await expect(diagram.locator('svg')).toBeVisible();
+
+  const overflows = await page.evaluate(() => {
+    const out: string[] = [];
+    for (const text of document.querySelectorAll('.doc-mermaid svg text.actor')) {
+      const rect = text.closest('g')?.querySelector('rect.actor');
+      if (!rect) continue;
+      const textBox = text.getBoundingClientRect();
+      const rectBox = rect.getBoundingClientRect();
+      if (textBox.left < rectBox.left - 1 || textBox.right > rectBox.right + 1) {
+        out.push(text.textContent?.trim() ?? '');
+      }
+    }
+    return out;
+  });
+  expect(overflows).toEqual([]);
+});
+
 test('table headers use normal font weight', async ({ page }) => {
   await page.goto('/docs/reference/system-requirements');
   await expect(page.locator('.doc-article table thead th').filter({ hasText: 'Android' })).toHaveCSS(

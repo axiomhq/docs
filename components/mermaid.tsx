@@ -466,15 +466,31 @@ export function Mermaid({ chart }: { chart: string }) {
 
     void (async () => {
       const { default: mermaid } = await import('mermaid');
+      // Mermaid sizes boxes by measuring label text in the live DOM. Wait for
+      // webfonts so those metrics come from the same glyphs the SVG will
+      // render with — a fallback-font measurement undershoots the mono stack.
+      await document.fonts.ready;
+      if (cancelled) return;
       // useId's delimiters aren't valid in the CSS selectors mermaid builds.
       const id = `mermaid-${rawId.replace(/[^a-zA-Z0-9-]/g, '')}`;
       try {
         const dark = resolvedTheme !== 'light';
+        const themeVariables = axiomThemeVariables(dark);
         mermaid.initialize({
           startOnLoad: false,
           theme: 'base',
           darkMode: dark,
-          themeVariables: axiomThemeVariables(dark),
+          // Mermaid sizes boxes from text it measures itself, so the fonts it
+          // measures with must be the fonts diagrams render with. Which config
+          // surface the renderer consults varies by version and diagram type —
+          // 11.16's sequence renderer reads the ROOT fontSize/fontFamily and
+          // ignores the sequence.* font keys — so the same mono 12.5px is
+          // pinned at every level: root config here, themeVariables for the
+          // svg-scoped CSS, and the sequence block below. Never let these
+          // drift apart, or labels overflow their measured boxes again.
+          fontFamily: themeVariables.fontFamily,
+          fontSize: 12.5,
+          themeVariables,
           themeCSS: themeCss(dark),
           flowchart: {
             // Plain polylines that orthogonalizeEdges can parse and re-route.
@@ -490,9 +506,19 @@ export function Mermaid({ chart }: { chart: string }) {
             // Clear the uppercase title off the first node row.
             subGraphTitleMargin: { top: 8, bottom: 16 },
           },
-          // Actor boxes are sized from mermaid's own font metrics, which run
-          // narrower than the mono stack; widen so names don't overflow.
-          sequence: { width: 180 },
+          // `width` is only an aesthetic minimum for short actor names; long
+          // ones grow from measurement (see the root font comment above). The
+          // font keys are dead in 11.16 but kept pinned so a version that
+          // resurrects them still measures with the rendered fonts.
+          sequence: {
+            width: 180,
+            actorFontFamily: themeVariables.fontFamily,
+            actorFontSize: 12.5,
+            messageFontFamily: themeVariables.fontFamily,
+            messageFontSize: 12.5,
+            noteFontFamily: themeVariables.fontFamily,
+            noteFontSize: 12.5,
+          },
         });
         const rendered = await mermaid.render(id, chart.replaceAll('\\n', '\n'));
         if (cancelled) return;
