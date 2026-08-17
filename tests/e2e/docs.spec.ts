@@ -1492,7 +1492,9 @@ test('nested sidebar connectors distinguish the active and hovered rows', async 
   const activePath = await activeConnector.getAttribute('d');
 
   await fundamentals.getByRole('link', { name: 'Limits', exact: true }).hover();
-  const hoverConnector = fundamentals.locator('[data-slot="sidebar-hover-connector"]').first();
+  // Hover paths are pre-rendered per child and revealed by CSS, so assert
+  // on the visible one rather than on DOM presence.
+  const hoverConnector = fundamentals.locator('[data-slot="sidebar-hover-connector"]:visible').first();
   await expect(hoverConnector).toHaveAttribute('stroke-dasharray', '4 4');
   const connectorStyles = await Promise.all(
     [activeConnector, hoverConnector].map((connector) =>
@@ -1517,7 +1519,7 @@ test('nested sidebar connectors distinguish the active and hovered rows', async 
   await expect(hoverConnector).not.toHaveAttribute('d', limitsHoverPath!);
 
   await fundamentals.getByRole('link', { name: 'Datasets', exact: true }).hover();
-  await expect(fundamentals.locator('[data-slot="sidebar-hover-connector"]')).toHaveCount(0);
+  await expect(fundamentals.locator('[data-slot="sidebar-hover-connector"]:visible')).toHaveCount(0);
   await expect(activeConnector).toHaveAttribute('d', activePath!);
 
   await page.goto('/docs/reference/limits');
@@ -1531,7 +1533,7 @@ test('nested sidebar connectors distinguish the active and hovered rows', async 
     .getByRole('link', { name: 'Edge deployments', exact: true })
     .hover();
   await expect(
-    fundamentalsWithLaterSelection.locator('[data-slot="sidebar-hover-connector"]'),
+    fundamentalsWithLaterSelection.locator('[data-slot="sidebar-hover-connector"]:visible'),
   ).toHaveAttribute('d', /^M15\.5 0V/);
 });
 
@@ -1579,7 +1581,7 @@ test('nested sidebar connector remains continuous through active parent rows', a
   await expect(nestedActiveConnector).toHaveAttribute('d', /H46\.5$/);
   await skills.getByRole('link', { name: 'Axiom alerting', exact: true }).hover();
   await expect(
-    nestedConnector.locator('[data-slot="sidebar-hover-connector"]'),
+    skills.locator(':scope > div > [data-sidebar-child] > svg > [data-slot="sidebar-hover-connector"]:visible'),
   ).toHaveAttribute('d', /H46\.5$/);
   await expect(
     nestedConnector.locator('[data-slot="sidebar-active-continuation"]'),
@@ -1613,19 +1615,23 @@ test('nested sidebar hover connector remains continuous through intermediate par
   await skills.locator(':scope > summary').click();
   await skills.getByRole('link', { name: 'Build dashboards', exact: true }).hover();
 
-  const outerConnector = aiAgents.locator(
-    ':scope > div > [data-slot="sidebar-nested-connector"]',
-  );
-  const hoverContinuation = outerConnector.locator(
-    '[data-slot="sidebar-hover-continuation"]',
-  );
+  // The continuation is a zero-width vertical line, which Playwright's
+  // :visible heuristic rejects (empty bounding box), so scope to the child
+  // wrapping Skills and assert the CSS reveal on computed display instead.
+  const hoverContinuation = aiAgents
+    .locator(':scope > div > [data-sidebar-child]')
+    .filter({ has: page.locator('details > summary', { hasText: 'Skills' }) })
+    .locator(':scope > svg > [data-slot="sidebar-hover-continuation"]');
   const nestedHoverConnector = skills.locator(
-    ':scope > div > [data-slot="sidebar-nested-connector"] > [data-slot="sidebar-hover-connector"]',
+    ':scope > div > [data-sidebar-child] > svg > [data-slot="sidebar-hover-connector"]:visible',
   );
+  await expect(hoverContinuation).toHaveCSS('display', 'inline');
   await expect(hoverContinuation).toHaveAttribute('d', /^M15\.5 0V/);
   await expect(hoverContinuation).toHaveAttribute('stroke-dasharray', '4 4');
   await expect(
-    outerConnector.locator('[data-slot="sidebar-hover-connector"]'),
+    aiAgents.locator(
+      ':scope > div > [data-sidebar-child] > svg > [data-slot="sidebar-hover-connector"]:visible',
+    ),
   ).toHaveCount(0);
   await expect(nestedHoverConnector).toHaveAttribute('d', /H46\.5$/);
 

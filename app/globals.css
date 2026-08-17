@@ -95,6 +95,52 @@
             transparent
         );
     }
+
+    /* Sidebar hover connector — CSS-only reveal. Every child row
+       pre-renders its dashed paths (SidebarHoverConnector); hover/focus
+       decides which one shows, with no JS hover tracking. `> svg` scopes
+       each rule to the child's own overlay so an outer level never
+       toggles paths inside nested lists. */
+    [data-slot="sidebar-hover-connector"],
+    [data-slot="sidebar-hover-continuation"] {
+        display: none;
+    }
+
+    /* The row itself is hovered or keyboard-focused → dashed elbow
+       pointing at it. A leaf row is the child's direct link; an
+       expandable row is the summary inside its <details>. */
+    [data-sidebar-child]:has(> [data-sidebar-row]:hover)
+        > svg
+        [data-slot="sidebar-hover-connector"],
+    [data-sidebar-child]:has(> [data-sidebar-row]:focus-visible)
+        > svg
+        [data-slot="sidebar-hover-connector"],
+    [data-sidebar-child]:has(> details > [data-sidebar-row]:hover)
+        > svg
+        [data-slot="sidebar-hover-connector"],
+    [data-sidebar-child]:has(> details > [data-sidebar-row]:focus-visible)
+        > svg
+        [data-slot="sidebar-hover-connector"] {
+        display: inline;
+    }
+
+    /* Hover/focus sits deeper inside an expanded child (past its row):
+       the line passes straight through — the nested list's own overlay
+       draws the elbow. The focus guard uses plain :focus so a
+       mouse-clicked summary doesn't read as "deeper focus" once the
+       pointer leaves. */
+    [data-sidebar-child]:has(> details:hover):not(
+            :has(> details > [data-sidebar-row]:hover)
+        )
+        > svg
+        [data-slot="sidebar-hover-continuation"],
+    [data-sidebar-child]:has(> details:focus-within):not(
+            :has(> details > [data-sidebar-row]:focus)
+        )
+        > svg
+        [data-slot="sidebar-hover-continuation"] {
+        display: inline;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
