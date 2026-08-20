@@ -820,7 +820,17 @@ test('search stays private and hands off to the persistent assistant sidebar', a
   await expect(contextualResult).not.toContainText('**');
   await expect(contextualResult).toContainText(/…$/);
 
+  const datasetSearchResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === '/docs/api/search'
+      && url.searchParams.get('query') === 'dataset retention'
+      && response.ok();
+  });
   await searchInput.fill('dataset retention');
+  const datasetResponse = await datasetSearchResponse;
+  const datasetResults = await datasetResponse.json() as Array<{ id: string }>;
+  expect(datasetResults.length).toBeGreaterThan(0);
+  await expect(firstSearchResult).toHaveAttribute('data-value', `result:${datasetResults[0].id}`);
   const askFromSearch = dialog.getByRole('option', { name: /Ask AI about “dataset retention”/ });
   await expect(askFromSearch).toBeVisible();
   // The ask row sits above the results but never steals the default selection.
