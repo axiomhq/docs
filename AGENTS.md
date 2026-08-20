@@ -60,7 +60,7 @@ The README mentions port 3000 for general contributors. Port 3100 is the establi
 - `components/docs-search.tsx` — unified, debounced Search/Ask AI dialog and ranked search results.
 - `components/docs-assistant.tsx` — lazily loaded assistant conversation UI and source presentation.
 - `components/markdown.tsx` — bounded streaming Markdown renderer for assistant answers.
-- `components/site-header.tsx` — top-level section tabs, unified search/AI entry point, theme menu, and console link.
+- `components/site-header.tsx` — top-level section tabs, unified search/AI entry point, dark/light theme toggle, and console link.
 - `components/table-of-contents.tsx` — transparent floating TOC and scroll tracking.
 - `components/heading-anchor.tsx` — hover hash, smooth navigation, clipboard copy, and Sonner feedback.
 - `components/mdx-components.tsx` — compatibility boundary between legacy MDX constructs and Axiom/Fumadocs components.
@@ -150,8 +150,8 @@ The design has gone through detailed browser review. Treat the following as prod
 
 ### Overall layout
 
-- Main article content must feel centered in the viewport, not merely centered in the area to the right of the sidebar.
-- The desktop article transform compensates for the fixed sidebar. Do not remove it without verifying 1440px, 1024px, and 768px viewport centering.
+- Pages without a table of contents center the article in the available main area to the right of the desktop sidebar; do not reserve or translate a synthetic right rail.
+- Pages with a table of contents keep the article viewport-centered while the TOC occupies its right-edge rail. Verify both cases at 1440px, 1024px, and 768px before changing their layout.
 - The sidebar’s first group heading aligns horizontally with the article breadcrumbs on initial load.
 - Protect tablet and small-screen margins; switch to the drawer navigation at the established breakpoint.
 - Avoid decorative shadows. Axiom surfaces use borders, small tonal shifts, and compact spacing.
@@ -173,7 +173,7 @@ The design has gone through detailed browser review. Treat the following as prod
 - Header tabs are Documentation, Query reference, and API reference. Do not add Changelog unless explicitly requested.
 - Search and “Ask AI” are one entry point because Fumadocs search provides both behaviors.
 - “Open console” is sentence case.
-- Theme defaults to system and uses `next-themes` local persistence under `axiom-docs-theme`. The menu offers System, Dark, and Light with matching icons.
+- Theme follows the system by default and uses `next-themes` local persistence under `axiom-docs-theme`. The header exposes a single-click dark/light toggle; the first click stores the opposite of the currently resolved system theme.
 - Sidebar expansion chevrons sit on the right, so nested labels do not acquire awkward left indentation.
 - All ancestors of the active sidebar page remain expanded during navigation.
 - API method badges sit at the right edge of sidebar rows, after the endpoint name.
@@ -184,7 +184,7 @@ The design has gone through detailed browser review. Treat the following as prod
 - The floating “On this page” control has no card background.
 - Its active item follows scroll position and uses a small terminal-like rectangular marker, not a dot.
 - Heading hashes appear on hover/focus. Clicking a heading copies the full anchor URL and shows a Sonner notification.
-- Notices use a colored left border, a subtly distinct background, no icon, and no shadow. Notice copy is monospace at the compact 12px/19px treatment.
+- Notices use a colored left border, a subtly distinct background, and no shadow. Each variant has a semantic Carbon icon and label whose color matches the border; a custom title replaces the default label while retaining the variant icon.
 - The article footer contains helpful/not-helpful feedback, previous/next pages, and “Suggest edits on GitHub”.
 
 ### Code, tabs, tables, and query examples

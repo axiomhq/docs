@@ -2,6 +2,7 @@ import v1 from '@/content/docs/(api-reference)/restapi/versions/v1.json';
 import v2 from '@/content/docs/(api-reference)/restapi/versions/v2.json';
 import edgeIngest from '@/content/docs/(api-reference)/restapi/versions/v1-edge-ingest.json';
 import edgeQuery from '@/content/docs/(api-reference)/restapi/versions/v1-edge-query.json';
+import edgeHec from '@/content/docs/(api-reference)/restapi/versions/v1-edge-hec.json';
 
 // OpenAPI documents are heterogeneous recursive JSON objects.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,6 +13,7 @@ const documents: Record<string, JsonObject> = {
   v2,
   'v1-edge-ingest': edgeIngest,
   'v1-edge-query': edgeQuery,
+  'v1-edge-hec': edgeHec,
 };
 
 export type ApiOperationData = {
@@ -49,6 +51,36 @@ export function getApiOperation(value: string): ApiOperationData | undefined {
   const baseUrl = document.servers?.[0]?.url ?? '';
   const prefix = baseUrl ? new URL(baseUrl).pathname.replace(/\/$/, '') : '';
   return { document, specId, method, path, displayPath: `${prefix}${path}` || '/', baseUrl, pathItem, operation };
+}
+
+export type ApiOperationSection = {
+  title: string;
+  url: string;
+  depth: number;
+};
+
+export function getApiOperationSections(value: string): ApiOperationSection[] {
+  const data = getApiOperation(value);
+  if (!data) return [];
+
+  const { pathItem, operation } = data;
+  const parameterCount = [
+    ...(pathItem.parameters ?? []),
+    ...(operation.parameters ?? []),
+  ].length;
+  const hasBody = Object.keys(resolveSchema(data.document, operation.requestBody)?.content ?? {}).length > 0;
+  const hasResponses = Object.keys(operation.responses ?? {}).length > 0;
+
+  return [
+    ...(parameterCount > 0
+      ? [{ title: 'Parameters', url: '#parameters', depth: 2 }]
+      : []),
+    ...(hasBody ? [{ title: 'Body', url: '#body', depth: 2 }] : []),
+    { title: 'Request', url: '#example', depth: 2 },
+    ...(hasResponses
+      ? [{ title: 'Response', url: '#response', depth: 2 }]
+      : []),
+  ];
 }
 
 export function schemaExample(document: JsonObject, input: JsonObject | undefined, depth = 0): unknown {

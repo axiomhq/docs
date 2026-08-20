@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     if (parameter.in === 'query' && value) target.searchParams.set(parameter.name, value);
   }
 
-  const content = data.operation.requestBody?.content as Record<string, unknown> | undefined;
+  const content = resolveSchema(data.document, data.operation.requestBody)?.content as Record<string, unknown> | undefined;
   const contentType = content ? Object.keys(content)[0] : undefined;
   let body: string | undefined;
   if (contentType && typeof input.body === 'string') {

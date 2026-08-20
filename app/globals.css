@@ -1,9 +1,9 @@
-@import 'tailwindcss';
-@import 'fumadocs-ui/css/black.css';
-@import 'fumadocs-ui/css/preset.css';
-@import '../styles/tokens.css';
-@import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
+@import "tailwindcss";
+@import "fumadocs-ui/css/black.css";
+@import "fumadocs-ui/css/preset.css";
+@import "../styles/tokens.css";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 /* Required for MessageResponse: Streamdown ships its own Tailwind classes. */
 @source '../node_modules/streamdown/dist/*.js';
@@ -12,310 +12,491 @@
    Map shadcn's `dark:` variant onto that instead of its stock `.dark` class. */
 @custom-variant dark (&:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *));
 
-/* Element defaults live in @layer base so component utilities (@layer
-   utilities) can override them; unlayered they would always win. Only elements
-   with no owning component remain: `a` and `kbd` are authored directly in MDX
-   content. `html`/`body` are styled in app/layout.tsx; box-sizing and form
-   `font: inherit` come from Tailwind's preflight. */
+/* Element defaults live in @layer base so component utilities can override
+   them. Raw MDX links have no owning component; html/body and form defaults
+   come from app/layout.tsx and Tailwind's preflight. */
 @layer base {
-  a { @apply text-inherit no-underline; }
-  kbd { @apply py-px px-[5px] border border-(--border-primary) rounded-[3px] bg-(--bg-emph-tertiary) text-(--text-quaternary) font-mono text-[10px] leading-[14px] font-[450]; }
+    a {
+        @apply text-inherit no-underline;
+    }
+
+    /* Raw links, buttons, and disclosure controls retain their native focus
+       geometry, but use Axiom orange instead of the browser's blue default. */
+    :focus-visible {
+        outline-color: var(--brand);
+    }
+
+    /* Default border color for the assistant surface. Lives in base (not as a
+       [&_*]:border-border utility on the panel) so descendants that set their
+       own border color — destructive error borders, the brand pulse dot —
+       still win the cascade. */
+    .docs-assistant-panel *,
+    .docs-assistant-panel *::before,
+    .docs-assistant-panel *::after {
+        border-color: var(--border);
+    }
 }
 
-/* Referenced by `animate-[docs-assistant-pulse_…]` in docs-assistant.tsx and
-   the docs-search.tsx loading fallback. */
-@keyframes docs-assistant-pulse { 50% { background: var(--color-accent); opacity: .45; } }
+@layer components {
+    .sidebar .method {
+        color: var(--method-badge-color, currentColor);
+        background-color: var(--method-badge-background, transparent);
+    }
 
-/* Inline glyphs in prose, e.g. <img className="inline-icon" src=".../share.svg">.
-   Authored as raw JSX in MDX content, so there is no component to carry
-   utilities. The Font Awesome assets are 576x512 with fill="currentColor",
-   which does not inherit through <img> — it paints black — so size them to the
-   text and invert on dark surfaces to keep them legible. */
-.inline-icon { @apply w-[1.05em] h-[1.05em] my-0 mx-[.12em] inline-block align-[-.16em] object-contain dark:invert; }
+    .sidebar .method-get {
+        --method-badge-color: color-mix(
+            in srgb,
+            var(--green-11) 85%,
+            var(--green-12)
+        );
+        --method-badge-background: color-mix(
+            in srgb,
+            var(--color-success) 11%,
+            transparent
+        );
+    }
+
+    .sidebar .method-post {
+        --method-badge-color: color-mix(
+            in srgb,
+            var(--blue-11) 85%,
+            var(--blue-12)
+        );
+        --method-badge-background: color-mix(
+            in srgb,
+            var(--color-info) 11%,
+            transparent
+        );
+    }
+
+    .sidebar .method-put,
+    .sidebar .method-patch {
+        --method-badge-color: color-mix(
+            in srgb,
+            var(--amber-11) 85%,
+            var(--amber-12)
+        );
+        --method-badge-background: color-mix(
+            in srgb,
+            var(--color-warning) 11%,
+            transparent
+        );
+    }
+
+    .sidebar .method-delete {
+        --method-badge-color: color-mix(
+            in srgb,
+            var(--red-11) 85%,
+            var(--red-12)
+        );
+        --method-badge-background: color-mix(
+            in srgb,
+            var(--color-destructive) 11%,
+            transparent
+        );
+    }
+
+    /* Sidebar hover connector — CSS-only reveal. Every child row
+       pre-renders its dashed paths (SidebarHoverConnector); hover/focus
+       decides which one shows, with no JS hover tracking. `> svg` scopes
+       each rule to the child's own overlay so an outer level never
+       toggles paths inside nested lists. */
+    [data-slot="sidebar-hover-connector"],
+    [data-slot="sidebar-hover-continuation"] {
+        display: none;
+    }
+
+    /* The row itself is hovered or keyboard-focused → dashed elbow
+       pointing at it. A leaf row is the child's direct link; an
+       expandable row is the summary inside its <details>. */
+    [data-sidebar-child]:has(> [data-sidebar-row]:hover)
+        > svg
+        [data-slot="sidebar-hover-connector"],
+    [data-sidebar-child]:has(> [data-sidebar-row]:focus-visible)
+        > svg
+        [data-slot="sidebar-hover-connector"],
+    [data-sidebar-child]:has(> details > [data-sidebar-row]:hover)
+        > svg
+        [data-slot="sidebar-hover-connector"],
+    [data-sidebar-child]:has(> details > [data-sidebar-row]:focus-visible)
+        > svg
+        [data-slot="sidebar-hover-connector"] {
+        display: inline;
+    }
+
+    /* Hover/focus sits deeper inside an expanded child (past its row):
+       the line passes straight through — the nested list's own overlay
+       draws the elbow. The focus guard uses plain :focus so a
+       mouse-clicked summary doesn't read as "deeper focus" once the
+       pointer leaves. */
+    [data-sidebar-child]:has(> details:hover):not(
+            :has(> details > [data-sidebar-row]:hover)
+        )
+        > svg
+        [data-slot="sidebar-hover-continuation"],
+    [data-sidebar-child]:has(> details:focus-within):not(
+            :has(> details > [data-sidebar-row]:focus)
+        )
+        > svg
+        [data-slot="sidebar-hover-continuation"] {
+        display: inline;
+    }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { @apply scroll-auto! duration-[.01ms]! [animation-duration:.01ms]!; }
+    *,
+    *::before,
+    *::after {
+        @apply scroll-auto! transition-none! animate-none!;
+    }
 }
 
 /* ╔══════════════════════════════════════════════════════════════╗
-   ║ shadcn / AI Elements → Axiom token bridge                    ║
+   ║ shadcn semantic tokens → Axiom palette                       ║
    ║                                                              ║
-   ║ AI Elements is authored against shadcn's token names. Point  ║
+   ║ Shell chrome and AI Elements use shadcn's token names. Point ║
    ║ them at the Axiom semantic tokens in styles/tokens.css so    ║
-   ║ the assistant inherits the docs design system instead of     ║
-   ║ shadcn's neutral palette. Everything below resolves through  ║
-   ║ Axiom tokens, so it flips with data-theme automatically.     ║
+   ║ both inherit the migrated www palette and theme together.    ║
    ║                                                              ║
-   ║ `accent` and `destructive` are deliberately NOT registered:  ║
-   ║ Axiom already owns --color-accent (orange) and               ║
-   ║ --color-destructive, and @theme would clobber both.          ║
+   ║ `accent` remains Axiom orange for compatibility. Migrated    ║
+   ║ shell chrome uses `brand` for orange and neutral shadcn      ║
+   ║ surface roles, leaving the final accent split for later.     ║
    ╚══════════════════════════════════════════════════════════════╝ */
 :root {
-  --background: var(--bg-canvas);
-  --foreground: var(--text-primary);
-  --card: var(--bg-surface);
-  --card-foreground: var(--text-primary);
-  --popover: var(--bg-overlay);
-  --popover-foreground: var(--text-primary);
-  --primary: var(--bg-emph-primary-inverse);
-  --primary-foreground: var(--text-on-inverse-primary);
-  --secondary: var(--bg-surface);
-  --secondary-foreground: var(--text-secondary);
-  --muted: var(--bg-inert);
-  --muted-foreground: var(--text-tertiary);
-  --border: var(--border-primary);
-  --input: var(--border-primary);
-  --ring: var(--color-accent);
-  --radius: 4px;
+    --background: var(--bg-canvas);
+    --foreground: var(--text-primary);
+    --card: var(--bg-surface);
+    --card-foreground: var(--text-primary);
+    --popover: var(--bg-overlay);
+    --popover-foreground: var(--text-primary);
+    --primary: var(--bg-emph-primary-inverse);
+    --primary-foreground: var(--text-on-inverse-primary);
+    --secondary: var(--bg-raised);
+    --secondary-foreground: var(--text-secondary);
+    --interactive-hover: color-mix(
+        in srgb,
+        var(--secondary) 30%,
+        transparent
+    );
+    --interactive-selected: color-mix(
+        in srgb,
+        var(--secondary) 50%,
+        transparent
+    );
+    --muted: var(--bg-muted);
+    /* Quaternary is the www --muted-foreground role; tertiary is the prose
+       body color, which is near-black in light and would leave placeholders
+       and muted labels indistinguishable from headings. */
+    --muted-foreground: var(--text-quaternary);
+    --border: var(--border-primary);
+    --input: var(--border-input);
+    --ring: var(--brand);
+    --color-fd-ring: var(--brand);
+    --radius: 0.475rem;
 
-  /* Referenced by shadcn's sidebar-flavoured surfaces (AI Elements' code block
+    /* Referenced by shadcn's sidebar-flavoured surfaces (AI Elements' code block
      uses bg-sidebar); without these they resolve to nothing. */
-  --sidebar: var(--bg-surface);
-  --sidebar-foreground: var(--text-primary);
-  --sidebar-border: var(--border-primary);
-  --sidebar-accent: var(--bg-emph-tertiary);
-  --sidebar-accent-foreground: var(--text-primary);
-  --sidebar-ring: var(--color-accent);
-  --sidebar-primary: var(--bg-emph-primary-inverse);
-  --sidebar-primary-foreground: var(--text-on-inverse-primary);
+    --sidebar: var(--bg-sidebar);
+    --sidebar-foreground: var(--text-primary);
+    --sidebar-border: var(--border-primary);
+    --sidebar-accent: var(--bg-raised);
+    --sidebar-accent-foreground: var(--text-primary);
+    --sidebar-connector: color-mix(
+        in srgb,
+        var(--border-strong) 30%,
+        var(--background)
+    );
+    --sidebar-ring: var(--brand);
+    --sidebar-primary: var(--bg-emph-primary-inverse);
+    --sidebar-primary-foreground: var(--text-on-inverse-primary);
+}
+
+:root[data-theme="light"] {
+    --interactive-hover: color-mix(
+        in srgb,
+        var(--foreground) 4%,
+        transparent
+    );
+    --interactive-selected: color-mix(
+        in srgb,
+        var(--foreground) 8%,
+        transparent
+    );
 }
 
 @theme inline {
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-  --font-heading: var(--font-sans);
+    --font-sans: var(--font-sans);
+    --font-mono: var(--font-mono);
+    --font-heading: var(--font-sans);
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-interactive-hover: var(--interactive-hover);
+    --color-interactive-selected: var(--interactive-selected);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(
+        --sidebar-accent-foreground
+    );
+    --color-sidebar-connector: var(--sidebar-connector);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(
+        --sidebar-primary-foreground
+    );
 
-  /* Registered at Axiom's own values, so the existing 22 var(--color-accent) /
-     var(--color-destructive) usages resolve exactly as before while the
-     matching Tailwind utilities still get generated. AI Elements' three
-     `bg-accent` hover states were repointed to `bg-muted`, since Axiom's
-     accent is the orange brand colour rather than a subtle hover fill. */
-  --color-accent: var(--orange-500);
-  --color-destructive: var(--red-400);
+    /* Keep Tailwind utilities on the same theme-aware www values used by the
+     docs semantic layer. */
+    --color-accent: var(--brand);
+    --color-destructive: var(--text-destructive);
 
-  /* Ported from www: `text-brand` / `bg-brand` etc. and the chart ramp
+    /* Ported from www: `text-brand` / `bg-brand` etc. and the chart ramp
      (values in styles/tokens.css). accent-foreground pairs with Axiom's
      orange accent, so it's white here rather than www's near-black. */
-  --color-brand: var(--brand);
-  --color-accent-foreground: var(--white);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
+    --color-brand: var(--brand);
+    --color-accent-foreground: var(--white);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
 
-  --radius-sm: calc(var(--radius) * 0.75);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) * 1.5);
-  --radius-xl: calc(var(--radius) * 2);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Adaptive color scales ported from www (values in styles/tokens.css) —
+    /* Adaptive color scales ported from www (values in styles/tokens.css) —
      generates the same utilities as www: `text-red-9`, `bg-gray-2`, etc. */
-  /* Gray */
-  --color-gray-1: var(--gray-1);
-  --color-gray-2: var(--gray-2);
-  --color-gray-3: var(--gray-3);
-  --color-gray-4: var(--gray-4);
-  --color-gray-5: var(--gray-5);
-  --color-gray-6: var(--gray-6);
-  --color-gray-7: var(--gray-7);
-  --color-gray-8: var(--gray-8);
-  --color-gray-9: var(--gray-9);
-  --color-gray-10: var(--gray-10);
-  --color-gray-11: var(--gray-11);
-  --color-gray-12: var(--gray-12);
-  /* Red */
-  --color-red-1: var(--red-1);
-  --color-red-2: var(--red-2);
-  --color-red-3: var(--red-3);
-  --color-red-4: var(--red-4);
-  --color-red-5: var(--red-5);
-  --color-red-6: var(--red-6);
-  --color-red-7: var(--red-7);
-  --color-red-8: var(--red-8);
-  --color-red-9: var(--red-9);
-  --color-red-10: var(--red-10);
-  --color-red-11: var(--red-11);
-  --color-red-12: var(--red-12);
-  /* Orange */
-  --color-orange-1: var(--orange-1);
-  --color-orange-2: var(--orange-2);
-  --color-orange-3: var(--orange-3);
-  --color-orange-4: var(--orange-4);
-  --color-orange-5: var(--orange-5);
-  --color-orange-6: var(--orange-6);
-  --color-orange-7: var(--orange-7);
-  --color-orange-8: var(--orange-8);
-  --color-orange-9: var(--orange-9);
-  --color-orange-10: var(--orange-10);
-  --color-orange-11: var(--orange-11);
-  --color-orange-12: var(--orange-12);
-  /* Yellow */
-  --color-yellow-1: var(--yellow-1);
-  --color-yellow-2: var(--yellow-2);
-  --color-yellow-3: var(--yellow-3);
-  --color-yellow-4: var(--yellow-4);
-  --color-yellow-5: var(--yellow-5);
-  --color-yellow-6: var(--yellow-6);
-  --color-yellow-7: var(--yellow-7);
-  --color-yellow-8: var(--yellow-8);
-  --color-yellow-9: var(--yellow-9);
-  --color-yellow-10: var(--yellow-10);
-  --color-yellow-11: var(--yellow-11);
-  --color-yellow-12: var(--yellow-12);
-  /* Green */
-  --color-green-1: var(--green-1);
-  --color-green-2: var(--green-2);
-  --color-green-3: var(--green-3);
-  --color-green-4: var(--green-4);
-  --color-green-5: var(--green-5);
-  --color-green-6: var(--green-6);
-  --color-green-7: var(--green-7);
-  --color-green-8: var(--green-8);
-  --color-green-9: var(--green-9);
-  --color-green-10: var(--green-10);
-  --color-green-11: var(--green-11);
-  --color-green-12: var(--green-12);
-  /* Blue */
-  --color-blue-1: var(--blue-1);
-  --color-blue-2: var(--blue-2);
-  --color-blue-3: var(--blue-3);
-  --color-blue-4: var(--blue-4);
-  --color-blue-5: var(--blue-5);
-  --color-blue-6: var(--blue-6);
-  --color-blue-7: var(--blue-7);
-  --color-blue-8: var(--blue-8);
-  --color-blue-9: var(--blue-9);
-  --color-blue-10: var(--blue-10);
-  --color-blue-11: var(--blue-11);
-  --color-blue-12: var(--blue-12);
-  /* Purple */
-  --color-purple-1: var(--purple-1);
-  --color-purple-2: var(--purple-2);
-  --color-purple-3: var(--purple-3);
-  --color-purple-4: var(--purple-4);
-  --color-purple-5: var(--purple-5);
-  --color-purple-6: var(--purple-6);
-  --color-purple-7: var(--purple-7);
-  --color-purple-8: var(--purple-8);
-  --color-purple-9: var(--purple-9);
-  --color-purple-10: var(--purple-10);
-  --color-purple-11: var(--purple-11);
-  --color-purple-12: var(--purple-12);
-  /* Tomato */
-  --color-tomato-1: var(--tomato-1);
-  --color-tomato-2: var(--tomato-2);
-  --color-tomato-3: var(--tomato-3);
-  --color-tomato-4: var(--tomato-4);
-  --color-tomato-5: var(--tomato-5);
-  --color-tomato-6: var(--tomato-6);
-  --color-tomato-7: var(--tomato-7);
-  --color-tomato-8: var(--tomato-8);
-  --color-tomato-9: var(--tomato-9);
-  --color-tomato-10: var(--tomato-10);
-  --color-tomato-11: var(--tomato-11);
-  --color-tomato-12: var(--tomato-12);
-  /* Amber */
-  --color-amber-1: var(--amber-1);
-  --color-amber-2: var(--amber-2);
-  --color-amber-3: var(--amber-3);
-  --color-amber-4: var(--amber-4);
-  --color-amber-5: var(--amber-5);
-  --color-amber-6: var(--amber-6);
-  --color-amber-7: var(--amber-7);
-  --color-amber-8: var(--amber-8);
-  --color-amber-9: var(--amber-9);
-  --color-amber-10: var(--amber-10);
-  --color-amber-11: var(--amber-11);
-  --color-amber-12: var(--amber-12);
-  /* Lime */
-  --color-lime-1: var(--lime-1);
-  --color-lime-2: var(--lime-2);
-  --color-lime-3: var(--lime-3);
-  --color-lime-4: var(--lime-4);
-  --color-lime-5: var(--lime-5);
-  --color-lime-6: var(--lime-6);
-  --color-lime-7: var(--lime-7);
-  --color-lime-8: var(--lime-8);
-  --color-lime-9: var(--lime-9);
-  --color-lime-10: var(--lime-10);
-  --color-lime-11: var(--lime-11);
-  --color-lime-12: var(--lime-12);
-  /* Teal */
-  --color-teal-1: var(--teal-1);
-  --color-teal-2: var(--teal-2);
-  --color-teal-3: var(--teal-3);
-  --color-teal-4: var(--teal-4);
-  --color-teal-5: var(--teal-5);
-  --color-teal-6: var(--teal-6);
-  --color-teal-7: var(--teal-7);
-  --color-teal-8: var(--teal-8);
-  --color-teal-9: var(--teal-9);
-  --color-teal-10: var(--teal-10);
-  --color-teal-11: var(--teal-11);
-  --color-teal-12: var(--teal-12);
-  /* Iris */
-  --color-iris-1: var(--iris-1);
-  --color-iris-2: var(--iris-2);
-  --color-iris-3: var(--iris-3);
-  --color-iris-4: var(--iris-4);
-  --color-iris-5: var(--iris-5);
-  --color-iris-6: var(--iris-6);
-  --color-iris-7: var(--iris-7);
-  --color-iris-8: var(--iris-8);
-  --color-iris-9: var(--iris-9);
-  --color-iris-10: var(--iris-10);
-  --color-iris-11: var(--iris-11);
-  --color-iris-12: var(--iris-12);
-  /* Pink */
-  --color-pink-1: var(--pink-1);
-  --color-pink-2: var(--pink-2);
-  --color-pink-3: var(--pink-3);
-  --color-pink-4: var(--pink-4);
-  --color-pink-5: var(--pink-5);
-  --color-pink-6: var(--pink-6);
-  --color-pink-7: var(--pink-7);
-  --color-pink-8: var(--pink-8);
-  --color-pink-9: var(--pink-9);
-  --color-pink-10: var(--pink-10);
-  --color-pink-11: var(--pink-11);
-  --color-pink-12: var(--pink-12);
+    /* Gray */
+    --color-gray-1: var(--gray-1);
+    --color-gray-2: var(--gray-2);
+    --color-gray-3: var(--gray-3);
+    --color-gray-4: var(--gray-4);
+    --color-gray-5: var(--gray-5);
+    --color-gray-6: var(--gray-6);
+    --color-gray-7: var(--gray-7);
+    --color-gray-8: var(--gray-8);
+    --color-gray-9: var(--gray-9);
+    --color-gray-10: var(--gray-10);
+    --color-gray-11: var(--gray-11);
+    --color-gray-12: var(--gray-12);
+    /* Red */
+    --color-red-1: var(--red-1);
+    --color-red-2: var(--red-2);
+    --color-red-3: var(--red-3);
+    --color-red-4: var(--red-4);
+    --color-red-5: var(--red-5);
+    --color-red-6: var(--red-6);
+    --color-red-7: var(--red-7);
+    --color-red-8: var(--red-8);
+    --color-red-9: var(--red-9);
+    --color-red-10: var(--red-10);
+    --color-red-11: var(--red-11);
+    --color-red-12: var(--red-12);
+    /* Orange */
+    --color-orange-1: var(--orange-1);
+    --color-orange-2: var(--orange-2);
+    --color-orange-3: var(--orange-3);
+    --color-orange-4: var(--orange-4);
+    --color-orange-5: var(--orange-5);
+    --color-orange-6: var(--orange-6);
+    --color-orange-7: var(--orange-7);
+    --color-orange-8: var(--orange-8);
+    --color-orange-9: var(--orange-9);
+    --color-orange-10: var(--orange-10);
+    --color-orange-11: var(--orange-11);
+    --color-orange-12: var(--orange-12);
+    /* Yellow */
+    --color-yellow-1: var(--yellow-1);
+    --color-yellow-2: var(--yellow-2);
+    --color-yellow-3: var(--yellow-3);
+    --color-yellow-4: var(--yellow-4);
+    --color-yellow-5: var(--yellow-5);
+    --color-yellow-6: var(--yellow-6);
+    --color-yellow-7: var(--yellow-7);
+    --color-yellow-8: var(--yellow-8);
+    --color-yellow-9: var(--yellow-9);
+    --color-yellow-10: var(--yellow-10);
+    --color-yellow-11: var(--yellow-11);
+    --color-yellow-12: var(--yellow-12);
+    /* Green */
+    --color-green-1: var(--green-1);
+    --color-green-2: var(--green-2);
+    --color-green-3: var(--green-3);
+    --color-green-4: var(--green-4);
+    --color-green-5: var(--green-5);
+    --color-green-6: var(--green-6);
+    --color-green-7: var(--green-7);
+    --color-green-8: var(--green-8);
+    --color-green-9: var(--green-9);
+    --color-green-10: var(--green-10);
+    --color-green-11: var(--green-11);
+    --color-green-12: var(--green-12);
+    /* Blue */
+    --color-blue-1: var(--blue-1);
+    --color-blue-2: var(--blue-2);
+    --color-blue-3: var(--blue-3);
+    --color-blue-4: var(--blue-4);
+    --color-blue-5: var(--blue-5);
+    --color-blue-6: var(--blue-6);
+    --color-blue-7: var(--blue-7);
+    --color-blue-8: var(--blue-8);
+    --color-blue-9: var(--blue-9);
+    --color-blue-10: var(--blue-10);
+    --color-blue-11: var(--blue-11);
+    --color-blue-12: var(--blue-12);
+    /* Purple */
+    --color-purple-1: var(--purple-1);
+    --color-purple-2: var(--purple-2);
+    --color-purple-3: var(--purple-3);
+    --color-purple-4: var(--purple-4);
+    --color-purple-5: var(--purple-5);
+    --color-purple-6: var(--purple-6);
+    --color-purple-7: var(--purple-7);
+    --color-purple-8: var(--purple-8);
+    --color-purple-9: var(--purple-9);
+    --color-purple-10: var(--purple-10);
+    --color-purple-11: var(--purple-11);
+    --color-purple-12: var(--purple-12);
+    /* Tomato */
+    --color-tomato-1: var(--tomato-1);
+    --color-tomato-2: var(--tomato-2);
+    --color-tomato-3: var(--tomato-3);
+    --color-tomato-4: var(--tomato-4);
+    --color-tomato-5: var(--tomato-5);
+    --color-tomato-6: var(--tomato-6);
+    --color-tomato-7: var(--tomato-7);
+    --color-tomato-8: var(--tomato-8);
+    --color-tomato-9: var(--tomato-9);
+    --color-tomato-10: var(--tomato-10);
+    --color-tomato-11: var(--tomato-11);
+    --color-tomato-12: var(--tomato-12);
+    /* Amber */
+    --color-amber-1: var(--amber-1);
+    --color-amber-2: var(--amber-2);
+    --color-amber-3: var(--amber-3);
+    --color-amber-4: var(--amber-4);
+    --color-amber-5: var(--amber-5);
+    --color-amber-6: var(--amber-6);
+    --color-amber-7: var(--amber-7);
+    --color-amber-8: var(--amber-8);
+    --color-amber-9: var(--amber-9);
+    --color-amber-10: var(--amber-10);
+    --color-amber-11: var(--amber-11);
+    --color-amber-12: var(--amber-12);
+    /* Lime */
+    --color-lime-1: var(--lime-1);
+    --color-lime-2: var(--lime-2);
+    --color-lime-3: var(--lime-3);
+    --color-lime-4: var(--lime-4);
+    --color-lime-5: var(--lime-5);
+    --color-lime-6: var(--lime-6);
+    --color-lime-7: var(--lime-7);
+    --color-lime-8: var(--lime-8);
+    --color-lime-9: var(--lime-9);
+    --color-lime-10: var(--lime-10);
+    --color-lime-11: var(--lime-11);
+    --color-lime-12: var(--lime-12);
+    /* Teal */
+    --color-teal-1: var(--teal-1);
+    --color-teal-2: var(--teal-2);
+    --color-teal-3: var(--teal-3);
+    --color-teal-4: var(--teal-4);
+    --color-teal-5: var(--teal-5);
+    --color-teal-6: var(--teal-6);
+    --color-teal-7: var(--teal-7);
+    --color-teal-8: var(--teal-8);
+    --color-teal-9: var(--teal-9);
+    --color-teal-10: var(--teal-10);
+    --color-teal-11: var(--teal-11);
+    --color-teal-12: var(--teal-12);
+    /* Iris */
+    --color-iris-1: var(--iris-1);
+    --color-iris-2: var(--iris-2);
+    --color-iris-3: var(--iris-3);
+    --color-iris-4: var(--iris-4);
+    --color-iris-5: var(--iris-5);
+    --color-iris-6: var(--iris-6);
+    --color-iris-7: var(--iris-7);
+    --color-iris-8: var(--iris-8);
+    --color-iris-9: var(--iris-9);
+    --color-iris-10: var(--iris-10);
+    --color-iris-11: var(--iris-11);
+    --color-iris-12: var(--iris-12);
+    /* Pink */
+    --color-pink-1: var(--pink-1);
+    --color-pink-2: var(--pink-2);
+    --color-pink-3: var(--pink-3);
+    --color-pink-4: var(--pink-4);
+    --color-pink-5: var(--pink-5);
+    --color-pink-6: var(--pink-6);
+    --color-pink-7: var(--pink-7);
+    --color-pink-8: var(--pink-8);
+    --color-pink-9: var(--pink-9);
+    --color-pink-10: var(--pink-10);
+    --color-pink-11: var(--pink-11);
+    --color-pink-12: var(--pink-12);
 }
 
-/* shadcn components assume `border` resolves to the theme border colour
-   (Tailwind v4 defaults it to currentColor). Scope that assumption to the
-   assistant subtree so no other docs surface is affected. */
-@layer base {
-  .docs-ai-surface,
-  .docs-ai-surface *,
-  .docs-ai-surface *::before,
-  .docs-ai-surface *::after {
-    border-color: var(--border);
-  }
+/* Step lists (fumadocs Steps/Step). Stock markers are 32px circles centred
+   on a full-height border-line: adjacent one-line steps sit 28px apart, so
+   consecutive circles fused into a pill, and the line poked out above the
+   first badge and below the last. Markers become 24px rounded squares sized
+   under the row height, steps gain breathing room, and the connector is
+   drawn per gap between badges instead of as a container border. Container
+   indent is pinned (stock is breakpoint-dependent) so the badge and line
+   offsets below are deterministic. */
+.fd-steps {
+    border-inline-start: none;
+    margin-inline-start: 16px;
+    padding-inline-start: 28px;
+}
+.fd-step {
+    position: relative;
+}
+.fd-step:not(:first-child) {
+    margin-top: 12px;
+}
+.fd-step::before {
+    width: 24px;
+    height: 24px;
+    /* Vertical position comes from the static position plus margin: the badge
+     tracks its own step's first text line. */
+    margin-top: 2px;
+    inset-inline-start: -39.5px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+}
+/* Connector segment per gap: from just below this badge (2px offset + 24px
+   badge + 4px gap) to just above the next one (12px step gap + 2px offset
+   - 4px gap), so the line never escapes the first or last badge. */
+.fd-step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    width: 1px;
+    inset-inline-start: -28px;
+    top: 30px;
+    bottom: -10px;
+    background-color: var(--color-fd-border);
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -324,180 +505,770 @@
  * styles are untouched.
  * ──────────────────────────────────────────────────────────────── */
 @utility body-xs-regular {
-  font-family: var(--font-sans);
-  font-size: 0.625rem; /* 10 / 16 */
-  line-height: 1rem; /* 16 / 16 */
-  font-weight: 400;
+    font-family: var(--font-sans);
+    font-size: 0.625rem; /* 10 / 16 */
+    line-height: 1rem; /* 16 / 16 */
+    font-weight: 400;
 }
 
 @utility body-xs-semibold {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
-  line-height: 1rem;
-  font-weight: 600;
+    font-family: var(--font-sans);
+    font-size: 0.625rem;
+    line-height: 1rem;
+    font-weight: 600;
 }
 
 @utility body-sm-regular {
-  font-family: var(--font-sans);
-  font-size: 0.6875rem; /* 11 / 16 */
-  line-height: 1rem;
-  font-weight: 400;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem; /* 11 / 16 */
+    line-height: 1rem;
+    font-weight: 400;
 }
 
 @utility body-sm-medium {
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  line-height: 1rem;
-  font-weight: 500;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: 500;
 }
 
 @utility body-sm-semibold {
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  line-height: 1rem;
-  font-weight: 600;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: 600;
 }
 
 @utility body-md-regular {
-  font-family: var(--font-sans);
-  font-size: 0.8125rem; /* 13 / 16 */
-  line-height: 1rem;
-  font-weight: 400;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem; /* 13 / 16 */
+    line-height: 1rem;
+    font-weight: 400;
 }
 
 @utility body-md-medium {
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1rem;
-  font-weight: 500;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1rem;
+    font-weight: 500;
 }
 
 @utility body-md-semibold {
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1rem;
-  font-weight: 600;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1rem;
+    font-weight: 600;
 }
 
 @utility body-lg-regular {
-  font-family: var(--font-sans);
-  font-size: 0.9375rem; /* 15 / 16 */
-  line-height: 1.25rem; /* 20 / 16 */
-  font-weight: 400;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem; /* 15 / 16 */
+    line-height: 1.25rem; /* 20 / 16 */
+    font-weight: 400;
 }
 
 @utility body-lg-medium {
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  line-height: 1.25rem;
-  font-weight: 500;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.25rem;
+    font-weight: 500;
 }
 
 @utility body-lg-semibold {
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  line-height: 1.25rem;
-  font-weight: 600;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.25rem;
+    font-weight: 600;
 }
 
 @utility body-normal-sm-regular {
-  font-family: var(--font-sans);
-  font-size: 0.6875rem; /* 11px */
-  font-weight: 400;
+    font-family: var(--font-sans);
+    font-size: 0.6875rem; /* 11px */
+    font-weight: 400;
 }
 
 @utility body-normal-md-regular {
-  font-family: var(--font-sans);
-  font-size: 0.8125rem; /* 13px */
-  font-weight: 400;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 400;
 }
 
 @utility body-normal-lg-regular {
-  font-family: var(--font-sans);
-  font-size: 0.9375rem; /* 15px */
-  font-weight: 400;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem; /* 15px */
+    font-weight: 400;
 }
 
 @utility mono-sm-regular {
-  font-family: var(--font-mono);
-  font-size: 0.625rem; /* 10 / 16 */
-  line-height: 1rem;
-  font-weight: 400;
+    font-family: var(--font-mono);
+    font-size: 0.625rem; /* 10 / 16 */
+    line-height: 1rem;
+    font-weight: 400;
 }
 
 @utility mono-sm-bold {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  line-height: 1rem;
-  font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    line-height: 1rem;
+    font-weight: 700;
 }
 
 @utility mono-md-regular {
-  font-family: var(--font-mono);
-  font-size: 0.75rem; /* 12 / 16 */
-  line-height: 1rem;
-  font-weight: 400;
+    font-family: var(--font-mono);
+    font-size: 0.75rem; /* 12 / 16 */
+    line-height: 1rem;
+    font-weight: 400;
 }
 
 @utility mono-md-medium {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1rem;
-  font-weight: 500;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
 }
 
 @utility mono-md-bold {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1rem;
-  font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 700;
 }
 
 @utility mono-lg-regular {
-  font-family: var(--font-mono);
-  font-size: 0.875rem; /* 14 / 16 */
-  line-height: 1.25rem; /* 20 / 16 */
-  font-weight: 400;
+    font-family: var(--font-mono);
+    font-size: 0.875rem; /* 14 / 16 */
+    line-height: 1.25rem; /* 20 / 16 */
+    font-weight: 400;
 }
 
 @utility mono-lg-medium {
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 500;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
 }
 
 @utility mono-xl-regular {
-  font-family: var(--font-mono);
-  font-size: 1rem; /* 16 / 16 */
-  line-height: 1.375rem; /* 22 / 16 */
-  font-weight: 400;
+    font-family: var(--font-mono);
+    font-size: 1rem; /* 16 / 16 */
+    line-height: 1.375rem; /* 22 / 16 */
+    font-weight: 400;
 }
 
 @utility mono-xl-medium {
-  font-family: var(--font-mono);
-  font-size: 1rem;
-  line-height: 1.375rem;
-  font-weight: 500;
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    line-height: 1.375rem;
+    font-weight: 500;
 }
 
 @utility mono-lg-bold {
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 700;
 }
 
 @utility content-md-regular {
-  font-family: var(--font-sans);
-  font-size: 0.8125rem; /* 13 / 16 */
-  line-height: 1.125rem; /* 18 / 16 */
-  font-weight: 400;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem; /* 13 / 16 */
+    line-height: 1.125rem; /* 18 / 16 */
+    font-weight: 400;
 }
 
 @utility content-md-bold {
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1.125rem;
-  font-weight: 700;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
+    font-weight: 700;
+}
+
+/* Assistant code blocks: the aicss.dev Code Block chrome layered over
+   streamdown's shiki-highlighted output (components/ai/code-block.tsx is the
+   standalone equivalent). Deliberately unlayered so these beat streamdown's
+   own utility classes without per-property `!`. */
+/* A real border, not the aicss shadow ring: the ring paints outside the
+   border box, so ancestors with overflow clipping shaved it off. */
+.docs-ai-markdown [data-streamdown="code-block"] {
+    position: relative;
+    margin: 12px 0;
+    padding: 0;
+    gap: 0;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    box-shadow: none;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-header"] {
+    height: 32px;
+    padding: 0 8px 0 12px;
+    border-bottom: 0.5px solid var(--border-primary);
+    color: var(--text-primary);
+    font: 450 11px/1 var(--font-code);
+}
+
+.docs-ai-markdown [data-streamdown="code-block-header"] > span {
+    margin-left: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    text-transform: capitalize;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-header"] > span::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    flex: none;
+    background: var(--text-tertiary);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m8 6-6 6 6 6M16 6l6 6-6 6' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+}
+
+/* Streamdown floats the action row over the code with sticky + negative
+   margin, which drifts off-center near the scrollport top. Pin it inside
+   the header instead so the copy button is always row-centered. */
+.docs-ai-markdown [data-streamdown="code-block-header"] + div {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    margin: 0;
+    height: 32px;
+    padding-right: 6px;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-actions"] {
+    padding: 0;
+    gap: 2px;
+    border: 0;
+    background: transparent;
+    backdrop-filter: none;
+}
+
+/* Matches components/ai/copy-button.tsx (h-6 w-6 rounded ghost with a
+   press scale); the download button is disabled via Streamdown controls. */
+.docs-ai-markdown [data-streamdown="code-block-copy-button"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 4px;
+    color: var(--text-tertiary);
+    transition:
+        color 150ms ease,
+        background 150ms ease,
+        transform 150ms ease;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-copy-button"]:hover {
+    color: var(--text-primary);
+    background: var(--bg-emph-tertiary);
+}
+
+.docs-ai-markdown [data-streamdown="code-block-copy-button"]:active {
+    transform: scale(0.9);
+}
+
+.docs-ai-markdown [data-streamdown="code-block-copy-button"] svg {
+    width: 11px;
+    height: 11px;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-body"] {
+    position: relative;
+    margin: 0;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    /* Scrolls without a visible bar, like the aicss source. */
+    scrollbar-width: none;
+}
+
+.docs-ai-markdown [data-streamdown="code-block-body"]::-webkit-scrollbar {
+    display: none;
+}
+
+/* Gutter rule between the line numbers and the code, like the aicss body. */
+.docs-ai-markdown [data-streamdown="code-block-body"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 33px;
+    width: 0.5px;
+    background: var(--border-primary);
+}
+
+/* Compact number column: streamdown defaults to a 24px column + 16px gap. */
+.docs-ai-markdown [data-streamdown="code-block-body"] code > span::before {
+    width: 18px;
+    margin-right: 13px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+}
+
+/* Scroll containers swallow their right padding for overflowing content, so
+   the breathing room at the end of long lines lives on the lines. */
+.docs-ai-markdown [data-streamdown="code-block-body"] code > span {
+    padding-right: 12px;
+}
+
+/* Assistant markdown tables: the docs-site table treatment (doc-prose.css),
+   sized down a step for the sidebar. Streamdown wraps tables in a padded
+   card with an action row — both are stripped so the table reads like the
+   rest of the documentation. */
+.docs-ai-markdown [data-streamdown="table-wrapper"] {
+    margin: 12px 0;
+    padding: 0;
+    gap: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.docs-ai-markdown [data-streamdown="table-wrapper"] > div:has(> table) {
+    overflow: auto;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: transparent;
+}
+
+.docs-ai-markdown [data-streamdown="table"] {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+}
+
+.docs-ai-markdown [data-streamdown="table"] :is(thead, tbody, tr) {
+    border: 0;
+}
+
+/* Streamdown gives thead its own fill, which showed through the translucent
+   --bg-inert on the th cells and lightened the header vs the docs tables. */
+.docs-ai-markdown [data-streamdown="table-header"] {
+    background: transparent;
+}
+
+.docs-ai-markdown [data-streamdown="table-header-cell"] {
+    padding: 8px 10px;
+    border: 0;
+    border-right: 1px solid var(--border-primary);
+    border-bottom: 1px solid var(--border-primary);
+    color: var(--text-secondary);
+    background: var(--bg-inert);
+    font: 400 12px/18px var(--font-code);
+    text-align: left;
+}
+
+.docs-ai-markdown [data-streamdown="table-cell"] {
+    padding: 8px 10px;
+    border: 0;
+    border-right: 1px solid var(--border-tertiary);
+    border-bottom: 1px solid var(--border-tertiary);
+    color: var(--text-secondary);
+    font: 400 12.5px/20px var(--font-sans);
+    text-align: left;
+    vertical-align: top;
+}
+
+.docs-ai-markdown [data-streamdown="table"] :is(th, td):last-child {
+    border-right: 0;
+}
+
+.docs-ai-markdown [data-streamdown="table"] tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Inline code in cells reads as an identifier via the mono face alone. */
+.docs-ai-markdown [data-streamdown="table"] :is(th, td) code {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: inherit;
+}
+
+/* Article code blocks (components/docs-code-block.tsx): line numbers via CSS
+   counters over shiki's .line spans, with the same gutter rule as the
+   assistant's code chrome. Unlayered so these beat shiki/fumadocs utilities. */
+.docs-code-block pre {
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+}
+
+.docs-code-block code {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    counter-reset: line;
+    /* The inline-code chip styling (border + card fill) leaks onto block
+       code without fumadocs' figure resets. */
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* Fumadocs pads each .line 16px on both sides; keep only trailing space so
+   the code hugs the number column like the assistant's blocks. */
+.docs-code-block code > .line {
+    padding: 0 12px 0 0;
+}
+
+/* The not-fumadocs-codeblock opt-out also drops fumadocs' shiki theme
+   mapping, so wire the dual-theme token colors back up here. */
+.docs-code-block .shiki,
+.docs-code-block .shiki span {
+    color: var(--shiki-light);
+}
+
+:root:not([data-theme="light"]) .docs-code-block .shiki,
+:root:not([data-theme="light"]) .docs-code-block .shiki span {
+    color: var(--shiki-dark);
+}
+
+/* Shiki separates .line spans with literal newlines, so the spans stay
+   inline — block display would double every line break. */
+.docs-code-block code > .line::before {
+    counter-increment: line;
+    content: counter(line);
+    display: inline-block;
+    width: 18px;
+    margin-right: 13px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-align: right;
+    /* Chromium/WebKit serialize ::before content into hand-made selections;
+       without this a drag-copied fence pastes with line numbers baked in. */
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Shiki leaves a trailing empty line span on most fences. */
+.docs-code-block code > .line:last-child:empty {
+    display: none;
+}
+
+.docs-code-body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 33px;
+    width: 0.5px;
+    background: var(--border-primary);
+}
+
+/* Article tabs (components/mdx-components.tsx Tabs): the code-field chrome —
+   a rounded-md shell on --bg-surface with a 32px hairline strip of mono
+   labels, active tab underlined in the accent. Unlayered so these outrank
+   fumadocs' utility classes without per-property `!` markers. */
+.docs-tabs > div {
+    margin: 0;
+    overflow: clip;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+}
+
+.docs-tabs [role="tablist"] {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    height: 38px;
+    padding: 0 12px;
+    border-bottom: 0.5px solid var(--border-primary);
+    background: transparent;
+    overflow-y: hidden;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.docs-tabs [role="tablist"]::-webkit-scrollbar {
+    display: none;
+}
+
+.docs-tabs [role="tab"] {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    margin: 0;
+    padding: 0 8px;
+    border: 0;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.12s ease;
+}
+
+.docs-tabs [role="tab"]:hover,
+.docs-tabs [role="tab"][aria-selected="true"] {
+    color: var(--text-primary);
+}
+
+.docs-tabs [role="tab"]:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+    border-radius: 4px;
+}
+
+.docs-tabs [role="tab"][aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    bottom: -0.5px;
+    left: 8px;
+    height: 1.5px;
+    background: var(--color-accent);
+}
+
+.docs-tabs [role="tabpanel"] {
+    padding: 12px;
+    border-radius: 0;
+    background: var(--bg-surface);
+    font-size: 14px;
+    line-height: 22px;
+    outline: none;
+}
+
+/* Full margin reset (not just block) so fumadocs' figure:only-child -m-4
+   bleed can't push media past the panel edges. `!` because the doc-prose
+   heading rules (`h2:not(.not-prose …)`) out-specify `> *` and were
+   re-inflating headings that open a tab panel. */
+.docs-tabs [role="tabpanel"] > * {
+    margin: 0 !important;
+}
+
+.docs-tabs [role="tabpanel"] > * + * {
+    margin-top: 10px !important;
+}
+
+/* A placeholder-config panel continues its code block (shared border,
+   rounded-t-none) — the panel rhythm must not wedge them apart. */
+.docs-tabs [role="tabpanel"] > * + .placeholder-config {
+    margin-top: 0 !important;
+}
+
+/* The doc-prose table-container rule carries `!`, so these two need it too. */
+.docs-tabs [role="tabpanel"] > div.relative.overflow-auto:has(> table) {
+    margin: 0 !important;
+}
+
+.docs-tabs [role="tabpanel"] > * + div.relative.overflow-auto:has(> table) {
+    margin-top: 10px !important;
+}
+
+/* Labels stay 11px; the strip grows to a comfortable touch target. */
+@media (max-width: 639px) {
+    .docs-tabs [role="tablist"] {
+        height: auto;
+        min-height: 44px;
+    }
+
+    .docs-tabs [role="tab"] {
+        min-height: 44px;
+    }
+}
+
+/* Assistant conversation scrollbar: the message scroller must own its native
+   scroll element (its autoscroll tracking binds to it), so the ScrollArea
+   component can't wrap it — these rules give the native bar the same look:
+   thin rounded thumb on a transparent rail, shown while hovering the thread.
+   Standard properties cover Chrome/Firefox; the -webkit rules cover Safari
+   with always-visible scrollbars. */
+.docs-assistant-messages {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+
+.docs-assistant-messages:hover {
+    scrollbar-color: var(--border) transparent;
+}
+
+.docs-assistant-messages::-webkit-scrollbar {
+    width: 10px;
+    background: transparent;
+}
+
+.docs-assistant-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.docs-assistant-messages::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-color: transparent;
+    background-clip: padding-box;
+}
+
+.docs-assistant-messages:hover::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+}
+
+/* Agent activity orb (components/ai/orb.tsx): a brand diamond core that
+   breathes while a square sonar ping expands and fades around it. */
+.ai-orb {
+    position: relative;
+    display: inline-block;
+    flex: none;
+    width: 14px;
+    height: 14px;
+}
+
+.ai-orb::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    background: var(--brand);
+    transform: rotate(45deg) scale(0.85);
+    animation: ai-orb-core 1.8s cubic-bezier(0.66, 0, 0.34, 1) infinite;
+}
+
+.ai-orb::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 1px solid var(--brand);
+    opacity: 0;
+    animation: ai-orb-ping 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes ai-orb-core {
+    0%,
+    100% {
+        transform: rotate(45deg) scale(0.85);
+        opacity: 0.75;
+    }
+    50% {
+        transform: rotate(45deg) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes ai-orb-ping {
+    0% {
+        transform: rotate(45deg) scale(0.9);
+        opacity: 0.9;
+    }
+    70%,
+    100% {
+        transform: rotate(45deg) scale(2.1);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ai-orb::before {
+        animation: none;
+        opacity: 1;
+    }
+    .ai-orb::after {
+        display: none;
+    }
+}
+
+/* Shared shimmering-label treatment for the components/ai family (thinking
+   state, web search). background-clip: text can't be expressed as Tailwind
+   utilities. The gradient reads currentColor, so the element's text color
+   sets the shimmer tone; -webkit-text-fill-color hides the painted glyphs
+   without zeroing currentColor the way `color: transparent` would. */
+.ai-shimmer-text {
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, currentColor 45%, transparent) 0%,
+        currentColor 44%,
+        color-mix(in srgb, currentColor 45%, transparent) 80%
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: ai-shimmer 2.7s linear infinite;
+}
+
+@keyframes ai-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Entry used by web-search result rows. */
+@keyframes ai-enter {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ai-shimmer-text {
+        background: none;
+        animation: none;
+        -webkit-text-fill-color: currentColor;
+    }
+}
+
+/* react-resizable-panels applies the Panel `className` prop to an inner
+   content div, not the outer flex-item panel element — so the collapsed and
+   below-xl overrides target the outer panels by id here instead. !important
+   is required regardless: the library sizes panels with inline styles. */
+.docs-app:not([data-assistant-open]) #docs-main-panel {
+    flex: 1 1 auto !important;
+}
+
+.docs-app:not([data-assistant-open]) #docs-assistant-panel {
+    flex: 0 0 0px !important;
+    overflow: hidden;
+}
+
+/* Below xl the assistant aside is a fixed overlay, so its panel never takes
+   part in the row regardless of open state. */
+@media (width < 80rem) {
+    .docs-app #docs-main-panel {
+        flex: 1 1 auto !important;
+    }
+
+    .docs-app #docs-assistant-panel {
+        flex: 0 0 0px !important;
+        overflow: hidden;
+    }
+}
+
+/* While the Ask AI sidebar is open (data-assistant-open on the shell root),
+   the floating TOC yields the right edge: hide it, release its 18rem grid
+   rail, and undo the article's TOC-compensating nudge. Deliberately unlayered
+   so these beat the `xl:*` utilities they reverse (unlayered declarations win
+   over @layer utilities regardless of specificity). 80rem matches Tailwind's
+   `xl` breakpoint used by those utilities. */
+.docs-app[data-assistant-open] .floating-toc {
+    display: none;
+}
+
+@media (min-width: 80rem) {
+    .docs-app[data-assistant-open] .article-content[data-has-toc] {
+        grid-template-columns:
+            minmax(2rem, 1fr) minmax(0, 768px) minmax(2rem, 1fr);
+    }
+
+    .docs-app[data-assistant-open] .doc-article {
+        transform: none;
+    }
 }

@@ -3,6 +3,7 @@ import { pageSchema } from 'fumadocs-core/source/schema';
 import { defineConfig, defineDocs } from 'fumadocs-mdx/config';
 import { z } from 'zod';
 import { axiomCodeDark, axiomCodeLight } from './lib/code-theme';
+import { rehypePlaygroundCode } from './lib/rehype-playground-code';
 
 export const docs = defineDocs({
   dir: 'content/docs',
@@ -33,12 +34,18 @@ export default defineConfig({
     // ```mermaid fences become <Mermaid chart="…"/> (components/mermaid.tsx)
     // instead of Shiki code blocks.
     remarkPlugins: [remarkMdxMermaid],
+    // After fumadocs' pipeline: hoists adjacent Run-in-Playground links onto
+    // their code block as data-playground for the header pill.
+    rehypePlugins: (v) => [...v, rehypePlaygroundCode],
     // Branded Shiki themes from www (grayscale + brand-orange accents) in
     // place of the stock github pair; defaults are spread so the notation
     // transformers and meta parsing stay intact.
     rehypeCodeOptions: {
       ...rehypeCodeDefaultOptions,
       themes: { light: axiomCodeLight, dark: axiomCodeDark },
+      // `language-*` lands on the pre so the code-block header can name the
+      // fence's language (components/docs-code-block.tsx).
+      addLanguageClass: true,
     },
   },
 });

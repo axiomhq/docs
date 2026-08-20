@@ -1,9 +1,12 @@
 import type { ThemeRegistration } from 'shiki';
 
 /**
- * `axiom-dark` — the branded Shiki theme, copied from www/src/lib/code-theme.ts.
- * Grayscale base with every accent drawn from the brand-orange family, so code
- * blocks sit on-palette instead of the blue/purple of stock themes. The editor
+ * `axiom-dark` — the branded Shiki theme. Accents sit on the design system's
+ * own orange ramp (styles/tokens.css): the brand fill (#DA5C2B) is too dark to
+ * read as vivid in thin glyphs, so text tokens use the scale's text-oriented
+ * steps — keywords on orange-10, constants on orange-11 (the same value as
+ * --color-accent-text) — with lighter apricot/sand steps of the same hue for
+ * functions and strings, and warm grays for everything structural. The editor
  * background is irrelevant (the docs strip it); tune tokens here.
  */
 export const axiomCodeDark: ThemeRegistration = {
@@ -11,16 +14,18 @@ export const axiomCodeDark: ThemeRegistration = {
   type: 'dark',
   colors: {
     'editor.background': '#0a0a0a',
-    'editor.foreground': '#b8b8b8',
+    'editor.foreground': '#d4cfc9',
   },
   settings: [
     // Default token color (anything unmatched).
-    { settings: { foreground: '#b8b8b8' } },
+    { settings: { foreground: '#d4cfc9' } },
     {
       scope: ['comment', 'punctuation.definition.comment'],
-      settings: { foreground: '#6f6f6f', fontStyle: 'italic' },
+      settings: { foreground: '#78726b', fontStyle: 'italic' },
     },
     {
+      // Strings are the most common accent in config-heavy docs — the
+      // calmest step on the ramp so examples never turn into orange walls.
       scope: [
         'string',
         'string.quoted',
@@ -28,9 +33,17 @@ export const axiomCodeDark: ThemeRegistration = {
         'string.regexp',
         'markup.inline.raw',
       ],
-      settings: { foreground: '#ffc799' },
+      settings: { foreground: '#f9c096' },
     },
     {
+      // TOML/INI section headers ([sinks.debug]) — the structural anchors of
+      // config examples, and the only shot at brand color in files that have
+      // no keywords at all.
+      scope: ['entity.name.section'],
+      settings: { foreground: '#fa7440' },
+    },
+    {
+      // orange-11: the system's accent-text tone.
       scope: [
         'constant.numeric',
         'constant.language',
@@ -38,9 +51,10 @@ export const axiomCodeDark: ThemeRegistration = {
         'constant.other',
         'keyword.other.unit',
       ],
-      settings: { foreground: '#ffb27d' },
+      settings: { foreground: '#ffa057' },
     },
     {
+      // The hero, on orange-10: the brand hue at text-legible luminance.
       scope: [
         'keyword',
         'keyword.control',
@@ -50,7 +64,7 @@ export const axiomCodeDark: ThemeRegistration = {
         'storage.type',
         'storage.modifier',
       ],
-      settings: { foreground: '#ff8a4c' },
+      settings: { foreground: '#fa7440' },
     },
     {
       scope: [
@@ -59,9 +73,11 @@ export const axiomCodeDark: ThemeRegistration = {
         'meta.function-call entity.name.function',
         'variable.function',
       ],
-      settings: { foreground: '#ffad66' },
+      settings: { foreground: '#ffbd91' },
     },
     {
+      // A lighter sibling of the keyword hero — SPL and SQL grammars scope
+      // their command words (table, sort) here, so it must read vivid too.
       scope: [
         'entity.name.type',
         'entity.name.class',
@@ -70,7 +86,7 @@ export const axiomCodeDark: ThemeRegistration = {
         'support.class',
         'entity.name.namespace',
       ],
-      settings: { foreground: '#e6875a' },
+      settings: { foreground: '#ff8f5e' },
     },
     {
       // JSON keys / object properties / HTML attributes — quiet, near-white,
@@ -85,63 +101,64 @@ export const axiomCodeDark: ThemeRegistration = {
         'entity.name.tag',
         'meta.object-literal.key',
       ],
-      settings: { foreground: '#dedede' },
+      settings: { foreground: '#eae5df' },
     },
     {
       scope: ['variable', 'variable.parameter', 'variable.other'],
-      settings: { foreground: '#cccccc' },
+      settings: { foreground: '#cac4bd' },
     },
     {
       scope: ['keyword.operator', 'punctuation', 'meta.brace'],
-      settings: { foreground: '#8f8f8f' },
+      settings: { foreground: '#8d867e' },
     },
     {
-      // Diffs — keep meaning, but warm.
+      // Diffs — semantic color, but earthy so it stays in the palette.
       scope: ['markup.inserted'],
-      settings: { foreground: '#ffc799' },
+      settings: { foreground: '#b0c493' },
     },
     {
       scope: ['markup.deleted'],
-      settings: { foreground: '#ff6b4c' },
+      settings: { foreground: '#ff6d4f' },
     },
     {
       scope: ['markup.changed'],
-      settings: { foreground: '#ffad66' },
+      settings: { foreground: '#f3a878' },
     },
     {
       scope: ['markup.heading', 'markup.bold'],
-      settings: { foreground: '#ffffff', fontStyle: 'bold' },
+      settings: { foreground: '#f7f4f1', fontStyle: 'bold' },
     },
     {
       scope: ['markup.italic'],
       settings: { fontStyle: 'italic' },
     },
     {
-      // Shell prompts / built-ins lean on the keyword orange.
+      // Shell prompts / built-ins lean on the constant step.
       scope: ['support.constant', 'constant.other.symbol'],
-      settings: { foreground: '#ffb27d' },
+      settings: { foreground: '#ffa057' },
     },
   ],
 };
 
 /**
  * `axiom-light` — light-mode counterpart the docs need (www is dark-only).
- * Scope-for-scope mirror of `axiom-dark` with the orange ramp darkened until
- * every token clears AA (>=4.5:1) on the light code surface; relative
- * intensity is preserved (keywords most vivid, strings softest).
+ * Scope-for-scope mirror of `axiom-dark` on the light orange scale: keywords
+ * take orange-11 light (the light theme's --color-accent-text), and the rest
+ * of the ramp is darkened until every token clears AA (>=4.5:1) on the light
+ * code surface; relative intensity is preserved.
  */
 export const axiomCodeLight: ThemeRegistration = {
   name: 'axiom-light',
   type: 'light',
   colors: {
     'editor.background': '#fafafa',
-    'editor.foreground': '#404040',
+    'editor.foreground': '#44403b',
   },
   settings: [
-    { settings: { foreground: '#404040' } },
+    { settings: { foreground: '#44403b' } },
     {
       scope: ['comment', 'punctuation.definition.comment'],
-      settings: { foreground: '#737373', fontStyle: 'italic' },
+      settings: { foreground: '#7c766e', fontStyle: 'italic' },
     },
     {
       scope: [
@@ -151,7 +168,12 @@ export const axiomCodeLight: ThemeRegistration = {
         'string.regexp',
         'markup.inline.raw',
       ],
-      settings: { foreground: '#8f530f' },
+      settings: { foreground: '#8a5f33' },
+    },
+    {
+      // TOML/INI section headers — see axiomCodeDark.
+      scope: ['entity.name.section'],
+      settings: { foreground: '#cc4e00' },
     },
     {
       scope: [
@@ -161,9 +183,10 @@ export const axiomCodeLight: ThemeRegistration = {
         'constant.other',
         'keyword.other.unit',
       ],
-      settings: { foreground: '#b45309' },
+      settings: { foreground: '#a5561d' },
     },
     {
+      // orange-11 light: the system's accent-text tone for light surfaces.
       scope: [
         'keyword',
         'keyword.control',
@@ -173,7 +196,7 @@ export const axiomCodeLight: ThemeRegistration = {
         'storage.type',
         'storage.modifier',
       ],
-      settings: { foreground: '#c2410c' },
+      settings: { foreground: '#cc4e00' },
     },
     {
       scope: [
@@ -182,9 +205,11 @@ export const axiomCodeLight: ThemeRegistration = {
         'meta.function-call entity.name.function',
         'variable.function',
       ],
-      settings: { foreground: '#b8461d' },
+      settings: { foreground: '#a34e20' },
     },
     {
+      // Vivid like the dark theme's type step (see axiomCodeDark) while
+      // staying AA on the light surface.
       scope: [
         'entity.name.type',
         'entity.name.class',
@@ -193,7 +218,7 @@ export const axiomCodeLight: ThemeRegistration = {
         'support.class',
         'entity.name.namespace',
       ],
-      settings: { foreground: '#9a3412' },
+      settings: { foreground: '#b34a10' },
     },
     {
       // JSON keys / object properties / HTML attributes — quiet, near-black,
@@ -207,31 +232,31 @@ export const axiomCodeLight: ThemeRegistration = {
         'entity.name.tag',
         'meta.object-literal.key',
       ],
-      settings: { foreground: '#262626' },
+      settings: { foreground: '#2e2a26' },
     },
     {
       scope: ['variable', 'variable.parameter', 'variable.other'],
-      settings: { foreground: '#525252' },
+      settings: { foreground: '#55504a' },
     },
     {
       scope: ['keyword.operator', 'punctuation', 'meta.brace'],
-      settings: { foreground: '#737373' },
+      settings: { foreground: '#79726b' },
     },
     {
       scope: ['markup.inserted'],
-      settings: { foreground: '#8f530f' },
+      settings: { foreground: '#5f7a45' },
     },
     {
       scope: ['markup.deleted'],
-      settings: { foreground: '#b91c1c' },
+      settings: { foreground: '#b5301c' },
     },
     {
       scope: ['markup.changed'],
-      settings: { foreground: '#b45309' },
+      settings: { foreground: '#a5561d' },
     },
     {
       scope: ['markup.heading', 'markup.bold'],
-      settings: { foreground: '#0a0a0a', fontStyle: 'bold' },
+      settings: { foreground: '#171412', fontStyle: 'bold' },
     },
     {
       scope: ['markup.italic'],
@@ -239,7 +264,7 @@ export const axiomCodeLight: ThemeRegistration = {
     },
     {
       scope: ['support.constant', 'constant.other.symbol'],
-      settings: { foreground: '#b45309' },
+      settings: { foreground: '#a5561d' },
     },
   ],
 };

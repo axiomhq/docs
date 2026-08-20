@@ -40,6 +40,31 @@ const unresolved = [];
 const missingAssets = [];
 const linkPattern = /(?:\]\(|href=|src=)["']?(\/[A-Za-z0-9_./{}?=#%+*:-]+)/g;
 
+function withoutFencedCode(content) {
+  let fence = null;
+
+  return content.split('\n').map((line) => {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})/u)?.[1];
+    if (marker) {
+      if (!fence) fence = { character: marker[0], length: marker.length };
+      else if (marker[0] === fence.character && marker.length >= fence.length) fence = null;
+      return '';
+    }
+    return fence ? '' : line;
+  }).join('\n');
+}
+
+const lowercaseSnippetImports = [...docs, ...snippets].flatMap((file) => {
+  const content = withoutFencedCode(readFileSync(file, 'utf8'));
+  const pattern = /^import\s+([a-z][A-Za-z0-9_$]*)\s+from\s+["']@\/content\/snippets\/[^"']+\.mdx["']\s*;?\s*$/gmu;
+
+  return [...content.matchAll(pattern)].map((match) => ({
+    file: path.relative(root, file),
+    line: content.slice(0, match.index).split('\n').length,
+    localName: match[1],
+  }));
+});
+
 for (const file of [...docs, ...snippets]) {
   const content = readFileSync(file, 'utf8');
   for (const match of content.matchAll(linkPattern)) {
@@ -72,6 +97,7 @@ const results = {
   unresolvedLinks: unresolved,
   missingAssets,
   retiredAnalyticsReferences: staleText,
+  lowercaseSnippetImports,
 };
 
 console.log(JSON.stringify(results, null, 2));
@@ -81,6 +107,7 @@ const defects = [
   ['unresolved links', unresolved],
   ['missing assets', missingAssets],
   ['retired analytics references', staleText],
+  ['lowercase MDX snippet imports', lowercaseSnippetImports],
 ].filter(([, found]) => found.length > 0);
 
 // Floors: the corpus is expected to grow. Adding pages must pass; losing them must not.
@@ -89,6 +116,9 @@ const floors = { routablePages: 629, snippets: 21, mdxTotal: 650, assets: 129, r
 const shrunk = Object.entries(floors).filter(([key, min]) => results[key] < min);
 
 for (const [label, found] of defects) console.error(`✗ ${found.length} ${label}`);
+for (const item of lowercaseSnippetImports) {
+  console.error(`  ${item.file}:${item.line}: rename ${item.localName} to PascalCase so React renders the imported MDX component`);
+}
 for (const [key, min] of shrunk) console.error(`✗ ${key} fell to ${results[key]}, floor is ${min}`);
 
 if (defects.length > 0 || shrunk.length > 0) process.exitCode = 1;

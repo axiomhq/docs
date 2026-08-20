@@ -2,11 +2,15 @@
 
 import posthog from 'posthog-js';
 
-export type SearchEntryPoint = 'header' | 'hero' | 'shortcut' | 'mode_tab';
-export type AssistantEntryPoint =
+export type SearchEntryPoint =
+  | 'header'
   | 'hero'
   | 'shortcut'
-  | 'mode_tab'
+  | 'assistant_handoff';
+export type AssistantEntryPoint =
+  | 'floating'
+  | 'hero'
+  | 'shortcut'
   | 'search_handoff'
   | 'search_empty_state'
   | 'search_footer'
@@ -20,7 +24,7 @@ type DocsAnalyticsEvents = {
   docs_search_opened: { entry_point: SearchEntryPoint };
   docs_search_completed: {
     duration_bucket: DurationBucket;
-    outcome: 'results' | 'empty';
+    outcome: 'results' | 'empty' | 'error';
     result_count: number;
   };
   docs_search_result_opened: {
