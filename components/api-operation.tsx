@@ -8,6 +8,7 @@ import { ApiCodeBlock, type ApiCodeSample } from "./api-code-block";
 import { ApiTryIt, type ApiTryItParameter } from "./api-try-it";
 import {
   getApiOperation,
+  operationRequiresAuth,
   resolveSchema,
   schemaExample,
 } from "@/lib/openapi";
@@ -270,6 +271,7 @@ function requestSamples(
   requestUrl: string,
   bodyType: string | undefined,
   bodyExample: unknown,
+  requiresAuth: boolean,
 ) {
   const upperMethod = method.toUpperCase();
   const json = bodyType
@@ -277,7 +279,9 @@ function requestSamples(
     : undefined;
   const curl = [
     `curl -X ${upperMethod} '${requestUrl}'`,
-    `  -H 'Authorization: Bearer API_TOKEN'`,
+    ...(requiresAuth
+      ? [`  -H 'Authorization: Bearer API_TOKEN'`]
+      : []),
     ...(bodyType
       ? [
           `  -H 'Content-Type: ${bodyType}'`,
@@ -285,12 +289,17 @@ function requestSamples(
         ]
       : []),
   ].join(" \\\n");
+  const javascriptHeaders = [
+    ...(requiresAuth
+      ? [`    Authorization: 'Bearer API_TOKEN',`]
+      : []),
+    ...(bodyType ? [`    'Content-Type': '${bodyType}',`] : []),
+  ];
   const javascriptOptions = [
     `  method: '${upperMethod}',`,
-    `  headers: {`,
-    `    Authorization: 'Bearer API_TOKEN',`,
-    ...(bodyType ? [`    'Content-Type': '${bodyType}',`] : []),
-    `  },`,
+    ...(javascriptHeaders.length
+      ? [`  headers: {`, ...javascriptHeaders, `  },`]
+      : []),
     ...(json
       ? [`  body: JSON.stringify(${json.replace(/\n/g, "\n  ")}),`]
       : []),
@@ -302,6 +311,10 @@ function requestSamples(
     ``,
     `const data = await response.json();`,
   ].join("\n");
+  const pythonHeaders = [
+    ...(requiresAuth ? [`'Authorization': 'Bearer API_TOKEN'`] : []),
+    ...(bodyType ? [`'Content-Type': '${bodyType}'`] : []),
+  ];
   const python = [
     ...(json ? [`import json`] : []),
     `import requests`,
@@ -309,7 +322,9 @@ function requestSamples(
     `response = requests.request(`,
     `    '${upperMethod}',`,
     `    '${requestUrl}',`,
-    `    headers={'Authorization': 'Bearer API_TOKEN'${bodyType ? `, 'Content-Type': '${bodyType}'` : ""}},`,
+    ...(pythonHeaders.length
+      ? [`    headers={${pythonHeaders.join(", ")}},`]
+      : []),
     // Raw string: a plain triple-quote would collapse JSON's \" escapes
     // before json.loads parses them.
     ...(json ? [`    json=json.loads(r'''${json}'''),`] : []),
@@ -331,7 +346,9 @@ function requestSamples(
     `func main() {`,
     `    req, err := http.NewRequest("${upperMethod}", "${requestUrl}", ${goBody})`,
     `    if err != nil { panic(err) }`,
-    `    req.Header.Set("Authorization", "Bearer API_TOKEN")`,
+    ...(requiresAuth
+      ? [`    req.Header.Set("Authorization", "Bearer API_TOKEN")`]
+      : []),
     ...(bodyType
       ? [`    req.Header.Set("Content-Type", "${bodyType}")`]
       : []),
@@ -447,8 +464,9 @@ export async function ApiOperation({
   const bodyExample = bodyType
     ? schemaExample(document, bodySchema)
     : undefined;
+  const requiresAuth = operationRequiresAuth(document, operation);
   const requestCodeSamples = await highlightedSamples(
-    requestSamples(method, requestUrl, bodyType, bodyExample),
+    requestSamples(method, requestUrl, bodyType, bodyExample, requiresAuth),
   );
   const parameterRows: SchemaRow[] = parameters.map(
     (parameter: JsonObject) => ({
@@ -588,6 +606,7 @@ export async function ApiOperation({
           serverVariables={serverVariables}
           bodyType={bodyType}
           bodyExample={bodyExample}
+          requiresAuth={requiresAuth}
         />
       </section>
       {responseEntries.length > 0 && (
