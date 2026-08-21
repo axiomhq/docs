@@ -362,6 +362,10 @@ export function DocsShell({
           ref={drawerRef}
           className={cn(
             "sidebar sticky top-14 z-30 flex h-[calc(100svh-3.5rem)] w-68 flex-none flex-col select-none bg-background text-sidebar-foreground max-xl:fixed max-xl:bottom-0 max-xl:left-0 max-xl:z-[70] max-xl:h-auto max-xl:w-[min(300px,86vw)] max-xl:shadow-[12px_0_48px_rgba(0,0,0,.35)] motion-reduce:[transition:none]!",
+            // The drawer stacks above the header (z-70 vs z-50), so without
+            // this clip its shadow blur would paint upward onto the header;
+            // only the rightward reach (12px offset + 48px blur) may escape.
+            "max-xl:[clip-path:inset(0_-64px_0_0)]",
             drawerOpen
               ? "open max-xl:visible max-xl:[transform:translateX(0)] max-xl:[transition:transform_.2s_ease,visibility_0s_linear_0s]"
               : "max-xl:invisible max-xl:[transform:translateX(-105%)] max-xl:[transition:transform_.2s_ease,visibility_0s_linear_.2s]",
