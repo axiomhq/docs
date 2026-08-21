@@ -99,6 +99,9 @@ export function DocsAssistantSidebar() {
         // own the width and the divider line there.
         'docs-assistant-sidebar ph-no-capture h-full w-full flex-col bg-background',
         'max-xl:fixed max-xl:top-14 max-xl:right-0 max-xl:bottom-0 max-xl:z-[65] max-xl:h-auto max-xl:w-[min(400px,92vw)] max-xl:border-l max-xl:border-border/50 max-xl:shadow-[-12px_0_48px_rgba(0,0,0,.35)]',
+        // Stacks above the header (z-65 vs z-50), so clip the shadow blur
+        // from bleeding upward onto it; only the leftward reach may escape.
+        'max-xl:[clip-path:inset(0_0_0_-64px)]',
         // Phones: the overlay owns the whole viewport width.
         'max-sm:left-0 max-sm:w-auto max-sm:border-l-0 max-sm:shadow-none',
         assistantOpen ? 'flex' : 'hidden',
