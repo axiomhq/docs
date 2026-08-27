@@ -2,7 +2,7 @@
 title: 'SPL command support in the Splunk Portal'
 description: 'Reference for which SPL commands are pushed down into Axiom, which run on the Splunk search head, and the limits that apply.'
 sidebarTitle: SPL command support
-keywords: ['splunk', 'splunk portal', 'spl', 'federated search', 'pushdown', 'stats', 'timechart', 'tstats', 'command support', 'limits']
+keywords: ['splunk', 'splunk portal', 'spl', 'federated search', 'pushdown', 'stats', 'timechart', 'tstats', 'command support', 'limits', 'mltk', 'machine learning toolkit', 'fit', 'apply', 'custom search commands']
 ---
 
 Every SPL command falls into one of three states when it runs against Axiom data through the Splunk Portal. This is the same model Splunk uses between its own deployments.
@@ -62,6 +62,26 @@ Every SPL command falls into one of three states when it runs against Axiom data
 Everything not listed above runs on the search head over the events Axiom returns, and behaves identically to native Splunk with remote peers: `eval`, `where`, `rename`, `rex`, `regex`, `spath`, `extract`, `dedup`, `sort`, `head`, `tail`, `table`, `fillnull`, `mvexpand`, the `mv*` functions, `eventstats`, `streamstats`, `convert`, `replace`, `fieldformat`, `transaction`, `append`, and more. These commands are exact whenever the matching events fit the response budget described in [Limits](#limits).
 
 Multivalue fields are first-class: array-valued Axiom fields arrive as real Splunk multivalue fields, so `mvcount`, `mvexpand`, and `mvfilter` behave exactly as on local indexes.
+
+## Machine Learning Toolkit
+
+The Splunk Machine Learning Toolkit (MLTK) works over the Portal in both federated modes. ML-SPL commands — `fit`, `apply`, `score`, `summary`, `listmodels`, `deletemodel`, `sample`, and `ai` — always execute on your search head, over the events Axiom returns. Nothing is installed on the Axiom side: MLTK and the Python for Scientific Computing add-on live on the search head, exactly as they would for a search over local indexes, and trained models are stored and applied there too.
+
+```spl
+index=http-logs | fit LinearRegression latency from bytes into my_model
+index=http-logs | apply my_model
+```
+
+Any streaming commands before the ML-SPL command, like `eval` or `rex`, are applied to the events before your search head runs the model, and aggregations after it, like `stats`, are computed by the search head as usual. Verified end to end on Splunk Enterprise 9.x and 10.x in both modes: identical results to running MLTK over a local index, in training and in inference.
+
+## Custom search commands from other apps
+
+Custom search commands run app code inside a Splunk instance, so no federated provider can execute them remotely — this is Splunk's model, not a Portal limit. What matters is where the command sits in your search:
+
+- **After the first reducing command** (for example after `stats`): the command runs on your search head over the finalized results. Works with any app.
+- **Before the first reducing command**, where Splunk ships it to the remote provider: the Portal fails the search with an ERROR banner naming the command, rather than returning events that are silently missing the command's effect. Move the command after a reducing command, or run it over a local index.
+
+MLTK commands are the documented exception: Splunk keeps them on the search head, so they work in every position.
 
 ## Fidelity notes
 
