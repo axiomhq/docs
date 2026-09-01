@@ -3,14 +3,14 @@ title: 'Connect Axiom with Vercel'
 description: 'Easily monitor data from requests, functions, and web vitals in one place to get the deepest observability experience for your Vercel projects.'
 overview: 'Platform for frontend frameworks and static sites'
 sidebarTitle: Vercel
-keywords: ['axiom documentation', 'documentation', 'axiom', 'vercel', 'request logs', 'function logs', 'web vitals', 'vercel app', 'vercel app']
+keywords: ['axiom documentation', 'documentation', 'axiom', 'vercel', 'request logs', 'function logs', 'firewall logs', 'vercel firewall', 'waf', 'log drain', 'web vitals', 'vercel app', 'vercel app']
 logoId: 'vercel'
 darkLogoId: 'vercelDark'
 ---
 
 Connect Axiom with Vercel to get the deepest observability experience for your Vercel projects.
 
-Easily monitor data from requests, functions, and web vitals in one place. 100% live and 100% of your data, no sampling.
+Easily monitor data from requests, functions, firewall events, and web vitals in one place. 100% live and 100% of your data, no sampling.
 
 Axiom’s Vercel app ships with a pre-built dashboard and pre-installed monitors so you can be in complete control of your projects with minimal effort.
 
@@ -39,6 +39,65 @@ For both requests and serverless functions, Axiom automatically installs a [drai
 As users interact with your website, various logs are produced. Axiom captures all these logs and ingests them into the `vercel` dataset. You can stream and analyze these logs live, or use the pre-built Vercel Dashboard to get an overview of all the important metrics. When you’re ready, you can fork the dashboard and start building your own.
 
 For function logs, if you call `console.log`, `console.warn` or `console.error` in your function, the output is also captured and made available as part of the log. You can use APL to easily search these logs.
+
+### Log sources
+
+The log drain that Axiom installs subscribes to the following [Vercel log sources](https://vercel.com/docs/drains/reference/logs#log-sources): `static`, `lambda`, `build`, `edge`, `external`, and `firewall`. Axiom records the origin of each event in the `vercel.source` field. To show events from one origin in the Datasets tab or the Stream tab, use the **Source** filter.
+
+### Firewall logs
+
+Vercel sends a firewall log entry for each request that a [Vercel Firewall](https://vercel.com/docs/vercel-firewall) rule denies. Axiom ingests these entries into the `vercel` dataset with `vercel.source` set to `firewall`. A firewall event has no `message` field. The fields that describe the denied request and the matched rule include the following:
+
+| Field | Description | Example |
+| :--- | :--- | :--- |
+| `vercel.source` | Origin of the event. Always `firewall` for firewall events. | `firewall` |
+| `request.wafAction` | Action that the firewall rule took. | `deny` |
+| `request.wafRule` | ID of the firewall rule that matched the request. | `rule_abc123` |
+| `request.statusCode` | HTTP status code that Vercel returned to the client. | `403` |
+| `request.method` | HTTP method of the denied request. | `POST` |
+| `request.path` | Path of the denied request. | `/api/webhook` |
+| `request.ip` | IP address of the client. | `203.0.113.7` |
+
+For example, the following query counts denied requests by firewall rule:
+
+```kusto
+['vercel']
+| where ['vercel.source'] == "firewall"
+| summarize count() by ['request.wafRule'], ['request.wafAction']
+```
+
+When Vercel reports a matched firewall rule on another request event, Axiom populates the same `request.wafAction` and `request.wafRule` fields on that event. To see all events that matched a rule, regardless of their source, filter on the rule field:
+
+```kusto
+['vercel']
+| where isnotempty(['request.wafRule'])
+| summarize count() by ['vercel.source'], ['request.wafAction'], ['request.wafRule']
+```
+
+<Note>
+Axiom populates the `request.wafAction`, `request.wafRule`, `request.cacheId`, `request.vercelCache`, and `request.referer` fields for installations created after October 7, 2024. If you installed the Axiom Vercel app before that date, [reinstall the integration](#update-the-log-drain-of-an-existing-installation) to receive these fields.
+</Note>
+
+### Update the log drain of an existing installation
+
+Axiom sets the sources of the log drain when it installs the drain. You can't change them later from the Vercel dashboard or from the Axiom app. Axiom added the `firewall` source in August 2026, so log drains installed before then don't receive firewall logs until you reinstall the integration.
+
+To check whether your log drain receives firewall logs, run the following query over a time range in which your firewall denied requests. If the query returns no results, reinstall the integration.
+
+```kusto
+['vercel']
+| where ['vercel.source'] == "firewall"
+| count
+```
+
+To reinstall the integration:
+
+1. In your Vercel dashboard, go to **Integrations**, and then select **Manage** next to the Axiom integration.
+2. Select **Settings**, and then select **Uninstall Integration**. Vercel removes the log drain and the environment variables that the integration created.
+3. Install the [Axiom Vercel app](https://vercel.com/integrations/axiom) again and select the projects that you want to monitor. Axiom installs a new log drain for each project with the current list of sources.
+4. If your projects send Web Vitals or use next-axiom, redeploy them. The new installation sets a new value for the `NEXT_PUBLIC_AXIOM_INGEST_ENDPOINT` environment variable, and your deployments only use the new value after you redeploy.
+
+Uninstalling the integration doesn't delete the `vercel` dataset or the data in it. When you reinstall, Axiom connects the new installation to the existing dataset, so your history, saved queries, dashboards, and monitors continue to work.
 
 ## Web vitals
 
