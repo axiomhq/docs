@@ -9,8 +9,9 @@ keywords: ['guides', 'erlang', 'otp', 'logger', 'httpc', 'rebar3', 'beam']
 import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
 import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import BaseDomains from "@/content/snippets/base-domains.mdx"
 
-This guide explains how to integrate Axiom as a logging solution in an Erlang/OTP app. Erlang’s `logger` module lets you attach custom handlers to the logging pipeline. In this guide, you create a handler that converts each log event into a JSON-friendly map, and a `gen_server` that buffers the events and sends them in batches to the Axiom ingest API. The integration only uses libraries that ship with Erlang/OTP: `httpc` from `inets` for HTTP, `ssl` for TLS, and the `json` module for encoding.
+This guide explains how to integrate Axiom as a logging solution in an Erlang/OTP app. Erlang’s `logger` module lets you attach custom handlers to the logging pipeline. In this guide, you create a handler that converts each log event into a JSON-friendly map, and a `gen_server` that buffers the events and sends them in batches to the ingest endpoint of your Axiom [edge deployment](/reference/edge-deployments). The integration only uses libraries that ship with Erlang/OTP: `httpc` from `inets` for HTTP, `ssl` for TLS, and the `json` module for encoding.
 
 <Prerequisites />
 - [Erlang/OTP](https://www.erlang.org/downloads) 27 or later. The `json` module used in this guide ships with OTP 27. On older releases, use a JSON library such as `jsx` or `thoas` instead.
@@ -68,6 +69,14 @@ export AXIOM_DOMAIN=AXIOM_DOMAIN
 <ReplaceDatasetToken />
 <ReplaceDomain />
 </Info>
+
+### Target your edge deployment
+
+Axiom ingests, stores, and queries your event data within the edge deployment your dataset lives in. `AXIOM_DOMAIN` is the base domain of that edge deployment, and the handler sends events to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`. Axiom currently offers edge deployments in the US and in the EU:
+
+<BaseDomains />
+
+For example, if your dataset lives in the `EU Central 1 (AWS)` edge deployment, set `AXIOM_DOMAIN` to `eu-central-1.aws.edge.axiom.co`. The handler then sends events to `https://eu-central-1.aws.edge.axiom.co/v1/ingest/DATASET_NAME`, and your event data is ingested, stored, and queried within the EU. For more information, including how to determine the edge deployment of your organization and how to create datasets in other edge deployments, see [Edge deployments](/reference/edge-deployments).
 
 ### Log level
 
@@ -389,7 +398,7 @@ ssl_options() ->
 
 How the sender works:
 
-- **Endpoint**: Events are sent to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`, the ingest endpoint of your edge deployment. The dataset name is URL-encoded with `uri_string:quote/1`.
+- **Endpoint**: Events are sent to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`, the ingest endpoint of your [edge deployment](/reference/edge-deployments). The dataset name is URL-encoded with `uri_string:quote/1`.
 - **Request**: `httpc:request/4` sends a POST request with the `Authorization: Bearer API_TOKEN` header and the `Content-Type` set to `application/json`. The body is the list of events encoded as a JSON array with `json:encode/1`, which is the format the ingest endpoint expects.
 - **TLS**: The `ssl` options verify the server certificate against the trust store of the operating system, which `public_key:cacerts_get/0` loads, and check that the certificate matches the host name.
 - **Retries**: The `post/2` function retries connection errors and responses with HTTP status 408, 429, 500, 502, 503, or 504 up to three times with a short backoff.

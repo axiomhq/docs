@@ -9,8 +9,9 @@ keywords: ['guides', 'elixir', 'logger', 'req', 'otp', 'beam']
 import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
 import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import BaseDomains from "@/content/snippets/base-domains.mdx"
 
-This guide explains how to integrate Axiom as a logging solution in an Elixir app. Elixir’s `Logger` is built on the Erlang/OTP `:logger` framework, which lets you attach custom handlers to the logging pipeline. In this guide, you create a handler that receives every log event, buffers events in a GenServer, and forwards them in batches to the Axiom ingest API using the [Req](https://hexdocs.pm/req) HTTP client.
+This guide explains how to integrate Axiom as a logging solution in an Elixir app. Elixir’s `Logger` is built on the Erlang/OTP `:logger` framework, which lets you attach custom handlers to the logging pipeline. In this guide, you create a handler that receives every log event, buffers events in a GenServer, and forwards them in batches to the ingest endpoint of your Axiom [edge deployment](/reference/edge-deployments) using the [Req](https://hexdocs.pm/req) HTTP client.
 
 <Prerequisites />
 - [Elixir](https://elixir-lang.org/install.html) 1.15 or later with Erlang/OTP 26 or later
@@ -95,6 +96,14 @@ export AXIOM_DOMAIN=AXIOM_DOMAIN
 <ReplaceDatasetToken />
 <ReplaceDomain />
 </Info>
+
+### Target your edge deployment
+
+Axiom ingests, stores, and queries your event data within the edge deployment your dataset lives in. `AXIOM_DOMAIN` is the base domain of that edge deployment, and the handler sends events to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`. Axiom currently offers edge deployments in the US and in the EU:
+
+<BaseDomains />
+
+For example, if your dataset lives in the `EU Central 1 (AWS)` edge deployment, set `AXIOM_DOMAIN` to `eu-central-1.aws.edge.axiom.co`. The handler then sends events to `https://eu-central-1.aws.edge.axiom.co/v1/ingest/DATASET_NAME`, and your event data is ingested, stored, and queried within the EU. For more information, including how to determine the edge deployment of your organization and how to create datasets in other edge deployments, see [Edge deployments](/reference/edge-deployments).
 
 The `batch_size` and `flush_interval` options control how often the handler sends events to Axiom. With the values above, the handler sends a request when it has collected 100 events or when two seconds have passed since the last request, whichever comes first. Axiom accepts up to 10,000 events in a single request. For more information, see [Limits](/reference/limits).
 
@@ -379,7 +388,7 @@ end
 
 How the buffer works:
 
-- **Endpoint**: Events are sent to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`, the ingest endpoint of your edge deployment. The dataset name is URL-encoded.
+- **Endpoint**: Events are sent to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`, the ingest endpoint of your [edge deployment](/reference/edge-deployments). The dataset name is URL-encoded.
 - **Authentication**: The `auth: {:bearer, token}` option sets the `Authorization: Bearer API_TOKEN` header.
 - **Payload**: The `json:` option encodes the list of events as a JSON array and sets the `Content-Type` header to `application/json`, which is the format the ingest endpoint expects.
 - **Retries**: By default, Req only retries GET and HEAD requests. Setting `retry: :transient` also retries POST requests that fail with a connection error or with HTTP status 408, 429, 500, 502, 503, or 504.
