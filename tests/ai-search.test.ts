@@ -81,8 +81,8 @@ describe('documentation icon mapping', () => {
 
     const used = new Set<string>();
     for (const file of files) {
-      // Card icon names resolve through the same map (mdx-components Card and AppCard).
-      for (const match of readFileSync(file, 'utf8').matchAll(/<(?:Icon|Card|AppCard)[^>]*\bicon="([^"]+)"/g)) {
+      // Card icon names resolve through the same map (mdx-components Card).
+      for (const match of readFileSync(file, 'utf8').matchAll(/<(?:Icon|Card)[^>]*\bicon="([^"]+)"/g)) {
         used.add(match[1]);
       }
     }
