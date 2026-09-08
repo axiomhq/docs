@@ -449,6 +449,76 @@
         "x-axiom-preview": true
       }
     },
+    "/datasets/{dataset_id}/delete-fields": {
+      "post": {
+        "security": [
+          {
+            "Auth": [
+              "vacuum|update"
+            ]
+          }
+        ],
+        "description": "Deletes fields from the schema of an event dataset. Deletion is asynchronous: the fields disappear from the dataset once the deletion job finishes, which can take several hours. Ingesting new events with a deleted field recreates the field. You can delete fields from a dataset once every 5 minutes.",
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Delete fields",
+        "operationId": "deleteDatasetFields",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteDatasetFieldsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted. The deletion is queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteDatasetFieldsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "description": "Too many requests. A field deletion started on this dataset in the last 5 minutes.",
+            "headers": {
+              "Retry-After": {
+                "description": "The GMT date/time at which the current rate limit window resets.\n",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-preview": true
+      }
+    },
     "/datasets/{dataset_id}/trim": {
       "post": {
         "security": [
@@ -678,6 +748,72 @@
             }
           }
         }
+      },
+      "delete": {
+        "security": [
+          {
+            "Auth": [
+              "vacuum|update"
+            ]
+          }
+        ],
+        "description": "Deletes a single field from the schema of an event dataset. Deletion is asynchronous: the field disappears from the dataset once the deletion job finishes, which can take several hours. Ingesting new events with the deleted field recreates the field. You can delete fields from a dataset once every 5 minutes.",
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Delete field",
+        "operationId": "deleteFieldForDataset",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "field_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted. The deletion is queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteDatasetFieldsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "Dataset or field not found."
+          },
+          "429": {
+            "description": "Too many requests. A field deletion started on this dataset in the last 5 minutes.",
+            "headers": {
+              "Retry-After": {
+                "description": "The GMT date/time at which the current rate limit window resets.\n",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-preview": true
       }
     },
     "/datasets/{dataset_id}/mapfields": {
@@ -3190,6 +3326,28 @@
       }
     },
     "responses": {
+      "BadRequestError": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "example": {
+                "code": 400,
+                "message": "Bad request"
+              }
+            }
+          }
+        }
+      },
       "ForbiddenError": {
         "description": "Forbidden",
         "content": {
@@ -8185,6 +8343,45 @@
           }
         },
         "additionalProperties": false
+      },
+      "DeleteDatasetFieldsRequest": {
+        "type": "object",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "description": "Names of the fields to delete.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "example": {
+          "fields": [
+            "http.user_agent",
+            "debug.payload"
+          ]
+        }
+      },
+      "DeleteDatasetFieldsResult": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Names of the fields queued for deletion, trimmed, de-duplicated, and sorted.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "example": {
+          "fields": [
+            "debug.payload",
+            "http.user_agent"
+          ]
+        }
       },
       "PieChart": {
         "type": "object",
