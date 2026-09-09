@@ -114,7 +114,7 @@ test('shared icon cards match the www treatment with compact docs spacing', asyn
 
   await page.goto('/docs/apps/introduction');
   const extensionCards = page.locator('.app-cards > .icon-card');
-  await expect(extensionCards).toHaveCount(12);
+  await expect(extensionCards).toHaveCount(13);
   await expect(extensionCards.first()).toHaveClass(/app-card/);
   await expect(extensionCards.first()).toHaveCSS('gap', '24px');
   await expect(extensionCards.first()).toHaveAttribute('href', '/docs/apps/lambda');
@@ -1364,6 +1364,7 @@ test('query reference sidebar icons stay on top-level options', async ({ page })
     '/docs/apl/tutorial',
     '/docs/apl/apl-features',
     '/docs/mpl/introduction',
+    '/docs/mpl/histograms-summaries',
     '/docs/mpl/sample-queries',
     '/docs/mpl/migrate-metrics',
   ];
@@ -1378,7 +1379,7 @@ test('query reference sidebar icons stay on top-level options', async ({ page })
       .filter({ hasText: new RegExp(`^${title}$`) });
     await expect(row.locator(':scope > [data-slot="sidebar-icon"]')).toHaveCount(1);
   }
-  await expect(querySidebar.locator('[data-slot="sidebar-icon"]')).toHaveCount(11);
+  await expect(querySidebar.locator('[data-slot="sidebar-icon"]')).toHaveCount(12);
   await expect(
     querySidebar.locator('[data-sidebar-child] [data-slot="sidebar-icon"]'),
   ).toHaveCount(0);
