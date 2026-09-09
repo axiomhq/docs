@@ -3,6 +3,7 @@ import {
   Binary,
   BookMarked,
   BookOpenText,
+  ChartColumn,
   ChartSpline,
   CodeXml,
   ListChecks,
@@ -65,4 +66,10 @@ export function MplFeaturesIcon(
   props: SVGProps<SVGSVGElement>,
 ) {
   return <ChartSpline {...props} strokeWidth={strokeWidth} />;
+}
+
+export function HistogramsSummariesIcon(
+  props: SVGProps<SVGSVGElement>,
+) {
+  return <ChartColumn {...props} strokeWidth={strokeWidth} />;
 }

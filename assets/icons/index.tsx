@@ -28,6 +28,7 @@ import { ObservabilityIcon } from "./observability";
 import { ProductAnalyticsIcon } from "./product-analytics";
 import { QuickStartIcon } from "./quick-start";
 import {
+  HistogramsSummariesIcon,
   MplFeaturesIcon,
   QueryFeaturesIcon,
   QueryFunctionsIcon,
@@ -72,6 +73,7 @@ export {
   ObservabilityIcon,
   ProductAnalyticsIcon,
   QuickStartIcon,
+  HistogramsSummariesIcon,
   MplFeaturesIcon,
   QueryFeaturesIcon,
   QueryFunctionsIcon,
@@ -146,6 +148,9 @@ export const querySidebarPageIcons: Readonly<
   "/docs/apl/tutorial": sidebarIcon(SampleQueriesIcon),
   "/docs/apl/apl-features": sidebarIcon(QueryFeaturesIcon),
   "/docs/mpl/introduction": sidebarIcon(MplFeaturesIcon),
+  "/docs/mpl/histograms-summaries": sidebarIcon(
+    HistogramsSummariesIcon,
+  ),
   "/docs/mpl/sample-queries": sidebarIcon(SampleQueriesIcon),
   "/docs/mpl/migrate-metrics": sidebarIcon(QueryMigrateIcon),
 };
