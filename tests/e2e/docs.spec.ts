@@ -114,7 +114,7 @@ test('shared icon cards match the www treatment with compact docs spacing', asyn
 
   await page.goto('/docs/apps/introduction');
   const extensionCards = page.locator('.app-cards > .icon-card');
-  await expect(extensionCards).toHaveCount(12);
+  await expect(extensionCards).toHaveCount(13);
   await expect(extensionCards.first()).toHaveClass(/app-card/);
   await expect(extensionCards.first()).toHaveCSS('gap', '24px');
   await expect(extensionCards.first()).toHaveAttribute('href', '/docs/apps/lambda');
