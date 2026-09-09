@@ -44,6 +44,19 @@ Calculate the 90th and 99th percentile HTTP request durations by service.
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20%60http.response.status_code%60%20%3C%20400%20%7C%20bucket%20by%20%60http.request.method%60%2C%20%60http.route%60%20to%205m%20using%20interpolate_cumulative_histogram(rate%2C%200.90%2C%200.99)%22%2C%22metricsDataset%22%3A%22otel-demo-metrics%22%7D)
 
+### Bucket distribution
+
+Show how request durations are distributed across a histogram's buckets. Visualize the result with a [heatmap](/dashboard-elements/heatmap) dashboard element.
+
+```kusto
+`otel-demo-metrics`:`http.server.request.duration`
+| where `axiom.histogram` == "bucket"
+| align to 5m using prom::rate
+| group by `axiom.le` using sum
+```
+
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20%60axiom.histogram%60%20%3D%3D%20%5C%22bucket%5C%22%20%7C%20align%20to%205m%20using%20prom%3A%3Arate%20%7C%20group%20by%20%60axiom.le%60%20using%20sum%22%2C%22metricsDataset%22%3A%22otel-demo-metrics%22%7D)
+
 ## Compute
 
 ### Compute error rate
