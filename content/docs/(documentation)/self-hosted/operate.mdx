@@ -1,0 +1,215 @@
+---
+title: 'Operate self-hosted EventDB'
+sidebarTitle: Operate
+description: 'Day-two operations for the axiom-eventdb Helm chart: publish Atom with an Ingress and OIDC, upgrade safely, scale and autoscale the hot-path components, monitor with Prometheus Operator, and enable the Splunk and Grafana portals.'
+keywords: ['self-hosted', 'eventdb', 'operate', 'upgrade', 'autoscaling', 'ingress', 'oidc', 'prometheus', 'servicemonitor', 'helm upgrade']
+---
+
+This page covers what comes after [Deploy on bare metal](/self-hosted/deploy-bare-metal): publishing Atom, upgrading, scaling, and monitoring. Every change below is a `helm upgrade` with an edited values file. Keep the values file under version control; it is the whole definition of the release.
+
+## Expose Atom
+
+Atom is the authenticating layer. Every API call needs an `xaat-` token it issued and the console needs a session, so it is the one workload in the chart meant to be reachable from outside the cluster. The EventDB Services and the portals stay `ClusterIP`.
+
+Publishing is `atom.ingress`, which routes each host whole to the Atom Service through the cluster's ingress controller. TLS terminates at the controller; Atom reads `X-Forwarded-Proto` from it, so session cookies come out `Secure` and OIDC callbacks come out `https` with nothing more configured.
+
+```yaml
+atom:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      # An ingest batch can be many megabytes; the NGINX controller allows 1m.
+      nginx.ingress.kubernetes.io/proxy-body-size: 64m
+      # A query may run for minutes.
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    hosts:
+      - host: atom.example.com
+    tls:
+      - secretName: atom-tls
+        hosts:
+          - atom.example.com
+```
+
+The two annotations are the ones that matter and are not every controller's default. Translate them for your controller. `hosts` takes the Kubernetes shape, with `paths` defaulting to one `Prefix` match on `/` per host, so the API and the `/ui/` console share the host.
+
+Once published, clients use Atom exactly as they use Axiom Cloud, with `https://atom.example.com` as the base URL and an API token from the console:
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" https://atom.example.com/v2/datasets
+```
+
+<Note>
+If you expose the Service directly through an L4 load balancer instead of an Ingress, set `atom.service.externalTrafficPolicy: Local`. With Kubernetes' default, the load balancer's health check passes on every node whether or not it has a ready Atom pod, and the resulting extra hop is a real source of intermittent timeouts.
+</Note>
+
+### Console single sign-on
+
+Setting `atom.oidc.issuer` switches the console to OIDC. The client ID goes in the values and the client secret in the `oidc-client-secret` key of the `axiom-atom` Secret:
+
+```yaml
+atom:
+  oidc:
+    issuer: https://login.example.com/realms/axiom
+    clientId: atom
+    # Only needed when a proxy in front of the Ingress does not forward the scheme.
+    redirectUrl: ""
+```
+
+```bash
+kubectl -n axiom-system patch secret axiom-atom --type merge \
+  -p "{\"stringData\":{\"oidc-client-secret\":\"$OIDC_CLIENT_SECRET\"}}"
+```
+
+Atom requests the `openid`, `profile`, and `email` scopes. The first-boot owner account keeps working alongside OIDC.
+
+## Upgrade
+
+### Chart upgrades
+
+Chart releases are OCI artifacts at `oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb`. Prereleases are versioned `0.0.1-alpha.<sha>`; Helm hides prereleases from version resolution, so always pass the exact `--version`. Upgrade with the same values file and the same command as the full install:
+
+```bash
+helm upgrade axiom-eventdb oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb \
+  --version $NEW_CHART_VERSION \
+  --namespace axiom-system \
+  --values values.yaml \
+  --timeout 15m
+```
+
+Every upgrade re-runs the revision-suffixed bootstrap Jobs, which are idempotent, and rolls any workload whose configuration changed. Wait for the Jobs and rollouts as in [Step 7](/self-hosted/deploy-bare-metal#wait-for-the-bootstrap-jobs-and-rollouts).
+
+<Warning>
+**Never disable a data-plane section on an upgrade.** Setting `rookCephCluster.enabled`, `postgresql.enabled`, or `eventdb.enabled` to `false` on a running release deletes the Ceph cluster, the PostgreSQL cluster, or the EventDB workloads, with their data. Those toggles are install-time decisions. The bootstrap pass in the deployment guide is the only time they are turned off, and only on a cluster with no release yet.
+</Warning>
+
+### EventDB image upgrades
+
+A new EventDB release is a new tag for the three `eventdb.image.*` entries, mirrored into your registry as in [Step 2](/self-hosted/deploy-bare-metal#step-2-mirror-container-images). Atom and the portals carry their own tags and move independently. Update the values and `helm upgrade`; `eventdb-migrate` applies any schema change before the workloads roll.
+
+### Operator and dependency upgrades
+
+The chart pins every dependency exactly, so a new chart version may carry a new Rook or CloudNativePG. Helm installs CRDs on a release's first install but deliberately never upgrades them, so a chart release that bumps an operator documents the CRD change and the order to apply it. Follow the upstream ordering the chart README describes: upgrade Rook's operator before its Ceph cluster and confirm `HEALTH_OK` before continuing, and upgrade the CloudNativePG operator before the PostgreSQL instances. A single Helm transaction does not by itself prove a safe data-plane upgrade.
+
+### What cannot change in place
+
+A PersistentVolumeClaim's access mode, storage class, and size are immutable. Changing `eventdb.wal.*` on an existing release fails with `spec is immutable`. The migration is to scale down the six workloads that mount the WAL, delete the claim, and upgrade so the chart recreates it. Deleting the claim discards whatever the WAL had not flushed; flush first by gracefully restarting ingest, or accept the loss knowingly.
+
+Workload selectors are immutable too. The chart selects each workload by a single stable `app` label and never by anything that varies with the release, so ordinary upgrades do not hit this.
+
+## Scale and autoscale
+
+### Fixed counts
+
+In `multi` mode each component's replica count comes from `eventdb.<component>.replicasByMode.multi`, and `eventdb.<component>.replicas` overrides it. Scale the component the load lands on:
+
+| Load | Scale | Rule of thumb |
+| :--- | :--- | :--- |
+| Ingest rate | `eventdb.ingest` | One pod per 8,000 events per second; keep `maxConcurrentIngests` at 256 per CPU of the limit. |
+| Ingest rate | `eventdb.deltaCache` | One pod per 16,000 events per second; it grows with ingest, not with queries. |
+| Query concurrency | `eventdb.queryWorker` | Throughput is replicas × `maxInflightRequests`; one pod per four concurrent queries at the defaults. |
+| Query bursts | `eventdb.queryRunner` | `maxConcurrentQueries` is a per-pod cap and decides whether a burst queues or fails. Size it for the whole expected concurrency. |
+
+Wide time ranges are bound by object-storage bandwidth and by how much data the range covers, not by these knobs. Retention is part of sizing.
+
+### Autoscaling
+
+The four hot-path components, Atom, and the portals each take an `autoscaling` block that hands the replica count to a HorizontalPodAutoscaler on CPU utilisation, the way the hosted service runs them:
+
+```yaml
+eventdb:
+  queryWorker:
+    autoscaling:
+      enabled: true
+      minReplicas: null      # empty means the fixed count for the mode
+      maxReplicas: 24
+      targetCPUUtilizationPercentage: 100
+```
+
+Three rules apply:
+
+- **The floor is the fixed count.** An empty `minReplicas` means the tested sizing, so autoscaling only ever adds pods above it. A ceiling below the floor fails the render.
+- **Targets are utilisation of the request.** Changing a component's request moves the point at which pods are added.
+- **Decide it at install time.** Turning autoscaling on for a running release removes the `replicas` field from the workload, which resets the count to one until the autoscaler's first reconcile restores the floor, about fifteen seconds later. For ingest that is a window of rejected batches. Flip it at a quiet moment, not alongside a change you want to watch. Turning it off has no such gap.
+
+Ingest scales down slowly on purpose: thirty minutes of stabilisation and one pod a minute, because a pod that stops without flushing leaves data invisible to queries until the `scan-nfs` CronJob recovers it, about 25 hours later.
+
+Autoscaling reads the Metrics API, so the cluster needs `metrics-server`. Without it the HPA enforces the floor and the ceiling but never scales between them and reports `FailedGetResourceMetric`.
+
+### Storage growth
+
+- **Object storage.** Watch Ceph's raw usage and add OSDs, by adding devices to the `storage.nodes` inventory, before it passes 80%. Ceph rebalances onto new OSDs automatically.
+- **Shared WAL.** The CephFS class in the deployment guide allows volume expansion; edit `eventdb.wal.size` upward and upgrade. It cannot shrink.
+- **PostgreSQL.** Data and WAL volumes expand the same way through `postgresql.cluster.storage.size` and `walStorage.size`, if the block class supports expansion.
+
+## Monitor with Prometheus
+
+The chart integrates with Prometheus Operator and creates nothing until you opt in. Install the operator and its `ServiceMonitor` and `PrometheusRule` CRDs first, then:
+
+```yaml
+eventdb:
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus-stack    # whatever your Prometheus selects on
+
+atom:
+  serviceMonitor:
+    enabled: true
+
+rookCephOperator:
+  monitoring:
+    enabled: true
+  csi:
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: prometheus-stack
+
+rookCephCluster:
+  monitoring:
+    enabled: true
+    createPrometheusRules: true
+    prometheusRule:
+      labels:
+        release: prometheus-stack
+```
+
+The EventDB switch scrapes `/metrics` on ingest, query runner, delta cache, dataset manager, and queue worker. Atom's switch scrapes its `/metrics`. Rook's cluster switch enables the Ceph manager and exporter metrics, whose ServiceMonitors the running operator creates as it reconciles the cluster, and the PrometheusRule installs Rook's maintained Ceph health and capacity alerts.
+
+CloudNativePG exposes PostgreSQL metrics on every instance; enable a `PodMonitor` for it through the upstream `cluster` chart's `cluster.monitoring` values.
+
+Set `eventdb.serviceMonitor.namespace` to place the monitors in a central monitoring namespace; their namespace selectors keep pointing at the release namespace.
+
+### What to alert on
+
+| Signal | Why |
+| :--- | :--- |
+| Shared WAL usage on the `eventdb-wal` claim | A full WAL stops ingest. Alert at 70%. |
+| PostgreSQL WAL volume usage | A full WAL volume takes the primary down, and with it Atom, ingest, and queries. Alert at 70%. |
+| Ceph health not `HEALTH_OK`, raw usage over 75% | The object store is the ceiling for everything. |
+| Ingest batch rejections and `Read request flood` responses from the query runner | The admission caps are being hit; scale the component. |
+| Bootstrap Job failures after an upgrade | `eventdb-migrate` or `axiom-atom-migrate` failing leaves the workloads crash-looping. |
+| `FailedGetResourceMetric` on any HPA | Autoscaling is not scaling. |
+
+## Portals
+
+Both portals are optional query front ends, off by default, and neither authenticates the credential it receives. They stay `ClusterIP` and belong behind an authenticating proxy.
+
+- **Splunk Portal** (`splunkPortal.enabled`) lets a Splunk search head run SPL against EventDB as a federated provider. By default it targets the bare query runner, which accepts any password. Point it at Atom instead so that the credential a search head sends is actually checked and dataset discovery works:
+
+  ```yaml
+  splunkPortal:
+    enabled: true
+    image:
+      repository: <registry-host>/splunk-portal
+      tag: <splunk-portal-commit>
+    queryUrl: http://axiom-atom:8080/v1/datasets/_apl?format=tabular
+    apiBase: http://axiom-atom:8080
+  ```
+
+  See [Axiom Portal for Splunk](/splunk/portal/overview) for the search-head side.
+
+- **Grafana Portal** (`grafanaPortal.enabled`) fronts Grafana's Loki and Tempo data sources. It only accepts HTTPS routes on `axiom.co` or on origins named in `grafanaPortal.axiomOriginAllowlist`, so against a self-hosted deployment its route points at the published Atom hostname. The Prometheus data source needs MetricsDB, which Atom does not include.
+
+Both images are tagged with their own repository's commit rather than the EventDB release tag.

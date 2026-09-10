@@ -1,0 +1,197 @@
+---
+title: 'Troubleshoot self-hosted EventDB'
+sidebarTitle: Troubleshoot
+description: 'Symptoms, causes, and fixes for the failure modes seen on real self-hosted EventDB deployments: stranded WAL volumes, Ceph OSDs that never appear, plain-HTTP object-storage endpoints, autoscalers without metrics, and crash-looping bootstrap.'
+keywords: ['self-hosted', 'eventdb', 'troubleshoot', 'multi-attach', 'pending pvc', 'osd', 'ceph', 'helm', 'hpa', 'atom', 'migrate']
+---
+
+Each entry names the symptom you see, why it happens, and what to do. Start with the release as a whole:
+
+```bash
+helm status axiom-eventdb -n axiom-system
+kubectl -n axiom-system get pods,jobs,pvc
+kubectl -n axiom-system get cephcluster,cephobjectstore,cephfilesystem,cluster
+helm test axiom-eventdb -n axiom-system --logs
+```
+
+## Install and render
+
+### The render fails with a schema error
+
+**Symptom.** `helm template` or `helm upgrade` fails with `values don't meet the specifications of the schema`, naming a key.
+
+**Cause.** The chart validates every first-party value against `values.schema.json` and rejects unknown keys, so a misspelling fails immediately instead of being silently ignored.
+
+**Fix.** Read the key path in the message and compare it with `values.yaml` in the chart.
+
+### The render demands an RWX storage class
+
+**Symptom.** `eventdb.wal.storageClass is required` or a message about ReadWriteMany.
+
+**Cause.** Six workloads mount the shared WAL in every mode, and no cluster's default class provides RWX, so the chart refuses to leave the claim `Pending` with nothing to explain it.
+
+**Fix.** Choose a WAL provider. On bare metal, `eventdb.wal.provider: cephfs` with a `CephFilesystem` under `rookCephCluster.cephFileSystems`, as in the deployment guide. With the `cephfs` provider, `eventdb.wal.storageClass` must be empty; an explicit class wins over derivation.
+
+### Custom resources fail validation on the first install
+
+**Symptom.** The first `helm upgrade --install` fails with `no matches for kind "CephCluster"` or `"Cluster" in version "postgresql.cnpg.io/v1"`.
+
+**Cause.** On a cluster that has never seen the chart's CRDs, Helm cannot validate custom resources introduced in the same transaction.
+
+**Fix.** Run the bootstrap pass from [Step 7](/self-hosted/deploy-bare-metal#step-7-install-the-chart) first, with `eventdb.enabled=false` and `atom.enabled=false`. Never run that pass against an existing release.
+
+## Ceph and object storage
+
+### No OSD is created on a storage node
+
+**Symptom.** The CephCluster stays in phase `Progressing`, the `rook-ceph-osd-prepare-<node>` Job completes, but no `rook-ceph-osd-N` Deployment appears for that node.
+
+**Cause.** One of: the device path in `storage.nodes` does not match the node's `/dev/disk/by-id/` entry; the device carries an old filesystem, partition table, or LVM signature; or the node name in the inventory differs from `kubectl get nodes`.
+
+**Fix.** Read the prepare Job's log:
+
+```bash
+kubectl -n axiom-system logs job/rook-ceph-osd-prepare-<node>
+```
+
+Correct the inventory or wipe the device (`sgdisk --zap-all`, `wipefs --all`, then zero the first 100 MiB), delete the prepare Job, and the operator retries on its next reconcile.
+
+### Ceph reports `HEALTH_WARN` after install
+
+**Symptom.** `HEALTH_WARN` with `1 pool(s) do not have an application enabled` or clock-skew messages.
+
+**Cause.** Usually transient while pools and daemons settle. Clock skew between storage nodes is real and Ceph will not tolerate more than a few tens of milliseconds.
+
+**Fix.** Wait ten minutes. For skew, run NTP on every node. Anything else: `kubectl -n axiom-system exec deploy/rook-ceph-tools -- ceph health detail` if the toolbox is enabled, or read the manager pod's log.
+
+### EventDB refuses the object-storage endpoint
+
+**Symptom.** Ingest and query pods crash-loop, and the log says the endpoint is insecure, or that TLS is required.
+
+**Cause.** EventDB only speaks plain HTTP to `localhost`, `127.0.0.1`, `::1`, or a `*.localhost` hostname. An in-cluster RGW's Service name is not one of those.
+
+**Fix.** Keep `objectStorage.endpoint` on a `*.localhost` name and map it to the RGW Service's ClusterIP with `eventdb.hostAliases`, as in Step 7. For an external store, use HTTPS with a certificate the pods trust.
+
+### The bucket-setup Job fails
+
+**Symptom.** `eventdb-bucket-setup-rN` fails with a connection or authentication error.
+
+**Cause.** With the Rook provider, the RGW user has not been created yet, or the `eventdb-s3-credentials` Secret does not match the user Rook created. With an external provider, the credentials cannot reach the endpoint or may not create buckets.
+
+**Fix.** Check `kubectl -n axiom-system get cephobjectstoreuser eventdb` reports `Ready` and that its status names `eventdb-s3-credentials`. For an external store that forbids bucket creation, create the bucket out of band and set `objectStorage.createBucket: false`. The Job re-runs on the next upgrade.
+
+## Volumes
+
+### `Multi-Attach error for volume "pvc-..."` on the WAL
+
+**Symptom.** After a node replacement, an EventDB pod stays `ContainerCreating` with `Multi-Attach error ... Volume is already used by pod(s) eventdb-dataset-manager, eventdb-delta-cache, ...`.
+
+**Cause.** The WAL claim is `ReadWriteOnce`, which binds the volume to one node. Deleting the stranded pod reschedules it onto a node the volume is not attached to; deleting the others inverts which side is stuck. This does not self-heal.
+
+**Fix.** Recovery means deleting the claim, which discards whatever the WAL had not flushed. Then change the WAL to a ReadWriteMany provider so it cannot happen again: scale down the six workloads that mount `eventdb-wal`, delete the claim, set `eventdb.wal.provider` and `size` in the values, and upgrade. A claim's access mode, class, and size are immutable, which is why the migration goes through deletion.
+
+### A CephFS claim stays `Pending` while everything reports healthy
+
+**Symptom.** `eventdb-wal` is `Pending` with no provisioner event, and the Ceph cluster, filesystem, and MDS are all `Ready`.
+
+**Cause.** Rook 1.20 hands CSI to the ceph-csi-operator but never creates the CephFS `Driver` resource. The chart renders it whenever a `CephFilesystem` is declared under `rookCephCluster.cephFileSystems`; a filesystem created any other way has no provisioner.
+
+**Fix.** Declare the filesystem in the chart values so the driver, its ServiceAccounts, and RBAC are rendered. If the nodes lack the `cephfs` kernel module, add `mounter: fuse` to the StorageClass parameters.
+
+### The PostgreSQL WAL volume fills up
+
+**Symptom.** The primary stops accepting writes; Atom, ingest, and queries fail together. The `postgresql-N-wal` claim is at 100%.
+
+**Cause.** The operator's replication slots retain WAL for a replica that has diverged after a failover storm until that replica is re-cloned.
+
+**Fix.** Re-clone the diverged replica: delete its PVCs and pod, and the operator rebuilds it from the primary, releasing the retained WAL. The chart's 30 GiB default is headroom to notice this, not a fix; alert on the volume at 70%.
+
+## Workloads
+
+### Atom crash-loops right after install
+
+**Symptom.** `axiom-atom` restarts several times in the first minutes with `database not migrated` or similar.
+
+**Cause.** By design. `atom serve` refuses to start on an unmigrated database and is restarted by its controller until the `axiom-atom-migrate` Job completes, which itself waits for PostgreSQL to be ready and for the operator to create Atom's role and database.
+
+**Fix.** Wait for the Job. If it fails, its log names the cause; the usual one is a missing `atom` role or database under `postgresql.cluster.roles` and `postgresql.databases`, which the render should have refused.
+
+### EventDB pods crash-loop behind `eventdb-migrate`
+
+**Symptom.** The same shape as above for the EventDB workloads.
+
+**Cause.** The same: the workloads start before `eventdb-migrate-rN` has applied the schema, and recover once it has.
+
+**Fix.** Wait for the Job. A Job that fails on credentials means the `axiom-postgresql-app` password does not match what CloudNativePG seeded the role with; both read the same Secret at install, so this only happens when the Secret was recreated after the database.
+
+### The console's generated admin password is gone
+
+**Symptom.** `atom.admin.email` was left empty, and the one-time password Atom logged at first boot has scrolled out of the pod log.
+
+**Cause.** Without an email, Atom creates `admin@atom.local` and logs a generated password once.
+
+**Fix.** Read it from the pod log if it is still there. Otherwise, sign in through OIDC if configured, or reset the database owner's password directly in PostgreSQL. Set `atom.admin.email` on new installs so the password lives in the `axiom-atom` Secret instead.
+
+### Every API token stopped working at once
+
+**Symptom.** Every request to Atom returns `401` after an upgrade or a Secret change.
+
+**Cause.** The `token-hash-secret` key of the `axiom-atom` Secret changed. It HMACs every token at rest, so a new value invalidates all of them.
+
+**Fix.** Restore the previous value from your Secret backup. There is no other recovery; a permanently lost value means reissuing every token.
+
+### The query runner answers `Read request flood`
+
+**Symptom.** Queries fail immediately under a burst while the workers are idle.
+
+**Cause.** `eventdb.queryRunner.maxConcurrentQueries` is a per-pod admission cap, and a client's keep-alive pool lands a burst on one or two runner pods.
+
+**Fix.** Size the cap for the whole expected concurrency rather than dividing it by the pod count, and scale `queryWorker` for throughput.
+
+### An autoscaler never scales
+
+**Symptom.** The HPA holds the floor and reports `FailedGetResourceMetric`.
+
+**Cause.** The Metrics API is missing; utilisation targets read it.
+
+**Fix.** Install `metrics-server`. The floor and ceiling are enforced regardless.
+
+### Ingest lost data after a scale-down or a crash
+
+**Symptom.** Events accepted just before a pod stopped are missing from queries.
+
+**Cause.** A pod that stops without flushing leaves its WAL directory behind. The data is on the shared volume but invisible until the `eventdb-scan-nfs` CronJob finds a heartbeat older than `eventdb.scanNfs.orphanedAge` (25 hours by default) and queues a flush.
+
+**Fix.** Wait, or lower `orphanedAge` for the next run. Prefer graceful stops: `kubectl rollout restart` flushes; `kubectl delete pod --force` does not.
+
+## Credentials
+
+### `helm template` rotates generated credentials
+
+**Symptom.** With `credentials.create: true` and no explicit values, every render mints new passwords.
+
+**Cause.** `helm template` and `--dry-run` cannot read the cluster, so the chart cannot read back the Secrets it created earlier.
+
+**Fix.** Do not apply rendered manifests as an upgrade path. Use `helm upgrade`, which can read the existing Secrets. Production installs should set `credentials.create: false` and manage Secrets themselves.
+
+### A credential with special characters breaks a connection URL
+
+**Symptom.** A workload fails to connect to PostgreSQL or Valkey with a parse error, while `psql` with the same password works.
+
+**Cause.** Credentials are embedded into connection URLs by environment-variable expansion, so they must be URL-safe.
+
+**Fix.** Use letters, digits, `-`, `_`, and `.` only. The deployment guide generates hex values for this reason.
+
+## Getting help
+
+When you contact Axiom, include:
+
+```bash
+helm get values axiom-eventdb -n axiom-system > values-live.yaml
+helm history axiom-eventdb -n axiom-system
+kubectl -n axiom-system get pods,jobs,pvc,cephcluster,cluster -o wide
+kubectl -n axiom-system describe pod <failing-pod>
+kubectl -n axiom-system logs <failing-pod> --previous
+```
+
+Redact the credentials in `values-live.yaml` before sending it; with `credentials.create: false` it contains none.
