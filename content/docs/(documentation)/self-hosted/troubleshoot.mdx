@@ -34,11 +34,11 @@ helm test axiom-eventdb -n axiom-system --logs
 
 ### Custom resources fail validation on the first install
 
-**Symptom.** The first `helm upgrade --install` fails with `no matches for kind "CephCluster"` or `"Cluster" in version "postgresql.cnpg.io/v1"`.
+**Symptom.** An install fails with `no matches for kind "CephCluster"` or `"Cluster" in version "postgresql.cnpg.io/v1"`.
 
-**Cause.** On a cluster that has never seen the chart's CRDs, Helm cannot validate custom resources introduced in the same transaction.
+**Cause.** The operators' CRDs did not go through Helm's `crds/` phase, which registers them before the templates are validated. That happens when rendered manifests are applied with `kubectl` instead of `helm install`, when the release is installed with `--skip-crds`, or when a `--dry-run` is validated against a cluster that has never seen the CRDs.
 
-**Fix.** Run the bootstrap pass from [Step 7](/self-hosted/deploy-bare-metal#step-7-install-the-chart) first, with `eventdb.enabled=false` and `atom.enabled=false`. Never run that pass against an existing release.
+**Fix.** Install with `helm upgrade --install` and without `--skip-crds`. The chart's companion CRD subcharts carry the definitions, and one transaction is enough; there is no separate bootstrap step.
 
 ## Ceph and object storage
 

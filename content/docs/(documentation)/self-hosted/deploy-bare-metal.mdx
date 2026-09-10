@@ -126,7 +126,33 @@ helm template axiom-eventdb oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb \
 
 Images that the Rook operator launches at runtime, such as the Ceph daemons and CSI sidecars, come from `rookCephCluster.cephImage` and the `rookCephOperator.csi` image settings rather than from rendered pod specs. Set both to your registry and mirror the tags they name.
 
-If your registry requires authentication for pulls, create the release namespace and a pull secret now, then attach it to the default service account so every pod in the namespace, including those the operators create, can pull:
+If your registry requires authentication for pulls, create the release namespace and a pull secret now. A pull secret reaches a pod through the service account the pod runs as, so it is attached in two places.
+
+The dependency subcharts each take an `imagePullSecrets` list and pass it to every service account they create. Add these to the values file you write in Step 6:
+
+```yaml
+rookCephOperator:
+  imagePullSecrets:
+    - name: registry-credentials
+rookCephCluster:
+  imagePullSecrets:
+    - name: registry-credentials
+cephCsiOperator:
+  imagePullSecrets:
+    - name: registry-credentials
+postgresqlOperator:
+  imagePullSecrets:
+    - name: registry-credentials
+postgresql:
+  cluster:
+    imagePullSecrets:
+      - name: registry-credentials
+valkey:
+  imagePullSecrets:
+    - name: registry-credentials
+```
+
+The first-party pods, including the bootstrap Jobs and CronJobs, run as the `axiom-eventdb` service account. The chart creates that account without pull secrets, so create it yourself with the secret attached and point the chart at it:
 
 ```bash
 kubectl create namespace $NAMESPACE
@@ -137,11 +163,26 @@ kubectl create secret docker-registry registry-credentials \
   --docker-password=<password> \
   -n $NAMESPACE
 
-kubectl patch serviceaccount default -n $NAMESPACE \
-  -p '{"imagePullSecrets":[{"name":"registry-credentials"}]}'
+kubectl apply -n $NAMESPACE -f - <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: axiom-eventdb
+automountServiceAccountToken: false
+imagePullSecrets:
+  - name: registry-credentials
+EOF
 ```
 
-The chart creates a dedicated `axiom-eventdb` service account for the EventDB pods. Patch it the same way after the first install, or set `eventdb.serviceAccount.create: false` and create the account with the pull secret attached beforehand.
+```yaml
+# values.yaml
+eventdb:
+  serviceAccount:
+    create: false
+    name: axiom-eventdb
+```
+
+The CephFS CSI plugin pods run as the `cephfs-ctrlplugin-sa` and `cephfs-nodeplugin-sa` accounts the chart renders, which carry no pull secrets. If the CSI images sit behind authentication too, patch those two accounts after the install and restart the plugin pods.
 
 ## Step 3: Provision local storage
 
@@ -181,7 +222,7 @@ Never list an OS or root disk. Rook creates an OSD on every device in the invent
 PostgreSQL, its WAL volume, and Valkey claim ReadWriteOnce volumes from a class you name in the values. Any performant provisioner works. On bare metal that is commonly:
 
 - **A local-path provisioner** on the EventDB nodes' NVMe, for the best latency. PostgreSQL and Valkey replicate across nodes, so node-bound volumes are acceptable.
-- **A Ceph RBD class** from the same Rook cluster. Declare it under `rookCephCluster.cephBlockPools` with `storageClass.enabled: true`; it becomes available after the Ceph cluster is healthy, which the bootstrap pass in Step 7 accounts for.
+- **A Ceph RBD class** from the same Rook cluster. Declare it under `rookCephCluster.cephBlockPools` with `storageClass.enabled: true`. Claims on it stay `Pending` until the Ceph cluster is healthy and then bind on their own; PostgreSQL and Valkey wait for them.
 
 PostgreSQL's WAL volume defaults to 30 GiB and its data volume to 50 GiB per instance. Confirm the class has that capacity on three nodes.
 
@@ -274,8 +315,16 @@ objectStorage:
   provider: rook
   bucket: eventdb
   # A *.localhost name is the one hostname EventDB accepts over plain HTTP.
-  # Step 7 aliases it to the in-cluster RGW Service for this release's pods.
+  # Step 7 maps it onto the in-cluster RGW Service.
   endpoint: http://ceph-rgw.eventdb.localhost:80
+
+# On k3s only: let the chart map the name above onto the RGW Service through
+# a CoreDNS rewrite, so Step 7 has nothing to bridge by hand. k3s imports the
+# kube-system/coredns-custom ConfigMap the chart writes; other distributions
+# do not, and use eventdb.hostAliases instead (see Step 7).
+# localDns:
+#   enabled: true
+#   hostname: ceph-rgw.eventdb.localhost
 
 eventdb:
   enabled: true
@@ -510,13 +559,7 @@ helm template axiom-eventdb oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb \
 
 ## Step 7: Install the chart
 
-The install is two passes of the same release. The first installs the operators, the Ceph cluster, and the datastores while EventDB and Atom stay off; the second enables everything. Two things force the split: Helm cannot validate custom resources against CRDs introduced in the same transaction on a cluster that has never seen them, and the RGW Service's ClusterIP, which the host alias needs, does not exist until Ceph is up.
-
-<Warning>
-The bootstrap pass sets `eventdb.enabled=false` and `atom.enabled=false` on the command line. **Never run it against a healthy existing release.** Disabling a data-plane section on an upgrade deletes the live workloads, and disabling `rookCephCluster` or `postgresql` on an upgrade deletes the Ceph and PostgreSQL clusters with their data. The bootstrap pass is an install-time step only.
-</Warning>
-
-### Bootstrap: operators, Ceph, and datastores
+The install is one Helm transaction. The operators' CRDs ship in companion subcharts under `crds/`, which Helm registers before it renders anything else, so the same release creates the Ceph cluster, the CephFS, the PostgreSQL cluster, and the EventDB workloads together. Nothing has to be installed first and nothing has to be turned off.
 
 ```bash
 helm upgrade --install axiom-eventdb \
@@ -524,19 +567,25 @@ helm upgrade --install axiom-eventdb \
   --version $CHART_VERSION \
   --namespace $NAMESPACE --create-namespace \
   --values values.yaml \
-  --set eventdb.enabled=false \
-  --set atom.enabled=false \
   --timeout 15m
 ```
 
-Wait for the Ceph cluster to converge. OSD preparation runs one Job per storage node and takes several minutes on first boot:
+Helm returns once the resources exist. What follows takes longer: Rook prepares one OSD per device, the operators bring up their data planes, and the EventDB workloads wait behind the bootstrap Jobs.
+
+<Tip>
+**Chart values reference.** This install sets only the values a bare-metal deployment needs. For the full list of configurable values and their defaults, read `values.yaml` in the chart, where every key is documented in place.
+</Tip>
+
+### Wait for Ceph and the datastores
+
+OSD preparation runs one Job per storage node and takes several minutes on first boot:
 
 ```bash
 kubectl -n $NAMESPACE get cephcluster eventdb-ceph -w
 # wait for PHASE Ready and HEALTH HEALTH_OK
 ```
 
-Then confirm the object store, the filesystem, and the RGW user are ready, and that PostgreSQL and Valkey are up:
+Then confirm the object store, the filesystem, and the RGW user are ready, and that the datastores are up:
 
 ```bash
 kubectl -n $NAMESPACE get cephobjectstore,cephfilesystem,cephobjectstoreuser
@@ -545,11 +594,14 @@ kubectl -n $NAMESPACE wait --for=condition=Ready cluster/postgresql --timeout=60
 kubectl -n $NAMESPACE rollout status statefulset/valkey --timeout=300s
 ```
 
-If a storage node shows no OSD after ten minutes, see [Troubleshoot](/self-hosted/troubleshoot#no-osd-is-created-on-a-storage-node).
+The `eventdb-wal` claim binds on its own once the filesystem's metadata server is up. If a storage node shows no OSD after ten minutes, see [Troubleshoot](/self-hosted/troubleshoot#no-osd-is-created-on-a-storage-node).
 
-### Resolve the RGW endpoint
+### Bridge the object-storage endpoint
 
-Read the ClusterIP of the RGW Service that Rook created. It is stable for the life of the Service:
+`objectStorage.endpoint` names the RGW as `ceph-rgw.eventdb.localhost`, because EventDB only speaks plain HTTP to a `*.localhost` name, and Rook publishes the RGW under its Service name. Something has to map one onto the other. Until it does, the EventDB pods restart while they cannot resolve the endpoint; that is expected and clears on its own once the mapping exists. The bucket-setup Job is unaffected: with the Rook provider it targets the Service name directly.
+
+- **On k3s**, with `localDns` enabled in Step 6, there is nothing to do. The chart wrote a CoreDNS rewrite for the name, k3s imports it, and the pods resolve it within a minute or two. Skip to the next section.
+- **On any other distribution**, the mapping is a per-pod `/etc/hosts` entry pointing at the RGW Service's ClusterIP, which exists now that Ceph is up and is stable for the life of the Service. Read it, add it to the values file, and upgrade:
 
 ```bash
 RGW_IP=$(kubectl -n $NAMESPACE get service rook-ceph-rgw-eventdb-store \
@@ -557,26 +609,25 @@ RGW_IP=$(kubectl -n $NAMESPACE get service rook-ceph-rgw-eventdb-store \
 echo "$RGW_IP"
 ```
 
-### Full install: EventDB and Atom
-
-Re-run the same release with the complete profile, adding the host alias that maps the `.localhost` endpoint onto the RGW Service for this release's pods:
+```yaml
+# values.yaml
+eventdb:
+  hostAliases:
+    - ip: <RGW_IP>
+      hostnames:
+        - ceph-rgw.eventdb.localhost
+```
 
 ```bash
-helm upgrade --install axiom-eventdb \
+helm upgrade axiom-eventdb \
   oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb \
   --version $CHART_VERSION \
   --namespace $NAMESPACE \
   --values values.yaml \
-  --set "eventdb.hostAliases[0].ip=$RGW_IP" \
-  --set "eventdb.hostAliases[0].hostnames[0]=ceph-rgw.eventdb.localhost" \
   --timeout 15m
 ```
 
-Add the alias to `values.yaml` under `eventdb.hostAliases` afterwards, so future upgrades carry it without the `--set` flags.
-
-<Tip>
-**Chart values reference.** This install sets only the values a bare-metal deployment needs. For the full list of configurable values and their defaults, read `values.yaml` in the chart, where every key is documented in place.
-</Tip>
+This is a values change like any other: nothing is disabled, and the upgrade rolls only the EventDB pods, which come back with the alias.
 
 ### Wait for the bootstrap Jobs and rollouts
 

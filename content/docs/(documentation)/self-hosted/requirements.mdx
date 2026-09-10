@@ -25,7 +25,7 @@ The chart runs on any conformant Kubernetes distribution, such as kubeadm, RKE2,
 | Kubernetes version | A currently supported release. The chart's dependencies (Rook 1.20, CloudNativePG 1.30) require 1.28 or later. |
 | CNI | Any CNI providing standard IPv4 pod networking. |
 | Container runtime | Any CRI-compatible runtime, such as containerd. |
-| DNS | Working in-cluster DNS. CoreDNS is only required if you use the chart's `localDns` rewrite, which is intended for single-purpose development clusters. |
+| DNS | Working in-cluster DNS. The chart's optional `localDns` rewrite maps the object-storage hostname onto the in-cluster RGW through CoreDNS, but only k3s imports the ConfigMap it writes; every other distribution uses `eventdb.hostAliases` for the same mapping. |
 | Metrics API | `metrics-server` or equivalent, required only when autoscaling is enabled. |
 | Ingress | An ingress controller and TLS issuance for publishing Atom. |
 | Prometheus Operator | Optional. Required for the chart's `ServiceMonitor` and `PrometheusRule` resources. |
@@ -113,7 +113,7 @@ Do not put lifecycle or expiration rules on the bucket. EventDB manages retentio
 </Warning>
 
 <Note>
-EventDB only speaks plain HTTP to an endpoint whose hostname is `localhost`, `127.0.0.1`, `::1`, or a `*.localhost` name. Every other hostname must use TLS. An in-cluster RGW answers on its Service name over HTTP, so the chart maps a `*.localhost` alias onto it through `eventdb.hostAliases`. The bare-metal guide does this in [Step 7](/self-hosted/deploy-bare-metal#step-7-install-the-chart).
+EventDB only speaks plain HTTP to an endpoint whose hostname is `localhost`, `127.0.0.1`, `::1`, or a `*.localhost` name. Every other hostname must use TLS. An in-cluster RGW answers on its Service name over HTTP, so a `*.localhost` alias is mapped onto it: by the chart's CoreDNS rewrite on k3s, or through `eventdb.hostAliases` elsewhere. The bare-metal guide does this in [Step 7](/self-hosted/deploy-bare-metal#step-7-install-the-chart).
 </Note>
 
 Object-storage bandwidth is the ceiling for both ingest and wide queries. A Rook RGW sharing nodes with the EventDB workloads saturated near 30,000 events per second on the validation clusters; dedicated storage nodes with NVMe OSDs and 25 GbE or better raise that.
