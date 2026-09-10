@@ -458,11 +458,11 @@
             ]
           }
         ],
-        "description": "Deletes fields from the schema of an event dataset. Deletion is asynchronous: the fields disappear from the dataset once the deletion job finishes, which can take several hours. Ingesting new events with a deleted field recreates the field. You can delete fields from a dataset once every 5 minutes.",
+        "description": "Deletes fields asynchronously. The field disappears from listings once the deletion pipeline finishes. Re-ingesting data with that field recreates it.\n",
         "tags": [
           "datasets"
         ],
-        "summary": "Delete fields",
+        "summary": "Delete fields from a dataset",
         "operationId": "deleteDatasetFields",
         "parameters": [
           {
@@ -486,7 +486,7 @@
         },
         "responses": {
           "202": {
-            "description": "Accepted. The deletion is queued.",
+            "description": "DeleteDatasetFieldsResult",
             "content": {
               "application/json": {
                 "schema": {
@@ -505,7 +505,7 @@
             "$ref": "#/components/responses/NotFoundError"
           },
           "429": {
-            "description": "Too many requests. A field deletion started on this dataset in the last 5 minutes.",
+            "description": "TooManyDeleteFieldsRequests",
             "headers": {
               "Retry-After": {
                 "description": "The GMT date/time at which the current rate limit window resets.\n",
@@ -757,11 +757,11 @@
             ]
           }
         ],
-        "description": "Deletes a single field from the schema of an event dataset. Deletion is asynchronous: the field disappears from the dataset once the deletion job finishes, which can take several hours. Ingesting new events with the deleted field recreates the field. You can delete fields from a dataset once every 5 minutes.",
+        "description": "Deletes the field asynchronously. The field disappears from listings once the deletion pipeline finishes. Re-ingesting data with that field recreates it.\n",
         "tags": [
           "datasets"
         ],
-        "summary": "Delete field",
+        "summary": "Delete a field from a dataset",
         "operationId": "deleteFieldForDataset",
         "parameters": [
           {
@@ -783,7 +783,7 @@
         ],
         "responses": {
           "202": {
-            "description": "Accepted. The deletion is queued.",
+            "description": "DeleteDatasetFieldsResult",
             "content": {
               "application/json": {
                 "schema": {
@@ -799,10 +799,10 @@
             "$ref": "#/components/responses/ForbiddenError"
           },
           "404": {
-            "description": "Dataset or field not found."
+            "$ref": "#/components/responses/NotFoundError"
           },
           "429": {
-            "description": "Too many requests. A field deletion started on this dataset in the last 5 minutes.",
+            "description": "TooManyDeleteFieldsRequests",
             "headers": {
               "Retry-After": {
                 "description": "The GMT date/time at which the current rate limit window resets.\n",
@@ -8351,7 +8351,6 @@
         ],
         "properties": {
           "fields": {
-            "description": "Names of the fields to delete.",
             "type": "array",
             "items": {
               "type": "string"
@@ -8360,8 +8359,8 @@
         },
         "example": {
           "fields": [
-            "http.user_agent",
-            "debug.payload"
+            "field1",
+            "field2"
           ]
         }
       },
@@ -8369,17 +8368,17 @@
         "type": "object",
         "properties": {
           "fields": {
-            "description": "Names of the fields queued for deletion, trimmed, de-duplicated, and sorted.",
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "x-omitempty": false
           }
         },
         "example": {
           "fields": [
-            "debug.payload",
-            "http.user_agent"
+            "field1",
+            "field2"
           ]
         }
       },
