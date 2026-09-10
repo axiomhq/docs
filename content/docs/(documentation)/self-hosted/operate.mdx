@@ -1,11 +1,11 @@
 ---
 title: 'Operate self-hosted EventDB'
 sidebarTitle: Operate
-description: 'Day-two operations for the axiom-eventdb Helm chart: publish Atom with an Ingress and OIDC, upgrade safely, scale and autoscale the hot-path components, monitor with Prometheus Operator, and enable the Splunk and Grafana portals.'
-keywords: ['self-hosted', 'eventdb', 'operate', 'upgrade', 'autoscaling', 'ingress', 'oidc', 'prometheus', 'servicemonitor', 'helm upgrade']
+description: 'Day-two operations for the axiom-eventdb Helm chart: publish Atom with an Ingress and OIDC, scale and autoscale the hot-path components, monitor with Prometheus Operator, and enable the Splunk and Grafana portals.'
+keywords: ['self-hosted', 'eventdb', 'operate', 'autoscaling', 'ingress', 'oidc', 'prometheus', 'servicemonitor', 'helm upgrade']
 ---
 
-This page covers what comes after [Deploy on bare metal](/self-hosted/deploy-bare-metal): publishing Atom, upgrading, scaling, and monitoring. Every change below is a `helm upgrade` with an edited values file. Keep the values file under version control; it is the whole definition of the release.
+This page covers what comes after [Deploy on bare metal](/self-hosted/deploy-bare-metal): publishing Atom, scaling, and monitoring. Upgrades have [their own page](/self-hosted/upgrade). Every change below is a `helm upgrade` with an edited values file. Keep the values file under version control; it is the whole definition of the release.
 
 ## Expose Atom
 
@@ -65,37 +65,11 @@ Atom requests the `openid`, `profile`, and `email` scopes. The first-boot owner 
 
 ## Upgrade
 
-### Chart upgrades
-
-Chart releases are OCI artifacts at `oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb`. Prereleases are versioned `0.0.1-alpha.<sha>`; Helm hides prereleases from version resolution, so always pass the exact `--version`. Upgrade with the same values file and the same command as the full install:
-
-```bash
-helm upgrade axiom-eventdb oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb \
-  --version $NEW_CHART_VERSION \
-  --namespace axiom-system \
-  --values values.yaml \
-  --timeout 15m
-```
-
-Every upgrade re-runs the revision-suffixed bootstrap Jobs, which are idempotent, and rolls any workload whose configuration changed. Wait for the Jobs and rollouts as in [Step 7](/self-hosted/deploy-bare-metal#wait-for-the-bootstrap-jobs-and-rollouts).
+Every change to the release, whether a values edit, new EventDB or Atom images, or a new chart version, is a `helm upgrade` of the same release with the same values file. What that does, the pre-flight checks, the ordering for Rook and CloudNativePG upgrades, the changes that need more than an upgrade, and how to roll back are on their own page: [Upgrade](/self-hosted/upgrade).
 
 <Warning>
-**Never disable a data-plane section on an upgrade.** Setting `rookCephCluster.enabled`, `postgresql.enabled`, or `eventdb.enabled` to `false` on a running release deletes the Ceph cluster, the PostgreSQL cluster, or the EventDB workloads, with their data. Those toggles are install-time decisions. The bootstrap pass in the deployment guide is the only time they are turned off, and only on a cluster with no release yet.
+**Never disable a data-plane section on an upgrade.** Setting `rookCephCluster.enabled`, `postgresql.enabled`, or `eventdb.enabled` to `false` on a running release deletes the Ceph cluster, the PostgreSQL cluster, or the EventDB workloads, with their data.
 </Warning>
-
-### EventDB image upgrades
-
-A new EventDB release is a new tag for the three `eventdb.image.*` entries, mirrored into your registry as in [Step 2](/self-hosted/deploy-bare-metal#step-2-mirror-container-images). Atom and the portals carry their own tags and move independently. Update the values and `helm upgrade`; `eventdb-migrate` applies any schema change before the workloads roll.
-
-### Operator and dependency upgrades
-
-The chart pins every dependency exactly, so a new chart version may carry a new Rook or CloudNativePG. Helm installs CRDs on a release's first install but deliberately never upgrades them, so a chart release that bumps an operator documents the CRD change and the order to apply it. Follow the upstream ordering the chart README describes: upgrade Rook's operator before its Ceph cluster and confirm `HEALTH_OK` before continuing, and upgrade the CloudNativePG operator before the PostgreSQL instances. A single Helm transaction does not by itself prove a safe data-plane upgrade.
-
-### What cannot change in place
-
-A PersistentVolumeClaim's access mode, storage class, and size are immutable. Changing `eventdb.wal.*` on an existing release fails with `spec is immutable`. The migration is to scale down the six workloads that mount the WAL, delete the claim, and upgrade so the chart recreates it. Deleting the claim discards whatever the WAL had not flushed; flush first by gracefully restarting ingest, or accept the loss knowingly.
-
-Workload selectors are immutable too. The chart selects each workload by a single stable `app` label and never by anything that varies with the release, so ordinary upgrades do not hit this.
 
 ## Scale and autoscale
 
