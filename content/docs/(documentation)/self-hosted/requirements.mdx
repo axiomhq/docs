@@ -1,0 +1,157 @@
+---
+title: 'Self-hosted EventDB requirements'
+sidebarTitle: Requirements
+description: 'Infrastructure requirements for running the axiom-eventdb Helm chart: Kubernetes version, node roles and sizing, block and ReadWriteMany storage, object storage, networking, credentials, and tooling.'
+keywords: ['self-hosted', 'eventdb', 'requirements', 'kubernetes', 'storage class', 'readwritemany', 'ceph', 'object storage', 'sizing']
+---
+
+This page is the reference for what a cluster must provide before you install the `axiom-eventdb` chart. [Deploy on bare metal](/self-hosted/deploy-bare-metal) walks through satisfying each requirement in order.
+
+## Tools
+
+| Tool | Version | Purpose |
+| :--- | :--- | :--- |
+| `kubectl` | Compatible with your cluster | Cluster access, Secrets, verification |
+| Helm | 3.18 or later | Installs the chart |
+| `skopeo` | Any recent | Mirrors container images into your registry |
+| `curl` and `jq` | Any recent | Verification requests |
+
+## Kubernetes cluster
+
+The chart runs on any conformant Kubernetes distribution, such as kubeadm, RKE2, or k3s.
+
+| Requirement | Details |
+| :--- | :--- |
+| Kubernetes version | A currently supported release. The chart's dependencies (Rook 1.20, CloudNativePG 1.30) require 1.28 or later. |
+| CNI | Any CNI providing standard IPv4 pod networking. |
+| Container runtime | Any CRI-compatible runtime, such as containerd. |
+| DNS | Working in-cluster DNS. The chart's optional `localDns` rewrite maps the object-storage hostname onto the in-cluster RGW through CoreDNS, but only k3s imports the ConfigMap it writes; every other distribution uses `eventdb.hostAliases` for the same mapping. |
+| Metrics API | `metrics-server` or equivalent, required only when autoscaling is enabled. |
+| Ingress | An ingress controller and TLS issuance for publishing Atom. |
+| Prometheus Operator | Optional. Required for the chart's `ServiceMonitor` and `PrometheusRule` resources. |
+
+## Node roles and failure domains
+
+Ceph and PostgreSQL both place replicas by host, so a production cluster needs at least three nodes that can each hold one replica. Dedicate nodes to Ceph storage and keep the EventDB workloads on separate nodes so that object-storage I/O and query CPU do not compete.
+
+| Role | Count | Purpose |
+| :--- | :--- | :--- |
+| Storage | 3 or more | Ceph monitors, managers, and OSDs. Each holds one or more dedicated raw disks. |
+| EventDB | 3 or more | Ingest, query, cache, Atom, PostgreSQL, and Valkey pods. |
+| Control plane and add-ons | 1 or more | Operators, ingress, monitoring. |
+
+Ceph's `failureDomain: host` is the chart default, and its pools replicate three ways, so the loss of any one storage node leaves the object store readable and writable. Rack or zone failure domains are a Ceph configuration change under `rookCephCluster.cephClusterSpec`; use them when the storage nodes span real fault boundaries.
+
+Label the storage nodes so the Ceph inventory in your values can name them, and use `eventdb.scheduling` to keep EventDB pods off them. See [Step 1 of the bare-metal guide](/self-hosted/deploy-bare-metal#step-1-prepare-the-kubernetes-cluster).
+
+## Sizing
+
+The chart's multi-mode defaults are taken from a 24-hour load experiment on four validation deployments. They hold 16,000 events per second with 24 concurrent queries and request about 15 cores and 21 GiB for EventDB itself.
+
+| Component | Pods | Requests → limits per pod |
+| :--- | :--- | :--- |
+| Ingest | 4 | 500m / 1 GiB → 2 CPU / 3 GiB |
+| Delta cache | 3 | 2 CPU / 4 GiB → 6 CPU / 8 GiB |
+| Query runner | 4 | 250m / 512 MiB → 2 CPU / 2 GiB |
+| Query worker | 6 | 1 CPU / 512 MiB → 3 CPU / 3 GiB |
+
+Add the dependencies on top: three PostgreSQL instances at 500m / 1 GiB each, three Valkey pods, Atom at two replicas, and the Ceph daemons. Rook's monitors, managers, and OSDs run at Ceph's own defaults; budget roughly 4 GiB of memory and one core per OSD, plus 1 to 2 GiB for each monitor and manager, on the storage nodes.
+
+To scale past the tested envelope, scale the component the load lands on:
+
+- **Ingest rate.** One ingest pod carries about 8,000 events per second. Add ingest pods linearly, and add a delta-cache pod per further 16,000 events per second.
+- **Query concurrency.** Query throughput is bounded by the worker pool: query-worker replicas × `maxInflightRequests`. Twelve workers at 16 in-flight requests held 48 concurrent queries.
+- **Wide time ranges.** Queries over 24 hours are bound by object-storage bandwidth and by how much data the range covers. Retention is part of sizing.
+
+The chart ships a worked example for 30 TB per day, 100 concurrent queries, and 30 days of hot retention under `charts/axiom-eventdb/examples/`. Its header lists what such a cluster must provide: about 890 cores and 4.6 TiB at the floor, a cluster autoscaler, an object store and a WAL class with the bandwidth, and Prometheus alerts.
+
+## Storage
+
+Three kinds of storage are needed, and they are provisioned differently.
+
+### Raw disks for Ceph
+
+When the chart manages object storage, Rook creates one OSD per dedicated raw block device you list in `rookCephCluster.cephClusterSpec.storage.nodes`. Requirements:
+
+- Whole, unformatted, unpartitioned devices with no filesystem or LVM signature. Never list an OS or root disk.
+- Stable `/dev/disk/by-id/` paths, so a reboot cannot renumber a device into the inventory.
+- NVMe or SSD. Ceph's write path fsyncs; slow disks become slow ingest.
+- At least three devices across at least three nodes, so the three-way replicated pools can place every copy on a different host.
+- Capacity for your retention: EventDB compresses blocks roughly 10:1, so plan the raw pool at three times the compressed volume plus growth. Do not fill Ceph past 80%.
+
+### A block StorageClass
+
+PostgreSQL data and WAL volumes, Valkey persistence, and NATS (if used) claim ReadWriteOnce volumes from a StorageClass you name in the values. Any performant block provisioner works: a local-path provisioner on NVMe, OpenEBS, Longhorn, or a Ceph RBD class from a Rook cluster you already run.
+
+PostgreSQL's WAL volume defaults to 30 GiB. Do not shrink it: the operator's replication slots retain WAL for a diverged replica until it is re-cloned, and a full WAL volume takes the primary, Atom, ingest, and queries down together.
+
+### A ReadWriteMany StorageClass for the shared WAL
+
+Six EventDB workloads mount one write-ahead-log volume, `eventdb-wal`, and that is true in every mode. The claim is `ReadWriteMany` because a `ReadWriteOnce` volume binds to a node, not a pod, and the first node replacement strands every pod that lands elsewhere behind a `Multi-Attach` error that cannot be cleared without deleting the claim.
+
+No cluster's default StorageClass provides RWX, so the chart refuses to render without one. The WAL provider you choose sets where it comes from:
+
+| Provider | Backing | For |
+| :--- | :--- | :--- |
+| `cephfs` | A `CephFilesystem` on the same Rook cluster that serves object storage. The chart creates the StorageClass. | Bare metal and air-gapped installs. This is the path the bare-metal guide uses. |
+| `existing` | An RWX class the cluster already has: NFS, a CephFS from another Rook release, a vendor filer. | Clusters with their own shared filesystem. |
+| `filestore` | GKE Filestore. | Google Cloud only. |
+
+Size the WAL for hours of raw ingest, not minutes: 100 GiB from 16,000 events per second upward. It is what keeps ingest accepting batches through an object-storage outage.
+
+## Object storage
+
+EventDB stores every block in S3-compatible object storage. Choose one of:
+
+- **Chart-managed Rook/Ceph RGW** (`objectStorage.provider: rook`). Self-contained, no external service, and the path validated on bare metal. The chart creates the RGW user, the credentials Secret, and the bucket.
+- **An S3-compatible store you already run** (`objectStorage.provider: external`): MinIO, SeaweedFS, another Ceph, or AWS S3. Provide the endpoint, bucket, region, and a static access key pair. The endpoint must be HTTPS with a certificate the pods trust.
+
+Two rules apply to either:
+
+<Warning>
+Do not put lifecycle or expiration rules on the bucket. EventDB manages retention per dataset and deletes its own blocks. A lifecycle rule deletes objects that EventDB still references, which is data loss. Object versioning likewise leaves deleted data behind; leave it off.
+</Warning>
+
+<Note>
+EventDB only speaks plain HTTP to an endpoint whose hostname is `localhost`, `127.0.0.1`, `::1`, or a `*.localhost` name. Every other hostname must use TLS. An in-cluster RGW answers on its Service name over HTTP, so a `*.localhost` alias is mapped onto it: by the chart's CoreDNS rewrite on k3s, or through `eventdb.hostAliases` elsewhere. The bare-metal guide does this in [Step 7](/self-hosted/deploy-bare-metal#step-7-install-the-chart).
+</Note>
+
+Object-storage bandwidth is the ceiling for both ingest and wide queries. A Rook RGW sharing nodes with the EventDB workloads saturated near 30,000 events per second on the validation clusters; dedicated storage nodes with NVMe OSDs and 25 GbE or better raise that.
+
+## Networking
+
+- Every node must reach your private registry to pull images.
+- EventDB pods reach PostgreSQL, Valkey, and the object store by in-cluster Service names; no external egress is required.
+- Atom is published through an Ingress. The controller must allow request bodies of at least 64 MiB (ingest batches) and upstream read timeouts of at least 600 seconds (long queries).
+- The Splunk and Grafana portals, if enabled, stay `ClusterIP` and must sit behind an authenticating proxy.
+- Nothing else is exposed. The EventDB Services are unauthenticated and stay inside the cluster.
+
+## Credentials
+
+Production installs set `credentials.create: false` and create these Secrets in the release namespace before installing. Values are embedded into connection URLs, so they must be URL-safe: letters, digits, `-`, `_`, and `.`.
+
+| Secret | Keys | Used by |
+| :--- | :--- | :--- |
+| `axiom-postgresql-app` | `username`, `password` | Every EventDB workload. CloudNativePG creates the database owner from it. |
+| `axiom-valkey-auth` | `default` | Every EventDB workload and Valkey's ACL. |
+| `eventdb-s3-credentials` | `access-key`, `secret-key` | Every EventDB workload and the bucket-setup Job. With the Rook provider, they seed the RGW user. |
+| `axiom-postgresql-atom` | `username`, `password` (type `kubernetes.io/basic-auth`) | Atom's PostgreSQL role. |
+| `axiom-atom` | `token-hash-secret`, `admin-password` | Atom. `token-hash-secret` HMACs every API token and must never change. |
+| `axiom-postgresql-backup` | `ACCESS_KEY_ID`, `ACCESS_SECRET_KEY` | PostgreSQL backups, when enabled. A different credential to a different bucket. |
+
+## Images
+
+The chart references these first-party images. Axiom provides the registry, credentials, and the release tag during onboarding.
+
+| Value | Image | Tag |
+| :--- | :--- | :--- |
+| `eventdb.image.db` | `eventdb-db` | The EventDB release tag |
+| `eventdb.image.queryWorker` | `eventdb-query-worker` | The EventDB release tag |
+| `eventdb.image.admin` | `eventdb-admin` | The EventDB release tag |
+| `atom.image` | `atom` | Atom's own commit, not the EventDB tag |
+| `splunkPortal.image` | `splunk-portal` | The portal's own commit |
+| `grafanaPortal.image` | `grafana-portal` | The portal's own commit, as `sha-<commit>` |
+
+Pin digests in production. Setting `digest` on any image takes precedence over `tag`, and a digest cannot be repointed at different content.
+
+The dependency subcharts pull their own upstream images: Rook, Ceph `v20.2.2`, the Ceph CSI plugins, CloudNativePG and its PostgreSQL 17 image, Valkey, NATS, plus `busybox`, `amazon/aws-cli`, and `natsio/nats-box` for bootstrap Jobs. [Step 2 of the bare-metal guide](/self-hosted/deploy-bare-metal#step-2-mirror-container-images) shows how to enumerate the exact list for your values.
