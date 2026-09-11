@@ -128,7 +128,7 @@ The data schema of your dataset is defined on read. Axiom continuously creates a
 
 In this case, vacuuming fields in a dataset can help you reduce the number of fields associated with a dataset and stay within the allowed limits. Vacuuming fields resets the number of fields associated with a dataset to the fields that occur in events within your retention period. Technically, it wipes the data schema and rebuilds it from the data you currently have in the dataset, which is partly defined by the retention period. For example, you have ingested 500 fields over the last year and 50 fields in the last 95 days, which is your retention period. In this case, before vacuuming, your data schema contains 500 fields. After vacuuming, the dataset only contains 50 fields.
 
-Vacuuming fields doesn’t delete any events from your dataset. To delete events, [trim the dataset](#trim-dataset). Vacuuming only removes fields that no longer occur in any event within your retention period. If you accidentally ingested events with fields you didn’t want to send to Axiom, and these events are within your retention period, vacuuming alone doesn’t solve your problem. In this case, [delete the unintended fields](#delete-fields) instead.
+Vacuuming fields doesn’t delete any events from your dataset. To delete events, [trim the dataset](#trim-dataset). Vacuuming only removes fields that no longer occur in any event within your retention period. If you accidentally ingested events with fields you didn’t want to send to Axiom, and these events are within your retention period, vacuuming alone doesn’t solve your problem. In this case, [delete the unintended fields](#delete-fields) instead. Deleting fields also vacuums the dataset.
 
 You can vacuum the fields of a dataset whose schema is locked. In this case, Axiom vacuums the fields and then regenerates the locked schema so that it matches the vacuumed fields. For more information, see [Lock dataset schema](#lock-dataset-schema).
 
@@ -148,7 +148,7 @@ Deleting fields removes specific fields from the data schema of an event dataset
 
 Deleting fields differs from the other ways of reducing the number of fields:
 
-- [Vacuuming fields](#vacuum-fields) only removes fields that no longer occur in any event within your retention period. Deleting fields removes the fields you select, even if events within your retention period contain them.
+- [Vacuuming fields](#vacuum-fields) only removes fields that no longer occur in any event within your retention period. Deleting fields removes the fields you select, even if events within your retention period contain them. Deleting fields also vacuums the dataset, so fields that vacuuming would remove are removed as well.
 - [Trimming a dataset](#trim-dataset) deletes events. Deleting fields doesn’t delete any events. All other fields of the events remain queryable.
 
 <Warning>
@@ -159,6 +159,7 @@ Deleting fields works in the following way:
 
 - Axiom removes the deleted fields from the schema, the list of fields in the Datasets tab, and query autocomplete. Field descriptions, units, and hidden settings for the deleted fields are removed as well.
 - The values of the deleted fields stay in storage but you can’t access them anymore. Deleting fields doesn’t reduce the storage usage of your dataset.
+- As the last step of the deletion, Axiom vacuums the fields of the dataset. This rebuilds the data schema from the events currently in the dataset, so fields that no longer occur in any event within your retention period disappear together with the fields you selected. For more information, see [Vacuum fields](#vacuum-fields).
 - Saved queries, dashboards, monitors, and virtual fields that reference a deleted field stop returning data for that field. Review these before you delete fields.
 - Deleting fields doesn’t prevent Axiom from adding the fields again. If you ingest events that contain a deleted field after the deletion, Axiom adds the field to the schema again and you can query the newly ingested values. The values you ingested before the deletion remain inaccessible. To stop a field from coming back, fix the data source or [lock the schema](#lock-dataset-schema) after the deletion completes.
 - Field deletion is an asynchronous operation. When you submit a request, Axiom queues the deletion and processes it in the background. The deletion can take several hours to complete, depending on the size of the dataset. During this time, the fields still appear in the Fields panel and in query results. The request appears as `deleteDatasetFields` in the [audit log](/reference/audit-log).
