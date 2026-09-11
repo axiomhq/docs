@@ -1,0 +1,124 @@
+---
+title: 'Send data from Loki to Axiom'
+description: 'Integrate Axiom in your existing Loki stack with minimal effort and without breaking any of your existing Loki workflows.'
+overview: 'Horizontally scalable, multi-tenant log aggregation system'
+sidebarTitle: Loki
+keywords: ['axiom documentation', 'documentation', 'axiom', 'loki', 'grafana', 'promtail', 'winston-loki', 'javascript', 'python']
+logoId: 'grafanaLoki'
+---
+
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceToken from "@/content/snippets/replace-token.mdx"
+
+This page explains how to send data from a Loki-based logging setup to Axiom. Choose the option that matches your setup:
+
+- If a log shipper sends your logs to Loki, replace the Loki output with an output that sends to Axiom directly. This is the recommended option.
+- If your apps or tools push to the Loki HTTP API directly, run the Axiom Loki Multiplexer and point them at it.
+
+<Prerequisites />
+
+## Send data with a log shipper
+
+Most Loki pipelines already run a shipper that has native support for Axiom. Replace the Loki output in the shipper configuration with the Axiom output:
+
+- [Vector](/send-data/vector)
+- [Fluent Bit](/send-data/fluent-bit)
+- [Fluentd](/send-data/fluentd)
+- [OpenTelemetry Collector](/send-data/opentelemetry)
+
+If your app logs through a Loki transport such as `winston-loki` or `logging_loki`, switch to the Axiom integration for your logging library. For example, see [Winston](/guides/winston) or [Python](/guides/python).
+
+## Send data with the Axiom Loki Multiplexer
+
+The [Axiom Loki Multiplexer](https://github.com/axiomhq/axiom-loki-multiplexer) is an open-source server that accepts requests to the [Loki push API](https://grafana.com/docs/loki/latest/reference/loki-http-api/#ingest-logs) and forwards them to Axiom. Use it when you want to keep your Loki clients unchanged.
+
+### Install and run the multiplexer
+
+1. Download a [release from GitHub](https://github.com/axiomhq/axiom-loki-multiplexer/releases/latest), install it with Homebrew (`brew install axiomhq/tap/axiom-loki-multiplexer`), or use the [Docker image](https://hub.docker.com/r/axiomhq/axiom-loki-multiplexer).
+1. Set the following environment variables:
+    - `AXIOM_TOKEN` is the Axiom API token with ingest permission for the datasets.
+    - Optional: `AXIOM_URL` is the URL of your edge deployment, for example `https://AXIOM_DOMAIN`. By default, the multiplexer uses the `US East 1 (AWS)` edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+1. Run the multiplexer. By default, it listens on port `8080` and forwards each request to both Axiom and a Loki instance at `http://localhost:3100`. Pass `-bypass` to send data to Axiom only.
+
+For example, with Docker:
+
+```shell
+docker run -p8080:8080/tcp \
+  -e=AXIOM_TOKEN=API_TOKEN \
+  axiomhq/axiom-loki-multiplexer -bypass
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
+
+### Choose the target dataset
+
+The multiplexer sends each log stream to the Axiom dataset named in the `_axiom_dataset_key` label. The label is removed before the events are sent. Streams without the label go to the dataset set with the `-default-dataset` flag, which defaults to `axiom-loki-multiplexer`. Create the datasets in Axiom before you send data.
+
+### Configure Loki clients
+
+Point your Loki clients at the multiplexer instead of Loki. For example, set the push URL to `http://localhost:8080/loki/api/v1/push`.
+
+## Examples
+
+### Send logs from Winston using `winston-loki`
+
+```js
+const { createLogger, transports, format, } = require("winston");
+const LokiTransport = require("winston-loki");
+
+let logger;
+
+const initializeLogger = () => {
+  if (logger) {
+    return;
+  }
+
+  logger = createLogger({
+    transports: [
+      new LokiTransport({
+        host: "http://localhost:8080",
+        labels: { app: "my-app", _axiom_dataset_key: "DATASET_NAME" },
+        json: true,
+        format: format.json(),
+        replaceTimestamp: true,
+        onConnectionError: (err) => console.error(err),
+      }),
+      new transports.Console({
+        format: format.combine(format.simple(), format.colorize()),
+      }),
+    ],
+  });
+};
+
+initializeLogger()
+logger.info("Starting app...");
+```
+
+### Send logs from Python using `logging_loki`
+
+```py
+import logging
+import logging_loki
+
+# Create a handler
+handler = logging_loki.LokiHandler(
+    url='http://localhost:8080/loki/api/v1/push',
+    tags={'app': 'my-app', '_axiom_dataset_key': 'DATASET_NAME'},
+    version='1',
+)
+
+# Create a logger
+logger = logging.getLogger('loki')
+
+# Add the handler to the logger
+logger.addHandler(handler)
+
+# Log some messages
+logger.info('Hello, world from Python!')
+logger.warning('This is a warning')
+logger.error('This is an error')
+```

@@ -3,39 +3,58 @@ title: 'Send data from syslog to Axiom over a secure connection'
 description: 'This page explains how to send data securely from a syslog logging system to Axiom.'
 overview: 'Standard protocol for message logging'
 sidebarTitle: Secure syslog
-keywords: ['syslog', 'axiom documentation', 'documentation', 'axiom', 'guide', 'syslog logs', 'tcp', 'udp', 'docker']
+keywords: ['syslog', 'axiom documentation', 'documentation', 'axiom', 'guide', 'syslog logs', 'tls', 'tcp', 'vector']
 logoId: 'syslog'
 darkLogoId: 'syslogLight'
 ---
 
 import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
-import SetUpEndpoint from "@/content/snippets/set-up-endpoint.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 
-The Secure Syslog endpoint allows you to send syslog data to Axiom over a secure connection. With the Secure Syslog endpoint, the logs you send to Axiom are encrypted using SSL/TLS.
+This page explains how to send syslog data to Axiom over a TLS-encrypted connection. Run a syslog receiver on infrastructure you control, point your syslog clients at it, and let the receiver forward the data to Axiom over HTTPS.
 
-## Syslog limitations and recommended alternatives
-
-Syslog is an outdated protocol. Some of the limitations are the following:
-
-- Lack of error reporting and feedback mechanisms when issues occur.
-- Inability to gracefully end the connection. This can result in missing data.
-
-<Note>
-For a more reliable and modern logging experience, consider using tools like [Vector](https://vector.dev/) to receive syslog messages and [forward them to Axiom](/send-data/vector). This approach bypasses many of syslog’s limitations.
-</Note>
+Axiom recommends [Vector](https://vector.dev/) as the receiver. Vector accepts syslog over TLS and adds the batching, retries, and error reporting that the syslog protocol lacks. If your clients are on a trusted network and don’t need TLS, you can also use the [Axiom Syslog Proxy](/send-data/syslog-proxy).
 
 <Prerequisites />
+- [Install Vector](https://vector.dev/docs/setup/installation/) on a host that your syslog clients can reach.
+- A TLS certificate and private key for that host.
 
-<SetUpEndpoint endpointName="Secure Syslog" />
+## Configure Vector
+
+Create a configuration file, for example `vector.toml`, with a `syslog` source that listens over TLS and an `axiom` sink:
+
+```toml
+[sources.syslog_tls]
+type = "syslog"
+address = "0.0.0.0:6514"
+mode = "tcp"
+max_length = 102_400
+
+[sources.syslog_tls.tls]
+enabled = true
+crt_file = "/etc/vector/server.crt"
+key_file = "/etc/vector/server.key"
+
+[sinks.axiom]
+type = "axiom"
+inputs = ["syslog_tls"]
+dataset = "DATASET_NAME"
+token = "API_TOKEN"
+region = "AXIOM_DOMAIN"
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+Start Vector with the configuration file: `vector --config /path/to/vector.toml`.
+
+For more configuration options, see the [Vector syslog source](https://vector.dev/docs/reference/configuration/sources/syslog/) and [Axiom sink](https://vector.dev/docs/reference/configuration/sinks/axiom/) documentation, and [Send data from Vector to Axiom](/send-data/vector).
 
 ## Configure syslog client
 
-1. Ensure the syslog client meets the following requirements:
-    - **Message size limit:** Axiom currently enforces a 64KB per-message size limit. This is in line with RFC5425 guidelines. Any message exceeding the limit causes the connection to close because Axiom doesn’t support ingesting truncated messages.
-    - **TLS requirement:** Axiom only supports syslog over TLS, specifically following RFC5425. Ensure you have certificate authority certificates installed in your environment to validate Axiom’s SSL certificate. For example, on Ubuntu/Debian systems, install the `ca-certificates` package. For more information, see the [RFC Series documentation](https://www.rfc-editor.org/rfc/rfc5425).
-    - **Port requirements:** TCP log messages are sent on TCP port `6514`.
-1. Configure your syslog client to connect to Axiom. Use the target URL for the endpoint you have generated in Axiom by following the procedure above. For example, `https://opbizplsf8klnw.ingress.axiom.co`. Consider this URL as secret information because syslog doesn’t support additional authentication such as API tokens.
+Configure your syslog client to send messages over TCP with TLS to the address and port where Vector listens, for example `syslog.example.com:6514`. Ensure the client trusts the certificate authority that issued the receiver’s certificate.
 
-## Troubleshooting
-
-Ensure your messages conform to the size limit and TLS requirements. If the connection is frequently re-established and messages are rejected, the issue can be the size of the messages or other formatting issues.
+In Axiom, click the **Stream** tab, select your dataset, and check that the messages arrive.

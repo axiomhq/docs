@@ -1,0 +1,112 @@
+---
+title: 'Send data from Splunk to Axiom'
+description: 'Integrate Axiom in your existing Splunk app with minimal effort and without breaking any of your existing Splunk stack.'
+overview: 'Platform for searching, monitoring, and analyzing machine-generated data'
+sidebarTitle: Splunk
+keywords: ['axiom documentation', 'documentation', 'axiom', 'splunk', 'hec', 'http event collector', 'forwarder', 'javascript', 'python']
+logoId: 'splunk'
+---
+
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+
+This page explains how to send data from Splunk forwarders and Splunk logging libraries to Axiom.
+
+Axiom provides a [Splunk HEC compatible API](/send-data/splunk-hec) on your edge deployment. Any tool that sends data to a Splunk HTTP Event Collector (HEC) can send the same data to Axiom without changes to its code.
+
+<Prerequisites />
+
+## Configure Splunk clients
+
+In your Splunk forwarder or HEC client, specify the following:
+
+- The HEC URL is `https://hec.AXIOM_DOMAIN/services/collector/event?index=DATASET_NAME`. For raw text payloads, use `https://hec.AXIOM_DOMAIN/services/collector/raw?index=DATASET_NAME`.
+- The HEC token is your Axiom API token. The API accepts `Authorization: Splunk API_TOKEN`, `Authorization: Bearer API_TOKEN`, and HTTP basic authentication.
+- Optional: If your client sets the `index` field on events instead of in the URL, Axiom sends each event to the dataset with that name.
+
+For the full description of the API, including envelope fields and response codes, see [Send data to Axiom using the Splunk HEC API](/send-data/splunk-hec).
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+## Examples
+
+### Send logs from JavaScript using `splunk-logging`
+
+```js
+var SplunkLogger = require('splunk-logging').Logger;
+
+var config = {
+  token: 'API_TOKEN',
+  url: 'https://hec.AXIOM_DOMAIN/services/collector/event?index=DATASET_NAME',
+};
+
+var Logger = new SplunkLogger(config);
+
+var payload = {
+  // Message can be anything; doesn’t have to be an object
+  message: {
+    temperature: '70F',
+    chickenCount: 500,
+  },
+};
+
+console.log('Sending payload', payload);
+Logger.send(payload, function (err, resp, body) {
+  // If successful, body will be { text: 'Success', code: 0 }
+  console.log('Response from Axiom', body);
+});
+```
+
+### Send logs from Python using `splunk_handler`
+
+```py
+import logging
+from splunk_handler import SplunkHandler
+splunk = SplunkHandler(
+        host='hec.AXIOM_DOMAIN',
+        port='443',
+        protocol='https',
+        token='API_TOKEN',
+        index='DATASET_NAME'
+    )
+
+logging.getLogger('').addHandler(splunk)
+
+logging.warning('Hello from Axiom!')
+```
+
+### Send logs from Go using the Docker Splunk client
+
+```go
+package main
+
+import (
+	"time"
+
+	"github.com/docker/docker/daemon/logger/splunk"
+)
+
+func main() {
+	// Create new Splunk client
+	client := splunk.NewClient(
+		nil,
+		"https://hec.AXIOM_DOMAIN/services/collector",
+		"API_TOKEN",
+		"my-source",
+		"my-sourcetype",
+		"DATASET_NAME",
+	)
+
+	if err := client.Log(map[string]interface{}{"msg": "hello from Axiom"}); err != nil {
+		panic(err)
+	}
+
+	if err := client.LogWithTime(time.Now(), map[string]interface{}{"msg": "hello again from Axiom"}); err != nil {
+		panic(err)
+	}
+}
+```

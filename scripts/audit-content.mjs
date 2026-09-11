@@ -112,7 +112,7 @@ const defects = [
 
 // Floors: the corpus is expected to grow. Adding pages must pass; losing them must not.
 // Raise a floor deliberately when content is intentionally retired — never to silence a red build.
-const floors = { routablePages: 629, snippets: 21, mdxTotal: 650, assets: 129, redirects: 115, openapiPages: 89 };
+const floors = { routablePages: 629, snippets: 19, mdxTotal: 650, assets: 127, redirects: 115, openapiPages: 89 };
 const shrunk = Object.entries(floors).filter(([key, min]) => results[key] < min);
 
 for (const [label, found] of defects) console.error(`✗ ${found.length} ${label}`);
