@@ -1,0 +1,120 @@
+---
+title: 'Send data from Honeycomb to Axiom'
+description: "Integrate Axiom in your existing Honeycomb stack with minimal effort and without breaking any of your existing Honeycomb workflows."
+overview: 'Observability tool for debugging and understanding distributed systems'
+sidebarTitle: Honeycomb
+keywords: ['axiom documentation', 'documentation', 'axiom', 'honeycomb', 'libhoney', 'beeline', 'opentelemetry', 'proxy']
+logoId: 'honeycomb'
+---
+
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceToken from "@/content/snippets/replace-token.mdx"
+
+This page explains how to send data from Honeycomb-instrumented apps to Axiom. Choose the option that matches your instrumentation:
+
+- If your apps use OpenTelemetry-based Honeycomb SDKs or distributions, point the OTLP exporter at Axiom. This is the recommended option.
+- If your apps use Libhoney or Beelines, run the Axiom Honeycomb Proxy and point the SDK at the proxy.
+
+<Prerequisites />
+
+## Send data with OpenTelemetry
+
+Honeycomb’s current SDKs and distributions are built on OpenTelemetry. Configure the OTLP exporter to send data to Axiom instead of Honeycomb:
+
+- Set the endpoint to `https://AXIOM_DOMAIN`.
+- Set the `Authorization` header to `Bearer API_TOKEN`.
+- Set the `X-Axiom-Dataset` header to the name of the Axiom dataset where you want to send data.
+
+For configuration details and language-specific guides, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
+
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
+
+## Send data with the Axiom Honeycomb Proxy
+
+The [Axiom Honeycomb Proxy](https://github.com/axiomhq/axiom-honeycomb-proxy) is an open-source server that accepts Honeycomb event and batch requests and forwards them to Axiom. Use it with Libhoney and Beelines, or with any other tool that speaks the Honeycomb events API.
+
+### Install and run the proxy
+
+1. Download a [release from GitHub](https://github.com/axiomhq/axiom-honeycomb-proxy/releases/latest), install it with Homebrew (`brew install axiomhq/tap/axiom-honeycomb-proxy`), or use the [Docker image](https://hub.docker.com/r/axiomhq/axiom-honeycomb-proxy).
+1. Create the Axiom datasets you want to send data to. Honeycomb creates datasets when you send data to them, but Axiom doesn’t. The proxy sends data to the Axiom dataset with the same name as the Honeycomb dataset in the request.
+1. Set the following environment variables:
+    - `AXIOM_TOKEN` is the Axiom API token with ingest permission for the datasets.
+    - Optional: `AXIOM_URL` is the URL of your edge deployment, for example `https://AXIOM_DOMAIN`. By default, the proxy uses the `US East 1 (AWS)` edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+1. Run the proxy. By default, it listens on port `8080` and forwards each request to both Axiom and Honeycomb. Pass `-bypass` to send data to Axiom only.
+
+For example, with Docker:
+
+```shell
+docker run -p8080:8080/tcp \
+  -e=AXIOM_TOKEN=API_TOKEN \
+  axiomhq/axiom-honeycomb-proxy -bypass
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceToken />
+</Info>
+
+### Configure the Honeycomb SDK
+
+In your app, set `APIHost` to the address of the proxy, for example `http://localhost:8080`. Keep the Honeycomb API key and dataset name as they are: the proxy passes the API key through to Honeycomb when it’s not in bypass mode, and uses the dataset name to select the Axiom dataset.
+
+## Examples
+
+### Send events from Libhoney for JavaScript
+
+```js
+const Libhoney = require('libhoney');
+const hny = new Libhoney({
+  writeKey: 'HONEYCOMB_API_KEY',
+  dataset: 'DATASET_NAME',
+  apiHost: 'http://localhost:8080',
+});
+
+hny.sendNow({ message: 'Welcome to Axiom!' });
+```
+
+### Send events from Libhoney for Python
+
+```py
+import libhoney
+libhoney.init(writekey="HONEYCOMB_API_KEY", dataset="DATASET_NAME", api_host="http://localhost:8080")
+
+event = libhoney.new_event()
+event.add_field("foo", "bar")
+event.add({"message": "Welcome to Axiom!"})
+event.send()
+```
+
+### Send events from Libhoney for Go
+
+```go
+package main
+
+import (
+	"github.com/honeycombio/libhoney-go"
+)
+
+func main() {
+	libhoney.Init(libhoney.Config{
+		WriteKey: "HONEYCOMB_API_KEY",
+		Dataset:  "DATASET_NAME",
+		APIHost:  "http://localhost:8080",
+	})
+
+	defer libhoney.Close() // Flush any pending events
+
+	var ev = libhoney.NewEvent()
+	ev.Add(map[string]interface{}{
+		"duration_ms":    155.67,
+		"method":         "post",
+		"hostname":       "web-1",
+		"payload_length": 43,
+	})
+	ev.Send()
+}
+```
