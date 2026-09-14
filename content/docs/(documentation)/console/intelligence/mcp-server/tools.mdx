@@ -2,7 +2,7 @@
 title: "MCP tools reference"
 description: "Tools and prompts exposed by Axiom MCP Server, with example prompts for AI agents."
 sidebarTitle: Tools
-keywords: ["MCP", "MCP tools", "Axiom MCP", "queryApl", "APL", "AI agent"]
+keywords: ["MCP", "MCP tools", "Axiom MCP", "queryDataset", "APL", "AI agent"]
 ---
 
 Axiom MCP Server exposes [tools](https://modelcontextprotocol.io/docs/concepts/tools) and [prompts](https://modelcontextprotocol.io/docs/concepts/prompts) that AI agents can call.
@@ -13,16 +13,17 @@ For setup, see [Axiom MCP Server](/console/intelligence/mcp-server).
 
 | Category | Read | Write |
 | --- | --- | --- |
-| Query | `queryApl`, `getSavedQueries` | — |
-| Datasets | `listDatasets`, `getDatasetSchema` | — |
+| Query | `queryDataset`, `getSavedQueries` | — |
+| Datasets | `listDatasets`, `getDatasetFields` | `createDataset` |
 | Metrics | `listMetrics`, `listMetricTags`, `getMetricTagValues`, `searchMetrics`, `queryMetrics` | — |
 | Dashboards | `listDashboards`, `getDashboard`, `exportDashboard` | `createDashboard`, `updateDashboard`, `updateDashboardChart`, `deleteDashboard` |
-| Monitors and notifiers | `checkMonitors`, `getMonitorHistory`, `listNotifiers` | `createMonitor`, `updateMonitor`, `deleteMonitor`, `createNotifier`, `updateNotifier`, `deleteNotifier` |
+| Monitors and notifiers | `checkMonitors`, `getMonitor`, `getMonitorHistory`, `listNotifiers` | `createMonitor`, `updateMonitor`, `deleteMonitor`, `createNotifier`, `updateNotifier`, `deleteNotifier` |
+| Service map | `services-getMap`, `services-getChanges`, `services-getEdgeHistory` | — |
 
 ## Query
 
-<ParamField path="queryApl" type="Read">
-Run an APL query against an Axiom dataset.
+<ParamField path="queryDataset" type="Read">
+Run an APL query against an events or traces dataset. For metrics datasets, use `queryMetrics` instead.
 
 **Example:** “Show the top 10 status codes in `logs` for the last 30 minutes.”
 </ParamField>
@@ -41,10 +42,16 @@ List available Axiom datasets.
 **Example:** “List datasets.”
 </ParamField>
 
-<ParamField path="getDatasetSchema" type="Read">
-Get the schema for a dataset, including field names and types.
+<ParamField path="getDatasetFields" type="Read">
+List fields in an events or traces dataset, including field names and types. For metrics datasets, use `listMetrics` and `listMetricTags` instead.
 
-**Example:** “Get the schema for the dataset `logs`.”
+**Example:** “List the fields in the dataset `logs`.”
+</ParamField>
+
+<ParamField path="createDataset" type="Write">
+Create a new dataset in the current organization.
+
+**Example:** “Create an events dataset named `app-logs`.”
 </ParamField>
 
 ## Metrics
@@ -131,6 +138,12 @@ Check monitors and their current statuses.
 **Example:** “Which monitors are currently alerting?”
 </ParamField>
 
+<ParamField path="getMonitor" type="Read">
+Get a monitor’s full definition by ID, including the complete query text.
+
+**Example:** “Show the full configuration for monitor `mon_123`.”
+</ParamField>
+
 <ParamField path="getMonitorHistory" type="Read">
 Get alert history for a specific monitor.
 
@@ -179,6 +192,28 @@ Delete a notifier by ID.
 **Example:** “Delete notifier `ntf_123`.”
 </ParamField>
 
+## Service map
+
+These tools are available when service map is enabled for your organization.
+
+<ParamField path="services-getMap" type="Read">
+Get the service dependency graph, including call volume, errors, and approximate latency.
+
+**Example:** “Show the service map for the last hour.”
+</ParamField>
+
+<ParamField path="services-getChanges" type="Read">
+Report what changed in the service dependency graph, such as new or missing dependencies and latency regressions.
+
+**Example:** “What changed in the service map in the last 6 hours?”
+</ParamField>
+
+<ParamField path="services-getEdgeHistory" type="Read">
+Get time-series history for a service’s dependency edges.
+
+**Example:** “Show edge history from `api-gateway` to `checkout` over the last day.”
+</ParamField>
+
 ## Prompts
 
 Axiom MCP Server also ships prebuilt prompts. In Claude, click **+ > Add from Axiom** to use them. Prompts aren’t available with the [local setup](/console/intelligence/mcp-server#local-setup).
@@ -217,6 +252,12 @@ Establish performance baselines for a dataset to support monitoring and anomaly 
 Analyze monitor health, alert patterns, and effectiveness.
 
 **Example:** “Analyze which monitors flap the most this week.”
+</ParamField>
+
+<ParamField path="investigate-service-topology" type="Prompt">
+Walk a system’s service dependency graph to find what talks to what, which dependency is at fault, and when it changed. Available when service map is enabled for your organization.
+
+**Example:** “Investigate the topology around `api-gateway`.”
 </ParamField>
 
 Axiom plans to support MCP [resources](https://modelcontextprotocol.io/docs/concepts/resources) in the future.
