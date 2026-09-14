@@ -7,8 +7,8 @@ import { DefaultChatTransport, type UIMessage } from 'ai';
 import {
   Message,
   MessageContent,
-  MessageResponse,
 } from '@/components/ai-elements/message';
+import { AssistantResponse } from '@/components/assistant-response';
 import { InlineCitations } from '@/components/ai/inline-citations';
 import { AiPromptInput } from '@/components/ai/prompt-input';
 import { WebSearch, type WebSearchItem } from '@/components/ai/web-search';
@@ -143,7 +143,7 @@ export function DocsAssistantPanel({
     captureDocsEvent('docs_ai_answer_completed', {
       duration_bucket: durationBucket(analyticsTimestamp() - startedAt),
       outcome: 'answered',
-      source_count: assistantSources(answer).length,
+      source_count: Math.min(assistantSources(answer).length, 4),
     });
   }, [chat.messages, chat.status]);
 
@@ -336,11 +336,9 @@ function AssistantMessage({
       <MessageContent>
         {searches.length > 0 && <WebSearch items={searches} />}
         {text && (
-          // linkSafety defaults to enabled, which renders citations as <button>s
-          // behind a confirmation modal. Every URL here comes from our own
-          // search_docs/read_docs_page tools and is same-origin /docs, so keep
-          // them as real anchors that navigate, as they did before.
-          <MessageResponse
+          // Keep citations as real anchors and restore legacy docs paths.
+          <AssistantResponse
+            sourceUrls={sources.map((source) => source.url)}
             className={cn(
               'docs-ai-markdown text-(--text-secondary) font-sans text-[14px] leading-[22px] font-normal',
               '[&>:first-child]:mt-0! [&>:last-child]:mb-0!',
@@ -370,7 +368,7 @@ function AssistantMessage({
             linkSafety={{ enabled: false }}
           >
             {text}
-          </MessageResponse>
+          </AssistantResponse>
         )}
         {/* The turn finished but left nothing to read — usually because the model
             spent its whole final step emitting tool calls as prose, which
@@ -400,7 +398,7 @@ function AssistantMessage({
       {!active && sources.length > 0 && (
         <InlineCitations
           className="animate-in fade-in duration-500"
-          citations={sources}
+          citations={sources.slice(0, 4)}
           onOpen={(citation, rank) => captureDocsEvent('docs_ai_source_opened', {
             destination_path: safeDocsPath(citation.url),
             source_rank: rank,
@@ -475,5 +473,5 @@ function assistantSources(message: UIMessage): AssistantSource[] {
       });
     }
   }
-  return [...sources.values()].slice(0, 4);
+  return [...sources.values()];
 }
