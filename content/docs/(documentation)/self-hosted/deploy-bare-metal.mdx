@@ -68,7 +68,7 @@ Dedicate nodes to Ceph storage and keep at least three more for the EventDB work
 Apply the labels and taints with `kubectl`:
 
 ```bash
-# storage nodes: one per failure domain, each with dedicated raw disks
+# storage nodes: one per failure domain
 for node in <storage-node-1> <storage-node-2> <storage-node-3>; do
   kubectl label node "$node" axiom.co/role=storage --overwrite
   kubectl taint node "$node" axiom.co/storage=true:NoSchedule --overwrite
@@ -149,45 +149,23 @@ The dependency images are open source and public: Rook, Ceph, the Ceph CSI plugi
 
 ## Step 3: Provision local storage
 
-Three kinds of storage are needed, and they are provisioned differently:
+Two kinds of storage are needed:
 
-- **Raw disks for Ceph OSDs** on the storage nodes. Rook claims them whole; they hold every EventDB block and the CephFS write-ahead log.
-- **A block StorageClass** for PostgreSQL, Valkey, and their write-ahead logs. These are ReadWriteOnce volumes.
+- **A block StorageClass.** Every stateful piece claims ReadWriteOnce volumes from it: Ceph's OSDs and monitors, PostgreSQL and its write-ahead log, and Valkey. Nothing in the release touches a disk directly. The OSDs are PVC-backed, so a lost pod comes back on a fresh, empty claim, and adding capacity is raising a count in the values rather than cabling a disk.
 - **A ReadWriteMany StorageClass** for the shared EventDB write-ahead log. This guide gets it from a CephFS on the same Rook cluster, so nothing external is required.
 
 <Note>
-**Durability.** EventDB's source of truth is object storage. The shared WAL holds only what has not yet been flushed into a block, and the delta cache is rebuilt from it. PostgreSQL holds dataset metadata and Atom's management state and is the one datastore that needs [backups](/self-hosted/backup-restore).
+**Durability.** EventDB's source of truth is object storage, replicated three ways across the OSD volumes. The shared WAL holds only what has not yet been flushed into a block, and the delta cache is rebuilt from it. PostgreSQL holds dataset metadata and Atom's management state and is the one datastore that needs [backups](/self-hosted/backup-restore).
 </Note>
-
-### Prepare the Ceph devices
-
-On each storage node, identify the disks Ceph will own and confirm they are empty. Rook refuses a device that carries a filesystem, partition table, or LVM signature, and it never touches a disk that is not in its inventory.
-
-```bash
-# list block devices and their stable by-id paths
-lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT
-ls -l /dev/disk/by-id/ | grep -v part
-
-# wipe a disk that was used before (destroys its contents)
-sudo sgdisk --zap-all /dev/nvme1n1
-sudo wipefs --all /dev/nvme1n1
-sudo dd if=/dev/zero of=/dev/nvme1n1 bs=1M count=100 oflag=direct
-```
-
-Record each device's `/dev/disk/by-id/` path and the node name it belongs to. Step 6 lists them explicitly; the chart never lets Rook claim "all devices".
-
-<Warning>
-Never list an OS or root disk. Rook creates an OSD on every device in the inventory and the data on it is gone.
-</Warning>
 
 ### Provide a block StorageClass
 
-PostgreSQL, its WAL volume, and Valkey claim ReadWriteOnce volumes from a class you name in the values. Any performant provisioner works. On bare metal that is commonly:
+The class has two requirements beyond being fast:
 
-- **A local-path provisioner** on the EventDB nodes' NVMe, for the best latency. PostgreSQL and Valkey replicate across nodes, so node-bound volumes are acceptable.
-- **A Ceph RBD class** from the same Rook cluster. Declare it under `rookCephCluster.cephBlockPools` with `storageClass.enabled: true`. Claims on it stay `Pending` until the Ceph cluster is healthy and then bind on their own; PostgreSQL and Valkey wait for them.
+- **It must support `volumeMode: Block`.** The OSD claims are raw block volumes that Ceph formats itself. Most CSI drivers do this; Rancher's `local-path` provisioner does not, so it can serve PostgreSQL and Valkey but not the OSDs.
+- **It decides whether an OSD can move.** With a networked class (a SAN or cloud volumes), a volume can re-attach on another node and the device set runs with `portable: true`. With a node-local class (OpenEBS LocalPV, TopoLVM, Longhorn in strict-local mode), an OSD is pinned to the node that holds its volume; set `portable: false` and let `removeOSDsIfOutAndSafeToRemove` purge an OSD whose node is gone so Rook creates a fresh one elsewhere.
 
-PostgreSQL's WAL volume defaults to 30 GiB and its data volume to 50 GiB per instance. Confirm the class has that capacity on three nodes.
+Capacity: the guide creates three OSD volumes of the size you set in Step 6 and one 10 GiB volume per monitor. Ceph replicates every object three times, so raw capacity is three times the compressed data you intend to keep, and Ceph should never fill past 80 %. PostgreSQL adds 50 GiB of data and 30 GiB of WAL per instance; Valkey 10 GiB per replica.
 
 ### Provide a ReadWriteMany class for the shared WAL
 
@@ -367,20 +345,49 @@ rookCephCluster:
           - key: axiom.co/storage
             operator: Exists
             effect: NoSchedule
+    mon:
+      count: 3
+      volumeClaimTemplate:
+        spec:
+          storageClassName: <block-storage-class>
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 10Gi
+    # An OSD whose node is gone is purged once its data is safe elsewhere,
+    # and the device set below creates a fresh one to replace it.
+    removeOSDsIfOutAndSafeToRemove: true
     storage:
       useAllNodes: false
       useAllDevices: false
-      # The explicit inventory from Step 3. Stable by-id paths only.
-      nodes:
-        - name: <storage-node-1>
-          devices:
-            - name: /dev/disk/by-id/<nvme-serial-1>
-        - name: <storage-node-2>
-          devices:
-            - name: /dev/disk/by-id/<nvme-serial-2>
-        - name: <storage-node-3>
-          devices:
-            - name: /dev/disk/by-id/<nvme-serial-3>
+      # PVC-backed OSDs: three raw block volumes from your class, one per
+      # node. No disks are listed or wiped; a lost OSD comes back on an
+      # empty claim. portable: true for a networked class; false for a
+      # node-local one (see Step 3).
+      storageClassDeviceSets:
+        - name: eventdb-osd
+          count: 3
+          portable: true
+          tuneDeviceClass: true
+          placement:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                      - key: app
+                        operator: In
+                        values: [rook-ceph-osd]
+                  topologyKey: kubernetes.io/hostname
+          volumeClaimTemplates:
+            - metadata:
+                name: data
+              spec:
+                storageClassName: <block-storage-class>
+                accessModes: [ReadWriteOnce]
+                volumeMode: Block
+                resources:
+                  requests:
+                    storage: <osd-size, e.g. 500Gi>
   # The RGW S3 gateway. Lists replace rather than merge in Helm, so the
   # chart's default store is repeated here with placement added.
   cephObjectStores:
@@ -541,7 +548,7 @@ Helm returns once the resources exist. What follows takes longer: Rook prepares 
 
 ### Wait for Ceph and the datastores
 
-OSD preparation runs one Job per storage node and takes several minutes on first boot:
+Rook runs one prepare Job per OSD claim, and the claims bind first; the whole thing takes several minutes on first boot:
 
 ```bash
 kubectl -n $NAMESPACE get cephcluster eventdb-ceph -w
@@ -557,7 +564,7 @@ kubectl -n $NAMESPACE wait --for=condition=Ready cluster/postgresql --timeout=60
 kubectl -n $NAMESPACE rollout status statefulset/valkey --timeout=300s
 ```
 
-The `eventdb-wal` claim binds on its own once the filesystem's metadata server is up. If a storage node shows no OSD after ten minutes, see [Troubleshoot](/self-hosted/troubleshoot#no-osd-is-created-on-a-storage-node).
+The `eventdb-wal` claim binds on its own once the filesystem's metadata server is up. If an OSD is missing after ten minutes, see [Troubleshoot](/self-hosted/troubleshoot#an-osd-claim-stays-pending-or-no-osd-appears).
 
 ### Bridge the object-storage endpoint
 

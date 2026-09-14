@@ -42,19 +42,20 @@ helm test axiom-eventdb -n axiom-system --logs
 
 ## Ceph and object storage
 
-### No OSD is created on a storage node
+### An OSD claim stays Pending, or no OSD appears
 
-**Symptom.** The CephCluster stays in phase `Progressing`, the `rook-ceph-osd-prepare-<node>` Job completes, but no `rook-ceph-osd-N` Deployment appears for that node.
+**Symptom.** The CephCluster stays in phase `Progressing`; a `eventdb-osd-data-*` PersistentVolumeClaim is `Pending`, or the `rook-ceph-osd-prepare-eventdb-osd-*` Job fails, and fewer than three `rook-ceph-osd-N` Deployments exist.
 
-**Cause.** One of: the device path in `storage.nodes` does not match the node's `/dev/disk/by-id/` entry; the device carries an old filesystem, partition table, or LVM signature; or the node name in the inventory differs from `kubectl get nodes`.
+**Cause.** The StorageClass cannot provision what the device set asks for: it does not support `volumeMode: Block` (Rancher's `local-path` does not), it has no capacity left, or a node-local class has no node that satisfies the OSD's anti-affinity. Less often, a class that binds `WaitForFirstConsumer` is waiting on a pod that cannot schedule.
 
-**Fix.** Read the prepare Job's log:
+**Fix.** Read the claim, then the Job:
 
 ```bash
-kubectl -n axiom-system logs job/rook-ceph-osd-prepare-<node>
+kubectl -n axiom-system describe pvc -l ceph.rook.io/DeviceSet=eventdb-osd
+kubectl -n axiom-system logs -l app=rook-ceph-osd-prepare --tail=50
 ```
 
-Correct the inventory or wipe the device (`sgdisk --zap-all`, `wipefs --all`, then zero the first 100 MiB), delete the prepare Job, and the operator retries on its next reconcile.
+Use a class with block-mode support, free capacity, or another node; the operator retries on its next reconcile. A device set is data the cluster depends on, so change its count or size in the values rather than deleting claims by hand.
 
 ### Ceph reports `HEALTH_WARN` after install
 

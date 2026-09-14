@@ -36,7 +36,7 @@ Ceph and PostgreSQL both place replicas by host, so a production cluster needs a
 
 | Role | Count | Purpose |
 | :--- | :--- | :--- |
-| Storage | 3 or more | Ceph monitors, managers, and OSDs. Each holds one or more dedicated raw disks. |
+| Storage | 3 or more | Ceph monitors, managers, and OSDs. Their volumes come from the block StorageClass; no node holds a disk of its own. |
 | EventDB | 3 or more | Ingest, query, cache, Atom, PostgreSQL, and Valkey pods. |
 | Control plane and add-ons | 1 or more | Operators, ingress, monitoring. |
 
@@ -69,19 +69,19 @@ The chart ships a worked example for 30 TB per day, 100 concurrent queries, and 
 
 Three kinds of storage are needed, and they are provisioned differently.
 
-### Raw disks for Ceph
+### Block volumes for Ceph
 
-When the chart manages object storage, Rook creates one OSD per dedicated raw block device you list in `rookCephCluster.cephClusterSpec.storage.nodes`. Requirements:
+When the chart manages object storage, Rook runs PVC-backed OSDs: `rookCephCluster.cephClusterSpec.storage.storageClassDeviceSets` names a count and a size, and each OSD claims a raw block volume (`volumeMode: Block`) from your StorageClass. The monitors claim 10 GiB filesystem volumes the same way. Nothing lists, formats, or wipes a disk, and a lost OSD is replaced by a fresh, empty claim. Requirements:
 
-- Whole, unformatted, unpartitioned devices with no filesystem or LVM signature. Never list an OS or root disk.
-- Stable `/dev/disk/by-id/` paths, so a reboot cannot renumber a device into the inventory.
-- NVMe or SSD. Ceph's write path fsyncs; slow disks become slow ingest.
-- At least three devices across at least three nodes, so the three-way replicated pools can place every copy on a different host.
+- A StorageClass that supports `volumeMode: Block`. Most CSI drivers do; Rancher's `local-path` provisioner does not.
+- `portable: true` with a networked class, whose volumes re-attach on another node; `portable: false` with a node-local class, where an OSD is pinned to its node and `removeOSDsIfOutAndSafeToRemove` lets Rook purge one whose node is gone.
+- NVMe or SSD behind the class. Ceph's write path fsyncs; slow volumes become slow ingest.
+- At least three OSDs on three nodes, so the three-way replicated pools can place every copy on a different host.
 - Capacity for your retention: EventDB compresses blocks roughly 10:1, so plan the raw pool at three times the compressed volume plus growth. Do not fill Ceph past 80%.
 
 ### A block StorageClass
 
-PostgreSQL data and WAL volumes, Valkey persistence, and NATS (if used) claim ReadWriteOnce volumes from a StorageClass you name in the values. Any performant block provisioner works: a local-path provisioner on NVMe, OpenEBS, Longhorn, or a Ceph RBD class from a Rook cluster you already run.
+PostgreSQL data and WAL volumes, Valkey persistence, and NATS (if used) claim ReadWriteOnce volumes from a StorageClass you name in the values, and so do the Ceph OSDs and monitors above. One class can serve all of them if it supports block mode: OpenEBS LocalPV, TopoLVM, Longhorn, or any CSI driver over a SAN or cloud volumes. A filesystem-only class such as `local-path` can still serve PostgreSQL and Valkey beside a block-capable one for Ceph.
 
 PostgreSQL's WAL volume defaults to 30 GiB. Do not shrink it: the operator's replication slots retain WAL for a diverged replica until it is re-cloned, and a full WAL volume takes the primary, Atom, ingest, and queries down together.
 
