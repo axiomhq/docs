@@ -126,7 +126,7 @@ helm template axiom-eventdb oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb \
 
 Images that the Rook operator launches at runtime, such as the Ceph daemons and CSI sidecars, come from `rookCephCluster.cephImage` and the `rookCephOperator.csi` image settings rather than from rendered pod specs. Set both to your registry and mirror the tags they name.
 
-If your registry requires authentication for pulls, create the release namespace and a pull secret now:
+If the registry holding the Axiom images requires authentication for pulls, create the release namespace and a pull secret now:
 
 ```bash
 kubectl create namespace $NAMESPACE
@@ -138,31 +138,14 @@ kubectl create secret docker-registry registry-credentials \
   -n $NAMESPACE
 ```
 
-Then name it in the values file you write in Step 6. `global.imagePullSecrets` reaches every first-party pod, including the bootstrap Jobs, CronJobs and `helm test` pods, and any subchart that reads a Helm global. The Rook and CloudNativePG charts read only their own key, so list it for them as well:
+Then name it at the top level of the values file you write in Step 6. That covers exactly the first-party pods: EventDB, Atom, the portals, the bootstrap Jobs, the CronJobs and the `helm test` pods.
 
 ```yaml
-global:
-  imagePullSecrets:
-    - name: registry-credentials
-rookCephOperator:
-  imagePullSecrets:
-    - name: registry-credentials
-rookCephCluster:
-  imagePullSecrets:
-    - name: registry-credentials
-cephCsiOperator:
-  imagePullSecrets:
-    - name: registry-credentials
-postgresqlOperator:
-  imagePullSecrets:
-    - name: registry-credentials
-postgresql:
-  cluster:
-    imagePullSecrets:
-      - name: registry-credentials
+imagePullSecrets:
+  - name: registry-credentials
 ```
 
-The CephFS CSI plugin pods run as the `cephfs-ctrlplugin-sa` and `cephfs-nodeplugin-sa` accounts the chart renders, which carry no pull secrets. If the CSI images sit behind authentication too, patch those two accounts after the install and restart the plugin pods.
+The dependency images are open source and public: Rook, Ceph, the Ceph CSI plugins, CloudNativePG and its PostgreSQL image, Valkey, and the `busybox` and `amazon/aws-cli` images the bootstrap Jobs run. They pull without credentials from their upstream registries, so leave the subcharts alone. Only a disconnected site that mirrored them into an authenticated registry needs to name the secret for each subchart as well (`rookCephOperator`, `rookCephCluster`, `cephCsiOperator` and `postgresqlOperator` take `imagePullSecrets`; the PostgreSQL cluster takes `postgresql.cluster.imagePullSecrets`; Valkey reads `global.imagePullSecrets`) and to patch the two CephFS CSI plugin accounts the chart renders, `cephfs-ctrlplugin-sa` and `cephfs-nodeplugin-sa`, after the install.
 
 ## Step 3: Provision local storage
 
