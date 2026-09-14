@@ -181,7 +181,7 @@ EventDB stores every block in S3-compatible object storage. On bare metal you ha
 
 With `objectStorage.provider: rook`, the chart's Rook subcharts run a Ceph cluster on the devices from Step 3 and expose its RGW S3 gateway inside the cluster. The chart creates the RGW user bound to your credentials Secret and a Job that creates the bucket. This is the self-contained path and the one validated on bare metal.
 
-The RGW serves plain HTTP on its Service name, and EventDB only speaks plain HTTP to a hostname ending in `.localhost`. Step 7 bridges that with a per-pod host alias, so no cluster-wide DNS change is needed.
+The RGW serves plain HTTP on its Service name, and EventDB only speaks plain HTTP to a hostname ending in `.localhost`. Step 5 reserves an address for it and Step 6 maps the name onto that address in each EventDB pod, so no cluster-wide DNS change is needed.
 
 ### An external S3-compatible store
 
@@ -241,6 +241,35 @@ kubectl create secret generic axiom-atom -n $NAMESPACE \
 
 If you enable [PostgreSQL backups](/self-hosted/backup-restore), also create `axiom-postgresql-backup` with the credentials for the backup bucket. Keep that bucket outside the cluster: a backup that dies with the Ceph it protects is not one.
 
+### Reserve the object-storage address
+
+EventDB speaks plain HTTP only to a hostname ending in `.localhost`, and Rook publishes the RGW under its Service name, so the values file names the RGW as `ceph-rgw.eventdb.localhost` and maps that name onto an IP in each EventDB pod's `/etc/hosts`. The IP has to be known before the install, and Rook's own Service does not exist yet, so create a Service of your own in front of the RGW pods now. The API server assigns its ClusterIP immediately; it has no endpoints until Ceph is up, which is expected.
+
+```bash
+kubectl apply -n $NAMESPACE -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: ceph-rgw-alias
+spec:
+  selector:
+    app: rook-ceph-rgw
+    rook_cluster: $NAMESPACE
+    rook_object_store: eventdb-store
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080   # the RGW container always listens on 8080
+EOF
+
+RGW_IP=$(kubectl -n $NAMESPACE get service ceph-rgw-alias -o jsonpath='{.spec.clusterIP}')
+echo "$RGW_IP"
+```
+
+Keep that IP for Step 6. It is stable for the life of the Service, and the selector is Rook's own daemon labelling, unchanged across Rook 1.x.
+
+On k3s, whose CoreDNS imports the `kube-system/coredns-custom` ConfigMap, the chart can do the mapping itself instead: skip the Service, enable `localDns` in Step 6, and leave `hostAliases` empty.
+
 ## Step 6: Write the values file
 
 The chart's base values enable nothing. The file below is a complete production profile for the topology in this guide: multi mode, Rook-managed object storage and CephFS WAL on the labeled storage nodes, PostgreSQL as the job queue, and Atom enabled. Replace every `<...>` placeholder.
@@ -255,14 +284,14 @@ credentials:
 objectStorage:
   provider: rook
   bucket: eventdb
-  # A *.localhost name is the one hostname EventDB accepts over plain HTTP.
-  # Step 7 maps it onto the in-cluster RGW Service.
+  # A *.localhost name is the one hostname EventDB accepts over plain HTTP;
+  # eventdb.hostAliases below maps it onto the RGW.
   endpoint: http://ceph-rgw.eventdb.localhost:80
 
 # On k3s only: let the chart map the name above onto the RGW Service through
-# a CoreDNS rewrite, so Step 7 has nothing to bridge by hand. k3s imports the
-# kube-system/coredns-custom ConfigMap the chart writes; other distributions
-# do not, and use eventdb.hostAliases instead (see Step 7).
+# a CoreDNS rewrite instead of the alias Service and hostAliases. k3s imports
+# the kube-system/coredns-custom ConfigMap the chart writes; other
+# distributions do not.
 # localDns:
 #   enabled: true
 #   hostname: ceph-rgw.eventdb.localhost
@@ -270,6 +299,12 @@ objectStorage:
 eventdb:
   enabled: true
   environment: prod
+  # The ClusterIP of the ceph-rgw-alias Service from Step 5. Rendered into
+  # every EventDB pod's /etc/hosts; nothing outside the release sees it.
+  hostAliases:
+    - ip: <RGW_IP>
+      hostnames:
+        - ceph-rgw.eventdb.localhost
   image:
     db:
       repository: <registry-host>/eventdb-db
@@ -540,7 +575,7 @@ helm upgrade --install axiom-eventdb \
   --timeout 15m
 ```
 
-Helm returns once the resources exist. What follows takes longer: Rook prepares one OSD per device, the operators bring up their data planes, and the EventDB workloads wait behind the bootstrap Jobs.
+Helm returns once the resources exist. What follows takes longer: Rook prepares the OSDs, the operators bring up their data planes, and the EventDB workloads wait behind the bootstrap Jobs and, until the RGW answers, restart on their object-storage connection, which is expected.
 
 <Tip>
 **Chart values reference.** This install sets only the values a bare-metal deployment needs. For the full list of configurable values and their defaults, read `values.yaml` in the chart, where every key is documented in place.
@@ -565,39 +600,6 @@ kubectl -n $NAMESPACE rollout status statefulset/valkey --timeout=300s
 ```
 
 The `eventdb-wal` claim binds on its own once the filesystem's metadata server is up. If an OSD is missing after ten minutes, see [Troubleshoot](/self-hosted/troubleshoot#an-osd-claim-stays-pending-or-no-osd-appears).
-
-### Bridge the object-storage endpoint
-
-`objectStorage.endpoint` names the RGW as `ceph-rgw.eventdb.localhost`, because EventDB only speaks plain HTTP to a `*.localhost` name, and Rook publishes the RGW under its Service name. Something has to map one onto the other. Until it does, the EventDB pods restart while they cannot resolve the endpoint; that is expected and clears on its own once the mapping exists. The bucket-setup Job is unaffected: with the Rook provider it targets the Service name directly.
-
-- **On k3s**, with `localDns` enabled in Step 6, there is nothing to do. The chart wrote a CoreDNS rewrite for the name, k3s imports it, and the pods resolve it within a minute or two. Skip to the next section.
-- **On any other distribution**, the mapping is a per-pod `/etc/hosts` entry pointing at the RGW Service's ClusterIP, which exists now that Ceph is up and is stable for the life of the Service. Read it, add it to the values file, and upgrade:
-
-```bash
-RGW_IP=$(kubectl -n $NAMESPACE get service rook-ceph-rgw-eventdb-store \
-  -o jsonpath='{.spec.clusterIP}')
-echo "$RGW_IP"
-```
-
-```yaml
-# values.yaml
-eventdb:
-  hostAliases:
-    - ip: <RGW_IP>
-      hostnames:
-        - ceph-rgw.eventdb.localhost
-```
-
-```bash
-helm upgrade axiom-eventdb \
-  oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb \
-  --version $CHART_VERSION \
-  --namespace $NAMESPACE \
-  --values values.yaml \
-  --timeout 15m
-```
-
-This is a values change like any other: nothing is disabled, and the upgrade rolls only the EventDB pods, which come back with the alias.
 
 ### Wait for the bootstrap Jobs and rollouts
 
