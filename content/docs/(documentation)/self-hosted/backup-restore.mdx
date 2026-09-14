@@ -1,0 +1,119 @@
+---
+title: 'Back up and restore PostgreSQL'
+sidebarTitle: Back up and restore
+description: 'Enable continuous WAL archiving and scheduled base backups for the PostgreSQL cluster in a self-hosted EventDB deployment, and restore to a point in time with CloudNativePG.'
+keywords: ['self-hosted', 'eventdb', 'backup', 'restore', 'postgresql', 'cloudnativepg', 'barman', 'point-in-time recovery', 'wal archiving']
+---
+
+PostgreSQL holds EventDB's dataset metadata and Atom's management state: organizations, users, API tokens, and the mapping from dataset names to the blocks in object storage. Everything else in a self-hosted deployment is either rebuilt from object storage or is the object store itself. PostgreSQL is what needs a backup.
+
+Replication is not one. The three instances survive losing a node; they do not survive a migration that drops the wrong table, because the standbys replay it as faithfully as everything else, and they do not survive losing the storage they all sit on.
+
+## How backups work
+
+`postgresql.backups` turns on CloudNativePG's built-in Barman Cloud support: continuous WAL archiving plus a scheduled base backup to an S3-compatible bucket. Together they give point-in-time recovery to any moment inside the retention window.
+
+- **WAL segments** are archived as they close, and at least every five minutes, so the recovery point is at most that far behind.
+- **A base backup** runs daily at 02:00 UTC by default, from a standby so the primary is not read end to end. The first runs at install.
+- **Retention** prunes base backups older than `retentionPolicy`, with the WAL segments only they needed.
+
+<Warning>
+Put the bucket outside the cluster. The chart-managed RGW runs on the same Ceph the PostgreSQL volumes are likely to, and a backup that dies with the thing it protects is not one. Use a second site, a cloud bucket, or a separate object store.
+</Warning>
+
+## Enable backups
+
+Create the credentials Secret. Its key names are the upstream chart's and differ from `eventdb-s3-credentials` on purpose: these are different credentials to a different bucket, and they need list, read, write, and delete on it, because retention prunes.
+
+```bash
+kubectl -n axiom-system create secret generic axiom-postgresql-backup \
+  --from-literal=ACCESS_KEY_ID="$BACKUP_KEY" \
+  --from-literal=ACCESS_SECRET_KEY="$BACKUP_SECRET"
+```
+
+Then add the backup configuration to the values file and upgrade:
+
+```yaml
+postgresql:
+  backups:
+    enabled: true
+    # Full URL with scheme. Leave empty on AWS to derive it from s3.region.
+    endpointURL: https://s3.backup.example.internal
+    s3:
+      region: us-east-1
+      bucket: axiom-postgresql-backups
+    secret:
+      name: axiom-postgresql-backup
+    retentionPolicy: "30d"
+```
+
+Barman creates the bucket on first use when the credentials allow it; otherwise create it first. Everything lands under `<bucket>/<s3.path>/postgresql/`, the cluster name, so one bucket can serve several releases as long as their cluster names differ.
+
+For a privately signed endpoint certificate, hand the CA bundle to the operator through `postgresql.backups.endpointCA`. Leave `wal.encryption` and `data.encryption` empty unless your store is configured for the explicit `AES256` header; Ceph RGW and MinIO reject it otherwise.
+
+## Check on it
+
+```bash
+kubectl -n axiom-system get scheduledbackups,backups
+kubectl -n axiom-system get cluster postgresql \
+  -o jsonpath='{.status.firstRecoverabilityPoint}{"\n"}'
+```
+
+An empty first recoverability point means no base backup has completed yet. A `Backup` in phase `failed` carries the reason in its status, and a WAL archiving failure surfaces as the cluster's `ContinuousArchiving` condition:
+
+```bash
+kubectl -n axiom-system get cluster postgresql \
+  -o jsonpath='{.status.conditions[?(@.type=="ContinuousArchiving")]}'
+```
+
+Barman runs inside the PostgreSQL image. The default `ghcr.io/cloudnative-pg/postgresql:17` ships it; the `-minimal` and `-standard` flavours do not, and a cluster on one of those archives nothing and says so in that condition.
+
+## Restore
+
+A restore is a new cluster bootstrapped from the archive, not an operation on the running one. Install a new release, or the same release once the original cluster is gone, with the upstream chart's recovery mode:
+
+```yaml
+postgresql:
+  mode: recovery
+  recovery:
+    method: object_store
+    clusterName: postgresql          # the archive's server name
+    database: eventdb
+    owner: eventdb
+    endpointURL: https://s3.backup.example.internal
+    s3:
+      region: us-east-1
+      bucket: axiom-postgresql-backups
+    secret:
+      create: false
+      name: axiom-postgresql-backup
+    pitrTarget:
+      time: "2026-09-07T01:30:00Z"   # omit to replay every archived WAL
+  backups:
+    # As before, but archiving somewhere new: see below.
+    enabled: true
+    s3:
+      path: /restored-2026-09-07/
+```
+
+The operator replays the newest base backup before the target and the WAL segments up to it. Three things to know before you need them:
+
+- **Bootstrap is read once.** `mode: recovery` stays in the values from then on. Changing it back would rewrite an immutable field and the upgrade fails.
+- **The application password is reset.** The upstream chart does not pass a Secret to the recovery bootstrap, so the operator mints a `postgresql-app` Secret and sets the `eventdb` role's password from it, while the workloads keep reading `axiom-postgresql-app`. Make the two agree once the cluster is up, from the one the workloads use:
+
+  ```bash
+  kubectl -n axiom-system patch secret postgresql-app --type merge \
+    -p "{\"data\":{\"password\":\"$(kubectl -n axiom-system get secret axiom-postgresql-app -o jsonpath='{.data.password}')\"}}"
+  ```
+
+  Atom's role is declared under `postgresql.cluster.roles` with its own `passwordSecret`, so the operator re-applies it from `axiom-postgresql-atom` unprompted.
+- **Archive somewhere new.** The restored cluster is a new timeline. Barman refuses to archive into a WAL archive that already holds one for the same server name, so the restored cluster's own `backups` need a different `s3.path` or bucket, or it comes up with archiving failed.
+
+Then run the EventDB and Atom migrate Jobs as any upgrade does; they are idempotent.
+
+## What is not backed up here
+
+- **Event data** lives in object storage and is not part of this backup. Protect the bucket with your object store's own replication or snapshots, and never with lifecycle rules.
+- **The shared WAL** holds only unflushed events. A graceful ingest restart flushes it.
+- **The `axiom-atom` Secret**, in particular `token-hash-secret`, is not in PostgreSQL. Without it every API token in a restored database is unusable. Back it up with your other Secrets.
+- **Valkey** is a cache and needs no backup.
