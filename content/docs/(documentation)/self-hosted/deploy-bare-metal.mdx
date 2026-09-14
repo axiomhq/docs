@@ -126,11 +126,24 @@ helm template axiom-eventdb oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb \
 
 Images that the Rook operator launches at runtime, such as the Ceph daemons and CSI sidecars, come from `rookCephCluster.cephImage` and the `rookCephOperator.csi` image settings rather than from rendered pod specs. Set both to your registry and mirror the tags they name.
 
-If your registry requires authentication for pulls, create the release namespace and a pull secret now. A pull secret reaches a pod through the service account the pod runs as, so it is attached in two places.
+If your registry requires authentication for pulls, create the release namespace and a pull secret now:
 
-The dependency subcharts each take an `imagePullSecrets` list and pass it to every service account they create. Add these to the values file you write in Step 6:
+```bash
+kubectl create namespace $NAMESPACE
+
+kubectl create secret docker-registry registry-credentials \
+  --docker-server=$REGISTRY_HOST \
+  --docker-username=<username> \
+  --docker-password=<password> \
+  -n $NAMESPACE
+```
+
+Then name it in the values file you write in Step 6. `global.imagePullSecrets` reaches every first-party pod, including the bootstrap Jobs, CronJobs and `helm test` pods, and any subchart that reads a Helm global. The Rook and CloudNativePG charts read only their own key, so list it for them as well:
 
 ```yaml
+global:
+  imagePullSecrets:
+    - name: registry-credentials
 rookCephOperator:
   imagePullSecrets:
     - name: registry-credentials
@@ -147,39 +160,6 @@ postgresql:
   cluster:
     imagePullSecrets:
       - name: registry-credentials
-valkey:
-  imagePullSecrets:
-    - name: registry-credentials
-```
-
-The first-party pods, including the bootstrap Jobs and CronJobs, run as the `axiom-eventdb` service account. The chart creates that account without pull secrets, so create it yourself with the secret attached and point the chart at it:
-
-```bash
-kubectl create namespace $NAMESPACE
-
-kubectl create secret docker-registry registry-credentials \
-  --docker-server=$REGISTRY_HOST \
-  --docker-username=<username> \
-  --docker-password=<password> \
-  -n $NAMESPACE
-
-kubectl apply -n $NAMESPACE -f - <<EOF
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: axiom-eventdb
-automountServiceAccountToken: false
-imagePullSecrets:
-  - name: registry-credentials
-EOF
-```
-
-```yaml
-# values.yaml
-eventdb:
-  serviceAccount:
-    create: false
-    name: axiom-eventdb
 ```
 
 The CephFS CSI plugin pods run as the `cephfs-ctrlplugin-sa` and `cephfs-nodeplugin-sa` accounts the chart renders, which carry no pull secrets. If the CSI images sit behind authentication too, patch those two accounts after the install and restart the plugin pods.
