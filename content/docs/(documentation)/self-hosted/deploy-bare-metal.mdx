@@ -656,33 +656,11 @@ Open [http://localhost:8080/ui/](http://localhost:8080/ui/) and sign in.
 
 ### Create a dataset and an API token
 
-From the console, create a dataset named `connectivity-check` and an API token with ingest and query capabilities on it. Or do the same through the API with the console session:
+From the console, create a dataset named `connectivity-check` and an API token with ingest and query capabilities on it. The console shows the token once; export it for the commands that follow:
 
 ```bash
 ATOM=http://localhost:8080
-EMAIL=<owner@example.com>
-PASSWORD=$(kubectl -n $NAMESPACE get secret axiom-atom -o jsonpath='{.data.admin-password}' | base64 -d)
-
-# sign in; the response carries the CSRF token the session needs
-LOGIN=$(curl -sS --cookie-jar cookies.txt --json \
-  "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" \
-  "$ATOM/api/internal/atom/auth/login")
-CSRF=$(echo "$LOGIN" | jq -r .csrfToken)
-
-# create a dataset
-curl -sS --cookie cookies.txt -H "X-Atom-CSRF: $CSRF" --json \
-  '{"name":"connectivity-check","description":"install verification"}' \
-  "$ATOM/v2/datasets" | jq .
-
-# mint an API token scoped to it
-TOKEN=$(curl -sS --cookie cookies.txt -H "X-Atom-CSRF: $CSRF" --json '{
-    "name": "connectivity-check",
-    "datasetCapabilities": {"connectivity-check": {"ingest": ["create"], "query": ["read"]}},
-    "orgCapabilities": {},
-    "viewCapabilities": {}
-  }' "$ATOM/v2/tokens" | jq -r .token)
-echo "$TOKEN"   # starts with xaat-
-rm cookies.txt
+TOKEN=xaat-...   # the token the console showed
 ```
 
 ### Ingest and query
