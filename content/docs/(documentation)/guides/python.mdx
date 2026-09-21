@@ -50,8 +50,6 @@ client = axiom_py.Client("API_TOKEN")
 
 ```py
 import axiom_py
-import rfc3339
-from datetime import datetime,timedelta
 
 client = axiom_py.Client()
 
@@ -130,22 +128,24 @@ For a full example, see [GitHub](https://github.com/axiomhq/axiom-py/tree/main/e
 
 ## Example with `structlog`
 
-The example below uses [structlog](https://github.com/hynek/structlog) to send logs to Axiom:
+The example below uses [structlog](https://github.com/hynek/structlog) to send logs to Axiom. structlog isn't a dependency of the Axiom Python SDK, so install it separately with `pip install structlog`.
+
+`AxiomProcessor` passes the event dictionary on unchanged so that later processors can run. Place a renderer such as `structlog.dev.ConsoleRenderer()` after it as the last processor. Without a renderer, structlog's logger receives a dictionary and raises a `TypeError`.
 
 ```python
 from axiom_py import Client
 from axiom_py.structlog import AxiomProcessor
+import structlog
 
 def setup_logger():
     client = Client()
 
     structlog.configure(
         processors=[
-            # ...
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", key="_time"),
             AxiomProcessor(client, "DATASET_NAME"),
-            # ...
+            structlog.dev.ConsoleRenderer(),
         ]
     )
 ```
