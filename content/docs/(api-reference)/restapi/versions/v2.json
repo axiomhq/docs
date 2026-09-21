@@ -850,6 +850,280 @@
         "x-axiom-not-suspended": true
       }
     },
+    "/labels": {
+      "get": {
+        "security": [
+          {
+            "Auth": [
+              "labels|read"
+            ]
+          }
+        ],
+        "description": "Returns labels as JSON, or the labels Agent Skill when the request negotiates text/markdown.",
+        "tags": [
+          "labels"
+        ],
+        "summary": "List labels",
+        "operationId": "listLabels",
+        "parameters": [
+          {
+            "description": "Filter labels by name.",
+            "name": "name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Labels",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Label"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "Auth": [
+              "labels|create"
+            ]
+          }
+        ],
+        "tags": [
+          "labels"
+        ],
+        "summary": "Create a label",
+        "operationId": "createLabel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLabel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created label",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Label"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid label payload"
+          },
+          "409": {
+            "description": "A label with this name already exists"
+          }
+        },
+        "description": "Create a label"
+      }
+    },
+    "/labels/assignments": {
+      "put": {
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
+        "description": "Replaces the complete label set for one target atomically. Concurrent replacements use last-write-wins semantics. The operation requires only the target resource's update permission: dashboards|update, datasets|update, or monitors|update. Datasets must also be readable, writable, and owned by the caller's organization. Monitor dataset permissions match those required to read the monitor. A target that uses the wrong identifier for its type returns 400. An unknown target type, duplicate label IDs, and more than 500 label IDs fail request validation with 422. A target that does not exist, is not owned by the caller's organization, or references one or more label IDs that do not exist returns 404.",
+        "tags": [
+          "labels"
+        ],
+        "summary": "Replace labels assigned to a resource target",
+        "operationId": "replaceLabelAssignments",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelAssignmentsReplace"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The target's complete label set after the atomic replacement.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelAssignmentResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The target uses the wrong identifier for its type."
+          },
+          "403": {
+            "description": "The caller lacks the target resource's update permission, or the dataset is shared or not writable."
+          },
+          "404": {
+            "description": "The target does not exist, is not owned by the caller's organization, or one or more label IDs do not exist."
+          },
+          "422": {
+            "description": "Request validation failed. The payload contains an unknown target type, duplicate label IDs, or more than 500 label IDs."
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
+        "description": "Accepts 1-500 unique resource targets and preserves their request order. Returns exactly one result per target. An eligible target without assignments, a target that does not exist, and a target that the caller cannot access all return an empty labelIds array. The response does not distinguish these cases. labelIds is a set with no meaningful order. The operation is safe and idempotent despite using POST. Eligible targets are owned saved dashboards, visible integration dashboards, readable datasets, and visible monitors. Each target is checked using its resource's read permission; missing permissions yield empty labelIds for that target. Dashboards shared into the organization are not eligible. A target that uses the wrong identifier for its type returns 400. An unknown target type, duplicate targets, and more than 500 targets fail request validation with 422. An internal failure while resolving targets fails the whole request instead of returning empty label sets.",
+        "tags": [
+          "labels"
+        ],
+        "summary": "List label assignments for resource targets",
+        "operationId": "listLabelAssignments",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelAssignmentsQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "One result for each requested target, in request order. labelIds is empty when the target has no assignments, does not exist, or is not accessible to the caller. The response does not distinguish those cases. labelIds is a set with no meaningful order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelAssignmentResult"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A target uses the wrong identifier for its type."
+          },
+          "422": {
+            "description": "Request validation failed. The request contains an unknown target type, duplicate targets, or more than 500 targets."
+          }
+        }
+      }
+    },
+    "/labels/{id}": {
+      "put": {
+        "security": [
+          {
+            "Auth": [
+              "labels|update"
+            ]
+          }
+        ],
+        "tags": [
+          "labels"
+        ],
+        "summary": "Update a label",
+        "operationId": "updateLabel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^lbl_"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated label",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Label"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid label ID or payload"
+          },
+          "404": {
+            "description": "Label not found"
+          },
+          "409": {
+            "description": "A label with this name already exists"
+          }
+        },
+        "description": "Update a label"
+      },
+      "delete": {
+        "security": [
+          {
+            "Auth": [
+              "labels|delete"
+            ]
+          }
+        ],
+        "tags": [
+          "labels"
+        ],
+        "summary": "Delete a label",
+        "operationId": "deleteLabel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^lbl_"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Label deleted"
+          },
+          "400": {
+            "description": "Invalid label ID"
+          },
+          "404": {
+            "description": "Label not found"
+          }
+        },
+        "description": "Delete a label"
+      }
+    },
     "/monitors": {
       "get": {
         "security": [
@@ -7419,11 +7693,11 @@
               "-60d",
               "-90d"
             ],
-            "description": "Relative time comparison offset. Compares the current time window against a previous period offset by this duration. Mutually exclusive with `againstTimestamp` — setting one clears the other. Use an empty string or omit to disable comparison."
+            "description": "Relative time comparison offset. Compares the current time window against a previous period offset by this duration. Mutually exclusive with `againstTimestamp` \u2014 setting one clears the other. Use an empty string or omit to disable comparison."
           },
           "againstTimestamp": {
             "$ref": "#/components/schemas/DatetimeString",
-            "description": "Absolute or relative timestamp to compare against. Mutually exclusive with `against` — setting one clears the other. Accepts ISO 8601, `now-{duration}` (e.g. `now-1h`), or epoch milliseconds as a string."
+            "description": "Absolute or relative timestamp to compare against. Mutually exclusive with `against` \u2014 setting one clears the other. Accepts ISO 8601, `now-{duration}` (e.g. `now-1h`), or epoch milliseconds as a string."
           },
           "timeWindowStart": {
             "$ref": "#/components/schemas/TimeWindowStart"
@@ -8748,7 +9022,7 @@
             "$ref": "#/components/schemas/SmartFilterActive"
           },
           "options": {
-            "description": "Pre-defined options merged with the dynamic options returned by `query` at runtime. Typically used to seed a default option (for example an \"All\" entry with `unset: true`) so the filter has a sensible initial selection before — or independent of — query results.",
+            "description": "Pre-defined options merged with the dynamic options returned by `query` at runtime. Typically used to seed a default option (for example an \"All\" entry with `unset: true`) so the filter has a sensible initial selection before \u2014 or independent of \u2014 query results.",
             "allOf": [
               {
                 "anyOf": [
@@ -8819,7 +9093,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500000,
-            "description": "APL query that returns the list of options for the filter dropdown. The result must contain a `key` column and a `value` column — Axiom interprets each row as a `{ key, value }` pair for an option. Use `distinct` to collapse the source field to unique values, then `project` to expose the `key` and `value` columns.\n\nExample:\n```\n['dataset-name'] | distinct field_name | project key=field_name, value=field_name\n```"
+            "description": "APL query that returns the list of options for the filter dropdown. The result must contain a `key` column and a `value` column \u2014 Axiom interprets each row as a `{ key, value }` pair for an option. Use `distinct` to collapse the source field to unique values, then `project` to expose the `key` and `value` columns.\n\nExample:\n```\n['dataset-name'] | distinct field_name | project key=field_name, value=field_name\n```"
           }
         },
         "required": [
@@ -8835,7 +9109,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500000,
-            "description": "MPL query that returns the list of options for the filter dropdown. The query must group by exactly one tag — Axiom uses each distinct value of that tag as both the key and the value of an option. Use `align using last` to simplify the query.\n\nExample:\n```\ndataset:metric | align using last | group by tag using count\n```"
+            "description": "MPL query that returns the list of options for the filter dropdown. The query must group by exactly one tag \u2014 Axiom uses each distinct value of that tag as both the key and the value of an option. Use `align using last` to simplify the query.\n\nExample:\n```\ndataset:metric | align using last | group by tag using count\n```"
           }
         },
         "required": [
@@ -8990,6 +9264,198 @@
       },
       "DashboardOutput": {
         "$ref": "#/components/schemas/DashboardResource"
+      },
+      "Label": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "color"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "$ref": "#/components/schemas/LabelID"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "LabelAssignmentResult": {
+        "type": "object",
+        "required": [
+          "target",
+          "labelIds"
+        ],
+        "properties": {
+          "labelIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            }
+          },
+          "target": {
+            "$ref": "#/components/schemas/LabelAssignmentTarget"
+          }
+        }
+      },
+      "LabelAssignmentTarget": {
+        "description": "A resource that supports organization labels. The target type determines which identifier is required.",
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "dataset": {
+            "description": "Required for dataset targets, which reject id, uid, and templateId. Also required alongside templateId for frontend integration dashboards. Use the current dataset name. Assignments use the underlying dataset instance, so permanent deletion and recreation do not restore old labels.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Required for monitor targets, using the ID returned by monitor APIs. Also identifies a backend-provided integration dashboard using the opaque ID returned by backend dashboard listing APIs. Mutually exclusive with uid, templateId, and dataset.",
+            "type": "string"
+          },
+          "templateId": {
+            "description": "Stable frontend-owned template key for an integration_dashboard target, such as k8s.stats. Requires dataset and rejects id and uid. The backend treats this key as opaque and does not validate a template registry. Whitespace and control characters are rejected.",
+            "type": "string",
+            "maxLength": 128
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "dashboard",
+              "integration_dashboard",
+              "dataset",
+              "monitor"
+            ]
+          },
+          "uid": {
+            "description": "Required only for saved dashboard targets; rejected for other target types.",
+            "type": "string"
+          }
+        }
+      },
+      "LabelAssignmentsQuery": {
+        "type": "object",
+        "required": [
+          "targets"
+        ],
+        "properties": {
+          "targets": {
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/LabelAssignmentTarget"
+            }
+          }
+        }
+      },
+      "LabelAssignmentsReplace": {
+        "type": "object",
+        "required": [
+          "target",
+          "labelIds"
+        ],
+        "properties": {
+          "labelIds": {
+            "type": "array",
+            "maxItems": 500,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            }
+          },
+          "target": {
+            "$ref": "#/components/schemas/LabelAssignmentTarget"
+          }
+        }
+      },
+      "LabelColor": {
+        "type": "object",
+        "required": [
+          "type",
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "red",
+              "coral",
+              "orange",
+              "amber",
+              "yellow",
+              "lime",
+              "green",
+              "teal",
+              "blue",
+              "iris",
+              "purple",
+              "pink"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "palette"
+            ]
+          }
+        }
+      },
+      "LabelID": {
+        "type": "string",
+        "pattern": "^lbl_",
+        "description": "Unique label ID."
+      },
+      "LabelUpdate": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 512,
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1
+          }
+        }
+      },
+      "NewLabel": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 512,
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1
+          }
+        }
       }
     }
   },
