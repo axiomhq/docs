@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+# Keep snapshot-safe tooling in this checkout, not in the host's global PATH.
+TOOLS="$ROOT/.agents/tools"
+NODE_VERSION="$(tr -d '[:space:]' < .node-version)"
+case "$(uname -s)-$(uname -m)" in
+  Linux-x86_64) NODE_ARCH=x64 ;;
+  Linux-aarch64) NODE_ARCH=arm64 ;;
+  *) printf '%s\n' 'Orb setup supports Linux x64 and arm64.' >&2; exit 1 ;;
+esac
+
+for tool in curl tar xz sha256sum; do
+  command -v "$tool" >/dev/null || { printf 'Required setup tool is missing: %s\n' "$tool" >&2; exit 1; }
+done
+mkdir -p "$TOOLS"
+if [[ ! -x "$TOOLS/node/bin/node" ]] || [[ "$("$TOOLS/node/bin/node" --version)" != "v$NODE_VERSION" ]]; then
+  TEMP="$(mktemp -d "$TOOLS/.node-install.XXXXXX")"
+  trap 'rm -rf "$TEMP"' EXIT
+  ARCHIVE="node-v$NODE_VERSION-linux-$NODE_ARCH.tar.xz"
+  RELEASE="https://nodejs.org/dist/v$NODE_VERSION"
+  curl --fail --silent --show-error --location "$RELEASE/$ARCHIVE" -o "$TEMP/$ARCHIVE"
+  curl --fail --silent --show-error --location "$RELEASE/SHASUMS256.txt" -o "$TEMP/SHASUMS256.txt"
+  (cd "$TEMP" && sha256sum --check --ignore-missing SHASUMS256.txt)
+  mkdir "$TEMP/node"
+  tar -xJf "$TEMP/$ARCHIVE" --strip-components=1 -C "$TEMP/node"
+  rm -rf "$TOOLS/node"
+  mv "$TEMP/node" "$TOOLS/node"
+  rm -rf "$TEMP"
+  trap - EXIT
+fi
+
+export PATH="$TOOLS/node/bin:$TOOLS/pnpm/bin:$PATH"
+PNPM_VERSION="$(node -p 'require("./package.json").packageManager.replace(/^pnpm@/, "")')"
+if [[ ! -x "$TOOLS/pnpm/bin/pnpm" ]] || [[ "$("$TOOLS/pnpm/bin/pnpm" --version)" != "$PNPM_VERSION" ]]; then
+  npm install --global --prefix "$TOOLS/pnpm" --no-audit --no-fund "pnpm@$PNPM_VERSION"
+fi
+pnpm install --frozen-lockfile
+printf '%s\n' 'Dependencies installed. Amp supervises the docs service; Next generates .source on startup.'

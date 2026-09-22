@@ -1,10 +1,15 @@
 import { createMDX } from 'fumadocs-mdx/next';
 
+const allowedDevOrigins = ['127.0.0.1', 'adipurush', 'adipurush.tail9166b.ts.net'];
+if (process.env.NODE_ENV === 'development' && process.env.PUBLIC_URL) {
+  allowedDevOrigins.push(new URL(process.env.PUBLIC_URL).hostname);
+}
+
 /** @type {import('next').NextConfig} */
 const config = {
   reactStrictMode: true,
   basePath: '/docs',
-  allowedDevOrigins: ['127.0.0.1', 'adipurush', 'adipurush.tail9166b.ts.net'],
+  allowedDevOrigins,
   output: 'standalone',
   images: {
     unoptimized: true,

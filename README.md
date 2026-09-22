@@ -17,6 +17,26 @@ pnpm dev
 
 Open `http://localhost:3000/docs`. The site defaults to dark mode and stores the reader’s theme and code-placeholder values in browser storage.
 
+### Amp Orbs
+
+This repository owns its standalone docs preview; no marketing checkout or credentials are required. On a Debian 12 Orb (Linux x64 or arm64 with `curl`, `tar`, `xz`, and `sha256sum`), Amp runs executable `.agents/setup` to install the versions pinned in `.node-version` and `package.json`, then installs dependencies with the frozen lockfile. Tooling stays in ignored `.agents/tools/`; setup does not change global Node/pnpm, copy environment files, or start services. It is safe to rerun.
+
+```bash
+amp orb services ensure
+amp orb service logs docs
+amp orb service restart docs
+```
+
+Open the exact **Axiom Docs** portal URL returned by ensure. `.amp/services.yaml` runs the existing Next development command on `0.0.0.0:$PORT`, checks `/docs`, and enables review annotations and agent control. Amp supplies `PORT` and `PUBLIC_URL` at runtime; Next adds only that portal hostname to its development allowlist, alongside the existing local hosts. The `/docs` base path and production redirects/rewrites are unchanged. The same service is supervised after wake; no resume hook or background server is needed.
+
+Fumadocs' existing `createMDX` Next integration generates `.source` when the dev server starts and watches content changes. No separate generation command or search credential is needed. `.source`, `.next`, local tooling, and generated `.amp/portals/` links remain ignored. To use the pinned tools in an Orb shell, run `export PATH="$PWD/.agents/tools/node/bin:$PWD/.agents/tools/pnpm/bin:$PATH"` from the repository root.
+
+Leave optional credentials unset for the default preview: search works, Ask AI returns HTTP 503 without `OPENROUTER_API_KEY`, and authenticated API “Try it” operations require a reader-supplied API token. No tokens are seeded. Analytics stays disabled without `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`. Shared Upstash rate limits (`KV_REST_API_URL` / `KV_REST_API_TOKEN`, or their `UPSTASH_REDIS_REST_*` aliases) remain optional in development and required for production assistant/API requests; do not enable a production fallback for previews. `NEXT_PUBLIC_SITE_URL` remains optional canonical metadata configuration, not a portal requirement. Supply any optional credentials only at runtime, never in setup or tracked files.
+
+The copied `.amp/plugins/mainframe.ts` uses runtime `MAINFRAME_URL` and `MAINFRAME_TOKEN` supplied by Amp settings. These enable Mainframe controls but are not needed to render or search docs.
+
+Smoke-check `/docs`, `/docs/getting-started`, and both reference portal links; search for `ingest` and follow a result. Confirm `/docs/api/search?query=ingest` returns results and an unconfigured `/docs/api/chat` POST returns 503. Edit an MDX paragraph and confirm hot reload, then restore it. After an Orb wake, repeat page/search checks and confirm the current portal is accepted without a cross-origin warning. Do not exercise live API requests with real credentials during verification.
+
 ## Content structure
 
 - `content/docs/(documentation)` — product documentation and guides
