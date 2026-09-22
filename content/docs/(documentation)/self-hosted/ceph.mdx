@@ -7,7 +7,7 @@ keywords: ['self-hosted', 'eventdb', 'ceph', 'rook', 'rgw', 'cephfs', 's3', 'obj
 
 The `axiom-eventdb` chart does not deploy Ceph. It consumes two things the cluster already provides: an S3-compatible object store for EventDB's blocks, and a ReadWriteMany `StorageClass` for the shared write-ahead log. Ceph provides both, through the RGW gateway and CephFS, and it is the path Axiom validates on bare metal. Deploying and operating it is your job; this page is the specification of what EventDB needs from it.
 
-Any S3-compatible store works in place of the RGW (MinIO, SeaweedFS, AWS S3), and any RWX class in place of CephFS (NFS, a vendor filer, GKE Filestore, or JuiceFS through the chart's optional subchart). If you already run one of those, skip this page and follow [Deploy on bare metal](/self-hosted/deploy-bare-metal) with its values.
+Any S3-compatible store works in place of the RGW (`objectStorage.provider: minio`, `seaweedfs`, `hetzner`, or `s3`), and any RWX class in place of CephFS (`eventdb.wal.provider: nfs` for an NFS export or a vendor filer, `efs`, `filestore` on GKE, or `juicefs` through the chart's optional subchart). If you already run one of those, skip this page and follow [Deploy on bare metal](/self-hosted/deploy-bare-metal) with its values.
 
 <Note>
 **Tested versions.** Axiom validates EventDB against Rook `v1.20.3` running Ceph `v20.2.2` (`quay.io/ceph/ceph:v20.2.2`), installed from the upstream `rook-release` Helm repository as two releases: `rook-ceph` (the operator, which installs the CRDs) and then `rook-ceph-cluster`. A Ceph deployed any other way, with `cephadm` or an existing cluster, is fine as long as the endpoint and the StorageClass below exist.
@@ -17,8 +17,8 @@ Any S3-compatible store works in place of the RGW (MinIO, SeaweedFS, AWS S3), an
 
 | Need | Ceph resource | Reaches the chart as |
 | :--- | :--- | :--- |
-| Object storage for blocks | A `CephObjectStore` with its RGW gateway, a `CephObjectStoreUser`, and the `eventdb` bucket | `objectStorage.provider: external`, `objectStorage.endpoint`, the `eventdb-s3-credentials` Secret |
-| A ReadWriteMany volume for the shared WAL | A `CephFilesystem` and its StorageClass | `eventdb.wal.provider: existing`, `eventdb.wal.storageClass` |
+| Object storage for blocks | A `CephObjectStore` with its RGW gateway, a `CephObjectStoreUser`, and the `eventdb` bucket | `objectStorage.provider: ceph`, `objectStorage.endpoint`, the `eventdb-s3-credentials` Secret |
+| A ReadWriteMany volume for the shared WAL | A `CephFilesystem` and its StorageClass | `eventdb.wal.provider: cephfs`, `eventdb.wal.storageClass` |
 
 Nothing else. The chart itself needs no RBD, though the block StorageClass that PostgreSQL, Valkey, and NATS claim from may well be a Ceph RBD class such as the `ceph-block` class the upstream cluster chart creates by default.
 
@@ -366,11 +366,11 @@ A claim that stays `Pending` with no provisioner event while the cluster, filesy
 
 | Ceph fact | Chart value |
 | :--- | :--- |
-| The RGW endpoint, as a URL with scheme | `objectStorage.provider: external`, `objectStorage.endpoint` |
+| The RGW endpoint, as a URL with scheme | `objectStorage.provider: ceph`, `objectStorage.endpoint` |
 | The bucket and whether the user may create it | `objectStorage.bucket: eventdb`, `objectStorage.createBucket` |
 | The user's keys | The `eventdb-s3-credentials` Secret, keys `access-key` and `secret-key` |
 | The `*.localhost` alias IP, if used | `eventdb.hostAliases`, or `localDns` on k3s |
-| The CephFS StorageClass name | `eventdb.wal.provider: existing`, `eventdb.wal.storageClass: ceph-filesystem` |
+| The CephFS StorageClass name | `eventdb.wal.provider: cephfs`, `eventdb.wal.storageClass: ceph-filesystem` |
 | The RBD StorageClass name, if used for the datastores | `postgresql.cluster.storage.storageClass`, `walStorage.storageClass`, `valkey.replica.persistence.storageClass` |
 
 The chart ships `values-cephfs.example.yaml` as an overlay with exactly the WAL half of this table.

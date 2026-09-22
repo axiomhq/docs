@@ -77,13 +77,16 @@ PostgreSQL's WAL volume defaults to 30 GiB. Do not shrink it: the operator's rep
 
 Six EventDB workloads mount one write-ahead-log volume, `eventdb-wal`, and that is true in every mode. The claim is `ReadWriteMany` because a `ReadWriteOnce` volume binds to a node, not a pod, and the first node replacement strands every pod that lands elsewhere behind a `Multi-Attach` error that cannot be cleared without deleting the claim.
 
-No cluster's default StorageClass provides RWX, so the chart refuses to render without one. The WAL provider you choose sets where it comes from:
+No cluster's default StorageClass provides RWX, so the chart refuses to render without one. `eventdb.wal.provider` names the filesystem it comes from, and is required:
 
 | Provider | Backing | For |
 | :--- | :--- | :--- |
-| `existing` | An RWX class the cluster already has, named in `eventdb.wal.storageClass`: the CephFS class from [Deploy Ceph](/self-hosted/ceph), NFS, a vendor filer. | Bare metal and air-gapped installs. This is the path the bare-metal guide uses, with the chart's `values-cephfs.example.yaml` overlay as the template. |
+| `cephfs` | A CephFS filesystem from the Ceph you run, named in `eventdb.wal.storageClass`: the class from [Deploy Ceph](/self-hosted/ceph). | Bare metal and air-gapped installs. This is the path the bare-metal guide uses, with the chart's `values-cephfs.example.yaml` overlay as the template. |
+| `nfs` | Any NFS export behind a StorageClass: an NFS server, a vendor filer's CSI driver, AWS FSx for OpenZFS. Named in `eventdb.wal.storageClass`. | Sites with a filer and no Ceph. |
+| `efs` | AWS EFS through its CSI driver, named in `eventdb.wal.storageClass`. | AWS. |
 | `filestore` | GKE Filestore. | Google Cloud only. |
 | `juicefs` | A JuiceFS filesystem over an S3-compatible bucket and a metadata database you run, served by the chart's optional CSI driver subchart. | Clusters with an object store but no shared filesystem. |
+| `local` | A ReadWriteOnce class on a single-node cluster. | Development only. |
 
 Size the WAL for hours of raw ingest, not minutes: 100 GiB from 16,000 events per second upward. It is what keeps ingest accepting batches through an object-storage outage.
 
@@ -91,8 +94,12 @@ Size the WAL for hours of raw ingest, not minutes: 100 GiB from 16,000 events pe
 
 EventDB stores every block in object storage that you provide. Choose one of:
 
-- **An S3-compatible store** (`objectStorage.provider: external`, the default): a Ceph RGW, MinIO, SeaweedFS, or AWS S3. Provide the endpoint, bucket, region, and a static access key pair in the `eventdb-s3-credentials` Secret. The endpoint must be HTTPS with a certificate the pods trust, or a `*.localhost` name for an in-cluster gateway. The chart's bucket-setup Job creates the bucket when `objectStorage.createBucket` is true and the credentials allow it. [Deploy Ceph](/self-hosted/ceph) is the validated bare-metal path.
+- **A Ceph RGW** (`objectStorage.provider: ceph`), the validated bare-metal path: [Deploy Ceph](/self-hosted/ceph).
+- **MinIO, SeaweedFS, or Hetzner Object Storage** (`objectStorage.provider: minio`, `seaweedfs`, or `hetzner`).
+- **AWS S3** (`objectStorage.provider: s3`); the chart derives the regional endpoint from `objectStorage.region`.
 - **Google Cloud Storage** (`objectStorage.provider: gcs`), through Workload Identity, with no credentials Secret at all.
+
+`objectStorage.provider` is required, and names the store rather than calling it "S3 compatible" so that the profiles, these pages, and the chart's render checks can say which one is meant. For every provider but `gcs`, provide the endpoint (except for `s3`), the bucket, the region, and a static access key pair in the `eventdb-s3-credentials` Secret. The endpoint must be HTTPS with a certificate the pods trust, or a `*.localhost` name for an in-cluster gateway. The chart's bucket-setup Job creates the bucket when `objectStorage.createBucket` is true and the credentials allow it.
 
 Two rules apply to either:
 

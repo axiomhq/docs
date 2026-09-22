@@ -159,11 +159,11 @@ Capacity: PostgreSQL adds 50 GiB of data and 30 GiB of WAL per instance; Valkey 
 
 Six EventDB workloads mount one write-ahead-log volume, and the chart insists it is `ReadWriteMany`: a ReadWriteOnce volume binds to a node, and the first node replacement strands ingest behind a `Multi-Attach` error that only deleting the claim clears.
 
-This guide sets `eventdb.wal.provider: existing` and names the CephFS class in `eventdb.wal.storageClass`. The chart creates nothing for it; it only claims from the class. [Deploy Ceph](/self-hosted/ceph#step-6-verify-before-installing-eventdb) proves the class binds a claim before you get here. If your cluster has a different RWX class (NFS, a vendor filer), name that one instead.
+This guide sets `eventdb.wal.provider: cephfs` and names the CephFS class in `eventdb.wal.storageClass`. The chart creates nothing for it; it only claims from the class. [Deploy Ceph](/self-hosted/ceph#step-6-verify-before-installing-eventdb) proves the class binds a claim before you get here. If your cluster has a different RWX class, name its provider (`nfs` for an NFS export or a vendor filer, `efs` on AWS) and that class instead.
 
 ## Step 4: Choose object storage
 
-EventDB stores every block in S3-compatible object storage, reached through `objectStorage.provider: external`. Provide:
+EventDB stores every block in object storage, and `objectStorage.provider` names which: `ceph` for a Ceph RGW, `minio`, `seaweedfs`, `hetzner`, `s3` for AWS, or `gcs`. Provide:
 
 | Value | Notes |
 | :--- | :--- |
@@ -178,7 +178,7 @@ The RGW serves plain HTTP on its Service name, and EventDB only speaks plain HTT
 
 ### Another S3-compatible store
 
-MinIO, SeaweedFS, another Ceph, or AWS S3 work the same way with an HTTPS endpoint, and need no `hostAliases`. The chart ships this shape as an overlay, `values-external-s3.example.yaml`.
+MinIO, SeaweedFS, Hetzner Object Storage, or AWS S3 work the same way with an HTTPS endpoint and their own provider name (`minio`, `seaweedfs`, `hetzner`, `s3`), and need no `hostAliases`. The chart ships the AWS shape as an overlay, `values-s3.example.yaml`; `s3` is also the one provider whose endpoint the chart derives from the region.
 
 <Warning>
 Do not create lifecycle or expiration rules on the bucket, and leave object versioning off. EventDB manages retention per dataset and deletes its own blocks. A lifecycle rule deletes objects EventDB still depends on, which is **data loss**. To manage retention, set it per dataset through Atom.
@@ -258,7 +258,7 @@ credentials:
   create: false
 
 objectStorage:
-  provider: external
+  provider: ceph
   bucket: eventdb
   region: us-east-1
   # A *.localhost name is the one hostname EventDB accepts over plain HTTP;
@@ -308,7 +308,7 @@ eventdb:
     nodeSelector:
       axiom.co/role: eventdb
   wal:
-    provider: existing
+    provider: cephfs
     # The CephFS class from Deploy Ceph. The chart claims from it and
     # creates nothing.
     storageClass: ceph-filesystem
@@ -378,7 +378,7 @@ nats:
 
 A few of these choices deserve a word:
 
-- **`eventdb.wal.storageClass` names a class the chart never creates.** With `provider: existing` the render refuses an empty name, and a name that does not exist leaves the claim `Pending`. Deploy Ceph's Step 6 is what proves the class works.
+- **`eventdb.wal.storageClass` names a class the chart never creates.** With `provider: cephfs` the render refuses an empty name, and a name that does not exist leaves the claim `Pending`. Deploy Ceph's Step 6 is what proves the class works.
 - **`queues.backend: postgres`** puts EventDB's background jobs on the PostgreSQL cluster it already runs. There is no extra datastore, no JetStream stream to replicate, and no bootstrap Job. The render refuses `postgres` with `nats.enabled: true`.
 - **Autoscaling is decided at install time.** Turning it on for a running release resets each component's count to one for about fifteen seconds. See [Operate](/self-hosted/operate#scale-and-autoscale).
 - **Nodes without the `cephfs` kernel module** need `mounter: fuse` in the CephFS StorageClass, which is Ceph's side to set; see [Deploy Ceph](/self-hosted/ceph#step-2-prepare-the-devices).

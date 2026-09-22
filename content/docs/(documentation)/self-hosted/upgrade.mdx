@@ -223,13 +223,13 @@ The one exception is size on a class that allows expansion, such as the CephFS c
 
 ## From a chart that deployed Ceph
 
-Chart versions before `0.2.0` bundled Rook and Ceph as subcharts, selected with `objectStorage.provider: rook`, `eventdb.wal.provider: cephfs`, and the `rookCephOperator`, `cephCsiOperator`, and `rookCephCluster` values. From `0.2.0` the chart deploys no Ceph: the S3 endpoint and the ReadWriteMany class are prerequisites you provide, as [Deploy Ceph](/self-hosted/ceph) describes, and the chart's schema rejects the three removed blocks.
+Chart versions before `0.2.0` bundled Rook and Ceph as subcharts, selected with `objectStorage.provider: rook`, `eventdb.wal.provider: cephfs` deriving its class from the subchart, and the `rookCephOperator`, `cephCsiOperator`, and `rookCephCluster` values. From `0.2.0` the chart deploys no Ceph: the S3 endpoint and the ReadWriteMany class are prerequisites you provide, as [Deploy Ceph](/self-hosted/ceph) describes, both providers name the store and the filesystem you connected, and the chart's schema rejects the three removed blocks.
 
 <Warning>
 **Do not `helm upgrade` a release that had Rook enabled to `0.2.0`.** Helm removes every resource the old chart rendered and the new one does not, which includes the `CephCluster`, its object store, and its filesystem. Rook then tears the Ceph cluster down, with EventDB's blocks and WAL in it.
 </Warning>
 
-Treat it as a new deployment. Deploy Ceph on its own, as its own Rook releases, migrate the blocks and the PostgreSQL data across in a plan of your own, and install the chart fresh against the new endpoint and class with `objectStorage.provider: external` and `eventdb.wal.provider: existing`.
+Treat it as a new deployment. Deploy Ceph on its own, as its own Rook releases, migrate the blocks and the PostgreSQL data across in a plan of your own, and install the chart fresh against the new endpoint and class with `objectStorage.provider: ceph` and `eventdb.wal.provider: cephfs` naming them.
 
 **Rotating credentials.** Update the Secret, then roll the consumers so they read it: every EventDB workload reads its credentials into environment variables at start. Rotate `axiom-postgresql-app` and `axiom-postgresql-atom` through PostgreSQL first, or CloudNativePG's managed roles will re-apply the old password from the Secret they still see. `token-hash-secret` in `axiom-atom` is the one credential that must never rotate: a new value invalidates every API token Atom has issued.
 
