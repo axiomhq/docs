@@ -65,10 +65,10 @@ Atom requests the `openid`, `profile`, and `email` scopes. The first-boot owner 
 
 ## Upgrade
 
-Every change to the release, whether a values edit, new EventDB or Atom images, or a new chart version, is a `helm upgrade` of the same release with the same values file. What that does, the pre-flight checks, the ordering for Rook and CloudNativePG upgrades, the changes that need more than an upgrade, and how to roll back are on their own page: [Upgrade](/self-hosted/upgrade).
+Every change to the release, whether a values edit, new EventDB or Atom images, or a new chart version, is a `helm upgrade` of the same release with the same values file. What that does, the pre-flight checks, the ordering for CloudNativePG upgrades, the changes that need more than an upgrade, and how to roll back are on their own page: [Upgrade](/self-hosted/upgrade). The object store and the shared filesystem are outside the release; a Ceph's day-two care is on [Deploy Ceph](/self-hosted/ceph#operate).
 
 <Warning>
-**Never disable a data-plane section on an upgrade.** Setting `rookCephCluster.enabled`, `postgresql.enabled`, or `eventdb.enabled` to `false` on a running release deletes the Ceph cluster, the PostgreSQL cluster, or the EventDB workloads, with their data.
+**Never disable a data-plane section on an upgrade.** Setting `postgresql.enabled`, `valkey.enabled`, or `eventdb.enabled` to `false` on a running release deletes the PostgreSQL cluster, the cache, or the EventDB workloads, with their data.
 </Warning>
 
 ## Scale and autoscale
@@ -112,8 +112,8 @@ Autoscaling reads the Metrics API, so the cluster needs `metrics-server`. Withou
 
 ### Storage growth
 
-- **Object storage.** Watch Ceph's raw usage and add OSDs, by adding devices to the `storage.nodes` inventory, before it passes 80%. Ceph rebalances onto new OSDs automatically.
-- **Shared WAL.** The CephFS class in the deployment guide allows volume expansion; edit `eventdb.wal.size` upward and upgrade. It cannot shrink.
+- **Object storage.** It is yours to grow. On Ceph, watch raw usage and add OSDs before it passes 80%, by labelling another node as [Deploy Ceph](/self-hosted/ceph#operate) describes; Ceph rebalances onto new OSDs automatically.
+- **Shared WAL.** The CephFS class from Deploy Ceph allows volume expansion; edit `eventdb.wal.size` upward and upgrade. It cannot shrink. Another RWX class expands only if it allows it.
 - **PostgreSQL.** Data and WAL volumes expand the same way through `postgresql.cluster.storage.size` and `walStorage.size`, if the block class supports expansion.
 
 ## Monitor with Prometheus
@@ -130,26 +130,9 @@ eventdb:
 atom:
   serviceMonitor:
     enabled: true
-
-rookCephOperator:
-  monitoring:
-    enabled: true
-  csi:
-    serviceMonitor:
-      enabled: true
-      labels:
-        release: prometheus-stack
-
-rookCephCluster:
-  monitoring:
-    enabled: true
-    createPrometheusRules: true
-    prometheusRule:
-      labels:
-        release: prometheus-stack
 ```
 
-The EventDB switch scrapes `/metrics` on ingest, query runner, delta cache, dataset manager, and queue worker. Atom's switch scrapes its `/metrics`. Rook's cluster switch enables the Ceph manager and exporter metrics, whose ServiceMonitors the running operator creates as it reconciles the cluster, and the PrometheusRule installs Rook's maintained Ceph health and capacity alerts.
+The EventDB switch scrapes `/metrics` on ingest, query runner, delta cache, dataset manager, queue worker, and the compaction scheduler. Atom's switch scrapes its `/metrics`. Ceph's metrics and Rook's maintained health and capacity alerts are switched on where Ceph is deployed; see [Deploy Ceph](/self-hosted/ceph#operate).
 
 CloudNativePG exposes PostgreSQL metrics on every instance; enable a `PodMonitor` for it through the upstream `cluster` chart's `cluster.monitoring` values.
 
@@ -161,7 +144,7 @@ Set `eventdb.serviceMonitor.namespace` to place the monitors in a central monito
 | :--- | :--- |
 | Shared WAL usage on the `eventdb-wal` claim | A full WAL stops ingest. Alert at 70%. |
 | PostgreSQL WAL volume usage | A full WAL volume takes the primary down, and with it Atom, ingest, and queries. Alert at 70%. |
-| Ceph health not `HEALTH_OK`, raw usage over 75% | The object store is the ceiling for everything. |
+| Object-store health, on Ceph `HEALTH_OK` and raw usage under 75% | The object store is the ceiling for everything. |
 | Ingest batch rejections and `Read request flood` responses from the query runner | The admission caps are being hit; scale the component. |
 | Bootstrap Job failures after an upgrade | `eventdb-migrate` or `axiom-atom-migrate` failing leaves the workloads crash-looping. |
 | `FailedGetResourceMetric` on any HPA | Autoscaling is not scaling. |

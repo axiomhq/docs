@@ -1,11 +1,13 @@
 ---
 title: 'Deploy EventDB on bare metal'
 sidebarTitle: Deploy on bare metal
-description: 'Step-by-step tutorial for deploying self-hosted Axiom EventDB with the axiom-eventdb Helm chart on a bare-metal or on-premises Kubernetes cluster, with Rook/Ceph object storage, a CephFS write-ahead log, and Atom.'
-keywords: ['self-hosted', 'eventdb', 'helm', 'bare metal', 'on-premises', 'kubernetes', 'rook', 'ceph', 'cephfs', 'atom', 'install', 'tutorial']
+description: 'Step-by-step tutorial for deploying self-hosted Axiom EventDB with the axiom-eventdb Helm chart on a bare-metal or on-premises Kubernetes cluster, against a Ceph RGW object store and a CephFS write-ahead log you deploy first, with Atom.'
+keywords: ['self-hosted', 'eventdb', 'helm', 'bare metal', 'on-premises', 'kubernetes', 'ceph', 'rgw', 'cephfs', 's3', 'atom', 'install', 'tutorial']
 ---
 
-This tutorial deploys self-hosted EventDB on a bare-metal or on-premises Kubernetes cluster. When you finish, you have a running EventDB with Rook-managed Ceph object storage, a CephFS-backed write-ahead log, a three-instance PostgreSQL cluster, Valkey, and Atom publishing an authenticated, Axiom-compatible API and console.
+This tutorial deploys self-hosted EventDB on a bare-metal or on-premises Kubernetes cluster. When you finish, you have a running EventDB writing its blocks to a Ceph RGW object store, a CephFS-backed write-ahead log, a three-instance PostgreSQL cluster, Valkey, and Atom publishing an authenticated, Axiom-compatible API and console.
+
+The chart deploys none of the storage. It consumes an S3-compatible endpoint and a ReadWriteMany `StorageClass` that the cluster already provides; this guide takes both from a Ceph you deploy first, following [Deploy Ceph for EventDB](/self-hosted/ceph). Any other S3-compatible store and RWX class work the same way, with their own endpoint and class name in Step 6.
 
 The guide works with any conformant Kubernetes distribution that satisfies [Requirements](/self-hosted/requirements), such as kubeadm, RKE2, or k3s. Host-level factors outside Kubernetes, such as restrictive SELinux policies or a kernel without the `cephfs` module, can still affect a given environment.
 
@@ -23,6 +25,7 @@ Ensure you have the following tools installed:
 You also need:
 
 - A **Kubernetes cluster** that meets the requirements in Step 1.
+- **Object storage and a ReadWriteMany class.** This guide assumes the Ceph from [Deploy Ceph for EventDB](/self-hosted/ceph): an RGW object store named `eventdb-store`, a `CephObjectStoreUser` named `eventdb`, and a CephFS `StorageClass` named `ceph-filesystem`, in the `rook-ceph` namespace. Adjust the names below to yours.
 - A **private, OCI-compatible container registry** reachable from every node.
 - **Access to Axiom's release registry.** Registry credentials, the EventDB release tag, the Atom tag, and the chart version are provided by Axiom during onboarding.
 - A **licence configuration** for EventDB, also provided during onboarding.
@@ -39,8 +42,9 @@ EVENTDB_TAG=<eventdb-release-tag>
 ATOM_TAG=<atom-commit-tag>
 CHART_VERSION=0.0.1-alpha.<sha>
 
-# release namespace
+# release namespace, and the namespace your Ceph runs in
 NAMESPACE=axiom-system
+CEPH_NAMESPACE=rook-ceph
 ```
 
 ## Step 1: Prepare the Kubernetes cluster
@@ -53,11 +57,11 @@ NAMESPACE=axiom-system
 | CNI | Any CNI providing standard IPv4 pod networking, such as Cilium, Calico, or Canal. |
 | Container runtime | Any CRI-compatible runtime, such as containerd. |
 | DNS | A working in-cluster DNS. |
-| Kernel | The `cephfs` and `rbd` kernel modules on every node that runs EventDB pods, so the CephFS write-ahead log can mount. Load them with `modprobe cephfs rbd` and persist the change in `/etc/modules-load.d/`. |
+| Kernel | The `cephfs` kernel module on every node that runs EventDB pods, so the CephFS write-ahead log can mount, and `rbd` if the block class is Ceph RBD. Load them with `modprobe cephfs rbd` and persist the change in `/etc/modules-load.d/`. |
 
 ### Node roles
 
-Dedicate nodes to Ceph storage and keep at least three more for the EventDB workloads and their datastores. Label the nodes so that the values file can place Ceph on the storage nodes and everything else away from them.
+Keep the EventDB workloads and their datastores on nodes of their own, at least three of them, and away from whatever runs the storage. Label them so the values file can place everything:
 
 | Role | Count | Node label | Taint |
 | :--- | :--- | :--- | :--- |
@@ -65,31 +69,22 @@ Dedicate nodes to Ceph storage and keep at least three more for the EventDB work
 | EventDB | 3 or more | `axiom.co/role=eventdb` | none |
 | Control plane and add-ons | 1 or more | none required | none |
 
-Apply the labels and taints with `kubectl`:
+The storage nodes are the Ceph nodes from [Deploy Ceph](/self-hosted/ceph#step-1-plan-the-topology), which labels and taints them. Label the EventDB nodes now:
 
 ```bash
-# storage nodes: one per failure domain
-for node in <storage-node-1> <storage-node-2> <storage-node-3>; do
-  kubectl label node "$node" axiom.co/role=storage --overwrite
-  kubectl taint node "$node" axiom.co/storage=true:NoSchedule --overwrite
-done
-
-# EventDB nodes
 for node in <eventdb-node-1> <eventdb-node-2> <eventdb-node-3>; do
   kubectl label node "$node" axiom.co/role=eventdb --overwrite
 done
 ```
 
-The Ceph daemons tolerate the storage taint through the `placement` blocks in Step 6. The EventDB workloads never carry that toleration, so they cannot land on a storage node.
+The EventDB workloads never carry the storage toleration, so they cannot land on a storage node.
 
 ### Failure domains
 
-Ceph's pools are replicated three ways with `failureDomain: host`, and its three monitors refuse to share a node, so three storage nodes is the minimum. Put them on separate power feeds or racks so that losing one domain loses one replica.
-
-PostgreSQL's three instances spread across nodes with pod anti-affinity, which the operator enforces by default, so the EventDB nodes need to be at least three as well.
+PostgreSQL's three instances spread across nodes with pod anti-affinity, which the operator enforces by default, so the EventDB nodes need to be at least three. Ceph's own failure domains are set where Ceph is deployed.
 
 <Note>
-**Sizing.** Storage nodes need one core and about 4 GiB of memory per OSD, plus 2 GiB each for a monitor and a manager. Size the EventDB nodes for the workload; the chart's multi-mode defaults request about 15 cores and 21 GiB for EventDB, plus roughly 4 cores and 8 GiB for PostgreSQL, Valkey, and Atom. See [Sizing](/self-hosted/requirements#sizing) for scaling beyond that.
+**Sizing.** Size the EventDB nodes for the workload: the chart's multi-mode defaults request about 15 cores and 21 GiB for EventDB, plus roughly 4 cores and 8 GiB for PostgreSQL, Valkey, and Atom. See [Sizing](/self-hosted/requirements#sizing) for scaling beyond that, and [Deploy Ceph](/self-hosted/ceph#step-1-plan-the-topology) for the storage nodes.
 </Note>
 
 ## Step 2: Mirror container images
@@ -116,15 +111,13 @@ skopeo copy --all \
   docker://$REGISTRY_HOST/atom:$ATOM_TAG
 ```
 
-The dependency subcharts pull their own upstream images: Rook, Ceph, the Ceph CSI plugins, CloudNativePG, PostgreSQL, Valkey, and the `busybox` and `amazon/aws-cli` images the bootstrap Jobs run. In a disconnected environment, render the chart with your values file once you have written it in Step 6 and mirror every image it references:
+The dependency subcharts pull their own upstream images: CloudNativePG, PostgreSQL, Valkey, and the `busybox` and `amazon/aws-cli` images the bootstrap Jobs run. In a disconnected environment, render the chart with your values file once you have written it in Step 6 and mirror every image it references:
 
 ```bash
 helm template axiom-eventdb oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb \
   --version $CHART_VERSION --namespace $NAMESPACE --values values.yaml \
   | grep -E '^\s+image: ' | sort -u
 ```
-
-Images that the Rook operator launches at runtime, such as the Ceph daemons and CSI sidecars, come from `rookCephCluster.cephImage` and the `rookCephOperator.csi` image settings rather than from rendered pod specs. Set both to your registry and mirror the tags they name.
 
 If the registry holding the Axiom images requires authentication for pulls, create the release namespace and a pull secret now:
 
@@ -145,56 +138,47 @@ imagePullSecrets:
   - name: registry-credentials
 ```
 
-The dependency images are open source and public: Rook, Ceph, the Ceph CSI plugins, CloudNativePG and its PostgreSQL image, Valkey, and the `busybox` and `amazon/aws-cli` images the bootstrap Jobs run. They pull without credentials from their upstream registries, so leave the subcharts alone. Only a disconnected site that mirrored them into an authenticated registry needs to name the secret for each subchart as well (`rookCephOperator`, `rookCephCluster`, `cephCsiOperator` and `postgresqlOperator` take `imagePullSecrets`; the PostgreSQL cluster takes `postgresql.cluster.imagePullSecrets`; Valkey reads `global.imagePullSecrets`) and to patch the two CephFS CSI plugin accounts the chart renders, `cephfs-ctrlplugin-sa` and `cephfs-nodeplugin-sa`, after the install.
+The dependency images are open source and public: CloudNativePG and its PostgreSQL image, Valkey, and the `busybox` and `amazon/aws-cli` images the bootstrap Jobs run. They pull without credentials from their upstream registries, so leave the subcharts alone. Only a disconnected site that mirrored them into an authenticated registry needs to name the secret for each subchart as well (`postgresqlOperator` takes `imagePullSecrets`; the PostgreSQL cluster takes `postgresql.cluster.imagePullSecrets`; Valkey reads `global.imagePullSecrets`).
 
-## Step 3: Provision local storage
+## Step 3: Provision storage
 
-Two kinds of storage are needed:
+Two kinds of storage are needed, and the chart provisions neither:
 
-- **A block StorageClass.** Every stateful piece claims ReadWriteOnce volumes from it: Ceph's OSDs and monitors, PostgreSQL and its write-ahead log, and Valkey. Nothing in the release touches a disk directly. The OSDs are PVC-backed, so a lost pod comes back on a fresh, empty claim, and adding capacity is raising a count in the values rather than cabling a disk.
-- **A ReadWriteMany StorageClass** for the shared EventDB write-ahead log. This guide gets it from a CephFS on the same Rook cluster, so nothing external is required.
+- **A block StorageClass.** PostgreSQL and its write-ahead log, and Valkey, claim ReadWriteOnce volumes from it. Any CSI class on fast media works; the `ceph-block` RBD class from [Deploy Ceph](/self-hosted/ceph) is a natural choice on the same cluster.
+- **A ReadWriteMany StorageClass** for the shared EventDB write-ahead log. This guide uses the `ceph-filesystem` CephFS class from Deploy Ceph.
 
 <Note>
-**Durability.** EventDB's source of truth is object storage, replicated three ways across the OSD volumes. The shared WAL holds only what has not yet been flushed into a block, and the delta cache is rebuilt from it. PostgreSQL holds dataset metadata and Atom's management state and is the one datastore that needs [backups](/self-hosted/backup-restore).
+**Durability.** EventDB's source of truth is object storage, which Ceph replicates three ways. The shared WAL holds only what has not yet been flushed into a block, and the delta cache is rebuilt from it. PostgreSQL holds dataset metadata and Atom's management state and is the one datastore that needs [backups](/self-hosted/backup-restore).
 </Note>
 
 ### Provide a block StorageClass
 
-The class has two requirements beyond being fast:
-
-- **It must support `volumeMode: Block`.** The OSD claims are raw block volumes that Ceph formats itself. Most CSI drivers do this; Rancher's `local-path` provisioner does not, so it can serve PostgreSQL and Valkey but not the OSDs.
-- **It decides whether an OSD can move.** With a networked class (a SAN or cloud volumes), a volume can re-attach on another node and the device set runs with `portable: true`. With a node-local class (OpenEBS LocalPV, TopoLVM, Longhorn in strict-local mode), an OSD is pinned to the node that holds its volume; set `portable: false` and let `removeOSDsIfOutAndSafeToRemove` purge an OSD whose node is gone so Rook creates a fresh one elsewhere.
-
-Capacity: the guide creates three OSD volumes of the size you set in Step 6 and one 10 GiB volume per monitor. Ceph replicates every object three times, so raw capacity is three times the compressed data you intend to keep, and Ceph should never fill past 80 %. PostgreSQL adds 50 GiB of data and 30 GiB of WAL per instance; Valkey 10 GiB per replica.
+Capacity: PostgreSQL adds 50 GiB of data and 30 GiB of WAL per instance; Valkey 10 GiB per replica. Do not shrink the PostgreSQL WAL volume: the operator's replication slots retain WAL for a diverged replica until it is re-cloned, and a full WAL volume takes the primary, Atom, ingest, and queries down together.
 
 ### Provide a ReadWriteMany class for the shared WAL
 
 Six EventDB workloads mount one write-ahead-log volume, and the chart insists it is `ReadWriteMany`: a ReadWriteOnce volume binds to a node, and the first node replacement strands ingest behind a `Multi-Attach` error that only deleting the claim clears.
 
-This guide sets `eventdb.wal.provider: cephfs`. The chart then declares a `CephFilesystem` on the Rook cluster, creates its StorageClass, and renders the CephFS CSI driver that Rook 1.20 otherwise leaves for you to create. Nothing outside the release is needed. If your cluster already has an RWX class (NFS, a vendor filer), use `provider: existing` and name it in `eventdb.wal.storageClass` instead.
+This guide sets `eventdb.wal.provider: existing` and names the CephFS class in `eventdb.wal.storageClass`. The chart creates nothing for it; it only claims from the class. [Deploy Ceph](/self-hosted/ceph#step-6-verify-before-installing-eventdb) proves the class binds a claim before you get here. If your cluster has a different RWX class (NFS, a vendor filer), name that one instead.
 
 ## Step 4: Choose object storage
 
-EventDB stores every block in S3-compatible object storage. On bare metal you have two options.
-
-### Chart-managed Rook/Ceph RGW (this guide)
-
-With `objectStorage.provider: rook`, the chart's Rook subcharts run a Ceph cluster on the devices from Step 3 and expose its RGW S3 gateway inside the cluster. The chart creates the RGW user bound to your credentials Secret and a Job that creates the bucket. This is the self-contained path and the one validated on bare metal.
-
-The RGW serves plain HTTP on its Service name, and EventDB only speaks plain HTTP to a hostname ending in `.localhost`. Step 5 reserves an address for it and Step 6 maps the name onto that address in each EventDB pod, so no cluster-wide DNS change is needed.
-
-### An external S3-compatible store
-
-With `objectStorage.provider: external`, EventDB talks to a store you already run: MinIO, SeaweedFS, another Ceph, or AWS S3. Provide:
+EventDB stores every block in S3-compatible object storage, reached through `objectStorage.provider: external`. Provide:
 
 | Value | Notes |
 | :--- | :--- |
-| `objectStorage.endpoint` | The S3 API URL. Must be HTTPS with a certificate the pods trust, unless the hostname ends in `.localhost`. |
+| `objectStorage.endpoint` | The S3 API URL, with scheme. Must be HTTPS with a certificate the pods trust, unless the hostname ends in `.localhost`. |
 | `objectStorage.bucket`, `objectStorage.region` | One bucket per release, or a shared bucket with a distinct `objectStorage.prefix`. |
 | `eventdb-s3-credentials` Secret | A static access key pair with read, write, list, and delete on the bucket. |
-| `objectStorage.createBucket` | `true` lets the in-cluster Job create the bucket; `false` assumes it exists. |
+| `objectStorage.createBucket` | `true` (the default) lets the in-cluster Job create the bucket; `false` assumes it exists. |
 
-Set `rookCephOperator.enabled` and `rookCephCluster.enabled` to `false`, and pick a different WAL provider, since there is no Ceph to put a CephFS on. The chart ships this as an overlay, `values-external-s3.example.yaml`.
+### The Ceph RGW from Deploy Ceph (this guide)
+
+The RGW serves plain HTTP on its Service name, and EventDB only speaks plain HTTP to a hostname ending in `.localhost`. [Deploy Ceph](/self-hosted/ceph#step-5-make-the-endpoint-reachable) reserved `ceph-rgw.eventdb.localhost` for it and gave you the ClusterIP of the `ceph-rgw-alias` Service; Step 6 maps the name onto that address in each EventDB pod, so no cluster-wide DNS change is needed. It also created the `eventdb-s3-credentials` Secret from the `CephObjectStoreUser`'s keys.
+
+### Another S3-compatible store
+
+MinIO, SeaweedFS, another Ceph, or AWS S3 work the same way with an HTTPS endpoint, and need no `hostAliases`. The chart ships this shape as an overlay, `values-external-s3.example.yaml`.
 
 <Warning>
 Do not create lifecycle or expiration rules on the bucket, and leave object versioning off. EventDB manages retention per dataset and deletes its own blocks. A lifecycle rule deletes objects EventDB still depends on, which is **data loss**. To manage retention, set it per dataset through Atom.
@@ -203,6 +187,8 @@ Do not create lifecycle or expiration rules on the bucket, and leave object vers
 ## Step 5: Create the namespace and Secrets
 
 Production installs set `credentials.create: false` and read every credential from Secrets you create before installing. Values are embedded into connection URLs, so keep them URL-safe: letters, digits, `-`, `_`, and `.`.
+
+`eventdb-s3-credentials` already exists from [Deploy Ceph](/self-hosted/ceph#step-4-create-the-s3-user-and-credentials). Create the rest:
 
 ```bash
 kubectl create namespace $NAMESPACE 2>/dev/null || true
@@ -218,11 +204,6 @@ kubectl create secret generic axiom-postgresql-app -n $NAMESPACE \
 kubectl create secret generic axiom-valkey-auth -n $NAMESPACE \
   --from-literal=default="$(gen)"
 
-# object-storage access keys; with the rook provider these seed the RGW user
-kubectl create secret generic eventdb-s3-credentials -n $NAMESPACE \
-  --from-literal=access-key="$(gen)" \
-  --from-literal=secret-key="$(gen)"
-
 # Atom's PostgreSQL role, in the basic-auth shape the operator reads
 kubectl create secret generic axiom-postgresql-atom -n $NAMESPACE \
   --type=kubernetes.io/basic-auth \
@@ -233,6 +214,17 @@ kubectl create secret generic axiom-postgresql-atom -n $NAMESPACE \
 kubectl create secret generic axiom-atom -n $NAMESPACE \
   --from-literal=token-hash-secret="$(openssl rand -hex 32)" \
   --from-literal=admin-password="$(gen)"
+
+# confirm the object-storage keys are in place
+kubectl -n $NAMESPACE get secret eventdb-s3-credentials
+```
+
+For a store other than the Ceph RGW, create `eventdb-s3-credentials` yourself from the access key pair the store issued:
+
+```bash
+kubectl create secret generic eventdb-s3-credentials -n $NAMESPACE \
+  --from-literal=access-key=<access-key> \
+  --from-literal=secret-key=<secret-key>
 ```
 
 <Warning>
@@ -243,36 +235,20 @@ If you enable [PostgreSQL backups](/self-hosted/backup-restore), also create `ax
 
 ### Reserve the object-storage address
 
-EventDB speaks plain HTTP only to a hostname ending in `.localhost`, and Rook publishes the RGW under its Service name, so the values file names the RGW as `ceph-rgw.eventdb.localhost` and maps that name onto an IP in each EventDB pod's `/etc/hosts`. The IP has to be known before the install, and Rook's own Service does not exist yet, so create a Service of your own in front of the RGW pods now. The API server assigns its ClusterIP immediately; it has no endpoints until Ceph is up, which is expected.
+If you skipped it in Deploy Ceph, read the address of the alias Service now, or create one:
 
 ```bash
-kubectl apply -n $NAMESPACE -f - <<EOF
-apiVersion: v1
-kind: Service
-metadata:
-  name: ceph-rgw-alias
-spec:
-  selector:
-    app: rook-ceph-rgw
-    rook_cluster: $NAMESPACE
-    rook_object_store: eventdb-store
-  ports:
-    - name: http
-      port: 80
-      targetPort: 8080   # the RGW container always listens on 8080
-EOF
-
-RGW_IP=$(kubectl -n $NAMESPACE get service ceph-rgw-alias -o jsonpath='{.spec.clusterIP}')
+RGW_IP=$(kubectl -n $CEPH_NAMESPACE get service ceph-rgw-alias -o jsonpath='{.spec.clusterIP}')
 echo "$RGW_IP"
 ```
 
-Keep that IP for Step 6. It is stable for the life of the Service, and the selector is Rook's own daemon labelling, unchanged across Rook 1.x.
+Keep that IP for Step 6. It is stable for the life of the Service.
 
-On k3s, whose CoreDNS imports the `kube-system/coredns-custom` ConfigMap, the chart can do the mapping itself instead: skip the Service, enable `localDns` in Step 6, and leave `hostAliases` empty.
+On k3s, whose CoreDNS imports the `kube-system/coredns-custom` ConfigMap, the chart can do the mapping itself instead: skip the Service, enable `localDns` in Step 6 with the RGW Service as its `target`, and leave `hostAliases` empty.
 
 ## Step 6: Write the values file
 
-The chart's base values enable nothing. The file below is a complete production profile for the topology in this guide: multi mode, Rook-managed object storage and CephFS WAL on the labeled storage nodes, PostgreSQL as the job queue, and Atom enabled. Replace every `<...>` placeholder.
+The chart's base values enable nothing. The file below is a complete production profile for the topology in this guide: multi mode, the Ceph RGW for blocks, the CephFS class for the WAL, PostgreSQL as the job queue, and Atom enabled. Replace every `<...>` placeholder.
 
 ```yaml
 # values.yaml
@@ -282,11 +258,16 @@ credentials:
   create: false
 
 objectStorage:
-  provider: rook
+  provider: external
   bucket: eventdb
+  region: us-east-1
   # A *.localhost name is the one hostname EventDB accepts over plain HTTP;
-  # eventdb.hostAliases below maps it onto the RGW.
+  # eventdb.hostAliases below maps it onto the RGW. An HTTPS endpoint with a
+  # trusted certificate needs neither.
   endpoint: http://ceph-rgw.eventdb.localhost:80
+  # The in-cluster Job creates the bucket on first install; false if the
+  # bucket exists or the user may not create buckets.
+  createBucket: true
 
 # On k3s only: let the chart map the name above onto the RGW Service through
 # a CoreDNS rewrite instead of the alias Service and hostAliases. k3s imports
@@ -295,12 +276,13 @@ objectStorage:
 # localDns:
 #   enabled: true
 #   hostname: ceph-rgw.eventdb.localhost
+#   target: rook-ceph-rgw-eventdb-store.rook-ceph.svc.cluster.local
 
 eventdb:
   enabled: true
   environment: prod
-  # The ClusterIP of the ceph-rgw-alias Service from Step 5. Rendered into
-  # every EventDB pod's /etc/hosts; nothing outside the release sees it.
+  # The ClusterIP of the ceph-rgw-alias Service from Deploy Ceph. Rendered
+  # into every EventDB pod's /etc/hosts; nothing outside the release sees it.
   hostAliases:
     - ip: <RGW_IP>
       hostnames:
@@ -321,13 +303,15 @@ eventdb:
     extra: {}
   queues:
     backend: postgres
-  # Keep every EventDB pod off the Ceph storage nodes.
+  # Keep every EventDB pod off the storage nodes.
   scheduling:
     nodeSelector:
       axiom.co/role: eventdb
   wal:
-    provider: cephfs
-    storageClass: ""     # derived from the CephFilesystem below
+    provider: existing
+    # The CephFS class from Deploy Ceph. The chart claims from it and
+    # creates nothing.
+    storageClass: ceph-filesystem
     size: 100Gi
   # The four hot-path components scale on CPU from the tested floor.
   # Needs metrics-server; decide at install time (see Operate).
@@ -356,155 +340,6 @@ atom:
   # Publishing is a separate step once the release is healthy; see Operate.
   ingress:
     enabled: false
-
-rookCephOperator:
-  enabled: true
-
-rookCephCluster:
-  enabled: true
-  operatorNamespace: axiom-system
-  cephImage:
-    repository: <registry-host>/ceph/ceph
-    tag: v20.2.2
-  cephClusterSpec:
-    placement:
-      all:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: axiom.co/role
-                    operator: In
-                    values: [storage]
-        tolerations:
-          - key: axiom.co/storage
-            operator: Exists
-            effect: NoSchedule
-    mon:
-      count: 3
-      volumeClaimTemplate:
-        spec:
-          storageClassName: <block-storage-class>
-          accessModes: [ReadWriteOnce]
-          resources:
-            requests:
-              storage: 10Gi
-    # An OSD whose node is gone is purged once its data is safe elsewhere,
-    # and the device set below creates a fresh one to replace it.
-    removeOSDsIfOutAndSafeToRemove: true
-    storage:
-      useAllNodes: false
-      useAllDevices: false
-      # PVC-backed OSDs: three raw block volumes from your class, one per
-      # node. No disks are listed or wiped; a lost OSD comes back on an
-      # empty claim. portable: true for a networked class; false for a
-      # node-local one (see Step 3).
-      storageClassDeviceSets:
-        - name: eventdb-osd
-          count: 3
-          portable: true
-          tuneDeviceClass: true
-          placement:
-            podAntiAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                - labelSelector:
-                    matchExpressions:
-                      - key: app
-                        operator: In
-                        values: [rook-ceph-osd]
-                  topologyKey: kubernetes.io/hostname
-          volumeClaimTemplates:
-            - metadata:
-                name: data
-              spec:
-                storageClassName: <block-storage-class>
-                accessModes: [ReadWriteOnce]
-                volumeMode: Block
-                resources:
-                  requests:
-                    storage: <osd-size, e.g. 500Gi>
-  # The RGW S3 gateway. Lists replace rather than merge in Helm, so the
-  # chart's default store is repeated here with placement added.
-  cephObjectStores:
-    - name: eventdb-store
-      spec:
-        metadataPool:
-          failureDomain: host
-          replicated:
-            size: 3
-        dataPool:
-          failureDomain: host
-          replicated:
-            size: 3
-        preservePoolsOnDelete: true
-        gateway:
-          port: 80
-          instances: 2
-          placement:
-            nodeAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                nodeSelectorTerms:
-                  - matchExpressions:
-                      - key: axiom.co/role
-                        operator: In
-                        values: [storage]
-            tolerations:
-              - key: axiom.co/storage
-                operator: Exists
-                effect: NoSchedule
-      storageClass:
-        enabled: false
-      ingress:
-        enabled: false
-  # The CephFS that backs the shared WAL. Its StorageClass name is what
-  # eventdb.wal.storageClass resolves to.
-  cephFileSystems:
-    - name: eventdb-fs
-      spec:
-        metadataPool:
-          failureDomain: host
-          replicated:
-            size: 3
-        dataPools:
-          - name: data0
-            failureDomain: host
-            replicated:
-              size: 3
-        metadataServer:
-          activeCount: 1
-          activeStandby: true
-          placement:
-            nodeAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                nodeSelectorTerms:
-                  - matchExpressions:
-                      - key: axiom.co/role
-                        operator: In
-                        values: [storage]
-            tolerations:
-              - key: axiom.co/storage
-                operator: Exists
-                effect: NoSchedule
-          resources:
-            requests:
-              cpu: 500m
-              memory: 2Gi
-            limits:
-              memory: 4Gi
-      storageClass:
-        enabled: true
-        name: eventdb-fs
-        pool: data0
-        reclaimPolicy: Retain
-        allowVolumeExpansion: true
-        volumeBindingMode: Immediate
-        parameters:
-          csi.storage.k8s.io/provisioner-secret-name: rook-csi-cephfs-provisioner
-          csi.storage.k8s.io/provisioner-secret-namespace: "{{ .Release.Namespace }}"
-          csi.storage.k8s.io/controller-expand-secret-name: rook-csi-cephfs-provisioner
-          csi.storage.k8s.io/controller-expand-secret-namespace: "{{ .Release.Namespace }}"
-          csi.storage.k8s.io/node-stage-secret-name: rook-csi-cephfs-node
-          csi.storage.k8s.io/node-stage-secret-namespace: "{{ .Release.Namespace }}"
 
 postgresqlOperator:
   enabled: true
@@ -543,10 +378,10 @@ nats:
 
 A few of these choices deserve a word:
 
-- **`eventdb.wal.storageClass: ""`** is deliberate. An explicit class always wins over derivation, so the value must be empty for the chart to hand the name to the CephFS it creates.
+- **`eventdb.wal.storageClass` names a class the chart never creates.** With `provider: existing` the render refuses an empty name, and a name that does not exist leaves the claim `Pending`. Deploy Ceph's Step 6 is what proves the class works.
 - **`queues.backend: postgres`** puts EventDB's background jobs on the PostgreSQL cluster it already runs. There is no extra datastore, no JetStream stream to replicate, and no bootstrap Job. The render refuses `postgres` with `nats.enabled: true`.
 - **Autoscaling is decided at install time.** Turning it on for a running release resets each component's count to one for about fifteen seconds. See [Operate](/self-hosted/operate#scale-and-autoscale).
-- **Nodes without the `cephfs` kernel module** need `mounter: fuse` under the StorageClass `parameters`, or nothing mounts.
+- **Nodes without the `cephfs` kernel module** need `mounter: fuse` in the CephFS StorageClass, which is Ceph's side to set; see [Deploy Ceph](/self-hosted/ceph#step-2-prepare-the-devices).
 - **Pin digests.** Each image accepts `digest: sha256:...`, which takes precedence over `tag` and cannot be repointed.
 
 The chart validates this file against its schema on every `lint`, `template`, and `install`: an unknown key or a missing storage class fails immediately with a message rather than leaving a claim `Pending`. Check it before touching the cluster:
@@ -564,7 +399,7 @@ helm template axiom-eventdb oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb \
 
 ## Step 7: Install the chart
 
-The install is one Helm transaction. The operators' CRDs ship in companion subcharts under `crds/`, which Helm registers before it renders anything else, so the same release creates the Ceph cluster, the CephFS, the PostgreSQL cluster, and the EventDB workloads together. Nothing has to be installed first and nothing has to be turned off.
+The install is one Helm transaction. The CloudNativePG CRDs ship in a companion subchart under `crds/`, which Helm registers before it renders anything else, so the same release creates the PostgreSQL cluster and the EventDB workloads together. Nothing has to be installed first and nothing has to be turned off.
 
 ```bash
 helm upgrade --install axiom-eventdb \
@@ -575,31 +410,21 @@ helm upgrade --install axiom-eventdb \
   --timeout 15m
 ```
 
-Helm returns once the resources exist. What follows takes longer: Rook prepares the OSDs, the operators bring up their data planes, and the EventDB workloads wait behind the bootstrap Jobs and, until the RGW answers, restart on their object-storage connection, which is expected.
+Helm returns once the resources exist. What follows takes longer: the operator brings up PostgreSQL, and the EventDB workloads wait behind the bootstrap Jobs and, until the bucket exists, restart on their object-storage connection, which is expected.
 
 <Tip>
 **Chart values reference.** This install sets only the values a bare-metal deployment needs. For the full list of configurable values and their defaults, read `values.yaml` in the chart, where every key is documented in place.
 </Tip>
 
-### Wait for Ceph and the datastores
-
-Rook runs one prepare Job per OSD claim, and the claims bind first; the whole thing takes several minutes on first boot:
+### Wait for the datastores
 
 ```bash
-kubectl -n $NAMESPACE get cephcluster eventdb-ceph -w
-# wait for PHASE Ready and HEALTH HEALTH_OK
-```
-
-Then confirm the object store, the filesystem, and the RGW user are ready, and that the datastores are up:
-
-```bash
-kubectl -n $NAMESPACE get cephobjectstore,cephfilesystem,cephobjectstoreuser
-kubectl -n $NAMESPACE rollout status deployment/rook-ceph-rgw-eventdb-store-a --timeout=600s
 kubectl -n $NAMESPACE wait --for=condition=Ready cluster/postgresql --timeout=600s
 kubectl -n $NAMESPACE rollout status statefulset/valkey --timeout=300s
+kubectl -n $NAMESPACE get pvc eventdb-wal     # Bound
 ```
 
-The `eventdb-wal` claim binds on its own once the filesystem's metadata server is up. If an OSD is missing after ten minutes, see [Troubleshoot](/self-hosted/troubleshoot#an-osd-claim-stays-pending-or-no-osd-appears).
+The `eventdb-wal` claim binds immediately from the CephFS class. If it stays `Pending`, see [Troubleshoot](/self-hosted/troubleshoot#a-cephfs-claim-stays-pending-while-everything-reports-healthy).
 
 ### Wait for the bootstrap Jobs and rollouts
 
@@ -708,10 +533,10 @@ kubectl -n $NAMESPACE rollout restart deployment/eventdb-delta-cache deployment/
 kubectl -n $NAMESPACE rollout status deployment/eventdb-query-runner --timeout=300s
 ```
 
-Re-run the query. The same count after the restart confirms the full write-then-read path through object storage. You can also list the objects under `blocks/connectivitycheck/` in the bucket with the AWS CLI against a port-forward of the RGW Service, using the keys in `eventdb-s3-credentials`:
+Re-run the query. The same count after the restart confirms the full write-then-read path through object storage. You can also list the objects under `blocks/connectivitycheck/` in the bucket with the AWS CLI against a port-forward of the RGW Service in the Ceph namespace, using the keys in `eventdb-s3-credentials`:
 
 ```bash
-kubectl -n $NAMESPACE port-forward service/rook-ceph-rgw-eventdb-store 18333:80 &
+kubectl -n $CEPH_NAMESPACE port-forward service/rook-ceph-rgw-eventdb-store 18333:80 &
 AWS_ACCESS_KEY_ID=$(kubectl -n $NAMESPACE get secret eventdb-s3-credentials -o jsonpath='{.data.access-key}' | base64 -d) \
 AWS_SECRET_ACCESS_KEY=$(kubectl -n $NAMESPACE get secret eventdb-s3-credentials -o jsonpath='{.data.secret-key}' | base64 -d) \
 AWS_DEFAULT_REGION=us-east-1 \

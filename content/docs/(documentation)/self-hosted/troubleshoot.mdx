@@ -1,7 +1,7 @@
 ---
 title: 'Troubleshoot self-hosted EventDB'
 sidebarTitle: Troubleshoot
-description: 'Symptoms, causes, and fixes for the failure modes seen on real self-hosted EventDB deployments: stranded WAL volumes, Ceph OSDs that never appear, plain-HTTP object-storage endpoints, autoscalers without metrics, and crash-looping bootstrap.'
+description: 'Symptoms, causes, and fixes for the failure modes seen on real self-hosted EventDB deployments: stranded WAL volumes, CephFS claims that never bind, plain-HTTP object-storage endpoints, autoscalers without metrics, and crash-looping bootstrap.'
 keywords: ['self-hosted', 'eventdb', 'troubleshoot', 'multi-attach', 'pending pvc', 'osd', 'ceph', 'helm', 'hpa', 'atom', 'migrate']
 ---
 
@@ -9,8 +9,8 @@ Each entry names the symptom you see, why it happens, and what to do. Start with
 
 ```bash
 helm status axiom-eventdb -n axiom-system
-kubectl -n axiom-system get pods,jobs,pvc
-kubectl -n axiom-system get cephcluster,cephobjectstore,cephfilesystem,cluster
+kubectl -n axiom-system get pods,jobs,pvc,cluster
+kubectl -n rook-ceph get cephcluster,cephobjectstore,cephfilesystem   # if Ceph is on this cluster
 helm test axiom-eventdb -n axiom-system --logs
 ```
 
@@ -30,32 +30,41 @@ helm test axiom-eventdb -n axiom-system --logs
 
 **Cause.** Six workloads mount the shared WAL in every mode, and no cluster's default class provides RWX, so the chart refuses to leave the claim `Pending` with nothing to explain it.
 
-**Fix.** Choose a WAL provider. On bare metal, `eventdb.wal.provider: cephfs` with a `CephFilesystem` under `rookCephCluster.cephFileSystems`, as in the deployment guide. With the `cephfs` provider, `eventdb.wal.storageClass` must be empty; an explicit class wins over derivation.
+**Fix.** Name the class. On bare metal that is `eventdb.wal.provider: existing` with `eventdb.wal.storageClass` set to the CephFS class from [Deploy Ceph](/self-hosted/ceph), as in the deployment guide. The class must exist and serve `ReadWriteMany` before the install; the chart creates nothing for it.
 
 ### Custom resources fail validation on the first install
 
-**Symptom.** An install fails with `no matches for kind "CephCluster"` or `"Cluster" in version "postgresql.cnpg.io/v1"`.
+**Symptom.** An install fails with `no matches for kind "Cluster" in version "postgresql.cnpg.io/v1"`.
 
-**Cause.** The operators' CRDs did not go through Helm's `crds/` phase, which registers them before the templates are validated. That happens when rendered manifests are applied with `kubectl` instead of `helm install`, when the release is installed with `--skip-crds`, or when a `--dry-run` is validated against a cluster that has never seen the CRDs.
+**Cause.** The operator's CRDs did not go through Helm's `crds/` phase, which registers them before the templates are validated. That happens when rendered manifests are applied with `kubectl` instead of `helm install`, when the release is installed with `--skip-crds`, or when a `--dry-run` is validated against a cluster that has never seen the CRDs.
 
-**Fix.** Install with `helm upgrade --install` and without `--skip-crds`. The chart's companion CRD subcharts carry the definitions, and one transaction is enough; there is no separate bootstrap step.
+**Fix.** Install with `helm upgrade --install` and without `--skip-crds`. The chart's companion CRD subchart carries the definitions, and one transaction is enough; there is no separate bootstrap step.
+
+### The render rejects `rookCephOperator` or `rookCephCluster`
+
+**Symptom.** `values don't meet the specifications of the schema` naming `rookCephOperator`, `cephCsiOperator`, or `rookCephCluster`.
+
+**Cause.** The values file is from a chart before `0.2.0`, which bundled Rook. The chart no longer deploys Ceph and its schema rejects those keys.
+
+**Fix.** Do not upgrade a release that had Rook enabled in place; see [Upgrade](/self-hosted/upgrade#from-a-chart-that-deployed-ceph). For a new install, remove the three blocks and follow [Deploy Ceph](/self-hosted/ceph) for the Ceph side.
 
 ## Ceph and object storage
 
-### An OSD claim stays Pending, or no OSD appears
+Ceph runs outside the release, so its own health is diagnosed there. The entries below are the Ceph faults that surface as EventDB symptoms.
 
-**Symptom.** The CephCluster stays in phase `Progressing`; a `eventdb-osd-data-*` PersistentVolumeClaim is `Pending`, or the `rook-ceph-osd-prepare-eventdb-osd-*` Job fails, and fewer than three `rook-ceph-osd-N` Deployments exist.
+### Fewer OSDs appear than devices you labelled
 
-**Cause.** The StorageClass cannot provision what the device set asks for: it does not support `volumeMode: Block` (Rancher's `local-path` does not), it has no capacity left, or a node-local class has no node that satisfies the OSD's anti-affinity. Less often, a class that binds `WaitForFirstConsumer` is waiting on a pod that cannot schedule.
+**Symptom.** The CephCluster stays in phase `Progressing` or reports fewer OSDs than the NVMe devices on the labelled nodes.
 
-**Fix.** Read the claim, then the Job:
+**Cause.** `ceph-volume` accepted only raw devices: a disk with a partition table, a filesystem, LVM metadata, or a Ceph signature from an earlier install reads as "in use", and Rook refuses to wipe it. Or the node lacks the `axiom.co/ceph-osd=true` label the OSD placement selects on.
+
+**Fix.** Read the prepare Job log for the node, which names the device and the reason:
 
 ```bash
-kubectl -n axiom-system describe pvc -l ceph.rook.io/DeviceSet=eventdb-osd
-kubectl -n axiom-system logs -l app=rook-ceph-osd-prepare --tail=50
+kubectl -n rook-ceph logs -l app=rook-ceph-osd-prepare --tail=50
 ```
 
-Use a class with block-mode support, free capacity, or another node; the operator retries on its next reconcile. A device set is data the cluster depends on, so change its count or size in the values rather than deleting claims by hand.
+Clear a device you are certain about (`sgdisk --zap-all`, then `wipefs -a`) or label the node; the operator retries on its next reconcile. See [Deploy Ceph](/self-hosted/ceph#step-2-prepare-the-devices).
 
 ### Ceph reports `HEALTH_WARN` after install
 
@@ -63,7 +72,15 @@ Use a class with block-mode support, free capacity, or another node; the operato
 
 **Cause.** Usually transient while pools and daemons settle. Clock skew between storage nodes is real and Ceph will not tolerate more than a few tens of milliseconds.
 
-**Fix.** Wait ten minutes. For skew, run NTP on every node. Anything else: `kubectl -n axiom-system exec deploy/rook-ceph-tools -- ceph health detail` if the toolbox is enabled, or read the manager pod's log.
+**Fix.** Wait ten minutes. For skew, run NTP on every node. Anything else: `kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph health detail` if the toolbox is enabled, or read the manager pod's log.
+
+### The Ceph manager is OOM-killed every few hours
+
+**Symptom.** The `rook-ceph-mgr` pod restarts on a regular cadence with `OOMKilled`, and its memory climbs steadily between restarts.
+
+**Cause.** Ceph's `rook` orchestrator module is enabled. The prometheus module probes it every 15 seconds, the probe lists every pod in the namespace, and the manager keeps the resulting log lines in its in-memory ring until the limit is hit.
+
+**Fix.** Disable the module and cap the ring, as the values in [Deploy Ceph](/self-hosted/ceph#operate) do: `mgr.modules: [{name: rook, enabled: false}]` and `cephConfig.mgr.log_max_recent: "500"`.
 
 ### EventDB refuses the object-storage endpoint
 
@@ -71,15 +88,15 @@ Use a class with block-mode support, free capacity, or another node; the operato
 
 **Cause.** EventDB only speaks plain HTTP to `localhost`, `127.0.0.1`, `::1`, or a `*.localhost` hostname. An in-cluster RGW's Service name is not one of those.
 
-**Fix.** Keep `objectStorage.endpoint` on a `*.localhost` name and map it to the RGW Service's ClusterIP with `eventdb.hostAliases`, as in Step 7. For an external store, use HTTPS with a certificate the pods trust.
+**Fix.** Keep `objectStorage.endpoint` on a `*.localhost` name and map it to the RGW Service's ClusterIP with `eventdb.hostAliases`, as in [Deploy Ceph](/self-hosted/ceph#step-5-make-the-endpoint-reachable), and make sure the RGW's `hosting.dnsNames` lists that name. For any other store, use HTTPS with a certificate the pods trust.
 
 ### The bucket-setup Job fails
 
 **Symptom.** `eventdb-bucket-setup-rN` fails with a connection or authentication error.
 
-**Cause.** With the Rook provider, the RGW user has not been created yet, or the `eventdb-s3-credentials` Secret does not match the user Rook created. With an external provider, the credentials cannot reach the endpoint or may not create buckets.
+**Cause.** The `eventdb-s3-credentials` Secret does not hold the keys of a user on the store, the endpoint is not reachable from the release namespace, or the user may not create buckets.
 
-**Fix.** Check `kubectl -n axiom-system get cephobjectstoreuser eventdb` reports `Ready` and that its status names `eventdb-s3-credentials`. For an external store that forbids bucket creation, create the bucket out of band and set `objectStorage.createBucket: false`. The Job re-runs on the next upgrade.
+**Fix.** On Ceph, check `kubectl -n rook-ceph get cephobjectstoreuser eventdb` reports `Ready` and that the Secret carries the `AccessKey` and `SecretKey` Rook wrote for it, as [Deploy Ceph](/self-hosted/ceph#step-4-create-the-s3-user-and-credentials) copies them. For a store that forbids bucket creation, create the bucket out of band and set `objectStorage.createBucket: false`. The Job re-runs on the next upgrade.
 
 ## Volumes
 
@@ -95,9 +112,9 @@ Use a class with block-mode support, free capacity, or another node; the operato
 
 **Symptom.** `eventdb-wal` is `Pending` with no provisioner event, and the Ceph cluster, filesystem, and MDS are all `Ready`.
 
-**Cause.** Rook 1.20 hands CSI to the ceph-csi-operator but never creates the CephFS `Driver` resource. The chart renders it whenever a `CephFilesystem` is declared under `rookCephCluster.cephFileSystems`; a filesystem created any other way has no provisioner.
+**Cause.** Nothing is serving the StorageClass. Rook 1.20 runs CSI through the ceph-csi-operator, and a CephFS class has a provisioner only when a `Driver` resource of `csi.ceph.io` exists for CephFS in the Ceph namespace and its provisioner and node-plugin pods are running. A misspelt `eventdb.wal.storageClass` has the same symptom.
 
-**Fix.** Declare the filesystem in the chart values so the driver, its ServiceAccounts, and RBAC are rendered. If the nodes lack the `cephfs` kernel module, add `mounter: fuse` to the StorageClass parameters.
+**Fix.** Confirm the class name, then check the driver on the Ceph side and consult Rook's CSI documentation for the release you run. [Deploy Ceph](/self-hosted/ceph#step-6-verify-before-installing-eventdb) proves a claim binds before EventDB is installed. If the nodes lack the `cephfs` kernel module, add `mounter: fuse` to the StorageClass parameters.
 
 ### The PostgreSQL WAL volume fills up
 
@@ -190,7 +207,8 @@ When you contact Axiom, include:
 ```bash
 helm get values axiom-eventdb -n axiom-system > values-live.yaml
 helm history axiom-eventdb -n axiom-system
-kubectl -n axiom-system get pods,jobs,pvc,cephcluster,cluster -o wide
+kubectl -n axiom-system get pods,jobs,pvc,cluster -o wide
+kubectl -n rook-ceph get cephcluster,cephobjectstore,cephfilesystem   # if Ceph is on this cluster
 kubectl -n axiom-system describe pod <failing-pod>
 kubectl -n axiom-system logs <failing-pod> --previous
 ```

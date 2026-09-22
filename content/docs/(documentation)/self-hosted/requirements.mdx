@@ -2,10 +2,10 @@
 title: 'Self-hosted EventDB requirements'
 sidebarTitle: Requirements
 description: 'Infrastructure requirements for running the axiom-eventdb Helm chart: Kubernetes version, node roles and sizing, block and ReadWriteMany storage, object storage, networking, credentials, and tooling.'
-keywords: ['self-hosted', 'eventdb', 'requirements', 'kubernetes', 'storage class', 'readwritemany', 'ceph', 'object storage', 'sizing']
+keywords: ['self-hosted', 'eventdb', 'requirements', 'kubernetes', 'storage class', 'readwritemany', 'ceph', 's3', 'object storage', 'sizing']
 ---
 
-This page is the reference for what a cluster must provide before you install the `axiom-eventdb` chart. [Deploy on bare metal](/self-hosted/deploy-bare-metal) walks through satisfying each requirement in order.
+This page is the reference for what a cluster must provide before you install the `axiom-eventdb` chart. [Deploy Ceph for EventDB](/self-hosted/ceph) covers the object store and shared filesystem when Ceph provides them, and [Deploy on bare metal](/self-hosted/deploy-bare-metal) walks through satisfying each requirement in order.
 
 ## Tools
 
@@ -22,27 +22,25 @@ The chart runs on any conformant Kubernetes distribution, such as kubeadm, RKE2,
 
 | Requirement | Details |
 | :--- | :--- |
-| Kubernetes version | A currently supported release. The chart's dependencies (Rook 1.20, CloudNativePG 1.30) require 1.28 or later. |
+| Kubernetes version | A currently supported release. The chart's dependencies (CloudNativePG 1.30) require 1.28 or later. |
 | CNI | Any CNI providing standard IPv4 pod networking. |
 | Container runtime | Any CRI-compatible runtime, such as containerd. |
-| DNS | Working in-cluster DNS. The chart's optional `localDns` rewrite maps the object-storage hostname onto the in-cluster RGW through CoreDNS, but only k3s imports the ConfigMap it writes; every other distribution uses `eventdb.hostAliases` for the same mapping. |
+| DNS | Working in-cluster DNS. The chart's optional `localDns` rewrite maps the object-storage hostname onto an in-cluster Service (`localDns.target`) through CoreDNS, but only k3s imports the ConfigMap it writes; every other distribution uses `eventdb.hostAliases` for the same mapping. |
 | Metrics API | `metrics-server` or equivalent, required only when autoscaling is enabled. |
 | Ingress | An ingress controller and TLS issuance for publishing Atom. |
 | Prometheus Operator | Optional. Required for the chart's `ServiceMonitor` and `PrometheusRule` resources. |
 
 ## Node roles and failure domains
 
-Ceph and PostgreSQL both place replicas by host, so a production cluster needs at least three nodes that can each hold one replica. Dedicate nodes to Ceph storage and keep the EventDB workloads on separate nodes so that object-storage I/O and query CPU do not compete.
+PostgreSQL places its three instances by host, so a production cluster needs at least three nodes that can each hold one. If the object store and the shared filesystem run on the same cluster, as Ceph does in the bare-metal guide, dedicate nodes to them and keep the EventDB workloads on separate nodes so that storage I/O and query CPU do not compete.
 
 | Role | Count | Purpose |
 | :--- | :--- | :--- |
-| Storage | 3 or more | Ceph monitors, managers, and OSDs. Their volumes come from the block StorageClass; no node holds a disk of its own. |
+| Storage | 3 or more, if storage runs on this cluster | Ceph monitors, managers, OSDs, RGW, and MDS. See [Deploy Ceph](/self-hosted/ceph#step-1-plan-the-topology). |
 | EventDB | 3 or more | Ingest, query, cache, Atom, PostgreSQL, and Valkey pods. |
 | Control plane and add-ons | 1 or more | Operators, ingress, monitoring. |
 
-Ceph's `failureDomain: host` is the chart default, and its pools replicate three ways, so the loss of any one storage node leaves the object store readable and writable. Rack or zone failure domains are a Ceph configuration change under `rookCephCluster.cephClusterSpec`; use them when the storage nodes span real fault boundaries.
-
-Label the storage nodes so the Ceph inventory in your values can name them, and use `eventdb.scheduling` to keep EventDB pods off them. See [Step 1 of the bare-metal guide](/self-hosted/deploy-bare-metal#step-1-prepare-the-kubernetes-cluster).
+Use `eventdb.scheduling` to keep EventDB pods off the storage nodes. See [Step 1 of the bare-metal guide](/self-hosted/deploy-bare-metal#step-1-prepare-the-kubernetes-cluster).
 
 ## Sizing
 
@@ -55,7 +53,7 @@ The chart's multi-mode defaults are taken from a 24-hour load experiment on four
 | Query runner | 4 | 250m / 512 MiB → 2 CPU / 2 GiB |
 | Query worker | 6 | 1 CPU / 512 MiB → 3 CPU / 3 GiB |
 
-Add the dependencies on top: three PostgreSQL instances at 500m / 1 GiB each, three Valkey pods, Atom at two replicas, and the Ceph daemons. Rook's monitors, managers, and OSDs run at Ceph's own defaults; budget roughly 4 GiB of memory and one core per OSD, plus 1 to 2 GiB for each monitor and manager, on the storage nodes.
+Add the dependencies on top: three PostgreSQL instances at 500m / 1 GiB each, three Valkey pods, and Atom at two replicas. A Ceph on the same cluster is sized separately, on its own nodes; see [Deploy Ceph](/self-hosted/ceph#step-1-plan-the-topology).
 
 To scale past the tested envelope, scale the component the load lands on:
 
@@ -67,21 +65,11 @@ The chart ships a worked example for 30 TB per day, 100 concurrent queries, and 
 
 ## Storage
 
-Three kinds of storage are needed, and they are provisioned differently.
-
-### Block volumes for Ceph
-
-When the chart manages object storage, Rook runs PVC-backed OSDs: `rookCephCluster.cephClusterSpec.storage.storageClassDeviceSets` names a count and a size, and each OSD claims a raw block volume (`volumeMode: Block`) from your StorageClass. The monitors claim 10 GiB filesystem volumes the same way. Nothing lists, formats, or wipes a disk, and a lost OSD is replaced by a fresh, empty claim. Requirements:
-
-- A StorageClass that supports `volumeMode: Block`. Most CSI drivers do; Rancher's `local-path` provisioner does not.
-- `portable: true` with a networked class, whose volumes re-attach on another node; `portable: false` with a node-local class, where an OSD is pinned to its node and `removeOSDsIfOutAndSafeToRemove` lets Rook purge one whose node is gone.
-- NVMe or SSD behind the class. Ceph's write path fsyncs; slow volumes become slow ingest.
-- At least three OSDs on three nodes, so the three-way replicated pools can place every copy on a different host.
-- Capacity for your retention: EventDB compresses blocks roughly 10:1, so plan the raw pool at three times the compressed volume plus growth. Do not fill Ceph past 80%.
+Two kinds of storage are needed, and the chart provisions neither. It names a class and claims from it.
 
 ### A block StorageClass
 
-PostgreSQL data and WAL volumes, Valkey persistence, and NATS (if used) claim ReadWriteOnce volumes from a StorageClass you name in the values, and so do the Ceph OSDs and monitors above. One class can serve all of them if it supports block mode: OpenEBS LocalPV, TopoLVM, Longhorn, or any CSI driver over a SAN or cloud volumes. A filesystem-only class such as `local-path` can still serve PostgreSQL and Valkey beside a block-capable one for Ceph.
+PostgreSQL data and WAL volumes, Valkey persistence, and NATS (if used) claim ReadWriteOnce volumes from a StorageClass you name in the values. Any CSI class on fast media works: OpenEBS LocalPV, TopoLVM, Longhorn, a driver over a SAN or cloud volumes, or the `ceph-block` RBD class a Ceph on the same cluster provides.
 
 PostgreSQL's WAL volume defaults to 30 GiB. Do not shrink it: the operator's replication slots retain WAL for a diverged replica until it is re-cloned, and a full WAL volume takes the primary, Atom, ingest, and queries down together.
 
@@ -93,18 +81,18 @@ No cluster's default StorageClass provides RWX, so the chart refuses to render w
 
 | Provider | Backing | For |
 | :--- | :--- | :--- |
-| `cephfs` | A `CephFilesystem` on the same Rook cluster that serves object storage. The chart creates the StorageClass. | Bare metal and air-gapped installs. This is the path the bare-metal guide uses. |
-| `existing` | An RWX class the cluster already has: NFS, a CephFS from another Rook release, a vendor filer. | Clusters with their own shared filesystem. |
+| `existing` | An RWX class the cluster already has, named in `eventdb.wal.storageClass`: the CephFS class from [Deploy Ceph](/self-hosted/ceph), NFS, a vendor filer. | Bare metal and air-gapped installs. This is the path the bare-metal guide uses, with the chart's `values-cephfs.example.yaml` overlay as the template. |
 | `filestore` | GKE Filestore. | Google Cloud only. |
+| `juicefs` | A JuiceFS filesystem over an S3-compatible bucket and a metadata database you run, served by the chart's optional CSI driver subchart. | Clusters with an object store but no shared filesystem. |
 
 Size the WAL for hours of raw ingest, not minutes: 100 GiB from 16,000 events per second upward. It is what keeps ingest accepting batches through an object-storage outage.
 
 ## Object storage
 
-EventDB stores every block in S3-compatible object storage. Choose one of:
+EventDB stores every block in object storage that you provide. Choose one of:
 
-- **Chart-managed Rook/Ceph RGW** (`objectStorage.provider: rook`). Self-contained, no external service, and the path validated on bare metal. The chart creates the RGW user, the credentials Secret, and the bucket.
-- **An S3-compatible store you already run** (`objectStorage.provider: external`): MinIO, SeaweedFS, another Ceph, or AWS S3. Provide the endpoint, bucket, region, and a static access key pair. The endpoint must be HTTPS with a certificate the pods trust.
+- **An S3-compatible store** (`objectStorage.provider: external`, the default): a Ceph RGW, MinIO, SeaweedFS, or AWS S3. Provide the endpoint, bucket, region, and a static access key pair in the `eventdb-s3-credentials` Secret. The endpoint must be HTTPS with a certificate the pods trust, or a `*.localhost` name for an in-cluster gateway. The chart's bucket-setup Job creates the bucket when `objectStorage.createBucket` is true and the credentials allow it. [Deploy Ceph](/self-hosted/ceph) is the validated bare-metal path.
+- **Google Cloud Storage** (`objectStorage.provider: gcs`), through Workload Identity, with no credentials Secret at all.
 
 Two rules apply to either:
 
@@ -113,10 +101,10 @@ Do not put lifecycle or expiration rules on the bucket. EventDB manages retentio
 </Warning>
 
 <Note>
-EventDB only speaks plain HTTP to an endpoint whose hostname is `localhost`, `127.0.0.1`, `::1`, or a `*.localhost` name. Every other hostname must use TLS. An in-cluster RGW answers on its Service name over HTTP, so a `*.localhost` alias is mapped onto it: by the chart's CoreDNS rewrite on k3s, or through `eventdb.hostAliases` pointed at a Service you create in front of the RGW pods before the install. The bare-metal guide does this in [Step 5](/self-hosted/deploy-bare-metal#reserve-the-object-storage-address).
+EventDB only speaks plain HTTP to an endpoint whose hostname is `localhost`, `127.0.0.1`, `::1`, or a `*.localhost` name. Every other hostname must use TLS. An in-cluster RGW answers on its Service name over HTTP, so a `*.localhost` alias is mapped onto it: by the chart's CoreDNS rewrite on k3s, or through `eventdb.hostAliases` pointed at a Service you create in front of the RGW pods before the install. [Deploy Ceph](/self-hosted/ceph#step-5-make-the-endpoint-reachable) does this.
 </Note>
 
-Object-storage bandwidth is the ceiling for both ingest and wide queries. A Rook RGW sharing nodes with the EventDB workloads saturated near 30,000 events per second on the validation clusters; dedicated storage nodes with NVMe OSDs and 25 GbE or better raise that.
+Object-storage bandwidth is the ceiling for both ingest and wide queries. A Ceph RGW sharing nodes with the EventDB workloads saturated near 30,000 events per second on the validation clusters; dedicated storage nodes with NVMe OSDs and 25 GbE or better raise that.
 
 ## Networking
 
@@ -134,7 +122,7 @@ Production installs set `credentials.create: false` and create these Secrets in 
 | :--- | :--- | :--- |
 | `axiom-postgresql-app` | `username`, `password` | Every EventDB workload. CloudNativePG creates the database owner from it. |
 | `axiom-valkey-auth` | `default` | Every EventDB workload and Valkey's ACL. |
-| `eventdb-s3-credentials` | `access-key`, `secret-key` | Every EventDB workload and the bucket-setup Job. With the Rook provider, they seed the RGW user. |
+| `eventdb-s3-credentials` | `access-key`, `secret-key` | Every EventDB workload and the bucket-setup Job. The object store's own user, with read, write, list, and delete on the bucket. Not created with the `gcs` provider. |
 | `axiom-postgresql-atom` | `username`, `password` (type `kubernetes.io/basic-auth`) | Atom's PostgreSQL role. |
 | `axiom-atom` | `token-hash-secret`, `admin-password` | Atom. `token-hash-secret` HMACs every API token and must never change. |
 | `axiom-postgresql-backup` | `ACCESS_KEY_ID`, `ACCESS_SECRET_KEY` | PostgreSQL backups, when enabled. A different credential to a different bucket. |
@@ -154,4 +142,4 @@ The chart references these first-party images. Axiom provides the registry, cred
 
 Pin digests in production. Setting `digest` on any image takes precedence over `tag`, and a digest cannot be repointed at different content.
 
-The dependency subcharts pull their own upstream images: Rook, Ceph `v20.2.2`, the Ceph CSI plugins, CloudNativePG and its PostgreSQL 17 image, Valkey, NATS, plus `busybox`, `amazon/aws-cli`, and `natsio/nats-box` for bootstrap Jobs. [Step 2 of the bare-metal guide](/self-hosted/deploy-bare-metal#step-2-mirror-container-images) shows how to enumerate the exact list for your values.
+The dependency subcharts pull their own upstream images: CloudNativePG and its PostgreSQL 17 image, Valkey, NATS, the JuiceFS CSI driver when selected, plus `busybox`, `amazon/aws-cli`, and `natsio/nats-box` for bootstrap Jobs. A Ceph you deploy pulls its own images (Rook, Ceph `v20.2.2`, the Ceph CSI plugins) outside the chart. [Step 2 of the bare-metal guide](/self-hosted/deploy-bare-metal#step-2-mirror-container-images) shows how to enumerate the exact list for your values.

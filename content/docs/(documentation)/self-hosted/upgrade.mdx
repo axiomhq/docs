@@ -2,7 +2,7 @@
 title: 'Upgrade self-hosted EventDB'
 sidebarTitle: Upgrade
 description: 'How to upgrade a self-hosted EventDB release safely: what an upgrade of the axiom-eventdb Helm chart does, the pre-flight checks, the step-by-step procedure for values, image, chart, and operator upgrades, topology changes that need care, and how to roll back.'
-keywords: ['self-hosted', 'eventdb', 'upgrade', 'helm upgrade', 'rollback', 'crd', 'rook', 'cloudnativepg', 'migration', 'atom']
+keywords: ['self-hosted', 'eventdb', 'upgrade', 'helm upgrade', 'rollback', 'crd', 'cloudnativepg', 'migration', 'ceph', 'atom']
 ---
 
 Every change to a running self-hosted EventDB deployment is a `helm upgrade` of the same release with an edited values file, a new chart version, or both. This page explains what that command does, what to check before running it, and which changes need more than one step.
@@ -17,15 +17,15 @@ One `helm upgrade` runs one Helm transaction, and inside it:
 2. **Changed configuration rolls the workloads.** Every workload that reads the shared `eventdb-config` ConfigMap carries a checksum of it in its pod template. A value that changes the ConfigMap therefore rolls the long-running controllers; the janitor CronJob picks the change up at its next run.
 3. **Changed images roll the workloads.** Deployments roll with their surge and unavailability defaults. The ingest StatefulSet rolls one pod at a time, in order, and each pod gets 60 seconds to stop gracefully, which flushes its WAL into a block before the next pod starts.
 4. **Workloads that start too early recover on their own.** EventDB processes and Atom refuse to start on an unmigrated database and are restarted by their controllers until the migrate Job completes. A few restarts in the first minutes of an upgrade are expected.
-5. **Operators reconcile their data planes.** Changes under `rookCephCluster` and `postgresql` are applied to the custom resources; Rook and CloudNativePG then carry them out on their own schedule, outside the Helm transaction.
+5. **The operator reconciles its data plane.** Changes under `postgresql` are applied to the `Cluster` resource; CloudNativePG then carries them out on its own schedule, outside the Helm transaction. The object store and the shared filesystem are outside the release altogether; a change to a Ceph is a change to its own releases, see [Deploy Ceph](/self-hosted/ceph#operate).
 
 Two things an upgrade never does:
 
-- **It never upgrades CRDs.** Helm installs the files under a chart's `crds/` directory on first install and deliberately leaves them alone afterwards. A chart release that bumps Rook or CloudNativePG needs its CRDs applied by hand first. See [Operator upgrades](#operator-upgrades).
+- **It never upgrades CRDs.** Helm installs the files under a chart's `crds/` directory on first install and deliberately leaves them alone afterwards. A chart release that bumps CloudNativePG needs its CRDs applied by hand first. See [Operator upgrades](#operator-upgrades).
 - **It never changes a PersistentVolumeClaim.** Access mode, storage class, and size are immutable. See [Changes that need more than an upgrade](#changes-that-need-more-than-an-upgrade).
 
 <Warning>
-**Never disable a data-plane section on an upgrade.** Setting `rookCephCluster.enabled`, `postgresql.enabled`, `valkey.enabled`, or `eventdb.enabled` to `false` on a running release deletes the Ceph cluster, the PostgreSQL cluster, or the EventDB workloads, with their data. Those toggles are install-time decisions, and there is no reason to turn them off on a running release.
+**Never disable a data-plane section on an upgrade.** Setting `postgresql.enabled`, `valkey.enabled`, or `eventdb.enabled` to `false` on a running release deletes the PostgreSQL cluster, the cache, or the EventDB workloads, with their data. Those toggles are install-time decisions, and there is no reason to turn them off on a running release.
 </Warning>
 
 ## Kinds of upgrade
@@ -36,7 +36,7 @@ Two things an upgrade never does:
 | EventDB images | `eventdb-migrate`, then every EventDB workload | Rolling |
 | Atom or portal images | `axiom-atom-migrate`, then Atom; the portals roll independently | Rolling |
 | Chart version, same dependencies | Whatever the chart changed; read its notes | Usually rolling |
-| Chart version with a new operator or dependency | CRDs, the operator, then its data plane under the operator's control | Rolling for PostgreSQL with a primary switchover; Ceph stays available throughout a healthy upgrade |
+| Chart version with a new operator or dependency | CRDs, the operator, then its data plane under the operator's control | Rolling for PostgreSQL with a primary switchover |
 
 Chart versions are OCI artifacts at `oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb`. Prereleases are versioned `0.0.1-alpha.<sha>` after the commit that built them, so the version string does not say which of two prereleases is newer. Take the version and its notes from Axiom, and always pass the exact `--version`: Helm hides prereleases from version resolution.
 
@@ -59,13 +59,13 @@ Keep `values-before.yaml` and the revision number. They are what a rollback retu
 ### Check the data plane is healthy
 
 ```bash
-kubectl -n $NAMESPACE get cephcluster eventdb-ceph          # PHASE Ready, HEALTH HEALTH_OK
 kubectl -n $NAMESPACE get cluster postgresql                 # Cluster in healthy state
 kubectl -n $NAMESPACE get pods | grep -v -E 'Running|Completed'
 kubectl -n $NAMESPACE get pvc                                # nothing Pending
+kubectl -n rook-ceph get cephcluster                         # HEALTH_OK, if Ceph is on this cluster
 ```
 
-Rook refuses to upgrade Ceph while the cluster is not `HEALTH_OK`, by design, and CloudNativePG needs a healthy standby to switch the primary over to. Fix health first; do not set `skipUpgradeChecks` or `continueUpgradeAfterChecksEvenIfNotHealthy` to get past it.
+CloudNativePG needs a healthy standby to switch the primary over to, and an object store that is degraded turns a rolling ingest restart into rejected batches. Fix health first.
 
 ### Take a PostgreSQL backup
 
@@ -108,11 +108,11 @@ diff -u rendered-before.yaml rendered-after.yaml | less
 
 The render also validates the new values file against the chart's schema, so an unknown key or a missing storage class fails here rather than mid-upgrade. If you use the `helm diff` plugin, `helm diff upgrade` gives the same picture in one command.
 
-Look for three things in the diff: a change to `rookCephCluster.cephImage` or to the CloudNativePG operator image, which means an [operator upgrade](#operator-upgrades); any `replicas` field disappearing from a workload, which means autoscaling is being turned on and needs a quiet moment; and any change under `eventdb.wal`, which the upgrade will refuse.
+Look for three things in the diff: a change to the CloudNativePG operator image, which means an [operator upgrade](#operator-upgrades); any `replicas` field disappearing from a workload, which means autoscaling is being turned on and needs a quiet moment; and any change under `eventdb.wal`, which the upgrade will refuse.
 
 ### Mirror the new images
 
-New EventDB, Atom, or portal tags must be in your registry before the upgrade, or the rollout stalls on `ImagePullBackOff`. Mirror them as in [Step 2 of the deployment guide](/self-hosted/deploy-bare-metal#step-2-mirror-container-images). For a chart that bumps a dependency, render it and mirror every image it references, and mirror the new `cephImage` tag if Rook moved.
+New EventDB, Atom, or portal tags must be in your registry before the upgrade, or the rollout stalls on `ImagePullBackOff`. Mirror them as in [Step 2 of the deployment guide](/self-hosted/deploy-bare-metal#step-2-mirror-container-images). For a chart that bumps a dependency, render it and mirror every image it references.
 
 ## Upgrade procedure
 
@@ -122,7 +122,7 @@ Edit `values.yaml` in version control. For an image upgrade that is the three `e
 
 ### Step 2: Apply CRDs if the operators moved
 
-Only for a chart release whose notes say Rook or CloudNativePG was bumped. See [Operator upgrades](#operator-upgrades) for the full sequence; the CRD step is:
+Only for a chart release whose notes say CloudNativePG was bumped. See [Operator upgrades](#operator-upgrades) for the full sequence; the CRD step is:
 
 ```bash
 helm show crds oci://ghcr.io/axiomhq/helm-charts/axiom-eventdb --version $NEW_CHART_VERSION \
@@ -132,7 +132,7 @@ kubectl diff -f crds-$NEW_CHART_VERSION.yaml | less     # review the schema chan
 kubectl apply --server-side --force-conflicts -f crds-$NEW_CHART_VERSION.yaml
 ```
 
-`helm show crds` prints the CRDs from the chart and from its companion CRD subcharts, which is where the pinned Rook, Ceph CSI, and CloudNativePG definitions live.
+`helm show crds` prints the CRDs from the chart and from its companion CRD subchart, which is where the pinned CloudNativePG definitions live.
 
 ### Step 3: Run the upgrade
 
@@ -181,21 +181,7 @@ Then ingest and query through Atom as in [Step 8 of the deployment guide](/self-
 
 ## Operator upgrades
 
-The chart pins Rook, Ceph, and CloudNativePG exactly, so a chart release that moves one of them is an operator upgrade. Rook and CloudNativePG each document an order, and a single Helm transaction does not enforce it. Follow the upstream ordering:
-
-### Rook and Ceph
-
-1. **Apply the new CRDs** as in Step 2 above.
-2. **Upgrade the operator without moving Ceph.** Pin `rookCephCluster.cephImage.tag` in your values to the tag you run today, so the chart bump upgrades the Rook operator alone. Run the upgrade and wait for the operator to reconcile: `kubectl -n $NAMESPACE get cephcluster eventdb-ceph` returns to `Ready` and `HEALTH_OK`, and the OSD, monitor, and manager pods restart once with the new operator's sidecars.
-3. **Then move Ceph.** Set `rookCephCluster.cephImage.tag` to the release's Ceph tag and upgrade again. Rook upgrades the daemons in order, monitors first, then managers, OSDs, MDS, and RGW, and checks health between each. Watch it with:
-
-   ```bash
-   kubectl -n $NAMESPACE get cephcluster eventdb-ceph -o jsonpath='{.status.ceph.versions}' | jq
-   ```
-
-   The upgrade is complete when every daemon reports one version.
-
-Ceph stays available throughout: the pools are replicated three ways and Rook takes down one daemon at a time. Ingest and queries continue.
+The chart pins CloudNativePG exactly, so a chart release that moves it is an operator upgrade. CloudNativePG documents an order, and a single Helm transaction does not enforce it. Follow the upstream ordering. A Ceph upgrade is not a chart upgrade at all: it happens on the Rook releases, operator before cluster, and is described on [Deploy Ceph](/self-hosted/ceph#operate). Ceph stays available throughout a healthy upgrade, and so do ingest and queries.
 
 ### CloudNativePG and PostgreSQL
 
@@ -224,7 +210,7 @@ Some values changes are legal but have a cost or a sequence that the upgrade its
 
 **Switching the job-queue backend.** Jobs queued on the old backend do not move across the switch: what is pending there is lost. Drain first, by letting the queue worker idle, or accept the loss. Moving to `postgres` needs an EventDB build that has it and `nats.enabled: false` in the same upgrade, because the render refuses `postgres` with an idle NATS cluster. Moving to `nats` needs the subchart enabled and creates the stream on that upgrade.
 
-**Switching object-storage providers.** Nothing migrates the objects. A release moved from Rook to an external store starts with an empty bucket; every existing dataset's blocks stay where they were and are unreachable. Treat this as a new deployment with a data migration you plan separately.
+**Switching object stores.** Nothing migrates the objects. A release pointed at a different endpoint or bucket starts with an empty bucket; every existing dataset's blocks stay where they were and are unreachable. Treat this as a new deployment with a data migration you plan separately.
 
 **Changing the WAL.** `eventdb.wal.size`, `storageClass`, `provider`, and `accessModes` describe an immutable claim. The upgrade fails with `spec is immutable`. The migration is:
 
@@ -233,7 +219,17 @@ Some values changes are legal but have a cost or a sequence that the upgrade its
 3. Delete the `eventdb-wal` claim. **This discards anything a pod did not flush.**
 4. `helm upgrade` with the new values; the chart recreates the claim and scales the workloads back.
 
-The one exception is size on a class that allows expansion, such as the CephFS class in the deployment guide: edit the claim's `spec.resources.requests.storage` directly with `kubectl`, then set the same `eventdb.wal.size` in the values so the chart agrees with the cluster.
+The one exception is size on a class that allows expansion, such as the CephFS class from [Deploy Ceph](/self-hosted/ceph): edit the claim's `spec.resources.requests.storage` directly with `kubectl`, then set the same `eventdb.wal.size` in the values so the chart agrees with the cluster.
+
+## From a chart that deployed Ceph
+
+Chart versions before `0.2.0` bundled Rook and Ceph as subcharts, selected with `objectStorage.provider: rook`, `eventdb.wal.provider: cephfs`, and the `rookCephOperator`, `cephCsiOperator`, and `rookCephCluster` values. From `0.2.0` the chart deploys no Ceph: the S3 endpoint and the ReadWriteMany class are prerequisites you provide, as [Deploy Ceph](/self-hosted/ceph) describes, and the chart's schema rejects the three removed blocks.
+
+<Warning>
+**Do not `helm upgrade` a release that had Rook enabled to `0.2.0`.** Helm removes every resource the old chart rendered and the new one does not, which includes the `CephCluster`, its object store, and its filesystem. Rook then tears the Ceph cluster down, with EventDB's blocks and WAL in it.
+</Warning>
+
+Treat it as a new deployment. Deploy Ceph on its own, as its own Rook releases, migrate the blocks and the PostgreSQL data across in a plan of your own, and install the chart fresh against the new endpoint and class with `objectStorage.provider: external` and `eventdb.wal.provider: existing`.
 
 **Rotating credentials.** Update the Secret, then roll the consumers so they read it: every EventDB workload reads its credentials into environment variables at start. Rotate `axiom-postgresql-app` and `axiom-postgresql-atom` through PostgreSQL first, or CloudNativePG's managed roles will re-apply the old password from the Secret they still see. `token-hash-secret` in `axiom-atom` is the one credential that must never rotate: a new value invalidates every API token Atom has issued.
 
@@ -253,8 +249,7 @@ A rollback is itself a new revision and behaves like an upgrade: the bootstrap J
 What a rollback does not undo:
 
 - **Schema migrations.** `eventdb-migrate` and `axiom-atom-migrate` move the database forward only. Rolling the images back after a migration works only if that migration is compatible with the earlier build, which the release notes state. When it is not, the recovery is a [restore from the pre-upgrade backup](/self-hosted/backup-restore#restore) followed by the earlier images.
-- **CRDs.** Helm does not touch them in either direction. Rolling an operator back to a version whose CRDs lack fields the newer operator wrote is unsupported by both Rook and CloudNativePG; roll operators forward, not back.
-- **Ceph daemon versions.** Rook does not downgrade Ceph. A `cephImage` rollback is refused.
+- **CRDs.** Helm does not touch them in either direction. Rolling an operator back to a version whose CRDs lack fields the newer operator wrote is unsupported by CloudNativePG; roll operators forward, not back.
 - **Deleted volumes.** A WAL claim deleted during a migration is gone. Rolling back the values recreates an empty one.
 - **Lost queue jobs.** Jobs dropped by a backend switch do not come back.
 
