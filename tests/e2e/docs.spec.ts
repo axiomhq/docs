@@ -1969,14 +1969,14 @@ test('article hierarchy and footer navigation follow the compact docs pattern', 
   await page.goto('/docs/console/intelligence/mcp-server');
 
   const parentHeading = page.getByRole('heading', { name: 'Current capabilities', level: 2 });
-  const childHeading = page.getByRole('heading', { name: 'Supported MCP tools', level: 3 });
+  const childHeading = page.getByRole('heading', { name: 'Tools and prompts', level: 3 });
   const parentBox = (await parentHeading.boundingBox())!;
   const childBox = (await childHeading.boundingBox())!;
   expect(childBox.y - (parentBox.y + parentBox.height)).toBeLessThanOrEqual(20);
 
   const pagination = page.getByRole('navigation', { name: 'Adjacent documentation pages' });
   await expect(pagination.getByRole('link', { name: /Previous AI agents/ })).toHaveAttribute('href', '/docs/console/intelligence/ai-agents-overview');
-  await expect(pagination.getByRole('link', { name: /Next Set query cost limits for AI agents/ })).toHaveAttribute('href', '/docs/console/intelligence/query-cost-limits');
+  await expect(pagination.getByRole('link', { name: /Next MCP tools reference/ })).toHaveAttribute('href', '/docs/console/intelligence/mcp-server/tools');
 
   const helpful = page.getByRole('button', { name: 'Yes, this page was helpful' });
   const unhelpful = page.getByRole('button', { name: 'No, this page was not helpful' });
