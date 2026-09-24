@@ -161,15 +161,16 @@ Deleting fields works in the following way:
 - The values of the deleted fields stay in storage but you can’t access them anymore. Deleting fields doesn’t reduce the storage usage of your dataset.
 - As the last step of the deletion, Axiom vacuums the fields of the dataset. This rebuilds the data schema from the events currently in the dataset, so fields that no longer occur in any event within your retention period disappear together with the fields you selected. For more information, see [Vacuum fields](#vacuum-fields).
 - After the deletion completes, saved queries, dashboards, monitors, and virtual fields that reference a deleted field return an error. Review these before you delete fields.
-- Deleting fields doesn’t prevent Axiom from adding the fields again. If you ingest events that contain a deleted field after the deletion, Axiom adds the field to the schema again and you can query the newly ingested values. The values you ingested before the deletion remain inaccessible. To stop a field from coming back, fix the data source or [lock the schema](#lock-dataset-schema) after the deletion completes.
-- Field deletion is an asynchronous operation. When you submit a request, Axiom queues the deletion and processes it in the background. The deletion can take several hours to complete, depending on the size of the dataset. During this time, the fields still appear in the Fields panel and in query results. The request appears as `deleteDatasetFields` in the [audit log](/reference/audit-log).
+- Deleting fields doesn’t prevent Axiom from adding the fields again. If you ingest events that contain a deleted field after the deletion, Axiom adds the field to the schema again and you can query the newly ingested values. The values you ingested before the deletion remain inaccessible. To stop a field from coming back, fix the data source before you delete the field, or [lock the schema](#lock-dataset-schema) after the deletion completes. If Axiom keeps receiving the field while the deletion runs, the field might remain in the dataset after the deletion finishes.
+- Field deletion is an asynchronous operation. When you submit a request, Axiom queues the deletion and processes it in the background. The deletion can take several hours to complete, depending on the size of the dataset. During this time, the fields still appear in the Fields panel, and queries might return the values of the deleted fields for some events but not for others. The request appears as `deleteDatasetFields` in the [audit log](/reference/audit-log).
 
 <Note>
 - You can delete fields from event datasets only. Metrics datasets don’t support deleting fields.
 - To delete fields, you need the same permissions as for [vacuuming fields](/reference/settings#assign-capabilities-to-roles). Without these permissions, Axiom doesn’t display the menu option below.
 - You can delete fields from a dataset once every 5 minutes. If a field deletion started on the dataset less than 5 minutes ago, wait and try again.
-- You can’t delete fields while the schema of the dataset is locked. [Unlock the schema](#lock-dataset-schema) first, delete the fields, and then lock the schema again.
+- You can’t delete fields while the schema of the dataset is locked. [Unlock the schema](#lock-dataset-schema) first, delete the fields, and then lock the schema again after the deletion completes.
 - You can’t delete fields from a dataset that another organization has shared with your organization.
+- You can’t delete fields from datasets that Axiom manages, such as `axiom-audit`.
 - You can’t delete the fields that Axiom creates automatically, such as `_time`, `_sysTime`, and `_rowID`.
 - You can’t delete a field that’s configured as a [map field](/apl/data-types/map-fields). To delete it, first remove the map field configuration, and then delete the field.
 - Virtual fields don’t store data. To delete a virtual field, see [Virtual fields](/query-data/virtual-fields).
@@ -188,6 +189,8 @@ To delete fields, follow these steps:
 Axiom displays a message that the deletion started. The deleted fields disappear from the Fields panel when the deletion completes.
 
 To delete fields using the Axiom API, send a POST request to the [delete fields endpoint](/restapi/endpoints/deleteDatasetFields) with the list of field names in the request body. To delete a single field, send a DELETE request to the [delete field endpoint](/restapi/endpoints/deleteFieldForDataset). Both endpoints return the status code 202 when the deletion is queued, and the status code 429 with a `Retry-After` header if a field deletion started on the dataset in the last 5 minutes.
+
+The API doesn’t match field names by pattern. Specify each field name exactly as it appears in the schema of the dataset. To get the field names, use the [list fields endpoint](/restapi/endpoints/getFieldsForDataset). If any field in the request doesn’t exist in the dataset, is a system field, or is a map field, Axiom rejects the whole request with the status code 400 and doesn’t delete any fields. If the field in a DELETE request doesn’t exist in the dataset, the delete field endpoint returns the status code 404.
 
 ## Lock dataset schema
 
