@@ -1,0 +1,100 @@
+---
+title: 'Endpoints end of life'
+description: 'Axiom endpoints are planned for end of life. This page explains the timeline, what changes for you, and how to migrate each endpoint type to its recommended alternative.'
+sidebarTitle: Endpoints end of life
+keywords: ['endpoints', 'end of life', 'deprecation', 'migration', 'honeycomb', 'loki', 'splunk', 'syslog', 'secure syslog', 'ingress.axiom.co', 'syslog.axiom.co']
+---
+
+import EndpointsEndOfLifeNotice from "@/content/snippets/endpoints-end-of-life-notice.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+
+<EndpointsEndOfLifeNotice />
+
+Endpoints let you send data to Axiom from tools that speak the Honeycomb, Loki, Splunk, or syslog protocol by creating a dedicated URL in **Settings > Endpoints**. Axiom is retiring endpoints in favor of native ingest options that work with every edge deployment and don’t depend on a separate ingest path.
+
+## Timeline
+
+| Phase | Date | What changes |
+| :--- | :--- | :--- |
+| Creation disabled | **[CREATION_CUTOFF_DATE]** | You can’t create new endpoints in the Console or with the API. Existing endpoints keep working. |
+| End of life | **[SHUTDOWN_DATE]** | Existing endpoints stop accepting data. Endpoint URLs on `ingress.axiom.co` and `syslog.axiom.co` stop resolving, and the **Endpoints** page is removed from **Settings**. |
+
+## Why Axiom is retiring endpoints
+
+- Endpoints are only available to organizations whose default edge deployment is `US East 1 (AWS)`. Organizations on other edge deployments can’t use them.
+- Endpoints receive data on a separate ingest path (`*.ingress.axiom.co` and `*.syslog.axiom.co`) instead of the base domain of your edge deployment. The alternatives on this page use the same ingest path as every other Axiom integration, so they work with all [edge deployments](/reference/edge-deployments) and authenticate with the [API tokens](/reference/tokens) you already manage.
+
+## Check if you’re affected
+
+You’re affected if your organization has one or more endpoints configured:
+
+1. Click <Icon icon="gear" iconType="solid"/> **Settings > Endpoints**.
+2. Review the list of configured endpoints. Each entry shows the endpoint name and its target URL. The icon next to the name identifies the endpoint type.
+
+If the **Endpoints** page isn’t in your settings, your organization has no endpoints and no action is required.
+
+## What isn’t affected
+
+- Data you have already sent through an endpoint stays in your datasets. Datasets, queries, dashboards, and monitors continue to work as before.
+- Every other way of sending data to Axiom, including the [Ingest API](/restapi/ingest), [OpenTelemetry](/send-data/opentelemetry), the [Splunk HEC API](/send-data/splunk-hec), the [Elastic Bulk API](/send-data/elasticsearch-bulk-api), Axiom SDKs, and [extensions](/apps/introduction).
+
+## Migrate each endpoint type
+
+Migrate before **[SHUTDOWN_DATE]**. Configure the alternative to send data to the same dataset that the endpoint uses so your data stays in one place and your existing queries, dashboards, and monitors keep working.
+
+After you have switched a data source to its alternative and confirmed that data arrives in your dataset, delete the endpoint in **Settings > Endpoints** so that nothing keeps pointing at a URL that will stop working.
+
+### Splunk
+
+Use the [Splunk HEC API](/send-data/splunk-hec) instead. It’s a native HEC-compatible API served from `hec.AXIOM_DOMAIN` on your edge deployment. No proxy is required.
+
+1. In your Splunk forwarder or HEC client, replace the endpoint URL with `https://hec.AXIOM_DOMAIN/services/collector/event?index=DATASET_NAME`. For raw text payloads, use `https://hec.AXIOM_DOMAIN/services/collector/raw?index=DATASET_NAME`.
+2. Set the HEC token to an Axiom API token that can ingest into the dataset. The API accepts `Authorization: Splunk API_TOKEN`, `Authorization: Bearer API_TOKEN`, and HTTP basic authentication.
+3. If your events specify an `index`, Axiom maps it to the dataset with that name.
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+### Secure syslog
+
+After the end-of-life date, Axiom no longer hosts a syslog receiver. Run a syslog receiver on infrastructure you control and forward the data to Axiom over HTTPS:
+
+- **Vector (recommended):** Configure a [`syslog` source and the `axiom` sink](/send-data/vector#send-syslog-logs-to-axiom). Vector adds the batching, retries, and error reporting that plain syslog lacks.
+- **Axiom Syslog Proxy:** Run the open-source [Axiom Syslog Proxy](/send-data/syslog-proxy), a syslog server that forwards to Axiom.
+
+Point your syslog clients at the receiver you run. This also applies to platforms whose log export only supports syslog, such as [Render](/send-data/render).
+
+### Honeycomb
+
+- **OpenTelemetry (recommended):** If your services use OpenTelemetry-based Honeycomb SDKs or distributions, point the OTLP exporter at Axiom. For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
+- **Libhoney and Beelines:** Run the open-source [Axiom Honeycomb Proxy](https://github.com/axiomhq/axiom-honeycomb-proxy) and set `APIHost` to the address of the proxy. The proxy accepts Honeycomb event and batch requests and forwards them to Axiom.
+
+### Loki
+
+Replace the Loki push step with a shipper or library that sends to Axiom directly:
+
+- **Vector, Fluent Bit, or Fluentd:** Replace the Loki output in your pipeline with the Axiom output. See [Vector](/send-data/vector), [Fluent Bit](/send-data/fluent-bit), or [Fluentd](/send-data/fluentd).
+- **OpenTelemetry Collector:** Export logs to Axiom with the OTLP exporter. See [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
+- **Logging libraries:** If your app uses a Loki transport such as `winston-loki` or `logging_loki`, switch to Axiom’s [Winston transport](/guides/winston) or [Python logging handler](/guides/python).
+- **Keep the Loki push API:** Run the open-source [Axiom Loki Proxy](/send-data/loki-multiplexer) on infrastructure you control and point your Loki clients at it.
+
+## Frequently asked questions
+
+### Do existing endpoints stop working on the creation cutoff date?
+
+No. Endpoints that already exist keep accepting data until **[SHUTDOWN_DATE]**. From **[CREATION_CUTOFF_DATE]**, you can’t create new endpoints, and you can’t recreate an endpoint that you delete.
+
+### Can I keep my endpoint URL?
+
+No. Endpoint URLs on `ingress.axiom.co` and `syslog.axiom.co` are retired with the feature. The alternatives use the base domain of your edge deployment or a receiver that you host.
+
+### Do I need to change my datasets, queries, or dashboards?
+
+No. Configure the alternative to send data to the same dataset that the endpoint used. Some alternatives produce slightly different field names or nesting, so compare a few events from the old and new paths before you delete the endpoint.
+
+### Where can I get help?
+
+[Contact Axiom](https://axiom.co/contact) if you need help planning your migration.
