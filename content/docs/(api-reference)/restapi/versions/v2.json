@@ -449,6 +449,76 @@
         "x-axiom-preview": true
       }
     },
+    "/datasets/{dataset_id}/delete-fields": {
+      "post": {
+        "security": [
+          {
+            "Auth": [
+              "vacuum|update"
+            ]
+          }
+        ],
+        "description": "Deletes fields asynchronously. The field disappears from listings once the deletion pipeline finishes. Re-ingesting data with that field recreates it.\n",
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Delete fields from a dataset",
+        "operationId": "deleteDatasetFields",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteDatasetFieldsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "DeleteDatasetFieldsResult",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteDatasetFieldsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "description": "TooManyDeleteFieldsRequests",
+            "headers": {
+              "Retry-After": {
+                "description": "The GMT date/time at which the current rate limit window resets.\n",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-preview": true
+      }
+    },
     "/datasets/{dataset_id}/trim": {
       "post": {
         "security": [
@@ -678,6 +748,72 @@
             }
           }
         }
+      },
+      "delete": {
+        "security": [
+          {
+            "Auth": [
+              "vacuum|update"
+            ]
+          }
+        ],
+        "description": "Deletes the field asynchronously. The field disappears from listings once the deletion pipeline finishes. Re-ingesting data with that field recreates it.\n",
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Delete a field from a dataset",
+        "operationId": "deleteFieldForDataset",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "field_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "DeleteDatasetFieldsResult",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteDatasetFieldsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "description": "TooManyDeleteFieldsRequests",
+            "headers": {
+              "Retry-After": {
+                "description": "The GMT date/time at which the current rate limit window resets.\n",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-axiom-preview": true
       }
     },
     "/datasets/{dataset_id}/mapfields": {
@@ -3190,6 +3326,28 @@
       }
     },
     "responses": {
+      "BadRequestError": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "example": {
+                "code": 400,
+                "message": "Bad request"
+              }
+            }
+          }
+        }
+      },
       "ForbiddenError": {
         "description": "Forbidden",
         "content": {
@@ -8185,6 +8343,44 @@
           }
         },
         "additionalProperties": false
+      },
+      "DeleteDatasetFieldsRequest": {
+        "type": "object",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "example": {
+          "fields": [
+            "field1",
+            "field2"
+          ]
+        }
+      },
+      "DeleteDatasetFieldsResult": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-omitempty": false
+          }
+        },
+        "example": {
+          "fields": [
+            "field1",
+            "field2"
+          ]
+        }
       },
       "PieChart": {
         "type": "object",
