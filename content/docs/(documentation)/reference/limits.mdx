@@ -136,25 +136,86 @@ If you include the `_time` field in the ingested data, follow these requirements
 
 ### Requirements for log level fields
 
-The Stream and Query tabs allow you to easily detect warnings and errors in your logs by highlighting the severity of log entries in different colors. As a prerequisite, specify the log level in the data you send to Axiom.
+Stream, query results, and the event timeline use the same rules to choose an event's display level. These rules leave stored event fields and monitor conditions unchanged.
 
-For Open Telemetry logs, specify the log level in the following fields:
-- `severity`
-- `severityNumber`
-- `severityText`
+An explicit log level takes priority over words in a message. For example, an event with `level: "info"` and `message: "error error error"` displays as `info`.
 
-For AWS Lambda logs, specify the log level in the following fields:
-- `record.error`
-- `record.level`
-- `record.severity`
-- `type`
+#### Field priority
 
-For logs from other sources, specify the log level in the following fields:
-- `level`
-- `@level`
-- `severity`
-- `@severity`
-- `status.code`
+Axiom checks the following fields in order and stops at the first recognized value. Missing fields and unrecognized values fall through to the next field. Within each table row, fields are checked from left to right.
+
+| Priority | Fields | Accepted values |
+| --- | --- | --- |
+| 1 | `_row_status` | A dashboard query's display override. Accepts the text levels below. |
+| 2 | `severity_text`, `severity_number`, `severityText`, `severityNumber` | OpenTelemetry text or numeric levels, according to the field name. |
+| 3 | `level`, `severity`, `log.level`, `@level`, `@severity` | Text levels. `severity` also accepts OpenTelemetry numbers for compatibility. |
+| 4 | `record.level`, `record.severity` | Text levels. |
+| 5 | `data.log_level` | Convex levels: `DEBUG`, `INFO`, `LOG`, `WARN`, and `ERROR`. |
+| 6 | `record.error` | Text levels. Exception objects and error descriptions aren't recognized. |
+| 7 | `type` | Only `platform.fault`, which displays as `error`. |
+
+Axiom reads dotted field names and their nested equivalents, including objects stored as JSON text. For example, both `{"record.level": "info"}` and `{"record": {"level": "info"}}` supply `record.level`. If both forms exist, a non-null dotted field takes precedence.
+
+#### Recognized values
+
+Text values match exactly, ignoring capitalization. For example, `ERROR` matches, but `errorful` and `error: request failed` don't.
+
+| Display level | Text values |
+| --- | --- |
+| `error` | `platform.fault`, `emerg`, `emergency`, `crit`, `critical`, `fatal`, `err`, `error`, `alert` |
+| `warn` | `warn`, `warning` |
+| `info` | `notice`, `info`, `debug`, `trace` |
+| `success` | `success` |
+
+OpenTelemetry numeric fields accept integers from 1 to 24:
+
+| Numeric value | Display level |
+| --- | --- |
+| 1–12 | `info` |
+| 13–16 | `warn` |
+| 17–24 | `error` |
+
+These fields also accept decimal strings such as `"17"`. Values such as `0`, `25`, `"017"`, and `"Severity(17)"` aren't recognized.
+
+For Convex's `data.log_level`, `DEBUG`, `INFO`, and `LOG` display as `info`, `WARN` as `warn`, and `ERROR` as `error`. The value `LOG` has no special meaning in other fields or message text.
+
+#### Message fallback
+
+If no field supplies a recognized level, Axiom checks string values in `message`, `msg`, `@message`, `text`, `record`, and `data.message`, in that order. For each value, Axiom checks only the first 100 characters and first two lines. The first complete severity keyword wins. Axiom doesn't scan the entire event or count repeated keywords.
+
+For example:
+
+| Event | Display level | Reason |
+| --- | --- | --- |
+| `{"level": "info", "message": "error error error"}` | `info` | The explicit level wins. |
+| `{"message": "WARN retry; error"}` | `warn` | The first keyword wins. |
+| `{"message": "request started\nerror: connection refused\nretry scheduled"}` | `error` | The keyword is on the second line. |
+| `{"message": "request started\nconnecting to database\nerror: connection refused"}` | `unknown` | The keyword is outside the first two lines. |
+| `{"severityNumber": 17}` | `error` | The numeric level is recognized. |
+
+If nothing matches, the event displays as neutral `unknown`.
+
+#### Inspect a log level
+
+Hover over an event's severity marker to see its display level, the field that determined it, and that field's original value. The tooltip also links to this reference.
+
+The tooltip's format label describes the matching rule: **OTel**, **AWS Lambda**, **Convex**, **Common**, **Message**, or **Override**. It doesn't identify the event's source service. For example, `record.level` uses the **Common** rule even when the event comes from AWS Lambda. An `unknown` level has no deciding field or format label.
+
+In the event details view, click a level badge with a source field to highlight that field. If the value is inside JSON text, Axiom highlights the containing field.
+
+#### Map a custom field
+
+To use a custom severity field, create a [virtual field](/query-data/virtual-fields#creating-a-virtual-field) named `level` or `severity` that returns a recognized value. For example, if `app_log_level` contains values such as `INFO` and `ERROR`, create a virtual field named `level` with this expression:
+
+```kusto
+tostring(app_log_level)
+```
+
+Virtual fields follow the same field priority as stored fields. A virtual field named `severity` doesn't override a recognized `level` or an earlier field.
+
+<Note>
+Severity detection previously counted clues across fields. It now uses field priority and a bounded message fallback. `status.code`, arbitrary `type` values, partial text matches, and decorated numbers such as `Severity(17)` no longer determine severity. The supported `type: "platform.fault"` value and exact text levels in `record.error` remain recognized. Map custom fields or values to a supported severity field to preserve highlighting. Existing monitor conditions continue to read their specified fields.
+</Note>
 
 ## Temporary account-specific limits
 
