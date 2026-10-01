@@ -313,6 +313,30 @@ export function DocsShell({
   const { assistantOpen } = useDocsSearchController();
   const drawerRef = useRef<HTMLElement>(null);
 
+  // Pages scroll inside .docs-scroll-viewport, not the window, and Chrome
+  // skips the initial #fragment jump when reloading an entry whose URL was
+  // changed in place (tab params, heading-anchor copies). The shell mounts
+  // once per document, so finish that jump here if nothing has scrolled.
+  // Targets inside inactive tabs are revealed by DocsTabs instead.
+  useEffect(() => {
+    const scrollToFragment = () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      const target = id ? document.getElementById(id) : null;
+      const viewport = document.querySelector<HTMLElement>(
+        ".docs-scroll-viewport",
+      );
+      if (!target || !viewport || viewport.scrollTop > 0) return;
+      if (target.getClientRects().length === 0) return;
+      target.scrollIntoView();
+    };
+    const frame = requestAnimationFrame(scrollToFragment);
+    window.addEventListener("load", scrollToFragment, { once: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("load", scrollToFragment);
+    };
+  }, []);
+
   useEffect(() => {
     const desktop = window.matchMedia("(min-width: 80rem)");
     const closeAtDesktop = (event: MediaQueryListEvent) => {

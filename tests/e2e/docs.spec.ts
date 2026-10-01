@@ -2331,6 +2331,24 @@ test('MDX tabs with a param restore and share their selection through the URL', 
   await expect(page.getByRole('tab', { name: 'Claude Code', exact: true })).toHaveAttribute('aria-selected', 'true');
 });
 
+test('reloading after a tab changes the URL still lands on the fragment heading', async ({ page }) => {
+  await page.goto('/docs/console/intelligence/mcp-server?client=claude&plan=free#quick-setup');
+  const quickSetup = page.getByRole('heading', { name: 'Quick setup', level: 3 });
+  await expect(quickSetup).toBeInViewport();
+
+  // The tab click rewrites the URL in place; Chrome then skips its own
+  // fragment jump on reload because the page scrolls in an inner viewport.
+  await page.getByRole('tab', { name: 'ChatGPT', exact: true }).click();
+  await expect(page).toHaveURL(/\?client=chatgpt&plan=free#quick-setup$/);
+  await page.reload();
+
+  await expect(page.getByRole('tab', { name: 'ChatGPT', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(quickSetup).toBeInViewport();
+  const headingBox = (await quickSetup.boundingBox())!;
+  const viewportBox = (await page.locator('.docs-scroll-viewport').boundingBox())!;
+  expect(Math.abs(headingBox.y - viewportBox.y - 32)).toBeLessThanOrEqual(1);
+});
+
 test('table of contents ignores and reveals headings inside inactive tabs', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/docs/console/intelligence/mcp-server#quick-setup');
