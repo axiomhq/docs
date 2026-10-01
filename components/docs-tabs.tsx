@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { ReactNode } from "react";
 import { TabsList, TabsTrigger } from "fumadocs-ui/components/tabs";
 import { Tabs } from "fumadocs-ui/components/tabs.unstyled";
@@ -36,6 +42,51 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
     picked ??
     (requested && values.includes(requested) ? requested : values[0]);
 
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Fragment navigation (TOC links, shared #heading URLs) can't scroll to a
+  // heading inside an inactive panel, which is display:none. Open the tab
+  // that holds the target, then scroll to it. Nested groups each open their
+  // own level from the same event.
+  const revealHashTarget = useEffectEvent(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    const target = id ? document.getElementById(id) : null;
+    if (!target || target.getClientRects().length > 0) return;
+    const triggers = Array.from(
+      listRef.current?.querySelectorAll<HTMLElement>('[role="tab"]') ?? [],
+    );
+    const index = triggers.findIndex((trigger) =>
+      document
+        .getElementById(trigger.getAttribute("aria-controls") ?? "")
+        ?.contains(target),
+    );
+    if (index < 0) return;
+    selectTab(values[index]);
+    requestAnimationFrame(() => target.scrollIntoView());
+  });
+
+  useEffect(() => {
+    let frame = requestAnimationFrame(revealHashTarget);
+    const scheduleReveal = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(revealHashTarget);
+    };
+    // Re-clicking a link to the current hash fires no hashchange, so also
+    // react to clicks on in-page links.
+    const onClick = (event: MouseEvent) => {
+      if ((event.target as Element | null)?.closest?.('a[href^="#"]')) {
+        scheduleReveal();
+      }
+    };
+    window.addEventListener("hashchange", scheduleReveal);
+    document.addEventListener("click", onClick);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("hashchange", scheduleReveal);
+      document.removeEventListener("click", onClick);
+    };
+  }, []);
+
   function selectTab(next: string) {
     if (!values.includes(next)) return;
     setPicked(next);
@@ -49,7 +100,7 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
 
   return (
     <Tabs className="flex flex-col" value={value} onValueChange={selectTab}>
-      <TabsList>
+      <TabsList ref={listRef}>
         {items.map((item, index) => (
           <TabsTrigger key={values[index]} value={values[index]}>
             {item}

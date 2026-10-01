@@ -158,9 +158,15 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
         // The main ScrollArea begins below the fixed header, so its top edge
         // is part of the document-space reading line.
         const readingLine = (scrollViewport?.getBoundingClientRect().top ?? 0) + 60;
-        let current = headings[0].item.url;
+        // Headings inside inactive tab panels are display:none and report a
+        // zero rect, which would read as "scrolled past"; skip them.
+        const rendered = headings.filter(
+          (heading) => heading.element.getClientRects().length > 0,
+        );
+        if (rendered.length === 0) return;
+        let current = rendered[0].item.url;
 
-        for (const heading of headings) {
+        for (const heading of rendered) {
           if (heading.element.getBoundingClientRect().top > readingLine) break;
           current = heading.item.url;
         }
@@ -168,7 +174,7 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
         const atPageEnd = scrollViewport
           ? scrollViewport.clientHeight + scrollViewport.scrollTop >= scrollViewport.scrollHeight - 4
           : window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
-        setActiveUrl(atPageEnd ? headings.at(-1)!.item.url : current);
+        setActiveUrl(atPageEnd ? rendered.at(-1)!.item.url : current);
       });
     };
 

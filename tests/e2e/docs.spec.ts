@@ -2331,6 +2331,33 @@ test('MDX tabs with a param restore and share their selection through the URL', 
   await expect(page.getByRole('tab', { name: 'Claude Code', exact: true })).toHaveAttribute('aria-selected', 'true');
 });
 
+test('table of contents ignores and reveals headings inside inactive tabs', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/docs/console/intelligence/mcp-server#quick-setup');
+
+  // "Header-based authentication" sits in the hidden "Other" client tab; its
+  // zero rect must not claim the reading line.
+  const toc = page.getByRole('complementary', { name: 'On this page' });
+  const hiddenHeadingLink = toc.getByRole('link', { name: 'Header-based authentication' });
+  await expect(toc.getByRole('link', { name: 'Quick setup' })).toHaveAttribute('aria-current', 'location');
+  await expect(hiddenHeadingLink).not.toHaveAttribute('aria-current');
+
+  // Following its TOC link opens the tab that holds the heading.
+  const heading = page.getByRole('heading', { name: 'Header-based authentication', level: 4 });
+  await hiddenHeadingLink.click();
+  await expect(page.getByRole('tab', { name: 'Other', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(heading).toBeInViewport();
+  await expect(page).toHaveURL(/\?client=other#header-based-authentication$/);
+
+  // Switching away is not overridden by the stale hash, and re-clicking the
+  // same link (no hashchange) reveals it again.
+  await page.getByRole('tab', { name: 'Cursor', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'Cursor', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await hiddenHeadingLink.click();
+  await expect(page.getByRole('tab', { name: 'Other', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(heading).toBeInViewport();
+});
+
 test('MDX tabs without a param keep selection out of the URL', async ({ page }) => {
   await page.goto('/docs/use-cases/llm-observability/redaction-policies');
 
