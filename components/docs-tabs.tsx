@@ -1,14 +1,7 @@
 "use client";
 
-import {
-  useEffect,
-  useEffectEvent,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
-import { flushSync } from "react-dom";
 import { TabsList, TabsTrigger } from "fumadocs-ui/components/tabs";
 import { Tabs } from "fumadocs-ui/components/tabs.unstyled";
 
@@ -43,31 +36,6 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
     picked ??
     (requested && values.includes(requested) ? requested : values[0]);
 
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  // A #link to a heading inside another tab (TOC entries, heading links)
-  // selects that tab, then scrolls to the heading. Panels are the root's
-  // direct children in `values` order.
-  const selectHashTab = useEffectEvent(() => {
-    const id = decodeURIComponent(window.location.hash.slice(1));
-    const target = id ? document.getElementById(id) : null;
-    if (!target || target.checkVisibility()) return;
-    const panels = rootRef.current?.querySelectorAll(
-      ':scope > [role="tabpanel"]',
-    );
-    const index = Array.from(panels ?? []).findIndex((panel) =>
-      panel.contains(target),
-    );
-    if (index < 0) return;
-    flushSync(() => selectTab(values[index]));
-    target.scrollIntoView();
-  });
-  useEffect(() => {
-    const onHashChange = () => selectHashTab();
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
-
   function selectTab(next: string) {
     if (!values.includes(next)) return;
     setPicked(next);
@@ -80,12 +48,7 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
   }
 
   return (
-    <Tabs
-      ref={rootRef}
-      className="flex flex-col"
-      value={value}
-      onValueChange={selectTab}
-    >
+    <Tabs className="flex flex-col" value={value} onValueChange={selectTab}>
       <TabsList>
         {items.map((item, index) => (
           <TabsTrigger key={values[index]} value={values[index]}>
