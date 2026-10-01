@@ -27,6 +27,21 @@ The `limit` operator returns the top **`N`** rows from the input dataset. If few
 When using `limit` with `summarize` where the first grouping expression is a time bin, the limit behavior differs: Axiom computes the global top **N** groups across all time buckets, then limits each time bucket to only include those groups. This can result in more than **N** total rows. For more information, see [summarize](/apl/tabular-operators/summarize-operator#limit-behavior-with-time-binning).
 </Note>
 
+### Default and maximum limits
+
+If your query doesn’t contain `limit` or `take`, Axiom applies a default limit of 1,000 rows to the query result. To return more rows, add `limit` to the end of your query and specify a higher value.
+
+In queries where `summarize` groups by a time bin first, the default limit applies to groups in the same way as described in the note above. This means that the query result can contain more than 1,000 rows without `limit`.
+
+The maximum value of **`N`** is 50,000. If you specify a higher value, Axiom returns a maximum of 50,000 rows.
+
+When a limit truncates the query result, Axiom adds one of the following warnings to the result:
+
+| Warning code | Message | Description |
+| :--- | :--- | :--- |
+| `default_limit_warning` | A default limit of 1000 was applied | The query doesn’t specify a limit and has more than 1,000 results. To return more results, add `limit` to the query. |
+| `max_limit_warning` | A maximum limit was applied | The query has more results than the maximum limit allows. To return the remaining results, narrow the time range or the filters of the query, or [paginate the query](/restapi/pagination). |
+
 ## Use case examples
 
 <Tabs>
