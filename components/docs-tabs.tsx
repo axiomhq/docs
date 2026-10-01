@@ -1,16 +1,7 @@
 "use client";
 
-import {
-  createContext,
-  use,
-  useEffect,
-  useEffectEvent,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
-import { flushSync } from "react-dom";
 import { TabsList, TabsTrigger } from "fumadocs-ui/components/tabs";
 import { Tabs } from "fumadocs-ui/components/tabs.unstyled";
 
@@ -25,10 +16,6 @@ type DocsTabsProps = {
 // The URL only changes through selectTab, which also sets state, so no
 // subscription is needed to keep the snapshot fresh.
 const emptySubscribe = () => () => {};
-
-// True inside a tab group's panels, so nested groups know they are not
-// top-level.
-const NestedTabsContext = createContext(false);
 
 // Controlled tab shell (Fumadocs' styled Tabs cannot be controlled). The
 // root's chrome comes from `.docs-tabs > div` in globals.css. Without
@@ -49,34 +36,6 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
     picked ??
     (requested && values.includes(requested) ? requested : values[0]);
 
-  const nested = use(NestedTabsContext);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  // A #link to a heading inside another tab (TOC entries, heading links)
-  // selects that tab, then scrolls to the heading. Only top-level groups
-  // do this; nested groups ignore the hash. Panels are the root's direct
-  // children in `values` order.
-  const selectHashTab = useEffectEvent(() => {
-    const id = decodeURIComponent(window.location.hash.slice(1));
-    const target = id ? document.getElementById(id) : null;
-    if (!target || target.checkVisibility()) return;
-    const panels = rootRef.current?.querySelectorAll(
-      ':scope > [role="tabpanel"]',
-    );
-    const index = Array.from(panels ?? []).findIndex((panel) =>
-      panel.contains(target),
-    );
-    if (index < 0) return;
-    flushSync(() => selectTab(values[index]));
-    target.scrollIntoView();
-  });
-  useEffect(() => {
-    if (nested) return;
-    const onHashChange = () => selectHashTab();
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, [nested]);
-
   function selectTab(next: string) {
     if (!values.includes(next)) return;
     setPicked(next);
@@ -89,12 +48,7 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
   }
 
   return (
-    <Tabs
-      ref={rootRef}
-      className="flex flex-col"
-      value={value}
-      onValueChange={selectTab}
-    >
+    <Tabs className="flex flex-col" value={value} onValueChange={selectTab}>
       <TabsList>
         {items.map((item, index) => (
           <TabsTrigger key={values[index]} value={values[index]}>
@@ -102,7 +56,7 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
           </TabsTrigger>
         ))}
       </TabsList>
-      <NestedTabsContext value>{children}</NestedTabsContext>
+      {children}
     </Tabs>
   );
 }

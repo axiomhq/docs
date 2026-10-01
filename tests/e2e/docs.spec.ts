@@ -2349,27 +2349,15 @@ test('reloading after a tab changes the URL still lands on the fragment heading'
   expect(Math.abs(headingBox.y - viewportBox.y - 32)).toBeLessThanOrEqual(1);
 });
 
-test('table of contents skips headings in inactive tabs and its links select their tab', async ({ page }) => {
+test('table of contents skips headings in inactive tabs', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/docs/console/intelligence/mcp-server#quick-setup');
 
-  // "Header-based authentication" sits in the hidden "Other" client tab; its
-  // zero rect must not claim the reading line.
+  // "Header-based authentication" sits in the hidden "Other" client tab; it
+  // must not claim the reading line.
   const toc = page.getByRole('complementary', { name: 'On this page' });
-  const hiddenHeadingLink = toc.getByRole('link', { name: 'Header-based authentication' });
   await expect(toc.getByRole('link', { name: 'Quick setup' })).toHaveAttribute('aria-current', 'location');
-  await expect(hiddenHeadingLink).not.toHaveAttribute('aria-current');
-
-  // Following its TOC link selects the tab that holds the heading.
-  const heading = page.getByRole('heading', { name: 'Header-based authentication', level: 4 });
-  await hiddenHeadingLink.click();
-  await expect(page.getByRole('tab', { name: 'Other', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(heading).toBeInViewport();
-  await expect(page).toHaveURL(/\?client=other#header-based-authentication$/);
-
-  // Switching away afterwards is not overridden by the stale hash.
-  await page.getByRole('tab', { name: 'Cursor', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'Cursor', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(toc.getByRole('link', { name: 'Header-based authentication' })).not.toHaveAttribute('aria-current');
 });
 
 test('MDX tabs without a param keep selection out of the URL', async ({ page }) => {
