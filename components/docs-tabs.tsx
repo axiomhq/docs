@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  createContext,
+  use,
   useEffect,
   useEffectEvent,
   useRef,
@@ -24,6 +26,10 @@ type DocsTabsProps = {
 // subscription is needed to keep the snapshot fresh.
 const emptySubscribe = () => () => {};
 
+// True inside a tab group's panels, so nested groups know they are not
+// top-level.
+const NestedTabsContext = createContext(false);
+
 // Controlled tab shell (Fumadocs' styled Tabs cannot be controlled). The
 // root's chrome comes from `.docs-tabs > div` in globals.css. Without
 // `param`, selection is local state only; with it, the URL is shareable.
@@ -43,11 +49,13 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
     picked ??
     (requested && values.includes(requested) ? requested : values[0]);
 
+  const nested = use(NestedTabsContext);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // A #link to a heading inside another tab (TOC entries, heading links)
-  // selects that tab, then scrolls to the heading. Panels are the root's
-  // direct children in `values` order.
+  // selects that tab, then scrolls to the heading. Only top-level groups
+  // do this; nested groups ignore the hash. Panels are the root's direct
+  // children in `values` order.
   const selectHashTab = useEffectEvent(() => {
     const id = decodeURIComponent(window.location.hash.slice(1));
     const target = id ? document.getElementById(id) : null;
@@ -63,10 +71,11 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
     target.scrollIntoView();
   });
   useEffect(() => {
+    if (nested) return;
     const onHashChange = () => selectHashTab();
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+  }, [nested]);
 
   function selectTab(next: string) {
     if (!values.includes(next)) return;
@@ -93,7 +102,7 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
           </TabsTrigger>
         ))}
       </TabsList>
-      {children}
+      <NestedTabsContext value>{children}</NestedTabsContext>
     </Tabs>
   );
 }
