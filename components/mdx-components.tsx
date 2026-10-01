@@ -14,10 +14,7 @@ import type {
 import type { MDXComponents } from "mdx/types";
 import defaultComponents from "fumadocs-ui/mdx";
 import { Step, Steps } from "fumadocs-ui/components/steps";
-import {
-  Tab as FumaTab,
-  Tabs as FumaTabs,
-} from "fumadocs-ui/components/tabs";
+import { TabsContent } from "fumadocs-ui/components/tabs";
 import { ImageZoom } from "fumadocs-ui/components/image-zoom";
 import { DOC_ICON_STROKE_WIDTH, resolveDocIcon } from "@/lib/doc-icons";
 import { ZoneLink } from "@/components/zone-link";
@@ -38,6 +35,8 @@ import {
 } from "./integration-icons";
 import { Notice } from "./notice";
 import { Accordion, AccordionGroup } from "./mdx-accordion";
+import { DocsTabs } from "./docs-tabs";
+import { tabValues } from "@/lib/tab-values";
 
 // play.axiom.co links come in two shapes: runnable APL query links
 // (…/query?initForm=…) that render as the compact "Run in Playground" button
@@ -225,20 +224,23 @@ function Card({
 
 // Restyled by the unlayered `.docs-tabs` rules in globals.css: the shell,
 // tab strip, and panel mirror the article code-field chrome.
-function Tabs({ children }: { children: ReactNode }) {
+// `<Tabs param="client">` opts the group into shareable URL state
+// (`?client=claude-code`); groups without `param` keep local state only.
+function Tabs({ children, param }: { children: ReactNode; param?: string }) {
   const tabs = Children.toArray(children).filter(
     isValidElement,
   ) as ReactElement<{ title?: string; value?: string }>[];
   const items = tabs.map(
     (tab, index) => tab.props.title ?? `Tab ${index + 1}`,
   );
+  const values = tabValues(items);
   return (
     <div className="docs-tabs my-5 mx-0">
-      <FumaTabs items={items}>
+      <DocsTabs items={items} values={values} param={param}>
         {tabs.map((tab, index) =>
-          cloneElement(tab, { ...tab.props, value: items[index] }),
+          cloneElement(tab, { ...tab.props, value: values[index] }),
         )}
-      </FumaTabs>
+      </DocsTabs>
     </div>
   );
 }
@@ -254,7 +256,8 @@ function Tab({
   title?: string;
   value?: string;
 }) {
-  return <FumaTab value={value}>{children}</FumaTab>;
+  // `value` is always assigned by Tabs from the title.
+  return <TabsContent value={value ?? ""}>{children}</TabsContent>;
 }
 
 function Field({

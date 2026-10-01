@@ -2314,6 +2314,73 @@ test('grouped MDX accordions keep only one item open', async ({ page }) => {
   );
 });
 
+test('MDX tabs with a param restore and share their selection through the URL', async ({ page }) => {
+  await page.goto('/docs/console/intelligence/mcp-server?client=claude&plan=free#quick-setup');
+
+  // Nested groups: the plan tabs live inside the Claude client panel.
+  await expect(page.getByRole('tab', { name: 'Claude', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Free', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel', { name: 'Free', exact: true })).toContainText('Claude Desktop');
+
+  await page.getByRole('tab', { name: 'Claude Code', exact: true }).click();
+  await expect(page).toHaveURL(/\?client=claude-code&plan=free#quick-setup$/);
+  await expect(page.getByRole('tabpanel', { name: 'Claude Code', exact: true })).toContainText('claude mcp add');
+
+  // Reloading the shared URL reopens the same tab after hydration.
+  await page.reload();
+  await expect(page.getByRole('tab', { name: 'Claude Code', exact: true })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('reloading after a tab changes the URL still lands on the fragment heading', async ({ page }) => {
+  await page.goto('/docs/console/intelligence/mcp-server?client=claude&plan=free#quick-setup');
+  const quickSetup = page.getByRole('heading', { name: 'Quick setup', level: 3 });
+  await expect(quickSetup).toBeInViewport();
+
+  // The tab click rewrites the URL in place; Chrome then skips its own
+  // fragment jump on reload because the page scrolls in an inner viewport.
+  await page.getByRole('tab', { name: 'ChatGPT', exact: true }).click();
+  await expect(page).toHaveURL(/\?client=chatgpt&plan=free#quick-setup$/);
+  await page.reload();
+
+  await expect(page.getByRole('tab', { name: 'ChatGPT', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(quickSetup).toBeInViewport();
+  const headingBox = (await quickSetup.boundingBox())!;
+  const viewportBox = (await page.locator('.docs-scroll-viewport').boundingBox())!;
+  expect(Math.abs(headingBox.y - viewportBox.y - 32)).toBeLessThanOrEqual(1);
+});
+
+test('table of contents skips headings in inactive tabs and its links select their tab', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/docs/console/intelligence/mcp-server#quick-setup');
+
+  // "Header-based authentication" sits in the hidden "Other" client tab; its
+  // zero rect must not claim the reading line.
+  const toc = page.getByRole('complementary', { name: 'On this page' });
+  const hiddenHeadingLink = toc.getByRole('link', { name: 'Header-based authentication' });
+  await expect(toc.getByRole('link', { name: 'Quick setup' })).toHaveAttribute('aria-current', 'location');
+  await expect(hiddenHeadingLink).not.toHaveAttribute('aria-current');
+
+  // Following its TOC link selects the tab that holds the heading.
+  const heading = page.getByRole('heading', { name: 'Header-based authentication', level: 4 });
+  await hiddenHeadingLink.click();
+  await expect(page.getByRole('tab', { name: 'Other', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(heading).toBeInViewport();
+  await expect(page).toHaveURL(/\?client=other#header-based-authentication$/);
+
+  // Switching away afterwards is not overridden by the stale hash.
+  await page.getByRole('tab', { name: 'Cursor', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'Cursor', exact: true })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('MDX tabs without a param keep selection out of the URL', async ({ page }) => {
+  await page.goto('/docs/use-cases/llm-observability/redaction-policies');
+
+  const tab = page.getByRole('tab', { name: 'OpenTelemetryDefault', exact: true }).first();
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/\/redaction-policies$/);
+});
+
 test('fragment navigation reveals content inside a closed MDX accordion', async ({ page }) => {
   await page.goto('/docs/console/intelligence/mcp-server');
 
