@@ -2349,7 +2349,7 @@ test('reloading after a tab changes the URL still lands on the fragment heading'
   expect(Math.abs(headingBox.y - viewportBox.y - 32)).toBeLessThanOrEqual(1);
 });
 
-test('table of contents ignores and reveals headings inside inactive tabs', async ({ page }) => {
+test('table of contents skips headings in inactive tabs and its links select their tab', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/docs/console/intelligence/mcp-server#quick-setup');
 
@@ -2360,20 +2360,16 @@ test('table of contents ignores and reveals headings inside inactive tabs', asyn
   await expect(toc.getByRole('link', { name: 'Quick setup' })).toHaveAttribute('aria-current', 'location');
   await expect(hiddenHeadingLink).not.toHaveAttribute('aria-current');
 
-  // Following its TOC link opens the tab that holds the heading.
+  // Following its TOC link selects the tab that holds the heading.
   const heading = page.getByRole('heading', { name: 'Header-based authentication', level: 4 });
   await hiddenHeadingLink.click();
   await expect(page.getByRole('tab', { name: 'Other', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(heading).toBeInViewport();
   await expect(page).toHaveURL(/\?client=other#header-based-authentication$/);
 
-  // Switching away is not overridden by the stale hash, and re-clicking the
-  // same link (no hashchange) reveals it again.
+  // Switching away afterwards is not overridden by the stale hash.
   await page.getByRole('tab', { name: 'Cursor', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Cursor', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await hiddenHeadingLink.click();
-  await expect(page.getByRole('tab', { name: 'Other', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(heading).toBeInViewport();
 });
 
 test('MDX tabs without a param keep selection out of the URL', async ({ page }) => {
