@@ -135,7 +135,7 @@ Mintlify-specific content was retained by mapping its constructs in `components/
 
 - `Info`, `Note`, `Tip`, `Warning`, and `CallOut` → Axiom notices.
 - `Accordion` and `AccordionGroup` → Fumadocs accordion primitives with compact custom styling.
-- `Tabs` and `Tab` → a shared compact tab treatment.
+- `Tabs` and `Tab` → a shared compact tab treatment. `<Tabs param="client">` opts a group into shareable URL state (`?client=<slugified tab title>`); groups without `param` keep selection local. Nested groups need distinct params.
 - `LanguageComparisons` → the query-language comparison control.
 - `Card`, `CardGroup`, `Cards`, `Steps`, and `Step` → Fumadocs primitives.
 - `Frame`, `CodeGroup`, `ParamField`, and `ResponseField` → custom compatibility components.

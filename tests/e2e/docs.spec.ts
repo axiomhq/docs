@@ -2314,6 +2314,32 @@ test('grouped MDX accordions keep only one item open', async ({ page }) => {
   );
 });
 
+test('MDX tabs with a param restore and share their selection through the URL', async ({ page }) => {
+  await page.goto('/docs/console/intelligence/mcp-server?client=claude&plan=free#quick-setup');
+
+  // Nested groups: the plan tabs live inside the Claude client panel.
+  await expect(page.getByRole('tab', { name: 'Claude', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Free', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel', { name: 'Free', exact: true })).toContainText('Claude Desktop');
+
+  await page.getByRole('tab', { name: 'Claude Code', exact: true }).click();
+  await expect(page).toHaveURL(/\?client=claude-code&plan=free#quick-setup$/);
+  await expect(page.getByRole('tabpanel', { name: 'Claude Code', exact: true })).toContainText('claude mcp add');
+
+  // Reloading the shared URL reopens the same tab after hydration.
+  await page.reload();
+  await expect(page.getByRole('tab', { name: 'Claude Code', exact: true })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('MDX tabs without a param keep selection out of the URL', async ({ page }) => {
+  await page.goto('/docs/use-cases/llm-observability/redaction-policies');
+
+  const tab = page.getByRole('tab', { name: 'OpenTelemetryDefault', exact: true }).first();
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/\/redaction-policies$/);
+});
+
 test('fragment navigation reveals content inside a closed MDX accordion', async ({ page }) => {
   await page.goto('/docs/console/intelligence/mcp-server');
 
