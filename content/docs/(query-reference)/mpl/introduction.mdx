@@ -40,7 +40,7 @@ A typical MPL query contains the following:
 
 **Example:**
 
-```kusto
+```mpl
 `otel-demo-metrics`:`go.memory.used`
 | where `k8s.deployment.name` == "checkout"
 | align to 5m using avg
@@ -64,7 +64,7 @@ Directives must appear before the query body.
 
 **Syntax:**
 
-```kusto
+```mpl
 set <directive_name> = <directive_value>;
 ```
 
@@ -80,13 +80,13 @@ Use string values for `custom_unit`. Set it to `"1"` to render values as unitles
 
 **Examples:**
 
-```kusto
+```mpl
 set custom_unit = "ms";
 `otel-demo-metrics`:`http.server.request.duration`
 | align to 5m using avg
 ```
 
-```kusto
+```mpl
 set custom_unit = "1";
 `otel-demo-metrics`:`http.server.request.duration`
 | align to 5m using avg
@@ -98,7 +98,7 @@ Specify the dataset, the metric, and optional time bounds.
 
 **Syntax:**
 
-```kusto
+```mpl
 <dataset>:<metric>[<time range>][ as <alias>]
 ```
 
@@ -109,7 +109,7 @@ Specify the dataset, the metric, and optional time bounds.
 
 **Examples:**
 
-```kusto
+```mpl
 `otel-demo-metrics`:`go.memory.used`[1h..]
 `otel-demo-metrics`:`go.memory.used`[2h..5m]
 `otel-demo-metrics`:`go.memory.used`[2025-03-01T13:00:00Z..+1h] as mem_usage
@@ -121,7 +121,7 @@ Use `where` to filter series based on tag values.
 
 **Syntax:**
 
-```kusto
+```mpl
 | where <filter-expression>
 ```
 
@@ -142,7 +142,7 @@ The value must be one of the [supported data types](#data-types).
 
 **Examples:**
 
-```kusto
+```mpl
 | where environment == "production" and status_code >= 200 and status_code < 300
 
 | where (environment == "production" or environment == "staging") and not status_code == 500
@@ -168,7 +168,7 @@ Available functions:
 
 **Examples:**
 
-```kusto
+```mpl
 // Calculate rate per second for the metric
 | map rate
 
@@ -197,7 +197,7 @@ Use `filter::` functions to remove data points that don't match a condition. Dat
 
 **Example:**
 
-```kusto
+```mpl
 // Remove data points where latency exceeds 400ms
 | map filter::lt(0.4)
 ```
@@ -219,7 +219,7 @@ Use `is::` instead of `filter::` when you need to preserve the shape of the time
 
 **Example:**
 
-```kusto
+```mpl
 // Set to 1.0 where latency is within SLO (below 400ms), 0.0 otherwise
 | map is::lt(0.4)
 ```
@@ -231,7 +231,7 @@ If you omit `to <time_window>`, `align` aggregates over the full query range and
 
 **Syntax:**
 
-```kusto
+```mpl
 | align to <time_window> using <aggregation_function>
 | align using <aggregation_function>
 ```
@@ -250,7 +250,7 @@ Available aggregation functions:
 
 **Examples:**
 
-```kusto
+```mpl
 // Calculate the average over 5-minute time windows
 | align to 5m using avg
 
@@ -267,7 +267,7 @@ Use `group by` to combine series by tags.
 
 **Syntax:**
 
-```kusto
+```mpl
 | group [by <tag1>, <tag2>] using <aggregation_function>
 ```
 
@@ -285,7 +285,7 @@ Available aggregation functions:
 
 **Examples:**
 
-```kusto
+```mpl
 // Calculate the number of series
 | group using count
 
@@ -303,7 +303,7 @@ If you omit `to <time_window>`, `bucket` aggregates over the full query range an
 
 **Syntax:**
 
-```kusto
+```mpl
 | bucket [by <tags>] to <window> using <function>
 | bucket [by <tags>] using <function>
 ```
@@ -324,7 +324,7 @@ MPL has no equivalent function for summary metrics. For more information, see [Q
 
 **Examples:**
 
-```kusto
+```mpl
 // Bucket over the `service` and `endpoint` tags using the histogram aggregation
 | bucket by service, endpoint to 5m using histogram(max)
 
@@ -343,7 +343,7 @@ Use `extend` to add new tags to every series in the query result. `extend` suppo
 
 **Syntax:**
 
-```kusto
+```mpl
 | extend <tag1> = <value1> [, <tag2> = <value2> ...]
 ```
 
@@ -352,7 +352,7 @@ Use `extend` to add new tags to every series in the query result. `extend` suppo
 
 **Examples:**
 
-```kusto
+```mpl
 // Add a constant string tag
 | extend environment = "production"
 
@@ -371,7 +371,7 @@ Combine multiple metrics in one query block.
 
 **Syntax:**
 
-```kusto
+```mpl
 (
   <subquery1>,
   <subquery2>
@@ -393,7 +393,7 @@ Available operators:
 
 `compute` uses strict intersection semantics. It only combines series with matching tag sets, and it only emits values for timestamps present on both sides. If you want results for timestamps where only one side has a value, fill missing values using `map` functions.
 
-```kusto
+```mpl
 // Use 0 as the default for addition
 (
   <subquery1> | map fill::const(0),
@@ -411,7 +411,7 @@ Available operators:
 
 **Example:**
 
-```kusto
+```mpl
 // Return the average error rate over the past 5 minutes
 (
   `otel-demo-metrics`:`http.server.request.duration`
@@ -472,7 +472,7 @@ MPL provides the following built-in variables that can be used in queries:
 
 **Example:**
 
-```kusto
+```mpl
 `otel-demo-metrics`:`http.server.request.duration`
 | align to $__interval using avg
 ```
@@ -481,7 +481,7 @@ MPL provides the following built-in variables that can be used in queries:
 
 **Syntax:**
 
-```kusto
+```mpl
 [<start>..<end>?]
 ```
 
@@ -509,7 +509,7 @@ Time can be defined in one of the following ways:
 
 **Examples:**
 
-```kusto
+```mpl
 // One hour ago until the current time
 [1h..]
 

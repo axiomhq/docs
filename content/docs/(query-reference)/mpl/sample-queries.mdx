@@ -8,7 +8,7 @@ sidebarTitle: Sample queries
 
 Calculate the rate of successful HTTP requests by method and route.
 
-```kusto
+```mpl
 `otel-demo-metrics`:`http.server.request.duration`
 | where `axiom.histogram` == "count"
 | where `http.response.status_code` < 400
@@ -22,7 +22,7 @@ Calculate the rate of successful HTTP requests by method and route.
 
 Calculate the 90th and 99th percentile HTTP request durations by service.
 
-```kusto
+```mpl
 `otel-demo-metrics`:`http.server.request.duration`
 | where `http.response.status_code` < 400
 | bucket by `service.name` to 5m using interpolate_delta_histogram(0.90, 0.99)
@@ -36,7 +36,7 @@ Calculate the 90th and 99th percentile HTTP request durations by service.
 `interpolate_cumulative_histogram` works on histogram metrics using cumulative temporality. `interpolate_delta_histogram` works on histogram metrics using delta temporality.
 </Info>
 
-```kusto
+```mpl
 `otel-demo-metrics`:`http.server.request.duration`
 | where `http.response.status_code` < 400
 | bucket by `http.request.method`, `http.route` to 5m using interpolate_cumulative_histogram(rate, 0.90, 0.99)
@@ -48,7 +48,7 @@ Calculate the 90th and 99th percentile HTTP request durations by service.
 
 Show how request durations are distributed across a histogram's buckets. Visualize the result with a [heatmap](/dashboard-elements/heatmap) dashboard element.
 
-```kusto
+```mpl
 `otel-demo-metrics`:`http.server.request.duration`
 | where `axiom.histogram` == "bucket"
 | align to 5m using prom::rate
@@ -63,7 +63,7 @@ Show how request durations are distributed across a histogram's buckets. Visuali
 
 Calculate the fraction of HTTP requests returning 5xx errors.
 
-```kusto
+```mpl
 (
   `otel-demo-metrics`:`http.server.request.duration`
   | where `http.response.status_code` >= 500
@@ -86,7 +86,7 @@ Calculate the fraction of HTTP requests returning 5xx errors.
 
 Calculate the fraction of time JVM CPU utilization stays below 80% over a 7-day window.
 
-```kusto
+```mpl
 `otel-demo-metrics`:`jvm.cpu.recent_utilization`
 | group using max
 | map is::lt(0.8)
@@ -99,7 +99,7 @@ Calculate the fraction of time JVM CPU utilization stays below 80% over a 7-day 
 
 Calculate the fraction of requests completing within the `400ms` latency SLO target, measured weekly.
 
-```kusto
+```mpl
 `otel-demo-metrics`:`http.server.request.duration`
 | bucket to 5m using interpolate_cumulative_histogram(rate, 0.99)
 | map is::lt(0.4)

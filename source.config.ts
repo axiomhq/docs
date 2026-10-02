@@ -4,6 +4,9 @@ import { defineConfig, defineDocs } from 'fumadocs-mdx/config';
 import { z } from 'zod';
 import { axiomCodeDark, axiomCodeLight } from './lib/code-theme';
 import { rehypePlaygroundCode } from './lib/rehype-playground-code';
+import { registerQueryLanguages } from './lib/query-languages';
+
+await registerQueryLanguages();
 
 export const docs = defineDocs({
   dir: 'content/docs',
