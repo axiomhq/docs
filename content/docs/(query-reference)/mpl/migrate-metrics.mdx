@@ -39,13 +39,15 @@ In PromQL, regular expressions are written as string literals using the `=~` ope
 
 MPL treats regular expressions as a first-class type. Use the `==` and `!=` operators with a regex literal prefixed by `#/`. There is no `=~` operator in MPL.
 
-```kusto
-// PromQL
+<CodeGroup>
+```promql PromQL
 service=~"checkout|payment"
+```
 
-// MPL equivalent
+```mpl MPL equivalent
 | where service == #/checkout|payment/
 ```
+</CodeGroup>
 
 <Tip>
 Regex is a native type in MPL. Denote regex using `#/` and `/` instead of quotation marks (`'` or `"`).
@@ -60,7 +62,7 @@ In regex, escape slash (`/`), but don't escape quotation marks (`'` or `"`).
 Calculate the fraction of time JVM CPU utilization stays below 80% over a 7-day window.
 
 <CodeGroup>
-```kusto Prometheus example
+```promql Prometheus example
 avg_over_time(
    (
       max(jvm_cpu_recent_utilization_ratio) < bool 0.8
@@ -68,7 +70,7 @@ avg_over_time(
 )
 ```
 
-```kusto MPL equivalent
+```mpl MPL equivalent
 `otel-demo-metrics`:`jvm.cpu.recent_utilization`
 | group using max
 | map is::lt(0.8)
@@ -83,11 +85,11 @@ avg_over_time(
 Convert CPU utilization from a ratio (0–1) to a percentage (0–100).
 
 <CodeGroup>
-```kusto Prometheus example
+```promql Prometheus example
 process_cpu_utilization_ratio{} * 100
 ```
 
-```kusto MPL equivalent
+```mpl MPL equivalent
 `otel-demo-metrics`:`process.cpu.utilization`
 | map * 100
 ```
@@ -100,13 +102,13 @@ process_cpu_utilization_ratio{} * 100
 Calculate the average error rate per 5-minute windows for HTTP server requests.
 
 <CodeGroup>
-```kusto Prometheus example
+```promql Prometheus example
 sum(rate(http_server_request_duration_seconds_count{status_code=~"5.."}[5m]))
 /
 sum(rate(http_server_request_duration_seconds_count{}[5m]))
 ```
 
-```kusto MPL equivalent
+```mpl MPL equivalent
 (
   `otel-demo-metrics`:`http.server.request.duration`
   | where `http.response.status_code` >= 500
@@ -129,7 +131,7 @@ sum(rate(http_server_request_duration_seconds_count{}[5m]))
 Calculate the rate of HTTP requests by method, route, and status code.
 
 <CodeGroup>
-```kusto Prometheus example
+```promql Prometheus example
 sum by (method, route, status_code) (
       rate(
           http_server_request_duration_seconds_count{
@@ -139,7 +141,7 @@ sum by (method, route, status_code) (
   )
 ```
 
-```kusto MPL equivalent
+```mpl MPL equivalent
 `otel-demo-metrics`:`http.server.request.duration`
 | where `http.response.status_code` == #/[123]../
 | map rate
