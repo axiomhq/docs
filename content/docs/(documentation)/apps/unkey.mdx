@@ -1,57 +1,193 @@
 ---
 title: 'Connect Axiom with Unkey'
-description: 'Stream Unkey workspace audit logs to an Axiom dataset with an Axiom log drain.'
+description: 'Stream Unkey audit logs, key verifications, gateway HTTP requests, runtime logs, and rate-limit decisions to Axiom.'
 sidebarTitle: Unkey
-keywords: ['unkey', 'audit logs', 'log drains']
+keywords: ['unkey', 'log drains']
 ---
 
 import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
 
-Unkey provides infrastructure for building and operating APIs. Connect Unkey with Axiom to stream structured workspace audit logs into an Axiom dataset.
+Unkey provides infrastructure for building and operating APIs. Connect Unkey with Axiom to send audit logs, key verifications, gateway HTTP requests, runtime logs, and rate-limit decisions to an Axiom dataset.
 
 <Prerequisites />
 - [Create an Unkey account](https://app.unkey.com).
 
+## Supported event streams
+
+Each log drain sends one event stream. To send all five streams, create five drains. You can send them to the same Axiom dataset and use the `stream` field to distinguish them, or use a separate dataset for each stream.
+
+| Stream | `stream` value | Events |
+| --- | --- | --- |
+| Audit logs | `audit_logs` | Workspace actions, such as creating projects or changing configuration |
+| Key verifications | `key_verifications` | API key verification results, including successful and rejected verifications |
+| Gateway HTTP requests | `gateway_requests` | Recorded HTTP requests served through Unkey's gateway |
+| Runtime logs | `runtime_logs` | Collected application output, including structured logs and multiline messages |
+| Rate limits | `ratelimits` | Recorded API rate-limit decisions, including passed and blocked checks |
+
 ## Set up an Axiom log drain
 
-Create the log drain in your Unkey workspace:
+Create a log drain in your Unkey workspace.
 
 1. In the Unkey dashboard, select your workspace, and then go to **Settings > Log Drains**.
 1. Click **Create Log Drain**.
 1. Select **Axiom** as the destination.
 1. Enter a descriptive name for the log drain.
+1. In **Stream**, select **Audit logs**, **Key verifications**, **Gateway HTTP requests**, **Runtime logs**, or **Rate limits**.
+1. Optional: Configure stream filters to limit which events Unkey sends.
 1. Enter the name of your Axiom dataset and your Axiom API token.
-1. Select **New audit logs** to send future events, or select **All retained audit logs** to include the history available under your [workspace's audit log retention](https://www.unkey.com/docs/audit-log/introduction#retention).
 1. Click **Create Log Drain**.
+1. Repeat these steps for each additional stream you want to send.
 
-Unkey sends audit logs asynchronously in batches. Events can take several minutes to appear in Axiom.
+Drains start at creation time. Historical backfill isn't supported. Unkey sends events asynchronously in batches, so events can take several minutes to appear in Axiom.
 
-Each Axiom row contains `_time`, a `stream` value of `audit_logs`, and the audit log payload in `event`. Log drains provide at-least-once delivery, so use `event.id` to identify duplicate events.
+## Explore your Unkey events
 
-For delivery behavior, retries, and troubleshooting, see the [Unkey log drain documentation](https://www.unkey.com/docs/audit-log/log-drains).
+After you create a drain, open the [Stream tab](/query-data/stream) in Axiom to verify that events arrive in your dataset. Filter by `stream` to inspect an event type.
 
-## Explore your Unkey audit logs
+Each event includes `_time`, when it occurred, and `stream`, its event type.
 
-After you create the log drain, open the [Stream tab](/query-data/stream) in Axiom to verify that events arrive in your dataset. Unkey audit log rows include the following fields:
+### Audit logs
 
-- **`_time`**: Time when the action occurred
-- **`stream`**: Unkey log stream, with the value `audit_logs`
-- **`['event.id']`**: Unique event identifier for deduplication
-- **`['event.action']`**: Action that produced the event, such as `key.create`
-- **`['event.occurred_at']`**: Time when the action occurred
-- **`['event.actor.type']`**: Type of actor, such as `user`, `rootkey`, or `system`
-- **`['event.actor.id']`**: Identifier of the actor
-- **`['event.actor.name']`**: Display name of the actor, when available
-- **`['event.actor.metadata']`**: Additional actor attributes, when available
-- **`['event.targets']`**: Resources affected by the action. Each target contains:
-  - **`id`**: Identifier of the resource
-  - **`type`**: Type of resource, such as `api` or `key`
-  - **`name`**: Display name of the resource
-  - **`metadata`**: Additional resource attributes, when available
-- **`['event.context.location']`**: IP address associated with the action
-- **`['event.context.user_agent']`**: User agent associated with the action
-- **`['event.metadata']`**: Additional event attributes, when available
-- **`['event.description']`**: Human-readable summary of the action
-- **`['event.correlation_id']`**: Identifier that groups related events, when available
+The `audit_logs` stream records who performed a workspace action and which resources it affected.
 
-For the complete list of actions, see [Unkey audit log event types](https://www.unkey.com/docs/audit-log/types).
+```json
+{
+  "_time": "2026-09-10T12:34:56.789Z",
+  "stream": "audit_logs",
+  "id": "evt_123",
+  "action": "key.create",
+  "occurred_at": "2026-09-10T12:34:56.789Z",
+  "actor": {
+    "id": "user_123",
+    "type": "user",
+    "name": "Ada",
+    "metadata": null
+  },
+  "targets": [
+    {
+      "id": "key_123",
+      "type": "key",
+      "name": "Production API key",
+      "metadata": null
+    }
+  ],
+  "context": {
+    "location": "203.0.113.10",
+    "user_agent": "Mozilla/5.0"
+  },
+  "metadata": null,
+  "description": "Created Production API key",
+  "correlation_id": "req_123"
+}
+```
+
+See [Unkey audit log event types](https://www.unkey.com/docs/audit-log/types) for the complete list of actions.
+
+### Key verifications
+
+The `key_verifications` stream records API key verification outcomes.
+
+```json
+{
+  "_time": "2026-09-10T12:34:56.789Z",
+  "stream": "key_verifications",
+  "request_id": "req_123",
+  "key_space_id": "ks_production",
+  "key_id": "key_123",
+  "identity": {
+    "id": "id_123",
+    "externalId": "customer_123"
+  },
+  "region": "eu-west-1",
+  "source": { "type": "api" },
+  "outcome": "VALID",
+  "tags": ["paid"],
+  "spent_credits": 1
+}
+```
+
+See [Unkey key verification payloads](https://www.unkey.com/docs/log-drains/overview#read-a-key-verification-payload) for field details.
+
+### Gateway HTTP requests
+
+The `gateway_requests` stream records gateway request metadata, response status, latency, and captured request details.
+
+```json
+{
+  "_time": "2026-09-10T12:34:56.789Z",
+  "stream": "gateway_requests",
+  "request_id": "req_123",
+  "project_id": "proj_store",
+  "app_id": "app_backend",
+  "environment_id": "env_production",
+  "deployment_id": "dep_release",
+  "region": "eu-west-1",
+  "request": {
+    "method": "GET",
+    "host": "api.example.com",
+    "path": "/orders",
+    "query_string": "status=paid",
+    "query_params": { "status": ["paid"] },
+    "headers": ["Accept: application/json"],
+    "body": "",
+    "user_agent": "store-client/1.0",
+    "ip_address": "203.0.113.10"
+  },
+  "response": {
+    "status": 200,
+    "headers": ["Content-Type: application/json"],
+    "body": "{\"orders\":[]}"
+  },
+  "latency": { "total": 52, "instance": 41, "gateway": 11 }
+}
+```
+
+Captured details follow your Unkey logging policy. See [Unkey gateway request payloads](https://www.unkey.com/docs/log-drains/overview#read-a-gateway-request-payload) for field details and capture limits.
+
+### Runtime logs
+
+The `runtime_logs` stream forwards collected application output, including multiline messages and nested structured attributes.
+
+```json
+{
+  "_time": "2026-09-10T12:34:56.789Z",
+  "stream": "runtime_logs",
+  "log_id": "rlog_123",
+  "severity": "error",
+  "message": "Payment failed",
+  "attributes": { "order": { "id": 42 }, "retry": false },
+  "project_id": "proj_store",
+  "app_id": "app_backend",
+  "environment_id": "env_production",
+  "deployment_id": "dep_release",
+  "region": "eu-west-1"
+}
+```
+
+See [Unkey runtime log payloads](https://www.unkey.com/docs/log-drains/overview#read-a-runtime-log-payload) for field details and handling of application output.
+
+### Rate limits
+
+The `ratelimits` stream exports recorded decisions from `ratelimit.limit` and `ratelimit.multiLimit`. These are rate-limit checks, not audit events for configuration changes.
+
+```json
+{
+  "_time": "2026-09-10T12:34:56.789Z",
+  "stream": "ratelimits",
+  "request_id": "req_123",
+  "namespace_id": "rl_payments",
+  "identifier": "customer_123",
+  "passed": false,
+  "limit": 100,
+  "remaining": 0,
+  "reset_at": 1789043756789,
+  "tokens": 3,
+  "source": "api"
+}
+```
+
+See [Unkey rate-limit payloads](https://www.unkey.com/docs/log-drains/overview#read-a-rate-limit-payload) for field details and which decisions are recorded.
+
+## Delivery and troubleshooting
+
+For delivery status, retention, retries, and troubleshooting, see the [Unkey log drain documentation](https://www.unkey.com/docs/log-drains/overview).
