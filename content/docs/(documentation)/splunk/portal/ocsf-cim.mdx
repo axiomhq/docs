@@ -9,9 +9,7 @@ Security teams in Splunk build on the [Common Information Model](https://help.sp
 
 The Axiom Portal for Splunk bridges the two at read time. It presents an [OCSF dataset in Axiom](/use-cases/ocsf) as a second Splunk index whose events carry CIM field names and values. Nothing is copied or rewritten in Axiom. This page covers the last step of the OCSF flow: searching OCSF data from Splunk.
 
-<Warning title="Preview">
-Searching OCSF data as CIM is in preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states). It requires transparent mode, and it maps only the OCSF classes and CIM data models listed on this page. It has been tested against Splunk_SA_CIM on Splunk Enterprise 9.4 and 10.4, not with Enterprise Security installed.
-</Warning>
+Searching OCSF data as CIM requires transparent mode and the [Axiom for Splunk app](/splunk/app/setup) TODO-APP-VERSION or later on the search head. It maps the OCSF classes and CIM data models listed on this page.
 
 ## How it works
 
@@ -86,6 +84,7 @@ Data models without an OCSF source, such as Risk, Certificates, Updates, and the
 ## Requirements
 
 - The Portal registered as a [transparent mode provider](/splunk/portal/set-up-transparent), with the search head’s knowledge objects turned on. Standard mode doesn’t expand tags or send data model definitions, so the CIM mapping doesn’t work with it.
+- The [Axiom for Splunk app](/splunk/app/setup) TODO-APP-VERSION or later on the search head. It provides the eventtypes and tags that connect OCSF classes to CIM data models.
 - The [Splunk Common Information Model add-on](https://splunkbase.splunk.com/app/1621) (`Splunk_SA_CIM`) on the search head. Enterprise Security includes it.
 - An OCSF dataset in Axiom that follows the [Axiom OCSF schema](/use-cases/ocsf#the-axiom-ocsf-schema). For more information, see [Send OCSF data to Axiom](/use-cases/ocsf/send-data).
 - A dataset name that Splunk accepts as an index name: lowercase letters, digits, underscores, and hyphens, starting with a letter or digit. The `cim_` prefix is reserved, so the Portal can’t search a dataset whose own name starts with `cim_` as a native index.
@@ -95,178 +94,8 @@ Data models without an OCSF source, such as Risk, Certificates, Updates, and the
 These steps use a dataset named `ocsf`. Replace it with the name of your dataset.
 
 <Steps>
-<Step title="Install the OCSF eventtypes and tags">
-On the search head, create an app that holds the eventtypes and tags, for example `$SPLUNK_HOME/etc/apps/axiom_ocsf_cim`. Add the three files below, then restart Splunk.
-
-<Tabs>
-<Tab title="default/eventtypes.conf">
-
-```ini
-[ocsf_network_activity]
-search = class_uid=4001
-
-[ocsf_authentication]
-search = class_uid=3002 activity_id=1
-
-[ocsf_http_activity]
-search = class_uid=4002
-
-[ocsf_dns_activity]
-search = class_uid=4003
-
-[ocsf_file_activity]
-search = class_uid=1001
-
-[ocsf_process_activity]
-search = class_uid=1007
-
-[ocsf_registry_key_activity]
-search = class_uid=201001
-
-[ocsf_registry_value_activity]
-search = class_uid=201002
-
-[ocsf_account_change]
-search = class_uid=3001
-
-[ocsf_group_management]
-search = class_uid=3006
-
-[ocsf_detection_finding]
-search = class_uid=2004 OR class_uid=2001
-
-[ocsf_vulnerability_finding]
-search = class_uid=2002
-
-[ocsf_data_security_finding]
-search = class_uid=2006
-
-[ocsf_email_activity]
-search = class_uid=4009
-
-[ocsf_dhcp_activity]
-search = class_uid=4004
-
-[ocsf_user_access]
-search = class_uid=3005
-
-[ocsf_entity_management]
-search = class_uid=3004
-
-[ocsf_scheduled_job_activity]
-search = class_uid=1006
-
-[ocsf_event_log_activity]
-search = class_uid=1008
-
-[ocsf_windows_service_activity]
-search = class_uid=201004
-
-[ocsf_api_activity]
-search = class_uid=6003
-```
-
-</Tab>
-<Tab title="default/tags.conf">
-
-```ini
-[eventtype=ocsf_network_activity]
-network = enabled
-communicate = enabled
-
-[eventtype=ocsf_authentication]
-authentication = enabled
-
-[eventtype=ocsf_http_activity]
-web = enabled
-
-[eventtype=ocsf_dns_activity]
-network = enabled
-resolution = enabled
-dns = enabled
-
-[eventtype=ocsf_file_activity]
-endpoint = enabled
-filesystem = enabled
-
-[eventtype=ocsf_process_activity]
-process = enabled
-report = enabled
-
-[eventtype=ocsf_registry_key_activity]
-endpoint = enabled
-registry = enabled
-
-[eventtype=ocsf_registry_value_activity]
-endpoint = enabled
-registry = enabled
-
-[eventtype=ocsf_account_change]
-change = enabled
-account = enabled
-
-[eventtype=ocsf_group_management]
-change = enabled
-account = enabled
-
-[eventtype=ocsf_detection_finding]
-ids = enabled
-attack = enabled
-alert = enabled
-
-[eventtype=ocsf_vulnerability_finding]
-report = enabled
-vulnerability = enabled
-
-[eventtype=ocsf_data_security_finding]
-dlp = enabled
-incident = enabled
-
-[eventtype=ocsf_email_activity]
-email = enabled
-
-[eventtype=ocsf_dhcp_activity]
-network = enabled
-session = enabled
-dhcp = enabled
-
-[eventtype=ocsf_user_access]
-change = enabled
-account = enabled
-
-[eventtype=ocsf_entity_management]
-change = enabled
-
-[eventtype=ocsf_scheduled_job_activity]
-change = enabled
-
-[eventtype=ocsf_event_log_activity]
-change = enabled
-audit = enabled
-
-[eventtype=ocsf_windows_service_activity]
-service = enabled
-report = enabled
-
-[eventtype=ocsf_api_activity]
-change = enabled
-```
-
-</Tab>
-<Tab title="metadata/default.meta">
-
-```ini
-[eventtypes]
-export = system
-
-[tags]
-export = system
-```
-
-</Tab>
-</Tabs>
-
-`export = system` makes the eventtypes and tags visible to every app on the search head, including Splunk_SA_CIM and Enterprise Security.
+<Step title="Install the Axiom for Splunk app">
+Install or upgrade the [Axiom for Splunk app](/splunk/app/setup) to TODO-APP-VERSION or later on the search head, then restart Splunk. The app ships eventtypes that select OCSF events by `class_uid` and tags them for the CIM data models in [Supported data models](#supported-data-models). They’re shared with every app on the search head, including Splunk_SA_CIM and Enterprise Security.
 </Step>
 <Step title="Check the CIM index">
 The `cim_` index appears automatically once the dataset contains OCSF data. Search it with a tag to confirm that tags expand and CIM fields are present:
@@ -363,7 +192,7 @@ Splunk normally answers `summariesonly=true` searches from pre-built acceleratio
 - **`unmapped` isn’t mapped.** Attributes stored under the `unmapped` map field don’t become CIM fields.
 - **Authentication covers logons only.** The Authentication eventtype selects `activity_id=1`. Other Authentication activities, such as logoffs, stay out of the data model.
 - **Index patterns must match one index.** An index pattern such as `index=cim_*`, for example in a data model macro, must match exactly one index. If it matches several, the search returns an error that names them. Name the concrete `cim_` index instead.
-- **Enterprise Security.** The mapping has been tested against the search shapes that ES and ESCU detections use, through Splunk_SA_CIM. It hasn’t been tested with Enterprise Security installed. ES features that depend on other configuration, such as asset and identity lookups, need their usual setup in ES.
+- **Enterprise Security.** TODO-ES-VERIFICATION: tested ES version, Splunk versions, and what was verified (correlation searches, notables, risk), from CONN-148. ES features that depend on other configuration, such as asset and identity lookups, need their usual setup in ES.
 - **One index per data model search.** A data model search that spans more than one `cim_` index returns an error.
 
 ## What’s next
