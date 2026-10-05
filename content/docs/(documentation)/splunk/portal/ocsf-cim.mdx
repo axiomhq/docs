@@ -1,0 +1,373 @@
+---
+title: 'Search OCSF data as Splunk CIM'
+description: 'Learn how the Axiom Portal for Splunk presents an OCSF dataset in Axiom as Splunk Common Information Model (CIM) data, so CIM data models, tstats, and Enterprise Security searches run against it.'
+sidebarTitle: OCSF as CIM
+keywords: ['splunk', 'splunk portal', 'axiom portal for splunk', 'ocsf', 'cim', 'common information model', 'data models', 'tstats', 'enterprise security', 'escu', 'transparent mode', 'eventtypes', 'tags']
+---
+
+Security teams in Splunk build on the [Common Information Model](https://help.splunk.com/en/splunk-enterprise-security-8/common-information-model/8.5/introduction/overview-of-the-splunk-common-information-model) (CIM): data models such as Authentication and Network_Traffic, `tstats` searches over them, and the Enterprise Security (ES) detections built on both. OCSF data uses different field names for the same ideas. For example, CIM’s `user` is OCSF’s `user.name` in a logon, and CIM’s `action` comes from `status_id` in a logon or from `action_id` in network traffic.
+
+The Axiom Portal for Splunk bridges the two at read time. It presents an [OCSF dataset in Axiom](/use-cases/ocsf) as a second Splunk index whose events carry CIM field names and values. Nothing is copied or rewritten in Axiom. This page covers the last step of the OCSF flow: searching OCSF data from Splunk.
+
+<Warning title="Preview">
+Searching OCSF data as CIM is in preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states). It requires transparent mode, and it maps only the OCSF classes and CIM data models listed on this page. It has been tested against Splunk_SA_CIM on Splunk Enterprise 9.4 and 10.4, not with Enterprise Security installed.
+</Warning>
+
+## How it works
+
+```mermaid
+flowchart LR
+    DS[("Axiom dataset ocsf<br/>OCSF columns")]:::axiom --> Raw["index=ocsf<br/>native OCSF fields"]:::splunk
+    DS --> Map["Portal maps OCSF to CIM<br/>on read"]:::axiom
+    Map --> Cim["index=cim_ocsf<br/>CIM fields: action, user,<br/>src, dest, …"]:::splunk
+    ET["Eventtypes and tags<br/>class_uid to CIM tags"]:::splunk --> DM["Splunk_SA_CIM data models<br/>scoped to cim_ocsf"]:::splunk
+    Cim --> DM
+    DM --> ES["tstats, ES and ESCU<br/>detections, dashboards"]:::splunk
+```
+
+Three pieces work together:
+
+- **Two indexes for one dataset.** For every Axiom dataset that looks like OCSF, the Portal advertises two indexes. `index=ocsf` shows the native OCSF fields. `index=cim_ocsf` points at the same dataset and adds CIM fields to every event. A dataset looks like OCSF when its `class_uid` field is an integer and it has at least one of `metadata.version`, `category_uid`, `type_uid`, `activity_id`, or `severity_id`.
+- **CIM fields computed in Axiom.** When you search a `cim_` index, the Portal computes the CIM fields inside the Axiom query, before filtering and aggregation. Filters such as `action=failure` and aggregations such as `stats count by user` therefore run in Axiom, like any other pushed-down search.
+- **Eventtypes and tags on the search head.** CIM data models find events by tag, for example `tag=authentication`. A set of eventtypes selects OCSF events by `class_uid` and attaches the CIM tags. In transparent mode, the search head expands tags into `class_uid` constraints before it sends the search to the Portal.
+
+### Class-aware mapping
+
+The same CIM field comes from different OCSF fields depending on the event class. The Portal reads the `*_id` enumerations first and falls back to their string siblings. For example:
+
+| CIM field | Authentication (`3002`) | Network Activity (`4001`) | Process Activity (`1007`) |
+| --- | --- | --- | --- |
+| `action` | `success` or `failure`, from `status_id` | `allowed` or `blocked`, from `action_id`, then `disposition_id` | `allowed` or `blocked`, from `action_id`, then `disposition_id` |
+| `user` | The account that logged on, `user.name` | The acting account, `actor.user.name` | The acting account, `actor.user.name` |
+| `dest` | The system logged on to, `dst_endpoint.ip` or `dst_endpoint.hostname` | The remote peer, `dst_endpoint.ip` or `dst_endpoint.hostname` | The device the event happened on, `device.hostname` or `device.ip` |
+| `src` | `src_endpoint.ip` or `src_endpoint.hostname` | `src_endpoint.ip` or `src_endpoint.hostname` | `src_endpoint.ip` or `src_endpoint.hostname` |
+| `severity` | Lowercase CIM severity from `severity_id` | Lowercase CIM severity from `severity_id` | Lowercase CIM severity from `severity_id` |
+
+For example, here is a failed logon from the [OCSF for Axiom sample data](/use-cases/ocsf/query#filter-on-promoted-columns) in the two indexes:
+
+| OCSF field in `index=ocsf` | Value | CIM field in `index=cim_ocsf` | Value |
+| --- | --- | --- | --- |
+| `status_id` | `2` | `action` | `failure` |
+| `user.name` | `heidi` | `user` | `heidi` |
+| `user.domain` | `CORP` | `dest_nt_domain` | `CORP` |
+| `src_endpoint.ip` | `10.24.111.174` | `src` | `10.24.111.174` |
+| `dst_endpoint.hostname` | `dc01.corp.example.com` | `dest` | `dc01.corp.example.com` |
+| `auth_protocol` | `Kerberos` | `authentication_method` | `Kerberos` |
+| `status_detail` | `Unknown user name or bad password.` | `reason` | `Unknown user name or bad password.` |
+| `severity_id` | `3` | `severity` | `medium` |
+
+Events in `index=cim_ocsf` keep their OCSF fields as well, so you can mix both vocabularies in one search. Where OCSF and CIM share a field name, such as `action`, `status`, and `severity`, the `cim_` index shows the CIM value for the classes the mapping covers and the native OCSF value for the others.
+
+The mapping reads only the typed columns of the dataset. Attributes stored under the `unmapped` map field don’t become CIM fields. Arrays of objects become multivalue CIM fields: `cve` from `vulnerabilities`, `file_hash` from `file.hashes`, `process_hash` from `process.file.hashes`, `answer` from `answers`, and `mitre_technique_id` from `attacks`. `cvss` is the first CVSS base score of the first vulnerability only.
+
+## Supported data models
+
+| CIM data model | OCSF classes | Tags |
+| --- | --- | --- |
+| Authentication | Authentication (`3002`), logon activity (`activity_id=1`) only | `authentication` |
+| Network_Traffic | Network Activity (`4001`) | `network`, `communicate` |
+| Network_Resolution | DNS Activity (`4003`) | `network`, `resolution`, `dns` |
+| Network_Sessions | DHCP Activity (`4004`) | `network`, `session`, `dhcp` |
+| Web | HTTP Activity (`4002`) | `web` |
+| Email | Email Activity (`4009`) | `email` |
+| Endpoint.Processes | Process Activity (`1007`) | `process`, `report` |
+| Endpoint.Filesystem | File System Activity (`1001`) | `endpoint`, `filesystem` |
+| Endpoint.Registry | Registry Key Activity (`201001`), Registry Value Activity (`201002`) | `endpoint`, `registry` |
+| Endpoint.Services | Windows Service Activity (`201004`) | `service`, `report` |
+| Change, including Account_Management | Account Change (`3001`), User Access Management (`3005`), Group Management (`3006`) | `change`, `account` |
+| Change | Entity Management (`3004`), Scheduled Job Activity (`1006`), API Activity (`6003`) | `change` |
+| Change, auditing changes | Event Log Activity (`1008`) | `change`, `audit` |
+| Intrusion_Detection and Alerts | Detection Finding (`2004`), Security Finding (`2001`) | `ids`, `attack`, `alert` |
+| Vulnerabilities | Vulnerability Finding (`2002`) | `report`, `vulnerability` |
+| Data_Loss_Prevention | Data Security Finding (`2006`) | `dlp`, `incident` |
+
+Data models without an OCSF source, such as Risk, Certificates, Updates, and the inventory data models, return no OCSF events. OCSF classes not listed in the table keep their native fields in the `cim_` index and match no CIM data model.
+
+## Requirements
+
+- The Portal registered as a [transparent mode provider](/splunk/portal/set-up-transparent), with the search head’s knowledge objects turned on. Standard mode doesn’t expand tags or send data model definitions, so the CIM mapping doesn’t work with it.
+- The [Splunk Common Information Model add-on](https://splunkbase.splunk.com/app/1621) (`Splunk_SA_CIM`) on the search head. Enterprise Security includes it.
+- An OCSF dataset in Axiom that follows the [Axiom OCSF schema](/use-cases/ocsf#the-axiom-ocsf-schema). For more information, see [Send OCSF data to Axiom](/use-cases/ocsf/send-data).
+- A dataset name that Splunk accepts as an index name: lowercase letters, digits, underscores, and hyphens, starting with a letter or digit. The `cim_` prefix is reserved, so the Portal can’t search a dataset whose own name starts with `cim_` as a native index.
+
+## Set up OCSF as CIM
+
+These steps use a dataset named `ocsf`. Replace it with the name of your dataset.
+
+<Steps>
+<Step title="Install the OCSF eventtypes and tags">
+On the search head, create an app that holds the eventtypes and tags, for example `$SPLUNK_HOME/etc/apps/axiom_ocsf_cim`. Add the three files below, then restart Splunk.
+
+<Tabs>
+<Tab title="default/eventtypes.conf">
+
+```ini
+[ocsf_network_activity]
+search = class_uid=4001
+
+[ocsf_authentication]
+search = class_uid=3002 activity_id=1
+
+[ocsf_http_activity]
+search = class_uid=4002
+
+[ocsf_dns_activity]
+search = class_uid=4003
+
+[ocsf_file_activity]
+search = class_uid=1001
+
+[ocsf_process_activity]
+search = class_uid=1007
+
+[ocsf_registry_key_activity]
+search = class_uid=201001
+
+[ocsf_registry_value_activity]
+search = class_uid=201002
+
+[ocsf_account_change]
+search = class_uid=3001
+
+[ocsf_group_management]
+search = class_uid=3006
+
+[ocsf_detection_finding]
+search = class_uid=2004 OR class_uid=2001
+
+[ocsf_vulnerability_finding]
+search = class_uid=2002
+
+[ocsf_data_security_finding]
+search = class_uid=2006
+
+[ocsf_email_activity]
+search = class_uid=4009
+
+[ocsf_dhcp_activity]
+search = class_uid=4004
+
+[ocsf_user_access]
+search = class_uid=3005
+
+[ocsf_entity_management]
+search = class_uid=3004
+
+[ocsf_scheduled_job_activity]
+search = class_uid=1006
+
+[ocsf_event_log_activity]
+search = class_uid=1008
+
+[ocsf_windows_service_activity]
+search = class_uid=201004
+
+[ocsf_api_activity]
+search = class_uid=6003
+```
+
+</Tab>
+<Tab title="default/tags.conf">
+
+```ini
+[eventtype=ocsf_network_activity]
+network = enabled
+communicate = enabled
+
+[eventtype=ocsf_authentication]
+authentication = enabled
+
+[eventtype=ocsf_http_activity]
+web = enabled
+
+[eventtype=ocsf_dns_activity]
+network = enabled
+resolution = enabled
+dns = enabled
+
+[eventtype=ocsf_file_activity]
+endpoint = enabled
+filesystem = enabled
+
+[eventtype=ocsf_process_activity]
+process = enabled
+report = enabled
+
+[eventtype=ocsf_registry_key_activity]
+endpoint = enabled
+registry = enabled
+
+[eventtype=ocsf_registry_value_activity]
+endpoint = enabled
+registry = enabled
+
+[eventtype=ocsf_account_change]
+change = enabled
+account = enabled
+
+[eventtype=ocsf_group_management]
+change = enabled
+account = enabled
+
+[eventtype=ocsf_detection_finding]
+ids = enabled
+attack = enabled
+alert = enabled
+
+[eventtype=ocsf_vulnerability_finding]
+report = enabled
+vulnerability = enabled
+
+[eventtype=ocsf_data_security_finding]
+dlp = enabled
+incident = enabled
+
+[eventtype=ocsf_email_activity]
+email = enabled
+
+[eventtype=ocsf_dhcp_activity]
+network = enabled
+session = enabled
+dhcp = enabled
+
+[eventtype=ocsf_user_access]
+change = enabled
+account = enabled
+
+[eventtype=ocsf_entity_management]
+change = enabled
+
+[eventtype=ocsf_scheduled_job_activity]
+change = enabled
+
+[eventtype=ocsf_event_log_activity]
+change = enabled
+audit = enabled
+
+[eventtype=ocsf_windows_service_activity]
+service = enabled
+report = enabled
+
+[eventtype=ocsf_api_activity]
+change = enabled
+```
+
+</Tab>
+<Tab title="metadata/default.meta">
+
+```ini
+[eventtypes]
+export = system
+
+[tags]
+export = system
+```
+
+</Tab>
+</Tabs>
+
+`export = system` makes the eventtypes and tags visible to every app on the search head, including Splunk_SA_CIM and Enterprise Security.
+</Step>
+<Step title="Check the CIM index">
+The `cim_` index appears automatically once the dataset contains OCSF data. Search it with a tag to confirm that tags expand and CIM fields are present:
+
+```spl
+index=cim_ocsf tag=authentication | stats count by action, user
+```
+
+If `cim_ocsf` isn’t found, check that the dataset name meets the [requirements](#requirements) and that it contains OCSF events. The Portal checks a dataset again within 15 minutes after it last found no OCSF data, or within 2 minutes if the dataset was empty.
+</Step>
+<Step title="Scope the CIM data models to the CIM index">
+Before you use `tstats` or ES, add `cim_ocsf` to the index constraint of each CIM data model you use. In Splunk Web, open the CIM add-on’s setup page, select a data model, and add `cim_ocsf` to its indexes. This sets the data model’s `cim_<Model>_indexes` macro, for example `cim_Authentication_indexes`.
+
+The Portal needs a concrete `cim_` index in the data model constraint to know which Axiom dataset to search. A pattern such as `index=cim_*` works only when it matches exactly one index. When it matches several, the search fails with an error that names the matching indexes.
+</Step>
+<Step title="Run a data model search">
+```spl
+| tstats count from datamodel=Authentication by Authentication.action
+```
+
+A count by `success` and `failure` confirms the full path: tags, data model, Portal mapping, and aggregation in Axiom.
+</Step>
+</Steps>
+
+## Example searches
+
+Failed logons by user and source, in the native OCSF vocabulary:
+
+```spl
+index=ocsf class_uid=3002 activity_id=1 status_id=2
+| stats count by "user.name", "src_endpoint.ip"
+```
+
+The same question in CIM vocabulary:
+
+```spl
+index=cim_ocsf tag=authentication action=failure
+| stats count by user, src
+```
+
+As a data model search, the form that ES and ES Content Update (ESCU) detections use:
+
+```spl
+| tstats count from datamodel=Authentication
+    where Authentication.action=failure
+    by Authentication.user, Authentication.src
+```
+
+Blocked network traffic and bytes by destination:
+
+```spl
+| tstats count sum(All_Traffic.bytes) from datamodel=Network_Traffic
+    where All_Traffic.action=blocked
+    by All_Traffic.dest
+```
+
+Accelerated data model searches with `summariesonly=true`, the default in ESCU detections, return the same results as unaccelerated ones:
+
+```spl
+| tstats summariesonly=true count from datamodel=Network_Traffic by All_Traffic.action
+```
+
+An ESCU-style process search with first and last seen times:
+
+```spl
+| tstats summariesonly=true count min(_time) as firstTime max(_time) as lastTime
+    from datamodel=Endpoint.Processes
+    where Processes.process_name=powershell.exe
+    by Processes.dest Processes.user Processes.process_name
+```
+
+Vulnerabilities with their CVE IDs, a multivalue field from the `vulnerabilities` array:
+
+```spl
+index=cim_ocsf tag=report tag=vulnerability cve=*
+| table cve, cvss, severity, signature
+```
+
+MITRE ATT&CK techniques in detection findings, from the `attacks` array:
+
+```spl
+index=cim_ocsf tag=ids tag=attack mitre_technique_id=*
+| stats count by mitre_technique_id, signature, dest
+```
+
+## Data model acceleration
+
+Splunk normally answers `summariesonly=true` searches from pre-built acceleration summaries. For `cim_` indexes, the Portal runs the equivalent aggregation live in Axiom instead. You don’t need to build summaries, and results include the latest events with no summary lag. Splunk’s periodic summary-building searches return no data and don’t affect results.
+
+## Limitations
+
+- **Transparent mode only.** Standard mode doesn’t expand tags or send data model definitions.
+- **Not every CIM field is populated.** The Portal fills a CIM field only when the dataset has an OCSF source for it. Fields without a source are empty.
+- **`unmapped` isn’t mapped.** Attributes stored under the `unmapped` map field don’t become CIM fields.
+- **Authentication covers logons only.** The Authentication eventtype selects `activity_id=1`. Other Authentication activities, such as logoffs, stay out of the data model.
+- **Index patterns must match one index.** An index pattern such as `index=cim_*`, for example in a data model macro, must match exactly one index. If it matches several, the search returns an error that names them. Name the concrete `cim_` index instead.
+- **Enterprise Security.** The mapping has been tested against the search shapes that ES and ESCU detections use, through Splunk_SA_CIM. It hasn’t been tested with Enterprise Security installed. ES features that depend on other configuration, such as asset and identity lookups, need their usual setup in ES.
+- **One index per data model search.** A data model search that spans more than one `cim_` index returns an error.
+
+## What’s next
+
+- [Query OCSF data with APL](/use-cases/ocsf/query)
+- [Set up transparent mode](/splunk/portal/set-up-transparent)
+- [SPL command support](/splunk/portal/spl-support#transparent-mode-knowledge-objects)
