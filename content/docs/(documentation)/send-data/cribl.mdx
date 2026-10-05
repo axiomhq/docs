@@ -1,81 +1,40 @@
 ---
 title: 'Send data from Cribl to Axiom'
-description: 'Learn how to configure Cribl LogStream to forward logs to Axiom using both HTTP and Syslog destinations.'
+description: 'Learn how to configure Cribl Stream to forward data to Axiom using the Webhook or Syslog destination, and how to send OCSF security data with the OCSF for Axiom pack.'
 overview: 'Data stream processing tool for log data collection and routing'
 sidebarTitle: Cribl
-keywords: ['cribl', 'axiom documentation', 'documentation', 'axiom', 'cribl logstream', 'log forwarding', 'http destination', 'syslog destination', 'log integration']
+keywords: ['cribl', 'axiom documentation', 'documentation', 'axiom', 'cribl stream', 'cribl logstream', 'log forwarding', 'webhook destination', 'http destination', 'syslog destination', 'log integration', 'ocsf', 'cribl pack']
 logoId: 'cribl'
 isPopular: true
 popularityOrder: 10
 ---
 
-import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
-import ReplaceDataset from "@/content/snippets/replace-dataset.mdx"
 import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
-import ReplaceToken from "@/content/snippets/replace-token.mdx"
+import CriblWebhookDestination from "@/content/snippets/cribl-webhook-destination.mdx"
 
 Cribl is a data processing framework often used with machine data. It allows you to parse, reduce, transform, and route data to and from various systems in your infrastructure.
 
-You can send logs from Cribl LogStream to Axiom using HTTP or Syslog destination.
+You can send data from Cribl Stream to Axiom using the Webhook destination or the Syslog destination.
+
+<Tip>
+To send OCSF security events, use the OCSF for Axiom pack together with the Webhook destination. The pack conforms OCSF events to the Axiom OCSF schema before they leave Cribl. For more information, see [Send OCSF data from Cribl Stream](/use-cases/ocsf/send-data#send-ocsf-data-from-cribl-stream).
+</Tip>
 
 <Prerequisites />
 
-## Set up log forwarding from Cribl to Axiom using the HTTP destination
+## Send data using the Webhook destination
 
-Below are the steps to set up and send logs from Cribl to Axiom using the HTTP destination:
+Cribl Stream has no dedicated Axiom destination. The stock Webhook destination sends batched, compressed NDJSON events straight to Axiom’s [ingest API](/restapi/ingest).
 
-1. Create a new HTTP destination in Cribl LogStream:
+1. In Cribl Stream, add a **Webhook** destination and enter an **Output ID** for it.
+1. Configure the destination with the following settings.
 
-Open Cribl’s UI and navigate to **Destinations > HTTP**. Click on `+` Add New to create a new destination.
+    <CriblWebhookDestination />
 
-<Frame caption="Cribl LogStream">
-  <img src="/docs/doc-assets/shots/new-destination-cribl1.png" alt="Cribl LogStream" />
-</Frame>
+1. Optional: In **Processing Settings > Post-Processing**, select a pipeline to shape events before they leave Cribl, and adjust **System fields**. By default, Cribl adds the `cribl_pipe` field to every event.
+1. Save the destination, and then commit and deploy the change.
 
-2. Configure the destination:
-
-- **Name:** Choose a name for the destination.
-
-- **Endpoint URL:** The URL of your Axiom log ingest endpoint `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`.
-
-    <Info>
-    <ReplaceDomain />
-    <ReplaceDataset />
-    </Info>
-
-- **Method:** Choose `POST`.
-
-- **Event Breaker:** Set this to One Event Per Request or CRLF (Carriage Return Line Feed), depending on how you want to separate events.
-
-<Frame caption="Cribl LogStream destination">
-  <img src="/docs/doc-assets/shots/input-endpointurl-cribl-axiom.png" alt="Cribl LogStream destination" />
-</Frame>
-
-3. Headers:
-
-You may need to add some headers. Here is a common example:
-
-- **Content-Type:** Set this to `application/json`.
-
-- **Authorization:** Set this to `Bearer API_TOKEN`.
-
-    <Info>
-    <ReplaceToken />
-    </Info>
-
-<Frame caption="Cribl LogStream destination headers">
-  <img src="/docs/doc-assets/shots/header-http-cribl-axiom.png" alt="Cribl LogStream destination headers" />
-</Frame>
-
-4. Body:
-
-In the Body Template, input `{{_raw}}`. This forwards the raw log event to Axiom.
-
-5. Save and enable the destination:
-
-After you’ve finished configuring the destination, save your changes and make sure the destination is enabled.
-
-## Set up log forwarding from Cribl to Axiom using the Syslog destination
+## Send data using the Syslog destination
 
 ### Create Syslog endpoint
 
@@ -85,7 +44,7 @@ import SetUpEndpoint from "@/content/snippets/set-up-endpoint-no-heading.mdx"
 
 ### Configure destination in Cribl
 
-1. Create a new Syslog destination in Cribl LogStream:
+1. Create a new Syslog destination in Cribl Stream:
 
 Open Cribl’s UI and navigate to **Destinations > Syslog**. Click on `+` Add New to create a new destination.
 
