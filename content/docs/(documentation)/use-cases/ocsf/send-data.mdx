@@ -11,7 +11,7 @@ import CriblWebhookDestination from "@/content/snippets/cribl-webhook-destinatio
 This page explains how to get OCSF events into an Axiom dataset in the shape that the [Axiom OCSF schema](/use-cases/ocsf#the-axiom-ocsf-schema) describes. It covers the middle of the OCSF flow: installing the OCSF for Axiom pack in Cribl Stream, preparing the dataset once, and sending events.
 
 <Note>
-Cribl Stream with the OCSF for Axiom pack is currently the supported way to send OCSF data to Axiom.
+Axiom supports sending OCSF data through Cribl Stream with the OCSF for Axiom pack.
 </Note>
 
 ```mermaid
@@ -31,16 +31,20 @@ flowchart LR
 
 An OCSF dataset needs 23 map fields registered before the first event arrives: the `unmapped` overflow map, the 16 OCSF attributes whose type is a free-form JSON object, and the six promoted arrays of objects, such as `observables` and `attacks`. Without them, Axiom flattens these fields at ingest and their structure is lost. Registering a map field affects only events ingested afterwards, so prepare the dataset before you send data. For more information, see [Map fields](/apl/data-types/map-fields).
 
-The OCSF for Axiom pack ships a script, `scripts/setup-dataset.sh`, that creates the dataset and registers all 23 map fields. The script is inside the pack’s `.crbl` file, which is a gzipped tarball. Get the pack’s `.crbl` file, either from the [Cribl Packs Dispensary](https://packs.cribl.io/) or by exporting the installed pack in Cribl Stream, extract the script, then run it. It needs only `sh` and `curl`:
+The OCSF for Axiom pack ships a script, `scripts/setup-dataset.sh`, that creates the dataset and registers all 23 map fields. It needs only `sh` and `curl`.
 
-```bash
-tar -xzf <pack>.crbl scripts/setup-dataset.sh
-AXIOM_TOKEN=API_TOKEN DATASET=DATASET_NAME sh scripts/setup-dataset.sh
-```
+1. Download the `.crbl` file of OCSF for Axiom from the [Cribl Packs Dispensary](https://packs.cribl.io/).
+1. The `.crbl` file is a gzipped tarball. Extract the script and run it:
 
-<Info>
-<ReplaceDatasetToken />
-</Info>
+    ```bash
+    tar -xzf PACK_FILE.crbl scripts/setup-dataset.sh
+    AXIOM_TOKEN=API_TOKEN DATASET=DATASET_NAME sh scripts/setup-dataset.sh
+    ```
+
+    <Info>
+    Replace `PACK_FILE` with the name of the downloaded `.crbl` file, for example `cc-stream-axiom-ocsf-1.0.2`.
+    <ReplaceDatasetToken />
+    </Info>
 
 The script prints one line per map field and ends with:
 
@@ -95,7 +99,7 @@ To see the result on a real event, see [What happens to one event](/use-cases/oc
 Install **OCSF for Axiom** (`cc-stream-axiom-ocsf`) 1.0.2 or later from the Cribl Packs Dispensary. In Cribl Stream, go to **Processing > Packs**, click **Add Pack > Add from Dispensary**, search for **OCSF for Axiom**, and then click **Add Pack**.
 </Step>
 <Step title="Prepare the dataset">
-Run `scripts/setup-dataset.sh` from the pack as described in [Prepare the dataset](#prepare-the-dataset).
+Extract `scripts/setup-dataset.sh` from the pack’s `.crbl` file and run it, as described in [Prepare the dataset](#prepare-the-dataset).
 </Step>
 <Step title="Create a Webhook destination">
 Cribl Stream has no dedicated Axiom destination. The stock Webhook destination sends batched, compressed NDJSON straight to Axiom’s ingest API. In Cribl Stream, create a **Webhook** destination with the following settings.
