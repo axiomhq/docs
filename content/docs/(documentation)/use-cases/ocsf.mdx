@@ -7,29 +7,27 @@ keywords: ['ocsf', 'open cybersecurity schema framework', 'security data lake', 
 
 The [Open Cybersecurity Schema Framework](https://schema.ocsf.io) (OCSF) is an open standard for security events. Firewalls, EDR tools, identity providers, and cloud audit logs map their native formats onto a shared set of event classes such as Network Activity, Authentication, and Detection Finding. Each event names its class in `class_uid`, and fields like `src_endpoint.ip` or `user.name` mean the same thing whichever product produced them.
 
-Axiom stores OCSF events in a dataset with a published, versioned schema: the [Axiom OCSF schema](https://github.com/axiomhq/ocsf). Every documented OCSF attribute up to a fixed depth becomes a typed Axiom column, and everything else is kept, not dropped, in a single `unmapped` map field. You query the result with APL in Axiom, or with SPL from Splunk through the Axiom Portal for Splunk and the Axiom for Splunk app.
+Axiom stores OCSF events in a dataset that follows the Axiom OCSF schema, a versioned layout for OCSF 1.9.0 data. Every documented OCSF attribute up to a fixed depth becomes a typed Axiom column, and everything else is kept, not dropped, in a single `unmapped` map field. You query the result with APL in Axiom, or with SPL from Splunk through the Axiom Portal for Splunk and the Axiom for Splunk app.
 
 ## How OCSF data flows through Axiom
 
 ```mermaid
 flowchart TB
     P["OCSF producers<br/>mapping packs, EDR,<br/>identity, cloud audit"] --> Cribl["Cribl Stream<br/>OCSF for Axiom pack"]
-    P --> Own["Your own pipeline<br/>conformed to the schema"]
     Cribl -->|"Ingest API"| DS[("Axiom dataset<br/>typed columns +<br/>unmapped map")]:::axiom
-    Own -->|"Ingest API"| DS
     DS --> APL["APL queries,<br/>dashboards, monitors"]:::axiom
     DS --> Portal["Axiom Portal and<br/>Axiom app for Splunk"]:::axiom
     Portal --> SPL["SPL searches,<br/>dashboards, alerts"]:::splunk
 ```
 
 1. **Produce OCSF.** You already produce OCSF events, for example with Cribl’s OCSF mapping packs or a vendor’s native OCSF export.
-1. **Conform and send.** Each event is reshaped to the Axiom OCSF schema and sent to Axiom’s ingest API. The [OCSF for Axiom](/use-cases/ocsf/send-data#send-ocsf-data-from-cribl-stream) Cribl pack does this for you. Without Cribl, conform events in your own pipeline before you send them. For more information, see [Send OCSF data to Axiom](/use-cases/ocsf/send-data).
+1. **Conform and send.** The OCSF for Axiom pack for Cribl Stream reshapes each event to the Axiom OCSF schema and sends it to Axiom’s ingest API. For more information, see [Send OCSF data to Axiom](/use-cases/ocsf/send-data).
 1. **Store.** One dataset holds every OCSF class. You prepare it once so that the map fields the schema relies on are registered before data arrives.
 1. **Query.** Query the dataset with APL. For more information, see [Query OCSF data](/use-cases/ocsf/query). Splunk users search the same dataset with SPL. For more information, see [Search OCSF data from Splunk](/splunk/portal/ocsf).
 
 ## The Axiom OCSF schema
 
-The [Axiom OCSF schema](https://github.com/axiomhq/ocsf) is a contract for OCSF 1.9.0 data in Axiom. It lists every promoted column with its exact Axiom type, its OCSF type, the enumeration values of every `*_id` field, and the classes that use it. Pipelines use it to shape events, and readers such as the Portal use it to know what to expect.
+The Axiom OCSF schema defines how OCSF 1.9.0 data is stored in Axiom. It fixes which OCSF attributes become columns, the Axiom type of each column, and where everything else goes. The OCSF for Axiom Cribl pack shapes events to it, and the Axiom Portal for Splunk reads data in that shape.
 
 The full OCSF object graph nests recursively, so flattening every possible path isn’t practical: the full closure of OCSF 1.9.0 runs to over 100,000 paths. Instead, every OCSF attribute lands in exactly one of three places:
 

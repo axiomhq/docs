@@ -1,37 +1,40 @@
 ---
 title: 'Send OCSF data to Axiom'
-description: 'Learn how to prepare an Axiom dataset for OCSF data and send OCSF events to it with the OCSF for Axiom Cribl pack or your own pipeline.'
+description: 'Learn how to send OCSF events from Cribl Stream to Axiom with the OCSF for Axiom pack, and how to prepare the Axiom dataset for them.'
 sidebarTitle: Send data
 keywords: ['ocsf', 'cribl', 'cribl stream', 'cribl pack', 'ocsf for axiom', 'webhook destination', 'map fields', 'unmapped', 'security data lake']
 ---
 
-import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
 import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 import CriblWebhookDestination from "@/content/snippets/cribl-webhook-destination.mdx"
 
-This page explains how to get OCSF events into an Axiom dataset in the shape that the [Axiom OCSF schema](/use-cases/ocsf#the-axiom-ocsf-schema) describes. It covers the middle of the OCSF flow: preparing the dataset once, then sending events from Cribl Stream or from your own pipeline.
+This page explains how to get OCSF events into an Axiom dataset in the shape that the [Axiom OCSF schema](/use-cases/ocsf#the-axiom-ocsf-schema) describes. It covers the middle of the OCSF flow: installing the OCSF for Axiom pack in Cribl Stream, preparing the dataset once, and sending events.
+
+<Note>
+Cribl Stream with the OCSF for Axiom pack is currently the supported way to send OCSF data to Axiom.
+</Note>
 
 ```mermaid
 flowchart LR
     P["OCSF producers"] --> Cribl["Cribl Stream<br/>OCSF for Axiom pack"]
-    P --> Own["Your own pipeline"]
     Cribl -->|"Ingest API"| DS[("Axiom dataset<br/>prepared once")]:::axiom
-    Own -->|"Ingest API"| DS
 ```
 
 ## Prerequisites
 
 - [Create an Axiom account](https://app.axiom.co/register).
-- [Create an advanced API token](/reference/tokens#create-advanced-api-token) that can create datasets and ingest data into them. You can use a separate token with only ingest permission for the pipeline that sends data.
+- A Cribl Stream deployment that receives your OCSF events.
+- [Create an advanced API token](/reference/tokens#create-advanced-api-token) that can create datasets and ingest data into them. You can use a separate token with only ingest permission for the Cribl destination.
 - Find the [edge deployment](/reference/edge-deployments) of your organization. You send data to its base domain.
 
 ## Prepare the dataset
 
 An OCSF dataset needs 23 map fields registered before the first event arrives: the `unmapped` overflow map, the 16 OCSF attributes whose type is a free-form JSON object, and the six promoted arrays of objects, such as `observables` and `attacks`. Without them, Axiom flattens these fields at ingest and their structure is lost. Registering a map field affects only events ingested afterwards, so prepare the dataset before you send data. For more information, see [Map fields](/apl/data-types/map-fields).
 
-The OCSF for Axiom pack ships a script that creates the dataset and registers all 23 map fields. It needs only `sh` and `curl`, so you can run it whether or not you use Cribl. Find the script in the pack’s [GitHub repository](https://github.com/axiomhq/cribl-axiom-ocsf) or inside the pack’s downloaded `.crbl` file, which is a gzipped tarball.
+The OCSF for Axiom pack ships a script, `scripts/setup-dataset.sh`, that creates the dataset and registers all 23 map fields. The script is inside the pack’s `.crbl` file, which is a gzipped tarball. Get the pack’s `.crbl` file, either from the [Cribl Packs Dispensary](https://packs.cribl.io/) or by exporting the installed pack in Cribl Stream, extract the script, then run it. It needs only `sh` and `curl`:
 
 ```bash
+tar -xzf <pack>.crbl scripts/setup-dataset.sh
 AXIOM_TOKEN=API_TOKEN DATASET=DATASET_NAME sh scripts/setup-dataset.sh
 ```
 
@@ -88,15 +91,11 @@ The pack’s `axiom_normalize` route sends every event that has a `class_uid` to
 To see the result on a real event, see [What happens to one event](/use-cases/ocsf#what-happens-to-one-event).
 
 <Steps>
-<Step title="Prepare the dataset">
-Run `scripts/setup-dataset.sh` as described in [Prepare the dataset](#prepare-the-dataset).
-</Step>
 <Step title="Install the pack">
-Download `cc-stream-axiom-ocsf-1.0.1.crbl` from the pack’s [GitHub release](https://github.com/axiomhq/cribl-axiom-ocsf/releases/tag/v1.0.1). In Cribl Stream, go to **Processing > Packs**, click **Add Pack > Import from File**, and select the downloaded file.
-
-<Note>
-The OCSF for Axiom pack is coming soon to the Cribl Packs Dispensary. Until then, install it from the GitHub release.
-</Note>
+Install **OCSF for Axiom** (`cc-stream-axiom-ocsf`) 1.0.2 or later from the Cribl Packs Dispensary. In Cribl Stream, go to **Processing > Packs**, click **Add Pack > Add from Dispensary**, search for **OCSF for Axiom**, and then click **Add Pack**.
+</Step>
+<Step title="Prepare the dataset">
+Run `scripts/setup-dataset.sh` from the pack as described in [Prepare the dataset](#prepare-the-dataset).
 </Step>
 <Step title="Create a Webhook destination">
 Cribl Stream has no dedicated Axiom destination. The stock Webhook destination sends batched, compressed NDJSON straight to Axiom’s ingest API. In Cribl Stream, create a **Webhook** destination with the following settings.
@@ -126,7 +125,7 @@ After data flows, count events by OCSF class:
 | summarize count() by class_uid, class_name
 ```
 
-`_time` should match the event time, not the ingest time. If events land in 1970 or far in the future, a producer emits an unusual time unit. Report it with a sanitized sample in the pack’s [GitHub issues](https://github.com/axiomhq/cribl-axiom-ocsf/issues).
+`_time` should match the event time, not the ingest time. If events land in 1970 or far in the future, a producer emits an unusual time unit. Report it with a sanitized sample event to [support@axiom.co](mailto:support@axiom.co) or on [Cribl Community Slack](https://cribl-community.slack.com/).
 </Step>
 </Steps>
 
@@ -144,31 +143,6 @@ The pack’s maintainers tested the Webhook settings in Cribl Stream 4.19.2, wit
 - **Retries.** With the `430` row, batches answered with `429`, `430`, or `503` were retried, and each of 3,000 events arrived exactly once. Without the `430` row, both rejected batches, 2,000 events in total, were dropped.
 - **Persistent Queue.** During a sustained `503` outage, 400,000 events spilled about 795 MB to disk. After recovery, all 400,000 were delivered, with 2 duplicates, in each of 2 runs.
 - **Pipeline cost.** In 3 runs of 100,000 events each, the pack roughly doubled CPU time per event for the whole container: 80 to 93 microseconds, against 40 to 48 without it. End-to-end throughput with one Worker Process averaged 10,000 to 12,000 events per second, against about 19,000 without the pack. Add Worker Processes for higher volume.
-
-## Send OCSF data from your own pipeline
-
-If you don’t use Cribl, conform each event to the schema before you send it, then send it to the [ingest API](/restapi/ingest). A conformed event is nested JSON:
-
-- Keep every path that’s a column in the schema’s `columns.json` file as a nested key. Axiom flattens nested objects into dotted columns such as `src_endpoint.ip`.
-- Keep each map field and promoted array of objects whole at its path.
-- Move every other path under `unmapped`, preserving its nesting.
-- Set `time` to epoch milliseconds and `_time` to the same instant.
-
-The [Axiom OCSF schema repository](https://github.com/axiomhq/ocsf) contains `scripts/rewrite.mjs`, the reference implementation of these rules. The Cribl pack’s conform step is a port of it. Prepare the dataset with the setup script first, then send conformed events:
-
-```bash
-curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
-  -H 'Authorization: Bearer API_TOKEN' \
-  -H 'Content-Type: application/x-ndjson' \
-  --data-binary @conformed.ndjson
-```
-
-<Info>
-<ReplaceDomain />
-<ReplaceDatasetToken />
-</Info>
-
-Send at most 10,000 events per request, and retry requests that return `429` or `430`. For more information, see [Limits](/reference/limits).
 
 ## What’s next
 
