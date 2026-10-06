@@ -76,33 +76,35 @@ index=ocsf class_uid=2004
 
 ### Fields in `unmapped`
 
-Fields stored under the [`unmapped` map field](/use-cases/ocsf#the-axiom-ocsf-schema) appear in events as dotted fields that start with `unmapped.`, at any depth, for example `unmapped.device.os.name`.
-
-In the base search, you can filter and aggregate only on fields one level below `unmapped`, such as `unmapped.vendor_field`. Most OCSF fields under `unmapped` are nested deeper. A base-search filter or `stats ... by` on a deeper field, such as `"unmapped.device.os.name"="Windows Server 2022"`, returns no results and no error. Filter on these fields after the events are returned instead, with `where` or `spath`:
+Fields stored under the [`unmapped` map field](/use-cases/ocsf#the-axiom-ocsf-schema) appear in events as dotted fields that start with `unmapped.`, for example `unmapped.device.os.name`. You can use them in the base search like any other field. Filters, `stats ... by`, `top`, and `timechart` on them run inside Axiom:
 
 ```spl
-index=ocsf class_uid=3002
-| where 'unmapped.device.os.name'="Windows Server 2022"
+index=ocsf class_uid=3002 "unmapped.device.os.name"="Windows Server 2022"
 | stats count by "user.name"
 ```
 
 ```spl
 index=ocsf class_uid=3002
-| spath input=_raw path=unmapped.device.os.name output=os
-| stats count by os
+| stats count by "unmapped.device.os.name"
 ```
 
-These commands run on the search head over the events Axiom returns, not inside Axiom, so they get slower as the number of matching events grows. Narrow the base search first, for example by `class_uid` and time range.
+Base-search filters and aggregations work for paths up to 8 segments below `unmapped`. For example, `unmapped.device.os.name` is 3 segments below `unmapped`. For a deeper path, the search returns an error instead of results. Extract deeper fields with `spath` instead:
 
-To read an array inside `unmapped`, such as `unmapped.evidences`, extract its elements with `spath` in the same way:
+```spl
+index=ocsf class_uid=2004
+| spath input=_raw path=unmapped.PATH output=deep_field
+| stats count by deep_field
+```
+
+Replace `PATH` with the path of the field below `unmapped`. `spath` runs on the search head over the events Axiom returns, so narrow the base search first, for example by `class_uid` and time range.
+
+An array inside `unmapped`, such as `unmapped.evidences`, behaves like a [promoted array of objects](#arrays-of-objects): you can’t filter or aggregate on its elements in the base search. To read its elements, extract them with `spath`:
 
 ```spl
 index=ocsf class_uid=2004
 | spath input=_raw path=unmapped.evidences{}.process.name output=evidence_process
 | stats count by evidence_process
 ```
-
-To filter or aggregate on a nested `unmapped` field inside Axiom, use APL, either in Axiom or with `axquery` in the Axiom app. For more information, see [Read fields from `unmapped`](/use-cases/ocsf/query#read-fields-from-unmapped).
 
 ## Search OCSF data with the Axiom app
 
@@ -144,7 +146,7 @@ For more information, see [Commands](/splunk/app/commands).
 | Address the dataset | `index=ocsf`, or `index=federated:ocsf` in standard mode | `dataset="ocsf"` in an `ax` command |
 | Arrays of objects such as `observables` | One JSON field. Extract elements with `spath` | Multivalue fields such as `observables{}.value` |
 | Arrays of scalar values such as `email.to` | Multivalue field `email.to` | Multivalue field `email.to{}` |
-| Nested fields under `unmapped` | Shown in events. Filter after the base search with `where` or `spath` | Shown in events. Filter inside Axiom with APL in `axquery` |
+| Nested fields under `unmapped` | Dotted fields. Filter and aggregate in the base search, up to 8 segments below `unmapped` | Dotted fields. Filter inside Axiom with APL in `axquery` |
 | Full APL, including map fields | No | Yes, with `axquery` |
 
 For a general comparison of the two integrations, see [Axiom and Splunk](/splunk/overview).
