@@ -459,6 +459,17 @@ test('API reference uses highlighted code, compact schemas, and persistent langu
   await expect(listResponseSchema.getByRole('row').filter({ hasText: /^└name/ }).first()).toHaveAttribute('data-depth', '1');
 });
 
+test('API schema cells wrap long names and types instead of overflowing', async ({ page }) => {
+  for (const endpoint of ['getMonitorHistory', 'createMonitor', 'createOrg']) {
+    await page.goto(`/docs/restapi/endpoints/${endpoint}`);
+    await expect(page.locator('.api-schema-table').first()).toBeVisible();
+    const overflowing = await page.locator('.api-schema-name, .api-schema-type').evaluateAll((cells) =>
+      cells.filter((cell) => cell.scrollWidth > cell.clientWidth + 1).map((cell) => cell.textContent),
+    );
+    expect(overflowing, endpoint).toEqual([]);
+  }
+});
+
 test('unauthenticated endpoints omit credentials from samples and the request runner', async ({ page }) => {
   await page.goto('/docs/restapi/endpoints/provisionOrg');
 
