@@ -1159,20 +1159,14 @@
     },
     "/monitors/{id}/history": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "monitors|read"
-            ]
-          }
-        ],
-        "description": "Get monitor history",
+        "description": "Lists the notifications sent for the monitor between `startTime` and `endTime`. Each delivery is a separate item: one per notifier, and one per recipient for email notifiers. Failed deliveries are included. State changes that sent no notification, for example while the monitor had no notifiers, aren't listed. The caller needs query access to the monitor's datasets.",
         "tags": [
           "Monitors"
         ],
         "operationId": "getMonitorHistory",
         "parameters": [
           {
+            "description": "Monitor ID.",
             "name": "id",
             "in": "path",
             "required": true,
@@ -1181,7 +1175,7 @@
             }
           },
           {
-            "description": "Start time (ISO 8601 format) for filtering alert history.",
+            "description": "Start of the time range (RFC 3339).",
             "name": "startTime",
             "in": "query",
             "required": true,
@@ -1191,7 +1185,7 @@
             }
           },
           {
-            "description": "End time (ISO 8601 format) for filtering alert history.",
+            "description": "End of the time range (RFC 3339). Must not be before `startTime`.",
             "name": "endTime",
             "in": "query",
             "required": true,
@@ -1203,7 +1197,7 @@
         ],
         "responses": {
           "200": {
-            "description": "AlertHistory",
+            "description": "Notifications sent in the time range.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1214,8 +1208,24 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "monitors|read"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
@@ -3613,7 +3623,7 @@
         }
       },
       "AlertHistory": {
-        "description": "Historical record of an alert's state changes.\nTracks when alerts are opened and closed, allowing for incident timeline analysis.\n",
+        "description": "A notification sent for a monitor.",
         "type": "object",
         "required": [
           "name",
@@ -3623,17 +3633,17 @@
         ],
         "properties": {
           "checkId": {
-            "description": "Unique identifier of the check that triggered the alert",
+            "description": "ID of the monitor",
             "type": "string",
-            "example": "chk_abc123"
+            "example": "QgOLFXIvK0ZbYf3tZE"
           },
           "name": {
-            "description": "The name of the alert",
+            "description": "Title of the notification: `Triggered: ` or `Resolved: ` followed by the monitor name",
             "type": "string",
-            "example": "High CPU Usage Alert"
+            "example": "Triggered: High CPU usage"
           },
           "state": {
-            "description": "Current state of the alert",
+            "description": "`open` if the notification reported that the monitor triggered, `closed` if it reported that the monitor resolved",
             "type": "string",
             "enum": [
               "open",
@@ -3642,7 +3652,7 @@
             "example": "open"
           },
           "timestamp": {
-            "description": "ISO 8601 timestamp when the alert state changed",
+            "description": "Time the delivery was recorded, after any retries",
             "type": "string",
             "format": "date-time",
             "example": "2024-03-20T15:30:00Z"
