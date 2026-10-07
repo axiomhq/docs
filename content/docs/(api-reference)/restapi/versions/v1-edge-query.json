@@ -23,13 +23,7 @@
   "paths": {
     "/query/batch": {
       "post": {
-        "security": [
-          {
-            "Auth": [
-              "query|read"
-            ]
-          }
-        ],
+        "description": "Runs several APL and MPL queries in one request and streams each result as a server-sent event when it completes. Each item sets exactly one of `aplRequest` or `mplRequest`; per-item failures, including query limit errors, arrive as `error` events.",
         "tags": [
           "query"
         ],
@@ -103,7 +97,7 @@
         },
         "responses": {
           "200": {
-            "description": "SSE stream of query results. Each event carries a `kind` field\n(\"apl\" or \"mpl\") indicating how the `data` payload for that\nqueryId should be interpreted.",
+            "description": "SSE stream of query results. Each event carries a `kind` field\n(\"apl\" or \"mpl\") indicating how the `data` payload for that\nqueryId should be interpreted.\n\nPer-item query-limit errors are delivered as SSE error events\nwith status 429, the QueryLimitError body, and X-QueryLimit-*\nheaders.",
             "headers": {
               "Content-Type": {
                 "schema": {
@@ -114,7 +108,7 @@
             }
           },
           "default": {
-            "description": "Error",
+            "description": "The batch is invalid, for example it's empty or has a missing or duplicate `queryId`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -124,12 +118,6 @@
             }
           }
         },
-        "x-axiom-nocompress": true,
-        "x-axiom-not-suspended": true
-      }
-    },
-    "/query/_mpl": {
-      "post": {
         "security": [
           {
             "Auth": [
@@ -137,6 +125,13 @@
             ]
           }
         ],
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/query/_mpl": {
+      "post": {
+        "description": "Runs an MPL query against metrics datasets in this edge deployment. The response format follows the `format` parameter or the `Accept` header and defaults to `metrics-v2`. Returns `429` when a query cost limit is exhausted.",
         "tags": [
           "query"
         ],
@@ -150,7 +145,9 @@
               "type": "string",
               "enum": [
                 "metrics-v1",
-                "metrics-v2"
+                "metrics-v2",
+                "metrics-v3",
+                "metrics-v4"
               ]
             }
           }
@@ -167,7 +164,7 @@
         },
         "responses": {
           "200": {
-            "description": "MetricsResult",
+            "description": "Query result in the requested format.",
             "headers": {
               "X-Axiom-History-Query-Id": {
                 "schema": {
@@ -183,6 +180,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/QueryLimitExceeded"
+          },
           "default": {
             "description": "User or system error",
             "content": {
@@ -194,11 +194,17 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "query|read"
+            ]
+          }
+        ],
         "x-axiom-nocompress": true,
         "x-axiom-not-suspended": true
       },
       "options": {
-        "security": [],
         "tags": [
           "query"
         ],
@@ -223,18 +229,13 @@
             }
           }
         },
+        "security": [],
         "x-axiom-nocompress": true
       }
     },
     "/query/metrics/info/datasets/{dataset}/metrics": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "query|read"
-            ]
-          }
-        ],
+        "description": "Lists the metric names in a metrics dataset between `start` and `end`. With `Accept: application/vnd.metrics-info.v2+json`, returns an object keyed by metric name with each metric's `type`, `temporality`, and `unit` instead.",
         "tags": [
           "query"
         ],
@@ -270,70 +271,28 @@
         ],
         "responses": {
           "200": {
-            "description": "List of metrics in the dataset",
+            "description": "Metric names. With `Accept: application/vnd.metrics-info.v2+json`, an object keyed by metric name whose values have `type` (for example `Gauge`), `temporality` (for example `Cumulative`, or null), and `unit` (empty string when not defined).",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "object",
-                    "required": [
-                      "type",
-                      "temporality",
-                      "unit"
-                    ],
-                    "properties": {
-                      "temporality": {
-                        "description": "The aggregation temporality",
-                        "type": "string",
-                        "example": "Mixed"
-                      },
-                      "type": {
-                        "description": "The metric type",
-                        "type": "string",
-                        "example": "Mixed"
-                      },
-                      "unit": {
-                        "description": "The unit of measurement. Null if not defined.",
-                        "type": "string"
-                      }
-                    }
+                  "type": "array",
+                  "items": {
+                    "type": "string"
                   }
                 }
               },
               "application/vnd.metrics-info.v2+json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "object",
-                    "required": [
-                      "type",
-                      "temporality",
-                      "unit"
-                    ],
-                    "properties": {
-                      "temporality": {
-                        "description": "The aggregation temporality",
-                        "type": "string",
-                        "example": "Mixed"
-                      },
-                      "type": {
-                        "description": "The metric type",
-                        "type": "string",
-                        "example": "Mixed"
-                      },
-                      "unit": {
-                        "description": "The unit of measurement. Null if not defined.",
-                        "type": "string"
-                      }
-                    }
+                  "type": "array",
+                  "items": {
+                    "type": "string"
                   }
                 }
               }
             }
           },
           "404": {
-            "description": "Dataset not found",
+            "description": "Dataset not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -363,10 +322,6 @@
             }
           }
         },
-        "x-axiom-nocompress": true,
-        "x-axiom-not-suspended": true
-      },
-      "post": {
         "security": [
           {
             "Auth": [
@@ -374,6 +329,11 @@
             ]
           }
         ],
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      },
+      "post": {
+        "description": "Finds the metrics in a metrics dataset that carry a tag with the given `value` between `start` and `end`. Returns an object that maps each matching metric name to the tag names that hold the value.",
         "tags": [
           "query"
         ],
@@ -405,6 +365,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Also search metrics that have been ingested but not yet flushed to durable storage",
+            "name": "search-ingest",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "requestBody": {
@@ -419,28 +387,34 @@
         },
         "responses": {
           "200": {
-            "description": "List of metrics matching the tag value",
+            "description": "Matching metric names, each mapped to the tag names that hold the value.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   }
                 }
               },
               "application/vnd.metrics-info.v2+json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   }
                 }
               }
             }
           },
           "404": {
-            "description": "Dataset not found",
+            "description": "Dataset not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -470,12 +444,6 @@
             }
           }
         },
-        "x-axiom-nocompress": true,
-        "x-axiom-not-suspended": true
-      }
-    },
-    "/query/metrics/info/datasets/{dataset}/metrics/{metric}/tags": {
-      "get": {
         "security": [
           {
             "Auth": [
@@ -483,6 +451,13 @@
             ]
           }
         ],
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/query/metrics/info/datasets/{dataset}/metrics/{metric}/tags": {
+      "get": {
+        "description": "Lists the tag names used by a metric in a metrics dataset between `start` and `end`. Returns an empty array when the metric has no data in the range.",
         "tags": [
           "query"
         ],
@@ -527,7 +502,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Tag names for the specified metric",
+            "description": "Tag names.",
             "content": {
               "application/json": {
                 "schema": {
@@ -548,7 +523,7 @@
             }
           },
           "404": {
-            "description": "Dataset or metric not found",
+            "description": "Dataset not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -578,12 +553,6 @@
             }
           }
         },
-        "x-axiom-nocompress": true,
-        "x-axiom-not-suspended": true
-      }
-    },
-    "/query/metrics/info/datasets/{dataset}/metrics/{metric}/tags/{tag}/values": {
-      "get": {
         "security": [
           {
             "Auth": [
@@ -591,6 +560,13 @@
             ]
           }
         ],
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/query/metrics/info/datasets/{dataset}/metrics/{metric}/tags/{tag}/values": {
+      "get": {
+        "description": "Lists the values of a tag on one metric in a metrics dataset between `start` and `end`. Values keep their original type, so the array can mix strings and numbers. Unknown metrics or tags return an empty array.",
         "tags": [
           "query"
         ],
@@ -644,28 +620,24 @@
         ],
         "responses": {
           "200": {
-            "description": "Tag values for the specified metric and tag",
+            "description": "Tag values. Each value is a string, number, or boolean.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
+                  "items": {}
                 }
               },
               "application/vnd.metrics-info.v2+json": {
                 "schema": {
                   "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
+                  "items": {}
                 }
               }
             }
           },
           "404": {
-            "description": "Dataset, metric, or tag not found",
+            "description": "Dataset not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -695,12 +667,6 @@
             }
           }
         },
-        "x-axiom-nocompress": true,
-        "x-axiom-not-suspended": true
-      }
-    },
-    "/query/metrics/info/datasets/{dataset}/tags": {
-      "get": {
         "security": [
           {
             "Auth": [
@@ -708,6 +674,13 @@
             ]
           }
         ],
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/query/metrics/info/datasets/{dataset}/tags": {
+      "get": {
+        "description": "Lists the tag names that occur in a metrics dataset between `start` and `end`. Both times are required and use RFC 3339 format.",
         "tags": [
           "query"
         ],
@@ -743,7 +716,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Dataset Tags",
+            "description": "Tag names.",
             "content": {
               "application/json": {
                 "schema": {
@@ -764,7 +737,7 @@
             }
           },
           "404": {
-            "description": "Dataset not found",
+            "description": "Dataset not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -794,12 +767,6 @@
             }
           }
         },
-        "x-axiom-nocompress": true,
-        "x-axiom-not-suspended": true
-      }
-    },
-    "/query/metrics/info/datasets/{dataset}/tags/{tag}/values": {
-      "get": {
         "security": [
           {
             "Auth": [
@@ -807,6 +774,13 @@
             ]
           }
         ],
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/query/metrics/info/datasets/{dataset}/tags/{tag}/values": {
+      "get": {
+        "description": "Lists the values of a tag across all metrics in a metrics dataset between `start` and `end`. Values keep their original type, so the array can mix strings and numbers. Unknown tags return an empty array.",
         "tags": [
           "query"
         ],
@@ -851,28 +825,24 @@
         ],
         "responses": {
           "200": {
-            "description": "Tag values for the specified dataset and tag",
+            "description": "Tag values. Each value is a string, number, or boolean.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
+                  "items": {}
                 }
               },
               "application/vnd.metrics-info.v2+json": {
                 "schema": {
                   "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
+                  "items": {}
                 }
               }
             }
           },
           "404": {
-            "description": "Dataset or tag not found",
+            "description": "Dataset not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -902,12 +872,6 @@
             }
           }
         },
-        "x-axiom-nocompress": true,
-        "x-axiom-not-suspended": true
-      }
-    },
-    "/query/_apl?format=tabular": {
-      "post": {
         "security": [
           {
             "Auth": [
@@ -915,6 +879,13 @@
             ]
           }
         ],
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/query/_apl?format=tabular": {
+      "post": {
+        "description": "Runs an APL query against datasets in this edge deployment and returns the result in the requested `format`. Returns `429` when an organization, token, or user query cost limit is exhausted.",
         "tags": [
           "query"
         ],
@@ -1000,24 +971,64 @@
         },
         "responses": {
           "200": {
-            "description": "AplResult",
+            "description": "Query result in the requested `format`.",
             "headers": {
               "X-Axiom-History-Query-Id": {
+                "description": "ID of the saved query history entry. Only set when `saveAsKind` is set.",
                 "schema": {
                   "type": "string"
                 }
               },
-              "X-QueryLimit-Limit": {
+              "X-Axiom-Query-Cost-GBms": {
+                "description": "Query cost in GB*ms. Not set on streamed responses.",
                 "schema": {
                   "type": "integer"
                 }
               },
-              "X-QueryLimit-Remaining": {
+              "X-QueryLimit-Daily-Limit": {
+                "description": "Daily query cost limit of the token or user, in credits. Only set when a daily limit applies.",
                 "schema": {
                   "type": "integer"
                 }
               },
-              "X-QueryLimit-Reset": {
+              "X-QueryLimit-Daily-Remaining": {
+                "description": "Credits remaining in the current daily window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-QueryLimit-Daily-Reset": {
+                "description": "Unix timestamp when the daily window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-QueryLimit-Daily-Used": {
+                "description": "Credits used in the current daily window, including this query.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-QueryLimit-Hourly-Limit": {
+                "description": "Hourly query cost limit of the token or user, in credits. Only set when an hourly limit applies.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-QueryLimit-Hourly-Remaining": {
+                "description": "Credits remaining in the current hourly window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-QueryLimit-Hourly-Reset": {
+                "description": "Unix timestamp when the hourly window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-QueryLimit-Hourly-Used": {
+                "description": "Credits used in the current hourly window, including this query.",
                 "schema": {
                   "type": "integer"
                 }
@@ -1031,6 +1042,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/QueryLimitExceeded"
+          },
           "default": {
             "description": "User or system error",
             "content": {
@@ -1042,12 +1056,63 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "query|read"
+            ]
+          }
+        ],
         "x-axiom-nocompress": true,
         "x-axiom-not-suspended": true
       }
     }
   },
   "components": {
+    "responses": {
+      "QueryLimitExceeded": {
+        "description": "Query limit exceeded. Returned when an org, token, or user query budget\nis exhausted. The body names the tripped scope with its limit, usage,\nand reset.",
+        "headers": {
+          "X-QueryLimit-Limit": {
+            "description": "Configured budget for the tripped scope",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "X-QueryLimit-Remaining": {
+            "description": "Remaining budget in the tripped scope (zero when exceeded)",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "X-QueryLimit-Reset": {
+            "description": "Unix timestamp when the limit window resets",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "X-QueryLimit-Retry-After": {
+            "description": "Seconds until the limit window resets",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "X-QueryLimit-Scope": {
+            "description": "Which budget tripped",
+            "schema": {
+              "type": "string"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/QueryLimitError"
+            }
+          }
+        }
+      }
+    },
     "securitySchemes": {
       "Auth": {
         "description": "Authenticate using an API token or personal access token (PAT). Include the token as a Bearer token: `Authorization: Bearer <token>`. For more information, see [Tokens](/reference/tokens).",
@@ -1144,6 +1209,64 @@
         "description": "APL query result (streaming binary data)",
         "type": "object"
       },
+      "CursorRequest": {
+        "type": "object",
+        "required": [
+          "apl"
+        ],
+        "properties": {
+          "apl": {
+            "description": "APL query string; must be a filtering query over one dataset",
+            "type": "string"
+          },
+          "endTime": {
+            "description": "End of the query range; defaults to now",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Maximum rows across the whole stream, including resumes. 0 means no limit.",
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "maxDuration": {
+            "description": "How long this connection streams before ending with a resume token,\nas a Go duration (e.g. 270s). Clamped to the server's maximum.",
+            "type": "string"
+          },
+          "order": {
+            "description": "Direction of the _time ordering applied to the query",
+            "type": "string",
+            "default": "asc",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "pageSize": {
+            "description": "Rows fetched per internal page",
+            "type": "integer",
+            "format": "int64",
+            "default": 5000,
+            "maximum": 50000,
+            "minimum": 1
+          },
+          "resumeToken": {
+            "description": "Token from a previous stream's rows, end or error event",
+            "type": "string"
+          },
+          "startTime": {
+            "description": "RFC3339 or relative time (e.g. now-1h). Relative times are resolved\nonce, when the stream starts, and stay fixed across resumes.",
+            "type": "string"
+          },
+          "variables": {
+            "description": "Variables inserted into the APL",
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          }
+        }
+      },
       "FindMetricsRequest": {
         "type": "object",
         "required": [
@@ -1151,17 +1274,25 @@
         ],
         "properties": {
           "value": {
-            "description": "The tag value to search for matching metrics",
-            "type": "string"
+            "description": "The tag value to search for matching metrics. Accepts any non-null JSON scalar: string, number, or boolean.",
+            "x-go-type": {
+              "hints": {
+                "noValidation": true
+              },
+              "import": {
+                "package": "encoding/json"
+              },
+              "type": "RawMessage"
+            }
           }
         }
       },
       "MetricsError": {
         "type": "object",
         "properties": {
-          "error": {
-            "description": "The error",
-            "type": "string"
+          "code": {
+            "description": "HTTP status code of the error",
+            "type": "integer"
           },
           "message": {
             "description": "A formatted user-facing error message",
@@ -1261,6 +1392,73 @@
             "description": "Message is the raw error message without any formatting",
             "type": "string"
           }
+        }
+      },
+      "QueryLimitError": {
+        "description": "Actionable payload when a query is rejected because an org, token, or\nuser budget is exhausted.",
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "scope",
+          "unit",
+          "limit",
+          "used",
+          "reset"
+        ],
+        "properties": {
+          "code": {
+            "description": "HTTP status code associated with this error",
+            "type": "integer"
+          },
+          "limit": {
+            "description": "Configured budget for the tripped scope",
+            "type": "integer",
+            "format": "uint64"
+          },
+          "message": {
+            "description": "A formatted user-facing error message",
+            "type": "string"
+          },
+          "reset": {
+            "description": "When the limit window resets",
+            "type": "string",
+            "format": "date-time"
+          },
+          "scope": {
+            "description": "Which budget tripped",
+            "type": "string",
+            "enum": [
+              "org",
+              "org-daily",
+              "token-hourly",
+              "token-daily",
+              "user-hourly",
+              "user-daily"
+            ]
+          },
+          "unit": {
+            "description": "Unit of limit and used. credits for token/user/org-daily budgets, gbms for the org monthly cap.",
+            "type": "string",
+            "enum": [
+              "credits",
+              "gbms"
+            ]
+          },
+          "used": {
+            "description": "Spend in the tripped scope at the time of the rejection",
+            "type": "integer",
+            "format": "uint64"
+          }
+        },
+        "example": {
+          "code": 429,
+          "limit": 100,
+          "message": "query limit exceeded: token-hourly",
+          "reset": "2026-08-17T12:00:00Z",
+          "scope": "token-hourly",
+          "unit": "credits",
+          "used": 120
         }
       },
       "QueryOptions": {

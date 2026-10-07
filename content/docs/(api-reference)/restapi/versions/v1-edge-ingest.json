@@ -23,13 +23,7 @@
   "paths": {
     "/ingest/{dataset-id}": {
       "post": {
-        "security": [
-          {
-            "Auth": [
-              "ingest|create"
-            ]
-          }
-        ],
+        "description": "Ingests JSON, NDJSON, or CSV events into an events or logs dataset in this edge deployment. Events that fail are counted in `failed` and listed in `failures`. Returns `430` when the organization has reached its ingest limit.",
         "tags": [
           "ingest"
         ],
@@ -123,7 +117,7 @@
         },
         "responses": {
           "200": {
-            "description": "IngestResult",
+            "description": "Ingest result, including any per-event failures.",
             "content": {
               "application/json": {
                 "schema": {
@@ -131,8 +125,55 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "The dataset name is invalid or reserved, or the dataset is in another edge deployment or isn't an events or logs dataset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token can't ingest into this dataset, the dataset is shared from another organization, or the organization is suspended.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestError"
+                }
+              }
+            }
+          },
+          "430": {
+            "description": "The organization has reached its ingest limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestError"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "ingest|create"
+            ]
+          }
+        ],
         "x-axiom-limit-requests": true,
         "x-axiom-nocompress": true,
         "x-axiom-not-suspended": true,
@@ -335,6 +376,19 @@
           "timestamp": {
             "description": "The timestamp (milliseconds since epoch) at which the server processed this request.",
             "type": "integer"
+          }
+        }
+      },
+      "IngestError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "description": "HTTP status code of the error",
+            "type": "integer"
+          },
+          "message": {
+            "description": "A formatted user-facing error message",
+            "type": "string"
           }
         }
       },
