@@ -23,14 +23,7 @@
   "paths": {
     "/annotations": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "annotations|read"
-            ]
-          }
-        ],
-        "description": "Get annotations",
+        "description": "Lists annotations in the organization. Filter by `datasets`, or by a time range with both `start` and `end` at most 100 days apart. Without filters, returns all annotations.",
         "tags": [
           "annotations"
         ],
@@ -68,7 +61,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Annotation",
+            "description": "Annotations.",
             "content": {
               "application/json": {
                 "schema": {
@@ -79,18 +72,21 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid `start` or `end`, only one of them set, `end` before `start`, or a range longer than 100 days."
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "annotations|create"
+              "annotations|read"
             ]
           }
-        ],
-        "description": "Create annotation",
+        ]
+      },
+      "post": {
+        "description": "Creates an annotation on one or more existing datasets. If you omit `time`, Axiom uses the time of the request. `time` can't be in the future.",
         "tags": [
           "annotations"
         ],
@@ -107,7 +103,7 @@
         },
         "responses": {
           "201": {
-            "description": "Annotation",
+            "description": "Created annotation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -115,20 +111,23 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid annotation, for example an unknown dataset, a `time` in the future, or an `endTime` before `time`."
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "annotations|create"
+            ]
+          }
+        ]
       }
     },
     "/annotations/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "annotations|read"
-            ]
-          }
-        ],
-        "description": "Get annotation by ID",
+        "description": "Retrieves an annotation by its ID.",
         "tags": [
           "annotations"
         ],
@@ -140,7 +139,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Annotation",
+            "description": "Annotation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -148,18 +147,24 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid annotation ID."
+          },
+          "404": {
+            "description": "Annotation not found."
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "annotations|update"
+              "annotations|read"
             ]
           }
-        ],
-        "description": "Update annotation",
+        ]
+      },
+      "put": {
+        "description": "Updates an annotation. Only the fields you include change. Omitted or empty fields keep their current values, so you can't clear a field.",
         "tags": [
           "annotations"
         ],
@@ -181,7 +186,7 @@
         },
         "responses": {
           "200": {
-            "description": "Annotation",
+            "description": "Updated annotation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -189,18 +194,24 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid annotation ID or the updated annotation is invalid."
+          },
+          "404": {
+            "description": "Annotation not found."
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "annotations|delete"
+              "annotations|update"
             ]
           }
-        ],
-        "description": "Delete annotation",
+        ]
+      },
+      "delete": {
+        "description": "Deletes an annotation by its ID.",
         "tags": [
           "annotations"
         ],
@@ -212,27 +223,64 @@
         ],
         "responses": {
           "204": {
-            "description": "Success"
+            "description": "Annotation deleted."
+          },
+          "400": {
+            "description": "Invalid annotation ID."
+          },
+          "404": {
+            "description": "Annotation not found."
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "annotations|delete"
+            ]
+          }
+        ]
       }
     },
     "/datasets": {
       "get": {
-        "security": [
-          {
-            "Auth": []
-          }
-        ],
-        "description": "Get list of datasets",
+        "description": "Lists the datasets you can read, including datasets shared with your organization, sorted by name. Returns all matching datasets in one response without pagination.",
         "tags": [
           "Datasets"
         ],
         "summary": "Get list of datasets",
         "operationId": "getDatasets",
+        "parameters": [
+          {
+            "description": "Exclude resolved label objects from each dataset response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
+          },
+          {
+            "description": "Return datasets assigned every specified label ID.",
+            "name": "labelIds",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "uniqueItems": true
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Datasets you can read.",
             "content": {
               "application/json": {
                 "schema": {
@@ -262,21 +310,22 @@
               }
             }
           },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
           }
         },
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
         "x-axiom-preview": true
       },
       "post": {
-        "security": [
-          {
-            "Auth": [
-              "datasets|create"
-            ]
-          }
-        ],
-        "description": "Create dataset",
+        "description": "Creates a dataset. The `name` must be unique in your organization, and `retentionDays` can't exceed the retention window of your plan.",
         "tags": [
           "Datasets"
         ],
@@ -304,7 +353,7 @@
         },
         "responses": {
           "200": {
-            "description": "Created",
+            "description": "Created dataset.",
             "content": {
               "application/json": {
                 "schema": {
@@ -313,21 +362,43 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid or reserved `name`, invalid `kind`, `retentionDays` longer than your plan allows, unsupported `edgeDeployment`, or dataset limit reached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
+          },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
+          },
+          "409": {
+            "description": "A dataset with this name already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "datasets|create"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/datasets/{dataset_id}": {
       "get": {
-        "security": [
-          {
-            "Auth": []
-          }
-        ],
-        "description": "Get dataset by ID",
+        "description": "Retrieves a dataset by its name.",
         "tags": [
           "Datasets"
         ],
@@ -341,11 +412,22 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Exclude resolved label objects from the dataset response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Dataset.",
             "content": {
               "application/json": {
                 "schema": {
@@ -361,17 +443,15 @@
             "$ref": "#/components/responses/NotFoundError"
           }
         },
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
         "x-axiom-preview": true
       },
       "put": {
-        "security": [
-          {
-            "Auth": [
-              "datasets|update"
-            ]
-          }
-        ],
-        "description": "Update dataset",
+        "description": "Updates the `description` and `retentionDays` of a dataset. Both values are replaced, so omitting `description` clears it, and omitting `retentionDays` or setting it to `0` applies your plan's default retention.",
         "tags": [
           "Datasets"
         ],
@@ -399,7 +479,7 @@
         },
         "responses": {
           "200": {
-            "description": "Dataset",
+            "description": "Updated dataset.",
             "content": {
               "application/json": {
                 "schema": {
@@ -408,21 +488,27 @@
               }
             }
           },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         },
-        "x-axiom-preview": true
-      },
-      "delete": {
         "security": [
           {
             "Auth": [
-              "datasets|delete"
+              "datasets|update"
             ]
           }
         ],
-        "description": "Delete dataset",
+        "x-axiom-preview": true
+      },
+      "delete": {
+        "description": "Deletes a dataset and queues the permanent deletion of its data. For a dataset shared with your organization, removes it from your organization only. Returns the ID of the deletion job.",
         "tags": [
           "Datasets"
         ],
@@ -439,95 +525,35 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": "(empty)"
-          },
-          "403": {
-            "$ref": "#/components/responses/ForbiddenError"
-          }
-        },
-        "x-axiom-preview": true
-      }
-    },
-    "/datasets/{dataset_id}/delete-fields": {
-      "post": {
-        "security": [
-          {
-            "Auth": [
-              "vacuum|update"
-            ]
-          }
-        ],
-        "description": "Deletes fields asynchronously. The field disappears from listings once the deletion pipeline finishes. Re-ingesting data with that field recreates it.\n",
-        "tags": [
-          "datasets"
-        ],
-        "summary": "Delete fields from a dataset",
-        "operationId": "deleteDatasetFields",
-        "parameters": [
-          {
-            "name": "dataset_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteDatasetFieldsRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "DeleteDatasetFieldsResult",
+          "200": {
+            "description": "Dataset deleted and data deletion job created.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeleteDatasetFieldsResult"
+                  "$ref": "#/components/schemas/JobCreateResponse"
                 }
               }
             }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequestError"
           },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
           },
           "404": {
             "$ref": "#/components/responses/NotFoundError"
-          },
-          "429": {
-            "description": "TooManyDeleteFieldsRequests",
-            "headers": {
-              "Retry-After": {
-                "description": "The GMT date/time at which the current rate limit window resets.\n",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "datasets|delete"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/datasets/{dataset_id}/trim": {
       "post": {
-        "security": [
-          {
-            "Auth": [
-              "trim|update"
-            ]
-          }
-        ],
         "description": "Trim dataset",
         "tags": [
           "datasets"
@@ -555,8 +581,15 @@
           "required": true
         },
         "responses": {
-          "204": {
-            "description": "TrimResult"
+          "200": {
+            "description": "Job created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCreateResponse"
+                }
+              }
+            }
           },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
@@ -565,18 +598,19 @@
             "$ref": "#/components/responses/NotFoundError"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "trim|update"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/datasets/{dataset_id}/vacuum": {
       "post": {
-        "security": [
-          {
-            "Auth": [
-              "vacuum|update"
-            ]
-          }
-        ],
+        "description": "Queues a job that rebuilds the field schema of a dataset from its stored events, removing fields that no longer occur in any event. Doesn't delete events. You can vacuum each dataset once per hour.",
         "tags": [
           "datasets"
         ],
@@ -593,10 +627,33 @@
         ],
         "responses": {
           "200": {
-            "description": "VacuumResult"
+            "description": "Vacuum job queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The dataset is a metrics dataset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           },
           "429": {
-            "description": "TooManyVacuumRequests",
+            "description": "The dataset was vacuumed less than an hour ago. Retry after the time in `Retry-After`.",
             "headers": {
               "Retry-After": {
                 "description": "The GMT date/time at which the current rate limit window resets.\n",
@@ -606,18 +663,96 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "vacuum|update"
+            ]
+          }
+        ]
+      }
+    },
+    "/datasets/{dataset_id}/delete-fields": {
+      "post": {
+        "description": "Queues the deletion of the listed fields from the dataset schema. Deleted values stay in storage but can't be queried, and ingesting a deleted field again recreates it. You can delete fields once every 5 minutes per dataset.",
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Delete fields from a dataset",
+        "operationId": "deleteDatasetFields",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteDatasetFieldsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Field deletion queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteDatasetFieldsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty `fields`, a field that isn't in the schema, a system field or map field, a locked schema, or a metrics dataset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "description": "Fields were deleted from this dataset less than 5 minutes ago. Retry after the time in `Retry-After`.",
+            "headers": {
+              "Retry-After": {
+                "description": "The GMT date/time at which the current rate limit window resets.\n",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "vacuum|update"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
       }
     },
     "/datasets/{dataset_id}/fields": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "datasets|read"
-            ]
-          }
-        ],
+        "description": "Lists the fields in the schema of a dataset with their type, unit, description, and hidden setting. Not supported for metrics datasets.",
         "tags": [
           "datasets"
         ],
@@ -634,7 +769,7 @@
         ],
         "responses": {
           "200": {
-            "description": "List of fields in the dataset",
+            "description": "Fields in the dataset.",
             "content": {
               "application/json": {
                 "schema": {
@@ -646,21 +781,35 @@
               }
             }
           },
+          "400": {
+            "description": "The dataset is a metrics dataset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
+          },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
-        }
-      }
-    },
-    "/datasets/{dataset_id}/fields/{field_id}": {
-      "get": {
+        },
         "security": [
           {
             "Auth": [
               "datasets|read"
             ]
           }
-        ],
+        ]
+      }
+    },
+    "/datasets/{dataset_id}/fields/{field_id}": {
+      "get": {
+        "description": "Retrieves a field in the schema of a dataset by its name. Not supported for metrics datasets.",
         "tags": [
           "datasets"
         ],
@@ -685,7 +834,7 @@
         ],
         "responses": {
           "200": {
-            "description": "DatasetField",
+            "description": "Field.",
             "content": {
               "application/json": {
                 "schema": {
@@ -693,17 +842,41 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "The dataset is a metrics dataset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "The dataset doesn't exist or the field isn't in its schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "datasets|update"
+              "datasets|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
+        "description": "Updates the `unit`, `description`, and `hidden` settings of a field. All three are replaced, so omitted values are cleared. The `name` and `type` in the body are ignored.",
         "tags": [
           "datasets"
         ],
@@ -738,7 +911,7 @@
         },
         "responses": {
           "200": {
-            "description": "DatasetField",
+            "description": "Updated field.",
             "content": {
               "application/json": {
                 "schema": {
@@ -746,18 +919,41 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "A metrics dataset or a dataset managed by Axiom.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "The dataset doesn't exist or the field isn't in its schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "vacuum|update"
+              "datasets|update"
             ]
           }
-        ],
-        "description": "Deletes the field asynchronously. The field disappears from listings once the deletion pipeline finishes. Re-ingesting data with that field recreates it.\n",
+        ]
+      },
+      "delete": {
+        "description": "Queues the deletion of a field from the dataset schema. Deleted values stay in storage but can't be queried, and ingesting the field again recreates it. You can delete fields once every 5 minutes per dataset.",
         "tags": [
           "datasets"
         ],
@@ -783,7 +979,7 @@
         ],
         "responses": {
           "202": {
-            "description": "DeleteDatasetFieldsResult",
+            "description": "Field deletion queued.",
             "content": {
               "application/json": {
                 "schema": {
@@ -793,16 +989,30 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/BadRequestError"
+            "description": "A system field or map field, a locked schema, or a metrics dataset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
           },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
           },
           "404": {
-            "$ref": "#/components/responses/NotFoundError"
+            "description": "The dataset doesn't exist or the field isn't in its schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
           },
           "429": {
-            "description": "TooManyDeleteFieldsRequests",
+            "description": "Fields were deleted from this dataset less than 5 minutes ago. Retry after the time in `Retry-After`.",
             "headers": {
               "Retry-After": {
                 "description": "The GMT date/time at which the current rate limit window resets.\n",
@@ -813,18 +1023,19 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "vacuum|update"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/datasets/{dataset_id}/mapfields": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "datasets|read"
-            ]
-          }
-        ],
+        "description": "Lists the names of the fields configured as map fields in a dataset.",
         "tags": [
           "datasets"
         ],
@@ -841,7 +1052,7 @@
         ],
         "responses": {
           "200": {
-            "description": "MapFields",
+            "description": "Map field names.",
             "content": {
               "application/json": {
                 "schema": {
@@ -849,18 +1060,25 @@
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         },
-        "x-axiom-not-suspended": true
-      },
-      "put": {
         "security": [
           {
             "Auth": [
-              "datasets|update"
+              "datasets|read"
             ]
           }
         ],
+        "x-axiom-not-suspended": true
+      },
+      "put": {
+        "description": "Replaces the list of map fields in a dataset. Fields you leave out of the list stop being map fields. Not supported for metrics datasets.",
         "tags": [
           "datasets"
         ],
@@ -888,7 +1106,7 @@
         },
         "responses": {
           "200": {
-            "description": "A list of map field names",
+            "description": "Map field names after the update.",
             "content": {
               "application/json": {
                 "schema": {
@@ -896,11 +1114,24 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Empty, invalid, or duplicate field name, or a metrics dataset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         },
-        "x-axiom-not-suspended": true
-      },
-      "post": {
         "security": [
           {
             "Auth": [
@@ -908,6 +1139,10 @@
             ]
           }
         ],
+        "x-axiom-not-suspended": true
+      },
+      "post": {
+        "description": "Configures a field as a map field. Events you ingest afterward store the field's nested keys inside the map, while previously ingested events keep their structure. Not supported for metrics datasets.",
         "tags": [
           "datasets"
         ],
@@ -934,7 +1169,7 @@
         },
         "responses": {
           "200": {
-            "description": "A mapfield, described by a name",
+            "description": "Created map field.",
             "content": {
               "application/json": {
                 "schema": {
@@ -942,13 +1177,34 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Empty or invalid field name, or a metrics dataset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "description": "The field is already a map field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
           }
         },
-        "x-axiom-not-suspended": true
-      }
-    },
-    "/datasets/{dataset_id}/mapfields/{map_field_name}": {
-      "delete": {
         "security": [
           {
             "Auth": [
@@ -956,6 +1212,12 @@
             ]
           }
         ],
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/datasets/{dataset_id}/mapfields/{map_field_name}": {
+      "delete": {
+        "description": "Removes a field from the map fields of a dataset. The field itself and its ingested data aren't deleted. Not supported for metrics datasets.",
         "tags": [
           "datasets"
         ],
@@ -980,29 +1242,81 @@
         ],
         "responses": {
           "204": {
-            "description": "(empty)"
+            "description": "Map field removed. No response body."
+          },
+          "400": {
+            "description": "The dataset is a metrics dataset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "The dataset doesn't exist or the field isn't a map field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetsError"
+                }
+              }
+            }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "datasets|update"
+            ]
+          }
+        ],
         "x-axiom-not-suspended": true
       }
     },
     "/monitors": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "monitors|read"
-            ]
-          }
-        ],
-        "description": "Lists all configured monitors. Returns an array of monitor configurations including their IDs and current status.",
+        "description": "Lists monitors in the organization, sorted by name. Only returns monitors that query at least one dataset visible to the caller. Labels are resolved unless `exclude=labels`.",
         "tags": [
           "Monitors"
         ],
         "operationId": "getMonitors",
+        "parameters": [
+          {
+            "description": "Exclude resolved label objects from each monitor response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
+          },
+          {
+            "description": "Return monitors assigned every specified label ID.",
+            "name": "labelIds",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "uniqueItems": true
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Monitor",
+            "description": "Monitors visible to the caller.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1013,19 +1327,22 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
           }
         },
-        "x-axiom-preview": true
-      },
-      "post": {
         "security": [
           {
             "Auth": [
-              "monitors|create"
+              "monitors|read"
             ]
           }
         ],
-        "description": "Create monitor",
+        "x-axiom-preview": true
+      },
+      "post": {
+        "description": "Creates a monitor. Axiom runs the monitor's query once before saving it and rejects the request if the query fails, for example because it's invalid or references a dataset that doesn't exist.",
         "tags": [
           "Monitors"
         ],
@@ -1035,7 +1352,7 @@
         },
         "responses": {
           "200": {
-            "description": "Monitor",
+            "description": "Created monitor.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1043,39 +1360,53 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "monitors|create"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/monitors/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "monitors|read"
-            ]
-          }
-        ],
-        "description": "Retrieves detailed configuration for a specific monitor by its unique identifier",
+        "description": "Retrieves a monitor by ID. Returns `404` if the monitor doesn't exist or the caller can't query its datasets. Labels are resolved unless `exclude=labels`.",
         "tags": [
           "Monitors"
         ],
         "operationId": "getMonitor",
         "parameters": [
           {
-            "description": "Unique identifier of the monitor (format: mon_*)",
+            "description": "Monitor ID.",
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Exclude resolved label objects from the monitor response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Monitor",
+            "description": "Monitor.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1083,24 +1414,28 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "monitors|update"
+              "monitors|read"
             ]
           }
-        ],
-        "description": "Update monitor",
+        ]
+      },
+      "put": {
+        "description": "Replaces a monitor's configuration with the request body, so omitted fields reset to their defaults. Axiom runs the new query once before saving, and the update clears the monitor's current alert state.",
         "tags": [
           "Monitors"
         ],
         "operationId": "updateMonitor",
         "parameters": [
           {
+            "description": "Monitor ID.",
             "name": "id",
             "in": "path",
             "required": true,
@@ -1114,7 +1449,7 @@
         },
         "responses": {
           "200": {
-            "description": "Monitor",
+            "description": "Updated monitor.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1122,25 +1457,32 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         },
-        "x-axiom-preview": true
-      },
-      "delete": {
         "security": [
           {
             "Auth": [
-              "monitors|delete"
+              "monitors|update"
             ]
           }
         ],
-        "description": "Delete monitor",
+        "x-axiom-preview": true
+      },
+      "delete": {
+        "description": "Permanently deletes a monitor and removes its label assignments. The caller needs query access to the monitor's datasets.",
         "tags": [
           "Monitors"
         ],
         "operationId": "deleteMonitor",
         "parameters": [
           {
+            "description": "Monitor ID.",
             "name": "id",
             "in": "path",
             "required": true,
@@ -1151,28 +1493,32 @@
         ],
         "responses": {
           "204": {
-            "description": "Success"
+            "description": "Monitor deleted."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "monitors|delete"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/monitors/{id}/history": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "monitors|read"
-            ]
-          }
-        ],
-        "description": "Get monitor history",
+        "description": "Lists the notifications sent for the monitor between `startTime` and `endTime`. Each delivery is a separate item: one per notifier, and one per recipient for email notifiers. Failed deliveries are included. State changes that sent no notification, for example while the monitor had no notifiers, aren't listed. The caller needs query access to the monitor's datasets.",
         "tags": [
           "Monitors"
         ],
         "operationId": "getMonitorHistory",
         "parameters": [
           {
+            "description": "Monitor ID.",
             "name": "id",
             "in": "path",
             "required": true,
@@ -1181,7 +1527,7 @@
             }
           },
           {
-            "description": "Start time (ISO 8601 format) for filtering alert history.",
+            "description": "Start of the time range (RFC 3339).",
             "name": "startTime",
             "in": "query",
             "required": true,
@@ -1191,7 +1537,7 @@
             }
           },
           {
-            "description": "End time (ISO 8601 format) for filtering alert history.",
+            "description": "End of the time range (RFC 3339). Must not be before `startTime`.",
             "name": "endTime",
             "in": "query",
             "required": true,
@@ -1203,7 +1549,7 @@
         ],
         "responses": {
           "200": {
-            "description": "AlertHistory",
+            "description": "Notifications sent in the time range.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1214,28 +1560,50 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "monitors|read"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/notifiers": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "notifiers|read"
-            ]
-          }
-        ],
-        "description": "Lists all configured notifiers. Returns an array of notification configurations including their IDs and current status.",
+        "description": "Lists all notifiers in the organization, sorted by name. Labels are resolved unless `exclude=labels`.",
         "tags": [
           "Monitors"
         ],
         "operationId": "getNotifiers",
+        "parameters": [
+          {
+            "description": "Exclude resolved label objects from each notifier response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved list of notifiers",
+            "description": "Notifiers in the organization.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1248,17 +1616,17 @@
             }
           }
         },
-        "x-axiom-preview": true
-      },
-      "post": {
         "security": [
           {
             "Auth": [
-              "notifiers|create"
+              "notifiers|read"
             ]
           }
         ],
-        "description": "Creates a new notifier configuration for sending alerts through various channels (Slack, Email, etc)",
+        "x-axiom-preview": true
+      },
+      "post": {
+        "description": "Creates a notifier. Set exactly one channel under `properties`, such as `slack`, `email`, or `webhook`. Returns `400` if the channel type isn't enabled for your organization.",
         "tags": [
           "Monitors"
         ],
@@ -1276,7 +1644,7 @@
         },
         "responses": {
           "200": {
-            "description": "Notifier",
+            "description": "Created notifier.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1284,13 +1652,65 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "notifiers|create"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/notifiers/{id}": {
       "get": {
+        "description": "Retrieves a notifier by ID. Labels are resolved unless `exclude=labels`.",
+        "tags": [
+          "Monitors"
+        ],
+        "operationId": "getNotifier",
+        "parameters": [
+          {
+            "description": "Notifier ID.",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exclude resolved label objects from the notifier response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notifier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifierWithId"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        },
         "security": [
           {
             "Auth": [
@@ -1298,51 +1718,17 @@
             ]
           }
         ],
-        "description": "Retrieves detailed configuration for a specific notifier by its unique identifier",
-        "tags": [
-          "Monitors"
-        ],
-        "operationId": "getNotifier",
-        "parameters": [
-          {
-            "description": "Unique identifier of the notifier (format: notify_*)",
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Notifier",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotifierWithId"
-                }
-              }
-            }
-          }
-        },
         "x-axiom-preview": true
       },
       "put": {
-        "security": [
-          {
-            "Auth": [
-              "notifiers|update"
-            ]
-          }
-        ],
-        "description": "Update notifier",
+        "description": "Replaces a notifier's name, channel `properties`, and `disabledUntil` with the request body, so omitted fields are cleared. Label assignments are unchanged.",
         "tags": [
           "Monitors"
         ],
         "operationId": "updateNotifier",
         "parameters": [
           {
+            "description": "Notifier ID.",
             "name": "id",
             "in": "path",
             "required": true,
@@ -1363,7 +1749,7 @@
         },
         "responses": {
           "200": {
-            "description": "Notifier",
+            "description": "Updated notifier.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1371,25 +1757,32 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         },
-        "x-axiom-preview": true
-      },
-      "delete": {
         "security": [
           {
             "Auth": [
-              "notifiers|delete"
+              "notifiers|update"
             ]
           }
         ],
-        "description": "Delete notifier",
+        "x-axiom-preview": true
+      },
+      "delete": {
+        "description": "Permanently deletes a notifier and removes its label assignments. Returns `400` if any monitor still uses the notifier.",
         "tags": [
           "Monitors"
         ],
         "operationId": "deleteNotifier",
         "parameters": [
           {
+            "description": "Notifier ID.",
             "name": "id",
             "in": "path",
             "required": true,
@@ -1400,26 +1793,35 @@
         ],
         "responses": {
           "204": {
-            "description": "(empty)"
+            "description": "Notifier deleted."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "notifiers|delete"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/orgs": {
       "get": {
-        "security": [
-          {
-            "Auth": []
-          }
-        ],
+        "description": "Lists the organizations the authenticated user is a member of. Requires a personal access token (PAT). Organizations that enforce SAML sign-in are omitted unless the PAT is SAML-authenticated.\n",
         "tags": [
           "orgs"
         ],
         "operationId": "getOrgs",
         "responses": {
           "200": {
-            "description": "Org",
+            "description": "Organizations the user is a member of.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1432,14 +1834,15 @@
             }
           }
         },
-        "x-axiom-no-org-required": true
-      },
-      "post": {
         "security": [
           {
             "Auth": []
           }
         ],
+        "x-axiom-no-org-required": true
+      },
+      "post": {
+        "description": "Creates an organization on the Personal plan with the authenticated user as its owner. Requires a personal access token (PAT).\n",
         "tags": [
           "orgs"
         ],
@@ -1456,7 +1859,7 @@
         },
         "responses": {
           "200": {
-            "description": "Org",
+            "description": "Created organization.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1464,54 +1867,22 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid name or edge deployment, or the user has reached the maximum number of organizations.\n"
           }
         },
-        "x-axiom-no-org-required": true
-      }
-    },
-    "/orgs/provision": {
-      "post": {
-        "security": [],
-        "tags": [
-          "orgs"
-        ],
-        "summary": "Provision a temporary organization for an agent",
-        "description": "Publicly provisions a temporary organization intended for automated agents. The organization is marked temporary with a TTL and is deleted automatically if it is not claimed before it expires. The response includes a claim URL that lets a human take ownership of the org. This endpoint is unauthenticated and strict rate limits apply.",
-        "operationId": "provisionOrg",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProvisionOrg"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Provisioned organization",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProvisionOrgResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded. The provisioning rate limit has been reached; retry later with backoff.\n"
-          }
-        }
-      }
-    },
-    "/orgs/{id}": {
-      "get": {
         "security": [
           {
             "Auth": []
           }
         ],
+        "x-axiom-no-org-required": true
+      }
+    },
+    "/orgs/{id}": {
+      "get": {
+        "description": "Retrieves an organization the authenticated user is a member of, including its plan and license limits. Requires a personal access token (PAT).\n",
         "tags": [
           "orgs"
         ],
@@ -1528,7 +1899,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Org",
+            "description": "Organization.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1536,15 +1907,19 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Organization not found, or the user isn't a member of it."
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": []
           }
-        ],
+        ]
+      },
+      "put": {
+        "description": "Renames an organization and returns the updated organization. Requires a personal access token (PAT) of an owner of the organization.\n",
         "tags": [
           "orgs"
         ],
@@ -1571,7 +1946,7 @@
         },
         "responses": {
           "200": {
-            "description": "Org",
+            "description": "Updated organization.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1579,20 +1954,63 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid name."
+          },
+          "403": {
+            "description": "The user isn't an owner of the organization."
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": []
+          }
+        ]
+      }
+    },
+    "/orgs/provision": {
+      "post": {
+        "description": "Creates a temporary organization for an automated agent and returns a full-permission API token and a claim URL. The organization is deleted after 24 hours unless a human claims it. Doesn't require authentication and is rate limited per client IP.\n",
+        "tags": [
+          "orgs"
+        ],
+        "summary": "Provision a temporary organization for an agent",
+        "operationId": "provisionOrg",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProvisionOrg"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Provisioned organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvisionOrgResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid name or edge deployment."
+          },
+          "429": {
+            "description": "Rate limit exceeded, either for the client IP or for all callers. Retry later with backoff.\n"
+          }
+        },
+        "security": []
       }
     },
     "/rbac/roles": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "rbac|read"
-            ]
-          }
-        ],
-        "description": "Retrieves all roles in the organization with their associated permissions and members.",
+        "description": "Lists the custom roles in the organization with their capabilities and the IDs of users assigned each role directly. Built-in roles such as `axiom-admin` aren't included.",
         "tags": [
           "rbac"
         ],
@@ -1600,7 +2018,7 @@
         "operationId": "listRoles",
         "responses": {
           "200": {
-            "description": "A list of roles was successfully retrieved",
+            "description": "Custom roles in the organization.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1612,17 +2030,17 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "rbac|create"
+              "rbac|read"
             ]
           }
-        ],
-        "description": "Creates a new role in the organization with the specified permissions and member assignments.",
+        ]
+      },
+      "post": {
+        "description": "Creates a custom role. Requires an Enterprise plan or the RBAC add-on. The name must be unique and can't start with `axiom-`. The `members` field is ignored; assign users with the Update user role endpoint.",
         "tags": [
           "rbac"
         ],
@@ -1636,12 +2054,12 @@
               }
             }
           },
-          "description": "The role configuration containing name, description, members, and capability settings",
+          "description": "The role's name, description, and capabilities",
           "required": true
         },
         "responses": {
           "200": {
-            "description": "The role was successfully created",
+            "description": "The created role.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1649,20 +2067,26 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "rbac|create"
+            ]
+          }
+        ]
       }
     },
     "/rbac/roles/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "rbac|read"
-            ]
-          }
-        ],
-        "description": "Retrieves detailed information about a specific role by its unique identifier.",
+        "description": "Retrieves a custom role by ID with its capabilities and the IDs of users assigned the role directly. Built-in role IDs such as `axiom-admin` return `404`.",
         "tags": [
           "rbac"
         ],
@@ -1681,7 +2105,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The role was successfully retrieved",
+            "description": "The role.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1689,18 +2113,21 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "rbac|create"
+              "rbac|read"
             ]
           }
-        ],
-        "description": "Updates an existing role's configuration including its permissions and member assignments.",
+        ]
+      },
+      "put": {
+        "description": "Replaces a custom role's name, description, and capabilities. Capabilities you omit are removed, and the `members` field is ignored. Requires an Enterprise plan or the RBAC add-on.",
         "tags": [
           "rbac"
         ],
@@ -1725,12 +2152,12 @@
               }
             }
           },
-          "description": "The updated role configuration",
+          "description": "The role's new name, description, and capabilities",
           "required": true
         },
         "responses": {
           "200": {
-            "description": "The role was successfully updated",
+            "description": "The updated role.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1738,18 +2165,27 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
               "rbac|create"
             ]
           }
-        ],
-        "description": "Permanently removes a role from the organization.",
+        ]
+      },
+      "delete": {
+        "description": "Permanently deletes a custom role. Users assigned the role get the `none` role, and the role is removed from all groups. Requires an Enterprise plan or the RBAC add-on.",
         "tags": [
           "rbac"
         ],
@@ -1768,21 +2204,27 @@
         ],
         "responses": {
           "204": {
-            "description": "The role was successfully deleted"
+            "description": "The role was deleted."
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "rbac|create"
+            ]
+          }
+        ]
       }
     },
     "/rbac/groups": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "rbac|read"
-            ]
-          }
-        ],
-        "description": "Retrieves all groups in the organization.",
+        "description": "Lists all groups in the organization with the role IDs and user IDs assigned to each group.",
         "tags": [
           "rbac"
         ],
@@ -1790,7 +2232,7 @@
         "operationId": "listGroups",
         "responses": {
           "200": {
-            "description": "A list of groups was successfully retrieved",
+            "description": "Groups in the organization.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1802,17 +2244,17 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "rbac|create"
+              "rbac|read"
             ]
           }
-        ],
-        "description": "Creates a new group in the organization.",
+        ]
+      },
+      "post": {
+        "description": "Creates a group whose members get the group's roles. Requires an Enterprise plan or the RBAC add-on. The name must be unique, every role ID must exist, and you can't add yourself as a member.",
         "tags": [
           "rbac"
         ],
@@ -1826,12 +2268,12 @@
               }
             }
           },
-          "description": "The group configuration",
+          "description": "The group's name, description, roles, and members",
           "required": true
         },
         "responses": {
           "200": {
-            "description": "The group was successfully created",
+            "description": "The created group.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1839,20 +2281,26 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "rbac|create"
+            ]
+          }
+        ]
       }
     },
     "/rbac/groups/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "rbac|read"
-            ]
-          }
-        ],
-        "description": "Retrieves detailed information about a specific group by its unique identifier.",
+        "description": "Retrieves a group by ID with its role IDs, member user IDs, and whether it's managed by your identity provider (`isManaged`).",
         "tags": [
           "rbac"
         ],
@@ -1871,7 +2319,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The group was successfully retrieved",
+            "description": "The group.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1879,18 +2327,21 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "rbac|create"
+              "rbac|read"
             ]
           }
-        ],
-        "description": "Updates an existing group's configuration.",
+        ]
+      },
+      "put": {
+        "description": "Replaces a group's name, description, roles, and members. Fields you omit are cleared, and members of managed groups aren't changed. Requires an Enterprise plan or the RBAC add-on.",
         "tags": [
           "rbac"
         ],
@@ -1915,12 +2366,12 @@
               }
             }
           },
-          "description": "The updated group configuration",
+          "description": "The group's new name, description, roles, and members",
           "required": true
         },
         "responses": {
           "200": {
-            "description": "The group was successfully updated",
+            "description": "The updated group.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1928,18 +2379,27 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
               "rbac|create"
             ]
           }
-        ],
-        "description": "Permanently removes a group from the organization.",
+        ]
+      },
+      "delete": {
+        "description": "Permanently deletes a group. Members lose the roles the group granted but keep their own role, and dashboards the group owned are shared with everyone. Managed groups can't be deleted. Requires an Enterprise plan or the RBAC add-on.",
         "tags": [
           "rbac"
         ],
@@ -1958,20 +2418,30 @@
         ],
         "responses": {
           "204": {
-            "description": "The group was successfully deleted"
+            "description": "The group was deleted."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "rbac|create"
+            ]
+          }
+        ]
       }
     },
     "/apl-starred-queries": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "starredQueries|read"
-            ]
-          }
-        ],
+        "description": "Lists saved APL queries on datasets you can read, sorted by name. Use `who` to choose whose queries to return, and `limit` and `offset` to paginate.",
         "tags": [
           "starred"
         ],
@@ -1984,6 +2454,7 @@
             "$ref": "#/components/parameters/Offset"
           },
           {
+            "description": "Return only queries saved on this dataset.",
             "name": "dataset",
             "in": "query",
             "schema": {
@@ -1991,7 +2462,7 @@
             }
           },
           {
-            "description": "- If the value of `who` is undefined, the request returns queries starred by the authenticated user.\n- If the value of `who` is a user ID, the request returns queries starred by the user with this ID (this request requires elevated privileges). For example, `&who='abc123'`.\n- If the value of `who` is `team`, the request returns queries starred by the team apart from the authenticated user.For example, `&who=team`.\n- If the value of `who` is `all`, the request returns queries starred by all users in the team, including the authenticated user. For example, `&who=all`.",
+            "description": "- If the value of `who` is your own user ID, the request returns queries saved by the authenticated user.\n- If the value of `who` is `team`, the request returns queries saved by other users in the organization. For example, `&who=team`.\n- If the value of `who` is `all`, the request returns queries saved by all users in the organization, including the authenticated user. For example, `&who=all`.\n- Any other value returns `400`. This includes another user's ID, and omitting `who` when you authenticate with a personal access token.",
             "name": "who",
             "in": "query",
             "schema": {
@@ -1999,6 +2470,7 @@
             }
           },
           {
+            "description": "Return only queries whose name contains this string. Case-insensitive.",
             "name": "qs",
             "in": "query",
             "schema": {
@@ -2008,7 +2480,7 @@
         ],
         "responses": {
           "200": {
-            "description": "StarredQueryWithId",
+            "description": "Saved queries.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2019,17 +2491,24 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid `who`."
+          },
+          "404": {
+            "description": "You can't read the dataset in `dataset`."
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "starredQueries|create"
+              "starredQueries|read"
             ]
           }
-        ],
+        ]
+      },
+      "post": {
+        "description": "Saves an APL query for the authenticated user. Axiom sets `who` to the caller and `kind` to `apl`. If you omit `dataset`, Axiom uses the alphabetically first dataset that `query.apl` references.",
         "tags": [
           "starred"
         ],
@@ -2039,7 +2518,7 @@
         },
         "responses": {
           "200": {
-            "description": "StarredQueryWithId",
+            "description": "Created saved query.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2047,19 +2526,26 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing `name`, or no `dataset` given and none found in `query.apl`."
+          },
+          "403": {
+            "description": "You don't have permission to create saved queries on the dataset."
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "starredQueries|create"
+            ]
+          }
+        ]
       }
     },
     "/apl-starred-queries/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "starredQueries|read"
-            ]
-          }
-        ],
+        "description": "Retrieves a saved query by its ID.",
         "tags": [
           "starred"
         ],
@@ -2076,7 +2562,7 @@
         ],
         "responses": {
           "200": {
-            "description": "StarredQueryWithId",
+            "description": "Saved query.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2084,17 +2570,21 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Saved query not found, or you can't read its dataset."
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "starredQueries|update"
+              "starredQueries|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
+        "description": "Replaces the `name`, `dataset`, `query`, and `metadata` of a saved query. With a personal access token, you can only update queries you saved.",
         "tags": [
           "starred"
         ],
@@ -2114,7 +2604,7 @@
         },
         "responses": {
           "200": {
-            "description": "StarredQueryWithId",
+            "description": "Updated saved query.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2122,17 +2612,30 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing `name`, or no `dataset` given and none found in `query.apl`."
+          },
+          "401": {
+            "description": "The saved query belongs to another user."
+          },
+          "403": {
+            "description": "You don't have permission to update saved queries on the current or new dataset."
+          },
+          "404": {
+            "description": "Saved query not found."
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "starredQueries|delete"
+              "starredQueries|update"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
+        "description": "Deletes a saved query by its ID. With a personal access token, you can only delete queries you saved.",
         "tags": [
           "starred"
         ],
@@ -2149,28 +2652,37 @@
         ],
         "responses": {
           "204": {
-            "description": "(empty)"
+            "description": "Saved query deleted."
+          },
+          "401": {
+            "description": "The saved query belongs to another user."
+          },
+          "403": {
+            "description": "You don't have permission to delete saved queries on the query's dataset."
+          },
+          "404": {
+            "description": "Saved query not found."
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "starredQueries|delete"
+            ]
+          }
+        ]
       }
     },
     "/tokens": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "apiTokens|read"
-            ]
-          }
-        ],
-        "description": "Get API tokens",
+        "description": "Lists the organization's active API tokens. Expired tokens, personal access tokens, and token secret values aren't included.\n",
         "tags": [
           "tokens"
         ],
         "operationId": "getAPITokens",
         "responses": {
           "200": {
-            "description": "Token",
+            "description": "Active API tokens.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2182,17 +2694,17 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "apiTokens|create"
+              "apiTokens|read"
             ]
           }
-        ],
-        "description": "Create API token",
+        ]
+      },
+      "post": {
+        "description": "Creates an API token and returns its secret `token` value, which you can't retrieve again. You can only grant capabilities you have yourself. If you omit `expiresAt`, the token doesn't expire.\n",
         "tags": [
           "tokens"
         ],
@@ -2209,7 +2721,7 @@
         },
         "responses": {
           "200": {
-            "description": "CreateApiTokenResponse",
+            "description": "Created API token, including its secret `token` value.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2217,21 +2729,24 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "No capability set, an invalid capability, or a capability the caller doesn't have.\n"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|create"
+            ]
+          }
+        ],
         "x-axiom-not-suspended": true
       }
     },
     "/tokens/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "apiTokens|read"
-            ]
-          }
-        ],
-        "description": "Get API token by ID",
+        "description": "Retrieves an active API token by ID. The response doesn't include the token's secret value.\n",
         "tags": [
           "tokens"
         ],
@@ -2248,7 +2763,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Token",
+            "description": "API token.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2256,18 +2771,21 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "API token not found or expired."
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "apiTokens|delete"
+              "apiTokens|read"
             ]
           }
-        ],
-        "description": "Delete API token",
+        ]
+      },
+      "delete": {
+        "description": "Permanently deletes an API token so it can no longer authenticate requests.\n",
         "tags": [
           "tokens"
         ],
@@ -2284,21 +2802,24 @@
         ],
         "responses": {
           "204": {
-            "description": "(empty)"
+            "description": "API token deleted."
+          },
+          "404": {
+            "description": "API token not found or expired."
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|delete"
+            ]
+          }
+        ]
       }
     },
     "/tokens/{id}/regenerate": {
       "post": {
-        "security": [
-          {
-            "Auth": [
-              "apiTokens|update"
-            ]
-          }
-        ],
-        "description": "Regenerate API token",
+        "description": "Creates a new API token with the existing token's capabilities, or with those in `newToken`, and returns its secret value. The existing token keeps working until `existingTokenExpiresAt`; set it to the current time to revoke it immediately.\n",
         "tags": [
           "tokens"
         ],
@@ -2324,7 +2845,7 @@
         },
         "responses": {
           "200": {
-            "description": "CreateAPITokenResponse",
+            "description": "New API token, including its secret `token` value.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2332,26 +2853,34 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing `existingTokenExpiresAt`, expiry set in both `newTokenExpiresAt` and `newToken.expiresAt`, or invalid capabilities in `newToken`.\n"
+          },
+          "404": {
+            "description": "API token not found or expired."
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|update"
+            ]
+          }
+        ],
         "x-axiom-not-suspended": true
       }
     },
     "/user": {
       "get": {
-        "security": [
-          {
-            "Auth": []
-          }
-        ],
-        "description": "Get current user",
+        "description": "Retrieves the user who owns the personal access token (PAT) used to authenticate. API tokens aren't supported. The response includes `role` only when the `X-AXIOM-ORG-ID` header is set.\n",
         "tags": [
           "Users"
         ],
         "operationId": "getCurrentUser",
         "responses": {
           "200": {
-            "description": "User",
+            "description": "Current user.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2359,18 +2888,21 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "The request was authenticated with an API token, or the user isn't a member of the organization in `X-AXIOM-ORG-ID`.\n"
           }
         },
-        "x-axiom-no-org-required": true,
-        "x-axiom-preview": true
-      },
-      "put": {
         "security": [
           {
             "Auth": []
           }
         ],
-        "description": "Update current user",
+        "x-axiom-no-org-required": true,
+        "x-axiom-preview": true
+      },
+      "put": {
+        "description": "Updates the name of the user who owns the personal access token (PAT) used to authenticate. API tokens aren't supported. The response doesn't include `role`.\n",
         "tags": [
           "Users"
         ],
@@ -2387,7 +2919,7 @@
         },
         "responses": {
           "200": {
-            "description": "User",
+            "description": "Updated user.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2395,29 +2927,30 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid name, or the request was authenticated with an API token."
           }
         },
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
         "x-axiom-no-org-required": true,
         "x-axiom-preview": true
       }
     },
     "/users": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "users|read"
-            ]
-          }
-        ],
-        "description": "Get users",
+        "description": "Lists all members of the organization, including each member's role.\n",
         "tags": [
           "Users"
         ],
         "operationId": "getUsers",
         "responses": {
           "200": {
-            "description": "User",
+            "description": "Organization members.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2430,17 +2963,17 @@
             }
           }
         },
-        "x-axiom-preview": true
-      },
-      "post": {
         "security": [
           {
             "Auth": [
-              "users|create"
+              "users|read"
             ]
           }
         ],
-        "description": "Create user",
+        "x-axiom-preview": true
+      },
+      "post": {
+        "description": "Adds a user to the organization with the given role and sends them an invite email. If the email address already belongs to an Axiom account, Axiom keeps its existing name. API tokens can't assign the `owner` role.\n",
         "tags": [
           "Users"
         ],
@@ -2457,7 +2990,7 @@
         },
         "responses": {
           "200": {
-            "description": "User",
+            "description": "Added user.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2465,8 +2998,24 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid email address, the user is already a member, or the organization has reached its user limit.\n"
+          },
+          "403": {
+            "description": "Insufficient permissions, or the caller isn't allowed to assign the `owner` role.\n"
+          },
+          "404": {
+            "description": "Role not found."
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "users|create"
+            ]
+          }
+        ],
         "x-axiom-no-org-required": true,
         "x-axiom-not-suspended": true,
         "x-axiom-preview": true
@@ -2474,14 +3023,7 @@
     },
     "/users/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "users|read"
-            ]
-          }
-        ],
-        "description": "Get user by ID",
+        "description": "Retrieves a member of the organization by user ID, including their role.\n",
         "tags": [
           "Users"
         ],
@@ -2498,7 +3040,7 @@
         ],
         "responses": {
           "200": {
-            "description": "User",
+            "description": "User.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2506,19 +3048,22 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "User not found."
           }
         },
-        "x-axiom-preview": true
-      },
-      "delete": {
         "security": [
           {
             "Auth": [
-              "users|delete"
+              "users|read"
             ]
           }
         ],
-        "description": "Remove user from org",
+        "x-axiom-preview": true
+      },
+      "delete": {
+        "description": "Removes a user from the organization without deleting their Axiom account. You can't remove the organization's last member. With a personal access token (PAT), only owners can remove an owner.\n",
         "tags": [
           "Users"
         ],
@@ -2535,22 +3080,22 @@
         ],
         "responses": {
           "204": {
-            "description": "(empty)"
+            "description": "User removed from the organization."
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "users|delete"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/users/{id}/role": {
       "put": {
-        "security": [
-          {
-            "Auth": [
-              "users|update"
-            ]
-          }
-        ],
-        "description": "Update user role",
+        "description": "Changes the role of a member of the organization and returns the updated user. You can't change your own role. Only owners using a personal access token (PAT) can assign `owner` or change an owner's role.\n",
         "tags": [
           "Users"
         ],
@@ -2577,7 +3122,7 @@
         },
         "responses": {
           "200": {
-            "description": "User",
+            "description": "Updated user.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2585,26 +3130,34 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Insufficient permissions, you tried to change your own role, or the caller isn't allowed to assign or change the `owner` role.\n"
+          },
+          "404": {
+            "description": "User or role not found."
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "users|update"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/vfields": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "virtualFields|read"
-            ]
-          }
-        ],
+        "description": "Lists the virtual fields of a dataset, ordered by creation time.",
         "tags": [
           "vfields"
         ],
         "operationId": "getVirtualFields",
         "parameters": [
           {
+            "description": "Name of the dataset",
             "name": "dataset",
             "in": "query",
             "required": true,
@@ -2615,7 +3168,7 @@
         ],
         "responses": {
           "200": {
-            "description": "VirtualFieldWithId",
+            "description": "Virtual fields.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2626,17 +3179,21 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "You can't read the dataset."
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "virtualFields|create"
+              "virtualFields|read"
             ]
           }
-        ],
+        ]
+      },
+      "post": {
+        "description": "Creates a virtual field on a dataset. Axiom sets its ID to `<dataset>.<name>`, so the name must be unique within the dataset. `expression` must be a valid APL expression.",
         "tags": [
           "vfields"
         ],
@@ -2646,7 +3203,7 @@
         },
         "responses": {
           "200": {
-            "description": "VirtualFieldWithId",
+            "description": "Created virtual field.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2654,25 +3211,39 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing `dataset`, `name`, or `expression`, an invalid `name`, or an expression that doesn't parse."
+          },
+          "403": {
+            "description": "You don't have permission to create virtual fields on the dataset."
+          },
+          "404": {
+            "description": "You can't read the dataset."
+          },
+          "409": {
+            "description": "A virtual field with this name already exists on the dataset."
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "virtualFields|create"
+            ]
+          }
+        ]
       }
     },
     "/vfields/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "virtualFields|read"
-            ]
-          }
-        ],
+        "description": "Retrieves a virtual field by its ID.",
         "tags": [
           "vfields"
         ],
         "operationId": "getVirtualField",
         "parameters": [
           {
+            "description": "ID of the virtual field in the form `<dataset>.<name>`",
             "name": "id",
             "in": "path",
             "required": true,
@@ -2683,7 +3254,7 @@
         ],
         "responses": {
           "200": {
-            "description": "VirtualFieldWithId",
+            "description": "Virtual field.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2691,23 +3262,28 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Virtual field not found, or you can't read its dataset."
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "virtualFields|update"
+              "virtualFields|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
+        "description": "Replaces all fields of a virtual field. Omitted optional fields are cleared. The ID doesn't change, even if you change `name` or `dataset`.",
         "tags": [
           "vfields"
         ],
         "operationId": "updateVirtualField",
         "parameters": [
           {
+            "description": "ID of the virtual field in the form `<dataset>.<name>`",
             "name": "id",
             "in": "path",
             "required": true,
@@ -2721,7 +3297,7 @@
         },
         "responses": {
           "200": {
-            "description": "VirtualFieldWithId",
+            "description": "Updated virtual field.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2729,23 +3305,34 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Missing `dataset`, `name`, or `expression`, an invalid `name`, or an expression that doesn't parse."
+          },
+          "403": {
+            "description": "You don't have permission to update virtual fields on the current or new dataset."
+          },
+          "404": {
+            "description": "Virtual field not found."
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "virtualFields|delete"
+              "virtualFields|update"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
+        "description": "Deletes a virtual field by its ID.",
         "tags": [
           "vfields"
         ],
         "operationId": "deleteVirtualField",
         "parameters": [
           {
+            "description": "ID of the virtual field in the form `<dataset>.<name>`",
             "name": "id",
             "in": "path",
             "required": true,
@@ -2756,27 +3343,34 @@
         ],
         "responses": {
           "204": {
-            "description": "(empty)"
+            "description": "Virtual field deleted."
+          },
+          "403": {
+            "description": "You don't have permission to delete virtual fields on the dataset."
+          },
+          "404": {
+            "description": "Virtual field not found, or you can't read its dataset."
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "virtualFields|delete"
+            ]
+          }
+        ]
       }
     },
     "/views": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "views|read"
-            ]
-          }
-        ],
+        "description": "Lists the views in the organization, including views shared with it by other organizations.",
         "tags": [
           "views"
         ],
         "operationId": "getViews",
         "responses": {
           "200": {
-            "description": "View",
+            "description": "Views.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2788,16 +3382,17 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "views|create"
+              "views|read"
             ]
           }
-        ],
+        ]
+      },
+      "post": {
+        "description": "Creates a view, a named APL query that you can query like a dataset. Axiom derives `datasets` from `aplQuery`. The name can't match an existing dataset or view, and the query can't reference views or use wildcards.",
         "tags": [
           "views"
         ],
@@ -2807,7 +3402,7 @@
         },
         "responses": {
           "200": {
-            "description": "View",
+            "description": "Created view.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2815,25 +3410,33 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid view, for example an APL parse error, a name that's already in use, or a query that references a view or datasets in different regions."
+          },
+          "403": {
+            "description": "You don't have query access to a dataset that `aplQuery` references."
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "views|create"
+            ]
+          }
+        ]
       }
     },
     "/views/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "views|read"
-            ]
-          }
-        ],
+        "description": "Retrieves a view by its name.",
         "tags": [
           "views"
         ],
         "operationId": "getView",
         "parameters": [
           {
+            "description": "Name of the view",
             "name": "id",
             "in": "path",
             "required": true,
@@ -2844,7 +3447,7 @@
         ],
         "responses": {
           "200": {
-            "description": "View",
+            "description": "View.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2852,23 +3455,31 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "You don't have query access to the view's dataset."
+          },
+          "404": {
+            "description": "View not found."
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "views|update"
+              "views|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
+        "description": "Replaces the `aplQuery` and `description` of a view, identified by its name. Axiom ignores `name` and `datasets` in the body and derives `datasets` from the new query.",
         "tags": [
           "views"
         ],
         "operationId": "updateView",
         "parameters": [
           {
+            "description": "Name of the view",
             "name": "id",
             "in": "path",
             "required": true,
@@ -2882,7 +3493,7 @@
         },
         "responses": {
           "200": {
-            "description": "View",
+            "description": "Updated view.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2890,23 +3501,31 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "You don't have query access to the view's current or new datasets."
+          },
+          "404": {
+            "description": "View not found."
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "views|delete"
+              "views|update"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
+        "description": "Deletes a view by its name.",
         "tags": [
           "views"
         ],
         "operationId": "deleteView",
         "parameters": [
           {
+            "description": "Name of the view",
             "name": "id",
             "in": "path",
             "required": true,
@@ -2917,9 +3536,22 @@
         ],
         "responses": {
           "204": {
-            "description": "(empty)"
+            "description": "View deleted."
+          },
+          "403": {
+            "description": "You don't have query access to the view's dataset."
+          },
+          "404": {
+            "description": "View not found."
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "views|delete"
+            ]
+          }
+        ]
       }
     },
     "/dashboards": {
@@ -2928,7 +3560,7 @@
           "dashboards"
         ],
         "summary": "List dashboards",
-        "description": "List dashboards visible to the caller.",
+        "description": "Lists dashboards visible to the caller, sorted by name and paginated with `limit` and `offset`. Labels are resolved unless `exclude=labels`.",
         "operationId": "listDashboards",
         "security": [
           {
@@ -2941,11 +3573,38 @@
           },
           {
             "$ref": "#/components/parameters/Offset"
+          },
+          {
+            "name": "exclude",
+            "in": "query",
+            "description": "Exclude resolved label objects from each dashboard response. The labelIds field is still returned.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
+          },
+          {
+            "name": "labelIds",
+            "in": "query",
+            "description": "Return dashboards assigned every specified label ID.",
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": false
           }
         ],
         "responses": {
           "200": {
-            "description": "List of dashboards",
+            "description": "Dashboards visible to the caller.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2953,6 +3612,16 @@
                   "items": {
                     "$ref": "#/components/schemas/DashboardResource"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid label filter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardError"
                 }
               }
             }
@@ -2964,7 +3633,7 @@
           "dashboards"
         ],
         "summary": "Create dashboard",
-        "description": "Create a dashboard from a dashboard document payload.",
+        "description": "Creates a dashboard and generates a `uid` if you don't set one. If a dashboard with the `uid` already exists, updates it and returns `200`, which requires the current `version` or `overwrite: true`.",
         "operationId": "createDashboard",
         "security": [
           {
@@ -3041,7 +3710,7 @@
           "dashboards"
         ],
         "summary": "Get dashboard",
-        "description": "Get a dashboard by UID.",
+        "description": "Retrieves a dashboard by UID, including its current `version`. Labels are resolved unless `exclude=labels`.",
         "operationId": "getDashboard",
         "security": [
           {
@@ -3055,6 +3724,17 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "exclude",
+            "in": "query",
+            "description": "Exclude resolved label objects from the dashboard response. The labelIds field is still returned.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
             }
           }
         ],
@@ -3086,7 +3766,7 @@
           "dashboards"
         ],
         "summary": "Update dashboard",
-        "description": "Update a dashboard by UID.",
+        "description": "Replaces the dashboard document for the UID. Set `version` to the current version, or `overwrite: true` to skip the check; a stale `version` returns `412`. Creates the dashboard and returns `201` if the UID doesn't exist.",
         "operationId": "updateDashboard",
         "security": [
           {
@@ -3171,7 +3851,7 @@
           "dashboards"
         ],
         "summary": "Delete dashboard",
-        "description": "Delete a dashboard by UID.",
+        "description": "Permanently deletes a dashboard by UID and removes its label assignments. Returns `404` if the dashboard doesn't exist or the caller can't manage it.",
         "operationId": "deleteDashboard",
         "security": [
           {
@@ -3211,7 +3891,7 @@
           "dashboards"
         ],
         "summary": "Patch dashboard chart",
-        "description": "Patch a single chart in a dashboard by chart ID.",
+        "description": "Applies a JSON merge patch to one chart in a dashboard. Set `version` to the dashboard's current version, or `overwrite: true` to skip the check; a stale `version` returns `412`.",
         "operationId": "patchDashboardChart",
         "security": [
           {
@@ -3394,16 +4074,6 @@
       }
     },
     "requestBodies": {
-      "FlowDestination": {
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/FlowDestination"
-            }
-          }
-        },
-        "required": true
-      },
       "Repo": {
         "content": {
           "application/json": {
@@ -3498,6 +4168,18 @@
           "orgCapabilities"
         ],
         "properties": {
+          "apiLastUsed": {
+            "description": "When the token was last used on an API other than ingest",
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "nullable": true
+          },
+          "auditIdentity": {
+            "description": "Audit identity of the token",
+            "type": "string",
+            "readOnly": true
+          },
           "datasetCapabilities": {
             "$ref": "#/components/schemas/datasetCapabilities"
           },
@@ -3515,6 +4197,13 @@
           "id": {
             "description": "ID of the token",
             "type": "string"
+          },
+          "ingestLastUsed": {
+            "description": "When the token was last used to ingest",
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "nullable": true
           },
           "name": {
             "description": "Name of the token",
@@ -3613,7 +4302,7 @@
         }
       },
       "AlertHistory": {
-        "description": "Historical record of an alert's state changes.\nTracks when alerts are opened and closed, allowing for incident timeline analysis.\n",
+        "description": "A notification sent for a monitor.",
         "type": "object",
         "required": [
           "name",
@@ -3623,17 +4312,17 @@
         ],
         "properties": {
           "checkId": {
-            "description": "Unique identifier of the check that triggered the alert",
+            "description": "ID of the monitor",
             "type": "string",
-            "example": "chk_abc123"
+            "example": "QgOLFXIvK0ZbYf3tZE"
           },
           "name": {
-            "description": "The name of the alert",
+            "description": "Title of the notification: `Triggered: ` or `Resolved: ` followed by the monitor name",
             "type": "string",
-            "example": "High CPU Usage Alert"
+            "example": "Triggered: High CPU usage"
           },
           "state": {
-            "description": "Current state of the alert",
+            "description": "`open` if the notification reported that the monitor triggered, `closed` if it reported that the monitor resolved",
             "type": "string",
             "enum": [
               "open",
@@ -3642,7 +4331,7 @@
             "example": "open"
           },
           "timestamp": {
-            "description": "ISO 8601 timestamp when the alert state changed",
+            "description": "Time the delivery was recorded, after any retries",
             "type": "string",
             "format": "date-time",
             "example": "2024-03-20T15:30:00Z"
@@ -3920,99 +4609,6 @@
           }
         }
       },
-      "Block": {
-        "type": "object",
-        "properties": {
-          "locatorURL": {
-            "description": "URL to locate the block in storage",
-            "type": "string",
-            "example": "block://unstable_v0/zgAQynPEQLEMsQwAAwAACAwYqTcAFGcAAAAAAAAACjgVchcAG7bpGFuQrFTOk54YW5Fr9V76LmidjehN6GOLBD7YhQAAAACS2SJheGlvbWVyc2Z0ODNheGlvbXRyYWNlc2RldnlreDdjeXJ12SxzMzovL2F4aW9tLWNsb3VkLWRldmVsb3BtZW50LWRhdGFiYXNlLTY1amJtLw=="
-          },
-          "memoryEstimate": {
-            "description": "Estimated memory usage in bytes",
-            "type": "integer",
-            "format": "int64",
-            "example": 100000
-          },
-          "recordCount": {
-            "description": "Number of records in the block",
-            "type": "integer",
-            "format": "int32",
-            "example": 10000
-          }
-        }
-      },
-      "BlockFailure": {
-        "type": "object",
-        "properties": {
-          "block": {
-            "$ref": "#/components/schemas/Block"
-          },
-          "error": {
-            "description": "Error message describing the failure",
-            "type": "string",
-            "example": "Failed to parse block data"
-          },
-          "errorCode": {
-            "description": "Error code for categorizing the failure",
-            "type": "string",
-            "example": "PARSE_ERROR"
-          }
-        }
-      },
-      "BlockSuccess": {
-        "type": "object",
-        "properties": {
-          "block": {
-            "$ref": "#/components/schemas/Block"
-          },
-          "events": {
-            "description": "Number of events processed",
-            "type": "integer",
-            "format": "int64",
-            "example": 5000
-          }
-        }
-      },
-      "BlocksRequest": {
-        "type": "object",
-        "required": [
-          "apl",
-          "startTime",
-          "endTime"
-        ],
-        "properties": {
-          "apl": {
-            "description": "The APL query to execute for finding matching blocks",
-            "type": "string",
-            "example": "['my-dataset'] | where status_code >= 400"
-          },
-          "endTime": {
-            "description": "The end time for the query time range",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-01-02T00:00:00Z"
-          },
-          "startTime": {
-            "description": "The start time for the query time range",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-01-01T00:00:00Z"
-          }
-        }
-      },
-      "BlocksResponse": {
-        "type": "object",
-        "properties": {
-          "blocks": {
-            "description": "List of blocks matching the query",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Block"
-            }
-          }
-        }
-      },
       "BucketInfo": {
         "description": "The standard mode of operation for Kirby is to create buckets on the _time column,",
         "type": "object",
@@ -4024,6 +4620,22 @@
           },
           "size": {
             "description": "An integer or float representing the fixed bucket size.\nWhen the bucket field is _time this value is in nanoseconds."
+          }
+        }
+      },
+      "Changes": {
+        "type": "object",
+        "required": [
+          "collections"
+        ],
+        "properties": {
+          "collections": {
+            "description": "Map of collection name to the RFC3339 time of its last change.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "format": "date-time"
+            }
           }
         }
       },
@@ -4121,7 +4733,7 @@
             "x-omitempty": false
           },
           "useRetentionPeriod": {
-            "description": "Whether to use the retention period",
+            "description": "Ignored. Axiom derives this value from `retentionDays`.",
             "type": "boolean",
             "x-omitempty": false
           }
@@ -4131,40 +4743,6 @@
           "kind": "axiom:events:v1",
           "name": "string",
           "retentionDays": 30
-        }
-      },
-      "CreateFlowExport": {
-        "type": "object",
-        "required": [
-          "destinationId",
-          "name",
-          "apl",
-          "start",
-          "end"
-        ],
-        "properties": {
-          "apl": {
-            "description": "The APL query to execute for the export",
-            "type": "string"
-          },
-          "destinationId": {
-            "description": "The destination to export to",
-            "type": "string"
-          },
-          "end": {
-            "description": "The RFC3339-formatted time of the end of the export range",
-            "type": "string",
-            "format": "date-time"
-          },
-          "name": {
-            "description": "The name of the export",
-            "type": "string"
-          },
-          "start": {
-            "description": "The RFC3339-formatted time of the start of the export range",
-            "type": "string",
-            "format": "date-time"
-          }
         }
       },
       "CreateUserRequest": {
@@ -4311,7 +4889,8 @@
           "createdAt",
           "updatedAt",
           "createdBy",
-          "updatedBy"
+          "updatedBy",
+          "labelIds"
         ],
         "properties": {
           "createdAt": {
@@ -4326,6 +4905,19 @@
           },
           "id": {
             "type": "string"
+          },
+          "labelIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            }
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Label"
+            },
+            "x-omitempty": true
           },
           "uid": {
             "type": "string"
@@ -4438,7 +5030,8 @@
           "created",
           "updatedAt",
           "who",
-          "kind"
+          "kind",
+          "labelIds"
         ],
         "properties": {
           "canWrite": {
@@ -4479,6 +5072,21 @@
               "axiom:events:v1"
             ],
             "example": "axiom:events:v1"
+          },
+          "labelIds": {
+            "description": "IDs of labels assigned to this dataset.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            }
+          },
+          "labels": {
+            "description": "Resolved labels assigned to this dataset.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Label"
+            },
+            "x-omitempty": true
           },
           "mapFields": {
             "type": "array",
@@ -4551,6 +5159,179 @@
             "description": "Unit of the field",
             "type": "string"
           }
+        }
+      },
+      "DatasetSchemaHealth": {
+        "type": "object",
+        "required": [
+          "fieldCount"
+        ],
+        "properties": {
+          "active30d": {
+            "description": "Fields with a non-null value in the last 30 days. Omitted if presence stats fail.",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "fieldCount": {
+            "description": "Number of fields in the dataset catalog.",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false
+          },
+          "fieldLimit": {
+            "description": "Organization field limit. Null when the org has no field cap.",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false,
+            "nullable": true
+          },
+          "growth": {
+            "description": "Fields first registered in each window. Fields with no firstSeen are skipped.",
+            "type": "object",
+            "required": [
+              "7d",
+              "30d"
+            ],
+            "properties": {
+              "30d": {
+                "description": "Fields first registered in the last 30 days.",
+                "type": "integer",
+                "format": "int64",
+                "x-go-name": "ThirtyDay",
+                "x-omitempty": false
+              },
+              "7d": {
+                "description": "Fields first registered in the last 7 days.",
+                "type": "integer",
+                "format": "int64",
+                "x-go-name": "SevenDay",
+                "x-omitempty": false
+              }
+            },
+            "x-omitempty": false
+          },
+          "headroom": {
+            "description": "fieldLimit minus fieldCount. Can be negative. Null when fieldLimit is null.",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false,
+            "nullable": true
+          },
+          "inactive30d": {
+            "description": "Fields with no non-null value in the last 30 days. Omitted if presence stats fail.",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "topGrowthSources": {
+            "description": "Parent paths with the most fields first registered in the last 7 days.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetSchemaHealthGrowthSource"
+            },
+            "x-omitempty": false
+          }
+        }
+      },
+      "DatasetSchemaHealthGrowthSource": {
+        "type": "object",
+        "required": [
+          "prefix",
+          "newFields7d"
+        ],
+        "properties": {
+          "newFields7d": {
+            "description": "Fields first registered under this prefix in the last 7 days.",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false
+          },
+          "prefix": {
+            "description": "Parent dotted path of the new fields.",
+            "type": "string"
+          }
+        }
+      },
+      "DatasetUnusedFields": {
+        "type": "object",
+        "required": [
+          "fieldCount",
+          "unused"
+        ],
+        "properties": {
+          "fieldCount": {
+            "description": "Number of fields in the dataset catalog.",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false
+          },
+          "unused": {
+            "description": "Catalog fields with a name or type absent from blocks.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnusedField"
+            },
+            "x-omitempty": false
+          }
+        }
+      },
+      "DatasetsError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "description": "HTTP status code.",
+            "type": "integer"
+          },
+          "message": {
+            "description": "Error message.",
+            "type": "string"
+          }
+        },
+        "example": {
+          "code": 400,
+          "message": "Vacuuming a metrics dataset is not supported"
+        }
+      },
+      "DeleteDatasetFieldsRequest": {
+        "type": "object",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "example": {
+          "fields": [
+            "field1",
+            "field2"
+          ]
+        }
+      },
+      "DeleteDatasetFieldsResult": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-omitempty": false
+          },
+          "jobId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "fields": [
+            "field1",
+            "field2"
+          ]
         }
       },
       "DiscordConfig": {
@@ -4664,178 +5445,6 @@
           }
         }
       },
-      "FlowDestination": {
-        "description": "Flow destination configuration schema.",
-        "type": "object",
-        "required": [
-          "kind",
-          "name",
-          "failureMode",
-          "properties"
-        ],
-        "properties": {
-          "failureMode": {
-            "type": "string",
-            "enum": [
-              "waitAndRetry",
-              "abort",
-              "continue"
-            ]
-          },
-          "id": {
-            "type": "string",
-            "readOnly": true
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "axiom",
-              "azureBlobStorageClientSecret",
-              "gcs",
-              "http",
-              "httpAuthorization",
-              "httpBasic",
-              "s3Compat"
-            ]
-          },
-          "name": {
-            "type": "string"
-          },
-          "properties": {
-            "description": "Flow properties for the specific flow type.",
-            "type": "object",
-            "properties": {
-              "axiom": {
-                "$ref": "#/components/schemas/axiomProperties"
-              },
-              "azureBlobStorageClientSecret": {
-                "$ref": "#/components/schemas/azureBlobStorageClientSecretProperties"
-              },
-              "gcs": {
-                "$ref": "#/components/schemas/gcsProperties"
-              },
-              "http": {
-                "$ref": "#/components/schemas/httpProperties"
-              },
-              "httpAuthorization": {
-                "$ref": "#/components/schemas/httpAuthorizationProperties"
-              },
-              "httpBasic": {
-                "$ref": "#/components/schemas/httpBasicProperties"
-              },
-              "s3Compat": {
-                "$ref": "#/components/schemas/s3CompatProperties"
-              }
-            }
-          }
-        }
-      },
-      "FlowExport": {
-        "type": "object",
-        "properties": {
-          "apl": {
-            "description": "The APL of the export",
-            "type": "string",
-            "readOnly": true
-          },
-          "createdAt": {
-            "description": "The RFC3339-formatted time the export was created at",
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true
-          },
-          "createdBy": {
-            "type": "string",
-            "readOnly": true
-          },
-          "destinationId": {
-            "description": "The destination ID",
-            "type": "string",
-            "readOnly": true
-          },
-          "end": {
-            "description": "The RFC3339-formatted time of the end of the export range",
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true
-          },
-          "errorMessages": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "readOnly": true
-          },
-          "errorRate": {
-            "description": "Error Rate",
-            "type": "number",
-            "format": "double",
-            "readOnly": true
-          },
-          "eventsIn": {
-            "description": "Number of events received",
-            "type": "integer",
-            "readOnly": true
-          },
-          "eventsOut": {
-            "description": "Number of events delivered",
-            "type": "integer",
-            "readOnly": true
-          },
-          "id": {
-            "type": "string",
-            "readOnly": true
-          },
-          "lastActivity": {
-            "description": "The RFC3339-formatted time of the last activity",
-            "type": "string",
-            "format": "date-time",
-            "x-isnullable": true,
-            "readOnly": true
-          },
-          "name": {
-            "description": "The name of the export",
-            "type": "string",
-            "readOnly": true
-          },
-          "progress": {
-            "description": "Progress",
-            "type": "number",
-            "format": "double",
-            "readOnly": true
-          },
-          "start": {
-            "description": "The RFC3339-formatted time of the start of the export range",
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true
-          },
-          "state": {
-            "description": "State",
-            "type": "string",
-            "enum": [
-              "requested",
-              "running",
-              "stopped",
-              "aborted",
-              "finished",
-              "expired"
-            ],
-            "readOnly": true
-          },
-          "stoppedAt": {
-            "description": "The RFC3339-formatted time the export was stopped at",
-            "type": "string",
-            "format": "date-time",
-            "x-isnullable": true,
-            "readOnly": true
-          },
-          "stoppedBy": {
-            "type": "string",
-            "readOnly": true
-          }
-        }
-      },
       "Group": {
         "description": "Defines a group of users for organizational purposes",
         "type": "object",
@@ -4848,7 +5457,7 @@
             "type": "string"
           },
           "isManaged": {
-            "description": "Whether the group is managed by Axiom",
+            "description": "Whether the group is synced from your identity provider. You can't delete a managed group or change its members.",
             "type": "boolean",
             "readOnly": true
           },
@@ -4864,7 +5473,7 @@
             "type": "string"
           },
           "roles": {
-            "description": "List of role IDs that are assigned to this group",
+            "description": "IDs of the roles assigned to the group. Use a custom role ID or a built-in role ID: `axiom-owner`, `axiom-admin`, `axiom-user`, `axiom-read-only`, or `axiom-none`.",
             "type": "array",
             "items": {
               "type": "string"
@@ -4936,6 +5545,253 @@
           "name": {
             "description": "Name of the token",
             "type": "string"
+          }
+        }
+      },
+      "Job": {
+        "type": "object",
+        "required": [
+          "jobID"
+        ],
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "datasetCanonicalID": {
+            "type": "string"
+          },
+          "datasetID": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "jobID": {
+            "type": "string"
+          },
+          "lastUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "numUpdates": {
+            "type": "integer"
+          },
+          "orgID": {
+            "type": "string"
+          },
+          "progress": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "x-go-type": {
+          "import": {
+            "package": "github.com/axiomhq/axiom/pkg/foundations/common/jobs"
+          },
+          "type": "Job"
+        }
+      },
+      "JobCreateResponse": {
+        "type": "object",
+        "required": [
+          "jobID"
+        ],
+        "properties": {
+          "jobID": {
+            "type": "string"
+          }
+        },
+        "x-go-type": {
+          "import": {
+            "alias": "corejobs",
+            "package": "github.com/axiomhq/axiom/pkg/core/common/jobs"
+          },
+          "type": "CreateResponse"
+        }
+      },
+      "Label": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "color"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "$ref": "#/components/schemas/LabelID"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "LabelAssignmentResult": {
+        "type": "object",
+        "required": [
+          "target",
+          "labelIds"
+        ],
+        "properties": {
+          "labelIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            }
+          },
+          "target": {
+            "$ref": "#/components/schemas/LabelAssignmentTarget"
+          }
+        }
+      },
+      "LabelAssignmentTarget": {
+        "description": "A resource that supports organization labels. The target type determines which identifier is required.",
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "dataset": {
+            "description": "Required for dataset targets, which reject id, uid, and templateId. Also required alongside templateId for frontend integration dashboards. Use the current dataset name. Assignments use the underlying dataset instance, so permanent deletion and recreation do not restore old labels.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Required for monitor and notifier targets, using the ID returned by their respective APIs. Also identifies a backend-provided integration dashboard using the opaque ID returned by backend dashboard listing APIs. Mutually exclusive with uid, templateId, and dataset.",
+            "type": "string"
+          },
+          "templateId": {
+            "description": "Stable frontend-owned template key for an integration_dashboard target, such as k8s.stats. Requires dataset and rejects id and uid. The backend treats this key as opaque and does not validate a template registry. Whitespace and control characters are rejected.",
+            "type": "string",
+            "maxLength": 128
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "dashboard",
+              "integration_dashboard",
+              "dataset",
+              "monitor",
+              "notifier"
+            ]
+          },
+          "uid": {
+            "description": "Required only for saved dashboard targets; rejected for other target types.",
+            "type": "string"
+          }
+        }
+      },
+      "LabelAssignmentsQuery": {
+        "type": "object",
+        "required": [
+          "targets"
+        ],
+        "properties": {
+          "targets": {
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/LabelAssignmentTarget"
+            }
+          }
+        }
+      },
+      "LabelAssignmentsReplace": {
+        "type": "object",
+        "required": [
+          "target",
+          "labelIds"
+        ],
+        "properties": {
+          "labelIds": {
+            "type": "array",
+            "maxItems": 500,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            }
+          },
+          "target": {
+            "$ref": "#/components/schemas/LabelAssignmentTarget"
+          }
+        }
+      },
+      "LabelColor": {
+        "type": "object",
+        "required": [
+          "type",
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "red",
+              "coral",
+              "orange",
+              "amber",
+              "yellow",
+              "lime",
+              "green",
+              "teal",
+              "blue",
+              "iris",
+              "purple",
+              "pink"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "palette"
+            ]
+          }
+        }
+      },
+      "LabelID": {
+        "type": "string",
+        "x-go-type": {
+          "import": {
+            "package": "github.com/axiomhq/axiom/pkg/core/ids"
+          },
+          "type": "LabelID"
+        }
+      },
+      "LabelUpdate": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 512,
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1
           }
         }
       },
@@ -5196,17 +6052,6 @@
             "maximum": 7,
             "example": 7
           },
-          "createdAt": {
-            "description": "Timestamp when the monitor was created",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-03-20T10:00:00Z"
-          },
-          "createdBy": {
-            "description": "ID of the user who created the monitor",
-            "type": "string",
-            "example": "usr_789xyz"
-          },
           "description": {
             "description": "Detailed description of the monitor's purpose",
             "type": "string",
@@ -5248,8 +6093,7 @@
               "type": "string"
             },
             "example": [
-              "notify_slack_prod",
-              "notify_email_oncall"
+              "z0NfJw64aKagPOBBIJ"
             ]
           },
           "notifyByGroup": {
@@ -5332,12 +6176,6 @@
               "AnomalyDetection"
             ],
             "example": "Threshold"
-          },
-          "updatedAt": {
-            "description": "Timestamp when the monitor was last updated",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-03-20T10:30:00Z"
           }
         }
       },
@@ -5350,13 +6188,60 @@
           {
             "type": "object",
             "required": [
-              "id"
+              "id",
+              "labelIds"
             ],
             "properties": {
+              "createdAt": {
+                "description": "Timestamp when the monitor was created",
+                "type": "string",
+                "format": "date-time",
+                "example": "2024-03-20T10:00:00Z"
+              },
+              "createdBy": {
+                "description": "ID of the user who created the monitor",
+                "type": "string",
+                "example": "usr_789xyz"
+              },
+              "datasets": {
+                "description": "Dataset names referenced by the monitor query.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "production-logs"
+                ]
+              },
               "id": {
                 "description": "Unique identifier for the monitor",
                 "type": "string",
-                "example": "mon_xyz789"
+                "example": "QgOLFXIvK0ZbYf3tZE"
+              },
+              "labelIds": {
+                "description": "IDs of labels assigned to this monitor.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LabelID"
+                }
+              },
+              "labels": {
+                "description": "Resolved labels assigned to this monitor.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Label"
+                },
+                "x-omitempty": true
+              },
+              "lastError": {
+                "description": "Most recent error encountered while evaluating the monitor.",
+                "type": "string"
+              },
+              "updatedAt": {
+                "description": "Timestamp when the monitor was last updated",
+                "type": "string",
+                "format": "date-time",
+                "example": "2024-03-20T10:30:00Z"
               }
             }
           }
@@ -5406,6 +6291,27 @@
             "description": "URL relevant for the event marked by the annotation. For example, link to GitHub pull request.",
             "type": "string",
             "maxLength": 512
+          }
+        }
+      },
+      "NewLabel": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 512,
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1
           }
         }
       },
@@ -5491,11 +6397,30 @@
             "$ref": "#/components/schemas/Notifier"
           },
           {
+            "type": "object",
+            "required": [
+              "labelIds"
+            ],
             "properties": {
               "id": {
                 "description": "Unique identifier for the notifier",
                 "type": "string",
-                "example": "notify_slack_prod"
+                "example": "z0NfJw64aKagPOBBIJ"
+              },
+              "labelIds": {
+                "description": "IDs of labels assigned to this notifier.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LabelID"
+                }
+              },
+              "labels": {
+                "description": "Resolved labels assigned to this notifier.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Label"
+                },
+                "x-omitempty": true
               }
             }
           }
@@ -5608,6 +6533,40 @@
           }
         }
       },
+      "OrgPreview": {
+        "type": "object",
+        "required": [
+          "name",
+          "defaultEdgeDeployment",
+          "expiresAt",
+          "datasetCount",
+          "ingestedBytes"
+        ],
+        "properties": {
+          "datasetCount": {
+            "description": "Number of datasets currently in the organization.",
+            "type": "integer",
+            "format": "int64"
+          },
+          "defaultEdgeDeployment": {
+            "description": "The edge deployment (region) the organization was created in.",
+            "type": "string"
+          },
+          "expiresAt": {
+            "description": "When the temporary organization expires and becomes eligible for deletion.",
+            "type": "string",
+            "format": "date-time"
+          },
+          "ingestedBytes": {
+            "description": "Bytes ingested into the organization over the past 24 hours.",
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "PagerDutyConfig": {
         "description": "Configuration for PagerDuty integration",
         "properties": {
@@ -5641,12 +6600,12 @@
       "ProvisionOrg": {
         "type": "object",
         "properties": {
-          "name": {
-            "description": "Optional display name for the organization. If omitted, a name is auto-generated and the owner can rename it later.",
+          "edgeDeployment": {
+            "description": "Optional edge deployment (region) the organization is created in. If omitted, the environment's default region is used.\n",
             "type": "string"
           },
-          "edgeDeployment": {
-            "description": "Optional edge deployment (region) the organization is created in. If omitted, the environment's default region is used.",
+          "name": {
+            "description": "Optional display name for the organization. If omitted, a name is auto-generated and the owner can rename it later.\n",
             "type": "string"
           }
         }
@@ -5662,10 +6621,8 @@
           "token"
         ],
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
+          "claimUrl": {
+            "description": "URL a human follows to claim ownership of the temporary org.",
             "type": "string"
           },
           "defaultEdgeDeployment": {
@@ -5675,12 +6632,14 @@
             "type": "string",
             "format": "date-time"
           },
-          "claimUrl": {
-            "description": "URL a human follows to claim ownership of the temporary org.",
+          "id": {
+            "type": "string"
+          },
+          "name": {
             "type": "string"
           },
           "token": {
-            "description": "Full-permission API token the agent uses to create datasets, ingest, and query. Returned once and never retrievable again.",
+            "description": "Full-permission API token the agent uses to create datasets, ingest, and query. Returned once and never retrievable again.\n",
             "type": "string"
           }
         }
@@ -5862,7 +6821,7 @@
             "type": "string"
           },
           "members": {
-            "description": "List of user IDs that are assigned to this role",
+            "description": "IDs of users assigned this role directly. Returned in responses and ignored in requests. To assign a role to a user, use the Update user role endpoint.",
             "type": "array",
             "items": {
               "type": "string"
@@ -6251,56 +7210,6 @@
           }
         }
       },
-      "TransformRequest": {
-        "type": "object",
-        "required": [
-          "blocks",
-          "apl",
-          "startTime",
-          "endTime",
-          "resultURLs"
-        ],
-        "properties": {
-          "apl": {
-            "description": "The APL query to apply for transformation",
-            "type": "string",
-            "example": "['my-dataset'] | where status_code >= 400 | project timestamp, service, error_message"
-          },
-          "blocks": {
-            "description": "List of block locator URLs to transform",
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "block://unstable_v0/zgAQynPEQLEMsQwAAwAACAwYqTcAFGcAAAAAAAAACjgVchcAG7bpGFuQrFTOk54YW5Fr9V76LmidjehN6GOLBD7YhQAAAACS2SJheGlvbWVyc2Z0ODNheGlvbXRyYWNlc2RldnlreDdjeXJ12SxzMzovL2F4aW9tLWNsb3VkLWRldmVsb3BtZW50LWRhdGFiYXNlLTY1amJtLw=="
-            ]
-          },
-          "endTime": {
-            "description": "The end time for the transformation",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-01-02T00:00:00Z"
-          },
-          "resultURLs": {
-            "description": "List of URLs where transformation results should be uploaded",
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "https://output-bucket.s3.amazonaws.com/transformed/result1.jsonl?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...",
-              "https://output-bucket.s3.amazonaws.com/transformed/result2.jsonl?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=..."
-            ]
-          },
-          "startTime": {
-            "description": "The start time for the transformation",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-01-01T00:00:00Z"
-          }
-        }
-      },
       "TrimOptions": {
         "type": "object",
         "required": [
@@ -6314,6 +7223,27 @@
         },
         "example": {
           "maxDuration": "1h"
+        }
+      },
+      "UnusedField": {
+        "type": "object",
+        "required": [
+          "name",
+          "types"
+        ],
+        "properties": {
+          "name": {
+            "description": "Catalog field name.",
+            "type": "string"
+          },
+          "types": {
+            "description": "Catalog types that are not stored in blocks.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-omitempty": false
+          }
         }
       },
       "UpdateCurrentUserRequest": {
@@ -6342,7 +7272,7 @@
             "x-omitempty": false
           },
           "useRetentionPeriod": {
-            "description": "Whether to use the retention period",
+            "description": "Ignored. Axiom derives this value from `retentionDays`.",
             "type": "boolean",
             "x-omitempty": false
           }
@@ -6479,9 +7409,11 @@
         ],
         "properties": {
           "aplQuery": {
+            "description": "APL query that defines the view",
             "type": "string"
           },
           "datasets": {
+            "description": "Datasets the view queries. Axiom derives this from `aplQuery` and ignores it in requests.",
             "type": "array",
             "items": {
               "type": "string"
@@ -6491,6 +7423,7 @@
             "type": "string"
           },
           "name": {
+            "description": "Name of the view. Use it as the view ID and to query the view like a dataset.",
             "type": "string"
           },
           "sharedByOrg": {
@@ -6521,6 +7454,7 @@
             "type": "string"
           },
           "name": {
+            "description": "Name of the virtual field. Use letters, digits, underscores, and hyphens, starting and ending with a letter or digit.",
             "type": "string"
           },
           "type": {
@@ -6559,83 +7493,10 @@
           }
         }
       },
-      "axiomProperties": {
-        "type": "object",
-        "required": [
-          "dataset",
-          "token"
-        ],
-        "properties": {
-          "dataset": {
-            "description": "Name of the destination dataset",
-            "type": "string"
-          },
-          "token": {
-            "description": "Axiom ingest API token",
-            "type": "string"
-          },
-          "url": {
-            "description": "Axiom ingest API endpoint",
-            "type": "string"
-          }
-        }
-      },
-      "azureBlobStorageClientSecretProperties": {
-        "type": "object",
-        "required": [
-          "clientId",
-          "clientSecret",
-          "tenantID",
-          "url"
-        ],
-        "properties": {
-          "clientId": {
-            "description": "Client ID of the service principal",
-            "type": "string"
-          },
-          "clientSecret": {
-            "description": "Client secret of the service principal",
-            "type": "string"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson"
-            ]
-          },
-          "maximumEvents": {
-            "description": "Maximum number of events to send in a single file",
-            "type": "integer"
-          },
-          "tenantID": {
-            "description": "AD Tenant ID",
-            "type": "string"
-          },
-          "url": {
-            "description": "URL of the container",
-            "type": "string"
-          }
-        }
-      },
       "datasetCapabilities": {
         "type": "object",
         "additionalProperties": {
           "properties": {
-            "data": {
-              "description": "Data Management capability",
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "delete"
-                ]
-              },
-              "x-omitempty": true
-            },
             "ingest": {
               "description": "Ingest capability",
               "type": "array",
@@ -6686,7 +7547,7 @@
               "x-omitempty": true
             },
             "trim": {
-              "description": "Data Trimming capability",
+              "description": "Data Trimming and Deletion capability",
               "type": "array",
               "items": {
                 "type": "string",
@@ -6721,173 +7582,6 @@
               },
               "x-omitempty": true
             }
-          }
-        }
-      },
-      "gcsProperties": {
-        "type": "object",
-        "required": [
-          "credentialsJson",
-          "bucket"
-        ],
-        "properties": {
-          "bucket": {
-            "description": "Name of the destination bucket",
-            "type": "string"
-          },
-          "credentialsJson": {
-            "description": "Service account or refresh token JSON credentials",
-            "type": "string"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson"
-            ]
-          }
-        }
-      },
-      "httpAuthorizationProperties": {
-        "type": "object",
-        "required": [
-          "authorization",
-          "url"
-        ],
-        "properties": {
-          "authorization": {
-            "description": "Authorization header value",
-            "type": "string"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson",
-              "textTemplate"
-            ]
-          },
-          "headers": {
-            "description": "HTTP headers to send with each request",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "maximumConnections": {
-            "description": "Maximum number of connections to the target server",
-            "type": "integer"
-          },
-          "maximumEvents": {
-            "description": "Maximum number of events to send in a single request",
-            "type": "integer"
-          },
-          "textTemplateEncoderBody": {
-            "description": "Text Encoder Template, only available if format is textTemplate",
-            "type": "string"
-          },
-          "url": {
-            "description": "URL of the destination endpoint",
-            "type": "string"
-          }
-        }
-      },
-      "httpBasicProperties": {
-        "type": "object",
-        "required": [
-          "username",
-          "url"
-        ],
-        "properties": {
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson",
-              "textTemplate"
-            ]
-          },
-          "headers": {
-            "description": "HTTP headers to send with each request",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "maximumConnections": {
-            "description": "Maximum number of connections to the target server",
-            "type": "integer"
-          },
-          "maximumEvents": {
-            "description": "Maximum number of events to send in a single request",
-            "type": "integer"
-          },
-          "password": {
-            "description": "Password of the destination endpoint",
-            "type": "string"
-          },
-          "textTemplateEncoderBody": {
-            "description": "Text Encoder Template, only available if format is textTemplate",
-            "type": "string"
-          },
-          "url": {
-            "description": "URL of the destination endpoint",
-            "type": "string"
-          },
-          "username": {
-            "description": "Username of the destination endpoint",
-            "type": "string"
-          }
-        }
-      },
-      "httpProperties": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "properties": {
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson",
-              "textTemplate"
-            ]
-          },
-          "headers": {
-            "description": "HTTP headers to send with each request",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "maximumConnections": {
-            "description": "Maximum number of connections to the target server",
-            "type": "integer"
-          },
-          "maximumEvents": {
-            "description": "Maximum number of events to send in a single request",
-            "type": "integer"
-          },
-          "textTemplateEncoderBody": {
-            "description": "Text Encoder Template, only available if format is textTemplate",
-            "type": "string"
-          },
-          "url": {
-            "description": "URL of the destination endpoint",
-            "type": "string"
           }
         }
       },
@@ -6987,8 +7681,8 @@
             },
             "x-omitempty": true
           },
-          "flows": {
-            "description": "Flows capability",
+          "integrations": {
+            "description": "Integrations capability",
             "type": "array",
             "items": {
               "type": "string",
@@ -7001,8 +7695,8 @@
             },
             "x-omitempty": true
           },
-          "integrations": {
-            "description": "Integrations capability",
+          "labels": {
+            "description": "Labels capability",
             "type": "array",
             "items": {
               "type": "string",
@@ -7104,17 +7798,6 @@
         "type": "object",
         "additionalProperties": {
           "properties": {
-            "data": {
-              "description": "Controls data management operations like deletion",
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "delete"
-                ]
-              },
-              "x-omitempty": true
-            },
             "ingest": {
               "description": "Controls the ability to ingest data into datasets",
               "type": "array",
@@ -7165,7 +7848,7 @@
               "x-omitempty": true
             },
             "trim": {
-              "description": "Controls data trimming operations for storage optimization",
+              "description": "Controls data trimming and deletion operations",
               "type": "array",
               "items": {
                 "type": "string",
@@ -7300,8 +7983,8 @@
             },
             "x-omitempty": true
           },
-          "flows": {
-            "description": "Controls the management of data flows and pipelines",
+          "integrations": {
+            "description": "Controls the management of third-party integrations",
             "type": "array",
             "items": {
               "type": "string",
@@ -7314,8 +7997,8 @@
             },
             "x-omitempty": true
           },
-          "integrations": {
-            "description": "Controls the management of third-party integrations",
+          "labels": {
+            "description": "Controls the management of labels",
             "type": "array",
             "items": {
               "type": "string",
@@ -7444,51 +8127,6 @@
           }
         }
       },
-      "s3CompatProperties": {
-        "type": "object",
-        "required": [
-          "accessKeyId",
-          "secretAccessKey",
-          "hostname",
-          "bucket"
-        ],
-        "properties": {
-          "accessKeyId": {
-            "description": "AWS access key identifier",
-            "type": "string"
-          },
-          "bucket": {
-            "description": "Name of the destination bucket",
-            "type": "string"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson"
-            ]
-          },
-          "hostname": {
-            "description": "Hostname of the S3 compatible storage",
-            "type": "string"
-          },
-          "maximumEvents": {
-            "description": "Maximum number of events to send in a single file",
-            "type": "integer"
-          },
-          "region": {
-            "description": "Region of the destination bucket",
-            "type": "string"
-          },
-          "secretAccessKey": {
-            "description": "AWS secret access key",
-            "type": "string"
-          }
-        }
-      },
       "viewCapabilities": {
         "type": "object",
         "additionalProperties": {
@@ -7549,9 +8187,17 @@
               "$ref": "#/components/schemas/LayoutItem"
             }
           },
+          "sections": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Section"
+            }
+          },
           "refreshTime": {
             "type": "integer",
             "enum": [
+              0,
               15,
               60,
               300
@@ -7636,6 +8282,9 @@
             "$ref": "#/components/schemas/StatisticChart"
           },
           {
+            "$ref": "#/components/schemas/GaugeChart"
+          },
+          {
             "$ref": "#/components/schemas/NoteChart"
           },
           {
@@ -7646,6 +8295,9 @@
           },
           {
             "$ref": "#/components/schemas/SpacerChart"
+          },
+          {
+            "$ref": "#/components/schemas/VisualizeChart"
           }
         ]
       },
@@ -7654,6 +8306,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -7695,6 +8350,11 @@
       },
       "ChartHideHeader": {
         "type": "boolean"
+      },
+      "SectionId": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
       },
       "OverrideDashboardTimeRange": {
         "anyOf": [
@@ -8116,6 +8776,9 @@
           "id": {
             "$ref": "#/components/schemas/ChartId"
           },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -8129,6 +8792,21 @@
           },
           "query": {
             "$ref": "#/components/schemas/HeatmapChartQuery"
+          },
+          "colorScheme": {
+            "type": "string",
+            "enum": [
+              "Blue",
+              "Orange",
+              "Red",
+              "Purple",
+              "Teal",
+              "Yellow",
+              "Green",
+              "Pink",
+              "Grey",
+              "Brown"
+            ]
           }
         },
         "required": [
@@ -8202,6 +8880,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8344,49 +9025,14 @@
         },
         "additionalProperties": false
       },
-      "DeleteDatasetFieldsRequest": {
-        "type": "object",
-        "required": [
-          "fields"
-        ],
-        "properties": {
-          "fields": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "example": {
-          "fields": [
-            "field1",
-            "field2"
-          ]
-        }
-      },
-      "DeleteDatasetFieldsResult": {
-        "type": "object",
-        "properties": {
-          "fields": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "x-omitempty": false
-          }
-        },
-        "example": {
-          "fields": [
-            "field1",
-            "field2"
-          ]
-        }
-      },
       "PieChart": {
         "type": "object",
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8417,6 +9063,9 @@
           "id": {
             "$ref": "#/components/schemas/ChartId"
           },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -8445,6 +9094,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8478,6 +9130,9 @@
           "id": {
             "$ref": "#/components/schemas/ChartId"
           },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -8506,6 +9161,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8647,11 +9305,104 @@
         },
         "additionalProperties": false
       },
+      "GaugeChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Gauge"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/SimpleChartQuery"
+          },
+          "segments": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GaugeChartSegment"
+            }
+          },
+          "colorScale": {
+            "type": "string",
+            "enum": [
+              "green-to-red",
+              "red-to-green"
+            ]
+          },
+          "showRing": {
+            "type": "boolean"
+          },
+          "labelMode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "boundaries",
+              "intervals"
+            ]
+          },
+          "showSparkline": {
+            "type": "boolean"
+          },
+          "scaleToTimeRange": {
+            "type": "boolean"
+          },
+          "scaleBaseDurationMs": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "customUnits": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query",
+          "segments"
+        ],
+        "additionalProperties": false,
+        "title": "Gauge"
+      },
+      "GaugeChartSegment": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "number"
+          },
+          "to": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "additionalProperties": false
+      },
       "NoteChart": {
         "type": "object",
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8684,6 +9435,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8752,6 +9506,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -9070,6 +9827,9 @@
           "id": {
             "$ref": "#/components/schemas/ChartId"
           },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -9080,6 +9840,14 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "variant": {
+            "type": "string",
+            "enum": [
+              "transparent",
+              "dashed",
+              "solid"
+            ]
           }
         },
         "required": [
@@ -9088,6 +9856,634 @@
         ],
         "additionalProperties": false,
         "title": "Spacer"
+      },
+      "VisualizeChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Visualize"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/SimpleChartQuery"
+          },
+          "visualization": {
+            "$ref": "#/components/schemas/VisualizeConfiguration"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query",
+          "visualization"
+        ],
+        "additionalProperties": false,
+        "title": "Visualize"
+      },
+      "VisualizeConfiguration": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ScatterVisualization"
+          },
+          {
+            "$ref": "#/components/schemas/BarVisualization"
+          },
+          {
+            "$ref": "#/components/schemas/HorizontalBarVisualization"
+          },
+          {
+            "$ref": "#/components/schemas/HistogramVisualization"
+          },
+          {
+            "$ref": "#/components/schemas/FrequencyBarVisualization"
+          },
+          {
+            "$ref": "#/components/schemas/VisualizeHeatmap"
+          }
+        ]
+      },
+      "ScatterVisualization": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "scatter"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/ScatterVisualizationBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/ScatterVisualizationSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Scatter"
+      },
+      "VisualizeConfigurationVersion": {
+        "type": "number",
+        "enum": [
+          1
+        ]
+      },
+      "ScatterVisualizationBindings": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "$ref": "#/components/schemas/VisualizeAxisColumnRef"
+          },
+          "y": {
+            "$ref": "#/components/schemas/VisualizeNumericColumnRef"
+          },
+          "series": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeAxisColumnRef": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "type": {
+            "$ref": "#/components/schemas/VisualizeAxisFieldType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeAxisFieldType": {
+        "type": "string",
+        "enum": [
+          "datetime",
+          "integer",
+          "float"
+        ]
+      },
+      "VisualizeNumericColumnRef": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "type": {
+            "$ref": "#/components/schemas/VisualizeNumericFieldType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeNumericFieldType": {
+        "type": "string",
+        "enum": [
+          "integer",
+          "float"
+        ]
+      },
+      "VisualizeCategoricalColumnRef": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "type": {
+            "$ref": "#/components/schemas/VisualizeCategoricalFieldType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeCategoricalFieldType": {
+        "type": "string",
+        "enum": [
+          "string",
+          "boolean"
+        ]
+      },
+      "ScatterVisualizationSettings": {
+        "type": "object",
+        "properties": {
+          "colors": {
+            "$ref": "#/components/schemas/VisualizeColorSettings"
+          },
+          "xAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          },
+          "legend": {
+            "$ref": "#/components/schemas/VisualizeLegendSettings"
+          }
+        },
+        "additionalProperties": false
+      },
+      "VisualizeColorSettings": {
+        "type": "object",
+        "properties": {
+          "palette": {
+            "type": "string",
+            "enum": [
+              "axiom",
+              "polychrome"
+            ]
+          },
+          "assignment": {
+            "type": "string",
+            "enum": [
+              "series-name",
+              "series-order"
+            ]
+          }
+        },
+        "required": [
+          "palette",
+          "assignment"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeAxisSettings": {
+        "type": "object",
+        "properties": {
+          "scale": {
+            "type": "string",
+            "enum": [
+              "linear",
+              "log"
+            ]
+          },
+          "range": {
+            "type": "string",
+            "enum": [
+              "fit",
+              "includeZero"
+            ]
+          }
+        },
+        "required": [
+          "scale",
+          "range"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeLegendSettings": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "string",
+            "enum": [
+              "none",
+              "bottom",
+              "right"
+            ]
+          }
+        },
+        "required": [
+          "position"
+        ],
+        "additionalProperties": false
+      },
+      "BarVisualization": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "bar"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/BarVisualizationBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/VisualizeBarSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Bar"
+      },
+      "BarVisualizationBindings": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          },
+          "value": {
+            "$ref": "#/components/schemas/VisualizeNumericColumnRef"
+          },
+          "series": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          }
+        },
+        "required": [
+          "category",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeBarSettings": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/VisualizeStandardAggregationSettings"
+          },
+          {
+            "$ref": "#/components/schemas/VisualizePercentileAggregationSettings"
+          }
+        ]
+      },
+      "VisualizeStandardAggregationSettings": {
+        "type": "object",
+        "properties": {
+          "aggregation": {
+            "$ref": "#/components/schemas/VisualizeStandardAggregation"
+          },
+          "categoryLimit": {
+            "$ref": "#/components/schemas/VisualizeCategoryLimit"
+          },
+          "colors": {
+            "$ref": "#/components/schemas/VisualizeColorSettings"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          },
+          "legend": {
+            "$ref": "#/components/schemas/VisualizeLegendSettings"
+          }
+        },
+        "required": [
+          "aggregation",
+          "categoryLimit"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeStandardAggregation": {
+        "type": "string",
+        "enum": [
+          "avg",
+          "sum",
+          "count",
+          "min",
+          "max"
+        ]
+      },
+      "VisualizeCategoryLimit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 100
+      },
+      "VisualizePercentileAggregationSettings": {
+        "type": "object",
+        "properties": {
+          "aggregation": {
+            "type": "string",
+            "enum": [
+              "percentile"
+            ]
+          },
+          "percentile": {
+            "$ref": "#/components/schemas/VisualizePercentile"
+          },
+          "categoryLimit": {
+            "$ref": "#/components/schemas/VisualizeCategoryLimit"
+          },
+          "colors": {
+            "$ref": "#/components/schemas/VisualizeColorSettings"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          },
+          "legend": {
+            "$ref": "#/components/schemas/VisualizeLegendSettings"
+          }
+        },
+        "required": [
+          "aggregation",
+          "percentile",
+          "categoryLimit"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizePercentile": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "HorizontalBarVisualization": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "horizontalBar"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/HorizontalBarVisualizationBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/VisualizeBarSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Horizontal bar"
+      },
+      "HorizontalBarVisualizationBindings": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          },
+          "value": {
+            "$ref": "#/components/schemas/VisualizeNumericColumnRef"
+          },
+          "series": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          }
+        },
+        "required": [
+          "category",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "HistogramVisualization": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "histogram"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/HistogramVisualizationBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/HistogramVisualizationSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Histogram"
+      },
+      "HistogramVisualizationBindings": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/VisualizeNumericColumnRef"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "HistogramVisualizationSettings": {
+        "type": "object",
+        "properties": {
+          "binCount": {
+            "$ref": "#/components/schemas/VisualizeBinCount"
+          },
+          "colors": {
+            "$ref": "#/components/schemas/VisualizeColorSettings"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          }
+        },
+        "required": [
+          "binCount"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeBinCount": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 200
+      },
+      "FrequencyBarVisualization": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "frequencyBar"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/FrequencyBarVisualizationBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/FrequencyBarVisualizationSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Frequency bar"
+      },
+      "FrequencyBarVisualizationBindings": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          }
+        },
+        "required": [
+          "category"
+        ],
+        "additionalProperties": false
+      },
+      "FrequencyBarVisualizationSettings": {
+        "type": "object",
+        "properties": {
+          "categoryLimit": {
+            "$ref": "#/components/schemas/VisualizeCategoryLimit"
+          },
+          "colors": {
+            "$ref": "#/components/schemas/VisualizeColorSettings"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          }
+        },
+        "required": [
+          "categoryLimit"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeHeatmap": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "heatmap"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/VisualizeHeatmapBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/VisualizeHeatmapSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Heatmap"
+      },
+      "VisualizeHeatmapBindings": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          },
+          "y": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeHeatmapSettings": {
+        "type": "object",
+        "properties": {
+          "categoryLimit": {
+            "$ref": "#/components/schemas/VisualizeCategoryLimit"
+          }
+        },
+        "required": [
+          "categoryLimit"
+        ],
+        "additionalProperties": false
       },
       "LayoutItem": {
         "type": "object",
@@ -9146,6 +10542,27 @@
           "y",
           "w",
           "h"
+        ],
+        "additionalProperties": false
+      },
+      "Section": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/SectionId"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "defaultCollapsed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "title"
         ],
         "additionalProperties": false
       },

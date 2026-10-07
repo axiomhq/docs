@@ -35,7 +35,7 @@
         ],
         "operationId": "ingestHecEvent",
         "summary": "Ingest Splunk HEC events",
-        "description": "Ingest one or more Splunk HEC event envelopes. Bodies may contain multiple envelopes, concatenated or newline-delimited. The target dataset is resolved from the `index` query parameter, then the `index` field of the first event, then the dataset the token is scoped to when it grants ingest access to exactly one dataset.",
+        "description": "Ingests one or more Splunk HEC event envelopes, concatenated or newline-delimited, into an events or logs dataset. The dataset comes from the `index` query parameter, then the first event's `index` field, then the token's only ingest dataset.",
         "parameters": [
           {
             "description": "The dataset (Splunk index) to ingest into. Overrides the `index` field in the event envelope.",
@@ -68,7 +68,37 @@
             }
           },
           "400": {
-            "description": "The request could not be processed. The `code` field identifies the Splunk error: `5` (no data), `6` (invalid data format), or `7` (incorrect index).",
+            "description": "The request can't be processed. `code` is `5` (no data), `6` (invalid data format, or the dataset is in another edge deployment or isn't an events or logs dataset), or `7` (no dataset could be resolved).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing (`code` `2`) or invalid (`code` `3`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token can't ingest into the dataset, the dataset is shared, or the organization is suspended. `code` is `4`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found. `code` is `7`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -96,7 +126,7 @@
         ],
         "operationId": "ingestHecCollector",
         "summary": "Ingest Splunk HEC events (alias)",
-        "description": "Alias of `/services/collector/event`. Accepts the same event envelopes and parameters.",
+        "description": "Ingests one or more Splunk HEC event envelopes, concatenated or newline-delimited, into an events or logs dataset. The dataset comes from the `index` query parameter, then the first event's `index` field, then the token's only ingest dataset.",
         "parameters": [
           {
             "description": "The dataset (Splunk index) to ingest into. Overrides the `index` field in the event envelope.",
@@ -129,7 +159,37 @@
             }
           },
           "400": {
-            "description": "The request could not be processed. The `code` field identifies the Splunk error: `5` (no data), `6` (invalid data format), or `7` (incorrect index).",
+            "description": "The request can't be processed. `code` is `5` (no data), `6` (invalid data format, or the dataset is in another edge deployment or isn't an events or logs dataset), or `7` (no dataset could be resolved).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing (`code` `2`) or invalid (`code` `3`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token can't ingest into the dataset, the dataset is shared, or the organization is suspended. `code` is `4`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found. `code` is `7`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -157,7 +217,7 @@
         ],
         "operationId": "ingestHecRaw",
         "summary": "Ingest raw Splunk HEC events",
-        "description": "Ingest a raw payload. Each line of a `text/plain` body becomes an event; JSON bodies are also accepted. Event metadata is supplied through query parameters rather than an envelope.",
+        "description": "Ingests a raw payload into an events or logs dataset. Each line of a plain-text body becomes one event. Event metadata comes from the `host`, `source`, and `sourcetype` query parameters instead of an envelope.",
         "parameters": [
           {
             "description": "The dataset (Splunk index) to ingest into.",
@@ -223,7 +283,37 @@
             }
           },
           "400": {
-            "description": "The request could not be processed. The `code` field identifies the Splunk error: `5` (no data), `6` (invalid data format), or `7` (incorrect index).",
+            "description": "The request can't be processed. `code` is `5` (no data), `6` (invalid data format, or the dataset is in another edge deployment or isn't an events or logs dataset), or `7` (no dataset could be resolved).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The token is missing (`code` `2`) or invalid (`code` `3`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token can't ingest into the dataset, the dataset is shared, or the organization is suspended. `code` is `4`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HecStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found. `code` is `7`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -245,7 +335,7 @@
         ],
         "operationId": "getHecHealth",
         "summary": "Check HEC health",
-        "description": "Report whether the collector is available and accepting data. No authentication is required. A healthy collector responds with HEC code `17`.",
+        "description": "Reports whether the HEC endpoint is accepting data. Requires no authentication and returns HEC code `17` when healthy.",
         "responses": {
           "200": {
             "description": "The collector is healthy.",
@@ -268,7 +358,7 @@
         ],
         "operationId": "getHecHealthVersioned",
         "summary": "Check HEC health (versioned)",
-        "description": "Versioned alias of `/services/collector/health`. No authentication is required.",
+        "description": "Reports whether the HEC endpoint is accepting data. Requires no authentication and returns HEC code `17` when healthy.",
         "responses": {
           "200": {
             "description": "The collector is healthy.",
