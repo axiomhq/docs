@@ -23,13 +23,6 @@
   "paths": {
     "/annotations": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "annotations|read"
-            ]
-          }
-        ],
         "description": "Get annotations",
         "tags": [
           "annotations"
@@ -80,16 +73,16 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "annotations|create"
+              "annotations|read"
             ]
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create annotation",
         "tags": [
           "annotations"
@@ -116,18 +109,18 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "annotations|create"
+            ]
+          }
+        ]
       }
     },
     "/annotations/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "annotations|read"
-            ]
-          }
-        ],
         "description": "Get annotation by ID",
         "tags": [
           "annotations"
@@ -149,16 +142,16 @@
               }
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "annotations|update"
+              "annotations|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Update annotation",
         "tags": [
           "annotations"
@@ -190,16 +183,16 @@
               }
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "annotations|delete"
+              "annotations|update"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete annotation",
         "tags": [
           "annotations"
@@ -214,22 +207,53 @@
           "204": {
             "description": "Success"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "annotations|delete"
+            ]
+          }
+        ]
       }
     },
     "/datasets": {
       "get": {
-        "security": [
-          {
-            "Auth": []
-          }
-        ],
         "description": "Get list of datasets",
         "tags": [
           "Datasets"
         ],
         "summary": "Get list of datasets",
         "operationId": "getDatasets",
+        "parameters": [
+          {
+            "description": "Exclude resolved label objects from each dataset response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
+          },
+          {
+            "description": "Return datasets assigned every specified label ID.",
+            "name": "labelIds",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "uniqueItems": true
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -262,20 +286,21 @@
               }
             }
           },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
           }
         },
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
         "x-axiom-preview": true
       },
       "post": {
-        "security": [
-          {
-            "Auth": [
-              "datasets|create"
-            ]
-          }
-        ],
         "description": "Create dataset",
         "tags": [
           "Datasets"
@@ -317,16 +342,18 @@
             "$ref": "#/components/responses/ForbiddenError"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "datasets|create"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/datasets/{dataset_id}": {
       "get": {
-        "security": [
-          {
-            "Auth": []
-          }
-        ],
         "description": "Get dataset by ID",
         "tags": [
           "Datasets"
@@ -340,6 +367,17 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "description": "Exclude resolved label objects from the dataset response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
             }
           }
         ],
@@ -361,16 +399,14 @@
             "$ref": "#/components/responses/NotFoundError"
           }
         },
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
         "x-axiom-preview": true
       },
       "put": {
-        "security": [
-          {
-            "Auth": [
-              "datasets|update"
-            ]
-          }
-        ],
         "description": "Update dataset",
         "tags": [
           "Datasets"
@@ -412,16 +448,16 @@
             "$ref": "#/components/responses/ForbiddenError"
           }
         },
-        "x-axiom-preview": true
-      },
-      "delete": {
         "security": [
           {
             "Auth": [
-              "datasets|delete"
+              "datasets|update"
             ]
           }
         ],
+        "x-axiom-preview": true
+      },
+      "delete": {
         "description": "Delete dataset",
         "tags": [
           "Datasets"
@@ -439,25 +475,136 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": "(empty)"
+          "200": {
+            "description": "Job created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCreateResponse"
+                }
+              }
+            }
           },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "datasets|delete"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
-    "/datasets/{dataset_id}/delete-fields": {
+    "/datasets/{dataset_id}/trim": {
       "post": {
+        "description": "Trim dataset",
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Trim dataset by duration",
+        "operationId": "trimDataset",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrimOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Job created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCreateResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "trim|update"
+            ]
+          }
+        ],
+        "x-axiom-preview": true
+      }
+    },
+    "/datasets/{dataset_id}/vacuum": {
+      "post": {
+        "tags": [
+          "datasets"
+        ],
+        "operationId": "vacuumDataset",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCreateResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "TooManyVacuumRequests",
+            "headers": {
+              "Retry-After": {
+                "description": "The GMT date/time at which the current rate limit window resets.\n",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
         "security": [
           {
             "Auth": [
               "vacuum|update"
             ]
           }
-        ],
+        ]
+      }
+    },
+    "/datasets/{dataset_id}/delete-fields": {
+      "post": {
         "description": "Deletes fields asynchronously. The field disappears from listings once the deletion pipeline finishes. Re-ingesting data with that field recreates it.\n",
         "tags": [
           "datasets"
@@ -516,60 +663,6 @@
             }
           }
         },
-        "x-axiom-preview": true
-      }
-    },
-    "/datasets/{dataset_id}/trim": {
-      "post": {
-        "security": [
-          {
-            "Auth": [
-              "trim|update"
-            ]
-          }
-        ],
-        "description": "Trim dataset",
-        "tags": [
-          "datasets"
-        ],
-        "summary": "Trim dataset by duration",
-        "operationId": "trimDataset",
-        "parameters": [
-          {
-            "name": "dataset_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TrimOptions"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "TrimResult"
-          },
-          "403": {
-            "$ref": "#/components/responses/ForbiddenError"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFoundError"
-          }
-        },
-        "x-axiom-preview": true
-      }
-    },
-    "/datasets/{dataset_id}/vacuum": {
-      "post": {
         "security": [
           {
             "Auth": [
@@ -577,47 +670,11 @@
             ]
           }
         ],
-        "tags": [
-          "datasets"
-        ],
-        "operationId": "vacuumDataset",
-        "parameters": [
-          {
-            "name": "dataset_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "VacuumResult"
-          },
-          "429": {
-            "description": "TooManyVacuumRequests",
-            "headers": {
-              "Retry-After": {
-                "description": "The GMT date/time at which the current rate limit window resets.\n",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
+        "x-axiom-preview": true
       }
     },
     "/datasets/{dataset_id}/fields": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "datasets|read"
-            ]
-          }
-        ],
         "tags": [
           "datasets"
         ],
@@ -649,18 +706,18 @@
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
           }
-        }
-      }
-    },
-    "/datasets/{dataset_id}/fields/{field_id}": {
-      "get": {
+        },
         "security": [
           {
             "Auth": [
               "datasets|read"
             ]
           }
-        ],
+        ]
+      }
+    },
+    "/datasets/{dataset_id}/fields/{field_id}": {
+      "get": {
         "tags": [
           "datasets"
         ],
@@ -694,16 +751,16 @@
               }
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "datasets|update"
+              "datasets|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
         "tags": [
           "datasets"
         ],
@@ -747,16 +804,16 @@
               }
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "vacuum|update"
+              "datasets|update"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Deletes the field asynchronously. The field disappears from listings once the deletion pipeline finishes. Re-ingesting data with that field recreates it.\n",
         "tags": [
           "datasets"
@@ -813,18 +870,18 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "vacuum|update"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/datasets/{dataset_id}/mapfields": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "datasets|read"
-            ]
-          }
-        ],
         "tags": [
           "datasets"
         ],
@@ -851,16 +908,16 @@
             }
           }
         },
-        "x-axiom-not-suspended": true
-      },
-      "put": {
         "security": [
           {
             "Auth": [
-              "datasets|update"
+              "datasets|read"
             ]
           }
         ],
+        "x-axiom-not-suspended": true
+      },
+      "put": {
         "tags": [
           "datasets"
         ],
@@ -898,9 +955,6 @@
             }
           }
         },
-        "x-axiom-not-suspended": true
-      },
-      "post": {
         "security": [
           {
             "Auth": [
@@ -908,6 +962,9 @@
             ]
           }
         ],
+        "x-axiom-not-suspended": true
+      },
+      "post": {
         "tags": [
           "datasets"
         ],
@@ -944,11 +1001,6 @@
             }
           }
         },
-        "x-axiom-not-suspended": true
-      }
-    },
-    "/datasets/{dataset_id}/mapfields/{map_field_name}": {
-      "delete": {
         "security": [
           {
             "Auth": [
@@ -956,6 +1008,11 @@
             ]
           }
         ],
+        "x-axiom-not-suspended": true
+      }
+    },
+    "/datasets/{dataset_id}/mapfields/{map_field_name}": {
+      "delete": {
         "tags": [
           "datasets"
         ],
@@ -983,23 +1040,52 @@
             "description": "(empty)"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "datasets|update"
+            ]
+          }
+        ],
         "x-axiom-not-suspended": true
       }
     },
     "/monitors": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "monitors|read"
-            ]
-          }
-        ],
-        "description": "Lists all configured monitors. Returns an array of monitor configurations including their IDs and current status.",
+        "description": "Lists all configured monitors. Returns an array of monitor configurations including their IDs, current status, and labels.",
         "tags": [
           "Monitors"
         ],
         "operationId": "getMonitors",
+        "parameters": [
+          {
+            "description": "Exclude resolved label objects from each monitor response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
+          },
+          {
+            "description": "Return monitors assigned every specified label ID.",
+            "name": "labelIds",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "uniqueItems": true
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Monitor",
@@ -1015,16 +1101,16 @@
             }
           }
         },
-        "x-axiom-preview": true
-      },
-      "post": {
         "security": [
           {
             "Auth": [
-              "monitors|create"
+              "monitors|read"
             ]
           }
         ],
+        "x-axiom-preview": true
+      },
+      "post": {
         "description": "Create monitor",
         "tags": [
           "Monitors"
@@ -1045,19 +1131,19 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "monitors|create"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/monitors/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "monitors|read"
-            ]
-          }
-        ],
-        "description": "Retrieves detailed configuration for a specific monitor by its unique identifier",
+        "description": "Retrieves detailed configuration for a specific monitor by its unique identifier, including labels.",
         "tags": [
           "Monitors"
         ],
@@ -1070,6 +1156,17 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "description": "Exclude resolved label objects from the monitor response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
             }
           }
         ],
@@ -1084,16 +1181,16 @@
               }
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "monitors|update"
+              "monitors|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Update monitor",
         "tags": [
           "Monitors"
@@ -1124,16 +1221,16 @@
             }
           }
         },
-        "x-axiom-preview": true
-      },
-      "delete": {
         "security": [
           {
             "Auth": [
-              "monitors|delete"
+              "monitors|update"
             ]
           }
         ],
+        "x-axiom-preview": true
+      },
+      "delete": {
         "description": "Delete monitor",
         "tags": [
           "Monitors"
@@ -1154,6 +1251,13 @@
             "description": "Success"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "monitors|delete"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
@@ -1231,18 +1335,24 @@
     },
     "/notifiers": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "notifiers|read"
-            ]
-          }
-        ],
-        "description": "Lists all configured notifiers. Returns an array of notification configurations including their IDs and current status.",
+        "description": "Lists all configured notifiers. Returns an array of notification configurations including their IDs, current status, and labels.",
         "tags": [
           "Monitors"
         ],
         "operationId": "getNotifiers",
+        "parameters": [
+          {
+            "description": "Exclude resolved label objects from each notifier response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successfully retrieved list of notifiers",
@@ -1258,16 +1368,16 @@
             }
           }
         },
-        "x-axiom-preview": true
-      },
-      "post": {
         "security": [
           {
             "Auth": [
-              "notifiers|create"
+              "notifiers|read"
             ]
           }
         ],
+        "x-axiom-preview": true
+      },
+      "post": {
         "description": "Creates a new notifier configuration for sending alerts through various channels (Slack, Email, etc)",
         "tags": [
           "Monitors"
@@ -1296,19 +1406,19 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "notifiers|create"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/notifiers/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "notifiers|read"
-            ]
-          }
-        ],
-        "description": "Retrieves detailed configuration for a specific notifier by its unique identifier",
+        "description": "Retrieves detailed configuration for a specific notifier by its unique identifier, including labels.",
         "tags": [
           "Monitors"
         ],
@@ -1321,6 +1431,17 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "description": "Exclude resolved label objects from the notifier response. The labelIds field is still returned.",
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
             }
           }
         ],
@@ -1336,16 +1457,16 @@
             }
           }
         },
-        "x-axiom-preview": true
-      },
-      "put": {
         "security": [
           {
             "Auth": [
-              "notifiers|update"
+              "notifiers|read"
             ]
           }
         ],
+        "x-axiom-preview": true
+      },
+      "put": {
         "description": "Update notifier",
         "tags": [
           "Monitors"
@@ -1383,16 +1504,16 @@
             }
           }
         },
-        "x-axiom-preview": true
-      },
-      "delete": {
         "security": [
           {
             "Auth": [
-              "notifiers|delete"
+              "notifiers|update"
             ]
           }
         ],
+        "x-axiom-preview": true
+      },
+      "delete": {
         "description": "Delete notifier",
         "tags": [
           "Monitors"
@@ -1413,16 +1534,18 @@
             "description": "(empty)"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "notifiers|delete"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/orgs": {
       "get": {
-        "security": [
-          {
-            "Auth": []
-          }
-        ],
         "tags": [
           "orgs"
         ],
@@ -1442,14 +1565,14 @@
             }
           }
         },
-        "x-axiom-no-org-required": true
-      },
-      "post": {
         "security": [
           {
             "Auth": []
           }
         ],
+        "x-axiom-no-org-required": true
+      },
+      "post": {
         "tags": [
           "orgs"
         ],
@@ -1476,17 +1599,21 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
         "x-axiom-no-org-required": true
       }
     },
     "/orgs/provision": {
       "post": {
-        "security": [],
+        "description": "Publicly provisions a temporary organization intended for automated agents. The organization is marked temporary with a TTL and is deleted automatically if it is not claimed before it expires. The response includes a claim URL that lets a human take ownership of the org. This endpoint is unauthenticated and rate limited per client IP.\n",
         "tags": [
           "orgs"
         ],
         "summary": "Provision a temporary organization for an agent",
-        "description": "Publicly provisions a temporary organization intended for automated agents. The organization is marked temporary with a TTL and is deleted automatically if it is not claimed before it expires. The response includes a claim URL that lets a human take ownership of the org. This endpoint is unauthenticated and strict rate limits apply.",
         "operationId": "provisionOrg",
         "requestBody": {
           "content": {
@@ -1508,20 +1635,13 @@
                 }
               }
             }
-          },
-          "429": {
-            "description": "Rate limit exceeded. The provisioning rate limit has been reached; retry later with backoff.\n"
           }
-        }
+        },
+        "security": []
       }
     },
     "/orgs/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": []
-          }
-        ],
         "tags": [
           "orgs"
         ],
@@ -1547,14 +1667,14 @@
               }
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": []
           }
-        ],
+        ]
+      },
+      "put": {
         "tags": [
           "orgs"
         ],
@@ -1590,18 +1710,16 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": []
+          }
+        ]
       }
     },
     "/rbac/roles": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "rbac|read"
-            ]
-          }
-        ],
         "description": "Retrieves all roles in the organization with their associated permissions and members.",
         "tags": [
           "rbac"
@@ -1622,16 +1740,16 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "rbac|create"
+              "rbac|read"
             ]
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Creates a new role in the organization with the specified permissions and member assignments.",
         "tags": [
           "rbac"
@@ -1660,18 +1778,18 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "rbac|create"
+            ]
+          }
+        ]
       }
     },
     "/rbac/roles/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "rbac|read"
-            ]
-          }
-        ],
         "description": "Retrieves detailed information about a specific role by its unique identifier.",
         "tags": [
           "rbac"
@@ -1700,16 +1818,16 @@
               }
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "rbac|create"
+              "rbac|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Updates an existing role's configuration including its permissions and member assignments.",
         "tags": [
           "rbac"
@@ -1749,16 +1867,16 @@
               }
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
               "rbac|create"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Permanently removes a role from the organization.",
         "tags": [
           "rbac"
@@ -1780,18 +1898,18 @@
           "204": {
             "description": "The role was successfully deleted"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "rbac|create"
+            ]
+          }
+        ]
       }
     },
     "/rbac/groups": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "rbac|read"
-            ]
-          }
-        ],
         "description": "Retrieves all groups in the organization.",
         "tags": [
           "rbac"
@@ -1812,16 +1930,16 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "rbac|create"
+              "rbac|read"
             ]
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Creates a new group in the organization.",
         "tags": [
           "rbac"
@@ -1850,18 +1968,18 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "rbac|create"
+            ]
+          }
+        ]
       }
     },
     "/rbac/groups/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "rbac|read"
-            ]
-          }
-        ],
         "description": "Retrieves detailed information about a specific group by its unique identifier.",
         "tags": [
           "rbac"
@@ -1890,16 +2008,16 @@
               }
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "rbac|create"
+              "rbac|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
         "description": "Updates an existing group's configuration.",
         "tags": [
           "rbac"
@@ -1939,16 +2057,16 @@
               }
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
               "rbac|create"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Permanently removes a group from the organization.",
         "tags": [
           "rbac"
@@ -1970,18 +2088,18 @@
           "204": {
             "description": "The group was successfully deleted"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "rbac|create"
+            ]
+          }
+        ]
       }
     },
     "/apl-starred-queries": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "starredQueries|read"
-            ]
-          }
-        ],
         "tags": [
           "starred"
         ],
@@ -2030,16 +2148,16 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "starredQueries|create"
+              "starredQueries|read"
             ]
           }
-        ],
+        ]
+      },
+      "post": {
         "tags": [
           "starred"
         ],
@@ -2058,18 +2176,18 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "starredQueries|create"
+            ]
+          }
+        ]
       }
     },
     "/apl-starred-queries/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "starredQueries|read"
-            ]
-          }
-        ],
         "tags": [
           "starred"
         ],
@@ -2095,16 +2213,16 @@
               }
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "starredQueries|update"
+              "starredQueries|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
         "tags": [
           "starred"
         ],
@@ -2133,16 +2251,16 @@
               }
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "starredQueries|delete"
+              "starredQueries|update"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
         "tags": [
           "starred"
         ],
@@ -2161,18 +2279,18 @@
           "204": {
             "description": "(empty)"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "starredQueries|delete"
+            ]
+          }
+        ]
       }
     },
     "/tokens": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "apiTokens|read"
-            ]
-          }
-        ],
         "description": "Get API tokens",
         "tags": [
           "tokens"
@@ -2192,16 +2310,16 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "apiTokens|create"
+              "apiTokens|read"
             ]
           }
-        ],
+        ]
+      },
+      "post": {
         "description": "Create API token",
         "tags": [
           "tokens"
@@ -2229,18 +2347,18 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|create"
+            ]
+          }
+        ],
         "x-axiom-not-suspended": true
       }
     },
     "/tokens/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "apiTokens|read"
-            ]
-          }
-        ],
         "description": "Get API token by ID",
         "tags": [
           "tokens"
@@ -2267,16 +2385,16 @@
               }
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "apiTokens|delete"
+              "apiTokens|read"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
         "description": "Delete API token",
         "tags": [
           "tokens"
@@ -2296,18 +2414,18 @@
           "204": {
             "description": "(empty)"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|delete"
+            ]
+          }
+        ]
       }
     },
     "/tokens/{id}/regenerate": {
       "post": {
-        "security": [
-          {
-            "Auth": [
-              "apiTokens|update"
-            ]
-          }
-        ],
         "description": "Regenerate API token",
         "tags": [
           "tokens"
@@ -2344,16 +2462,18 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "apiTokens|update"
+            ]
+          }
+        ],
         "x-axiom-not-suspended": true
       }
     },
     "/user": {
       "get": {
-        "security": [
-          {
-            "Auth": []
-          }
-        ],
         "description": "Get current user",
         "tags": [
           "Users"
@@ -2371,15 +2491,15 @@
             }
           }
         },
-        "x-axiom-no-org-required": true,
-        "x-axiom-preview": true
-      },
-      "put": {
         "security": [
           {
             "Auth": []
           }
         ],
+        "x-axiom-no-org-required": true,
+        "x-axiom-preview": true
+      },
+      "put": {
         "description": "Update current user",
         "tags": [
           "Users"
@@ -2407,19 +2527,17 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
         "x-axiom-no-org-required": true,
         "x-axiom-preview": true
       }
     },
     "/users": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "users|read"
-            ]
-          }
-        ],
         "description": "Get users",
         "tags": [
           "Users"
@@ -2440,16 +2558,16 @@
             }
           }
         },
-        "x-axiom-preview": true
-      },
-      "post": {
         "security": [
           {
             "Auth": [
-              "users|create"
+              "users|read"
             ]
           }
         ],
+        "x-axiom-preview": true
+      },
+      "post": {
         "description": "Create user",
         "tags": [
           "Users"
@@ -2477,6 +2595,13 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "users|create"
+            ]
+          }
+        ],
         "x-axiom-no-org-required": true,
         "x-axiom-not-suspended": true,
         "x-axiom-preview": true
@@ -2484,13 +2609,6 @@
     },
     "/users/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "users|read"
-            ]
-          }
-        ],
         "description": "Get user by ID",
         "tags": [
           "Users"
@@ -2518,16 +2636,16 @@
             }
           }
         },
-        "x-axiom-preview": true
-      },
-      "delete": {
         "security": [
           {
             "Auth": [
-              "users|delete"
+              "users|read"
             ]
           }
         ],
+        "x-axiom-preview": true
+      },
+      "delete": {
         "description": "Remove user from org",
         "tags": [
           "Users"
@@ -2548,18 +2666,18 @@
             "description": "(empty)"
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "users|delete"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/users/{id}/role": {
       "put": {
-        "security": [
-          {
-            "Auth": [
-              "users|update"
-            ]
-          }
-        ],
         "description": "Update user role",
         "tags": [
           "Users"
@@ -2597,18 +2715,18 @@
             }
           }
         },
+        "security": [
+          {
+            "Auth": [
+              "users|update"
+            ]
+          }
+        ],
         "x-axiom-preview": true
       }
     },
     "/vfields": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "virtualFields|read"
-            ]
-          }
-        ],
         "tags": [
           "vfields"
         ],
@@ -2637,16 +2755,16 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "virtualFields|create"
+              "virtualFields|read"
             ]
           }
-        ],
+        ]
+      },
+      "post": {
         "tags": [
           "vfields"
         ],
@@ -2665,18 +2783,18 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "virtualFields|create"
+            ]
+          }
+        ]
       }
     },
     "/vfields/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "virtualFields|read"
-            ]
-          }
-        ],
         "tags": [
           "vfields"
         ],
@@ -2702,16 +2820,16 @@
               }
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "virtualFields|update"
+              "virtualFields|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
         "tags": [
           "vfields"
         ],
@@ -2740,16 +2858,16 @@
               }
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "virtualFields|delete"
+              "virtualFields|update"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
         "tags": [
           "vfields"
         ],
@@ -2768,18 +2886,18 @@
           "204": {
             "description": "(empty)"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "virtualFields|delete"
+            ]
+          }
+        ]
       }
     },
     "/views": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "views|read"
-            ]
-          }
-        ],
         "tags": [
           "views"
         ],
@@ -2798,16 +2916,16 @@
               }
             }
           }
-        }
-      },
-      "post": {
+        },
         "security": [
           {
             "Auth": [
-              "views|create"
+              "views|read"
             ]
           }
-        ],
+        ]
+      },
+      "post": {
         "tags": [
           "views"
         ],
@@ -2826,18 +2944,18 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "views|create"
+            ]
+          }
+        ]
       }
     },
     "/views/{id}": {
       "get": {
-        "security": [
-          {
-            "Auth": [
-              "views|read"
-            ]
-          }
-        ],
         "tags": [
           "views"
         ],
@@ -2863,16 +2981,16 @@
               }
             }
           }
-        }
-      },
-      "put": {
+        },
         "security": [
           {
             "Auth": [
-              "views|update"
+              "views|read"
             ]
           }
-        ],
+        ]
+      },
+      "put": {
         "tags": [
           "views"
         ],
@@ -2901,16 +3019,16 @@
               }
             }
           }
-        }
-      },
-      "delete": {
+        },
         "security": [
           {
             "Auth": [
-              "views|delete"
+              "views|update"
             ]
           }
-        ],
+        ]
+      },
+      "delete": {
         "tags": [
           "views"
         ],
@@ -2929,7 +3047,14 @@
           "204": {
             "description": "(empty)"
           }
-        }
+        },
+        "security": [
+          {
+            "Auth": [
+              "views|delete"
+            ]
+          }
+        ]
       }
     },
     "/dashboards": {
@@ -2951,6 +3076,33 @@
           },
           {
             "$ref": "#/components/parameters/Offset"
+          },
+          {
+            "name": "exclude",
+            "in": "query",
+            "description": "Exclude resolved label objects from each dashboard response. The labelIds field is still returned.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
+            }
+          },
+          {
+            "name": "labelIds",
+            "in": "query",
+            "description": "Return dashboards assigned every specified label ID.",
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": false
           }
         ],
         "responses": {
@@ -2963,6 +3115,16 @@
                   "items": {
                     "$ref": "#/components/schemas/DashboardResource"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid label filter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardError"
                 }
               }
             }
@@ -3051,7 +3213,7 @@
           "dashboards"
         ],
         "summary": "Get dashboard",
-        "description": "Get a dashboard by UID.",
+        "description": "Get a dashboard by UID. Assigned labels are resolved by default.",
         "operationId": "getDashboard",
         "security": [
           {
@@ -3065,6 +3227,17 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "exclude",
+            "in": "query",
+            "description": "Exclude resolved label objects from the dashboard response. The labelIds field is still returned.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "labels"
+              ]
             }
           }
         ],
@@ -3404,16 +3577,6 @@
       }
     },
     "requestBodies": {
-      "FlowDestination": {
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/FlowDestination"
-            }
-          }
-        },
-        "required": true
-      },
       "Repo": {
         "content": {
           "application/json": {
@@ -3508,6 +3671,18 @@
           "orgCapabilities"
         ],
         "properties": {
+          "apiLastUsed": {
+            "description": "When the token was last used on an API other than ingest",
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "nullable": true
+          },
+          "auditIdentity": {
+            "description": "Audit identity of the token",
+            "type": "string",
+            "readOnly": true
+          },
           "datasetCapabilities": {
             "$ref": "#/components/schemas/datasetCapabilities"
           },
@@ -3525,6 +3700,13 @@
           "id": {
             "description": "ID of the token",
             "type": "string"
+          },
+          "ingestLastUsed": {
+            "description": "When the token was last used to ingest",
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "nullable": true
           },
           "name": {
             "description": "Name of the token",
@@ -3930,99 +4112,6 @@
           }
         }
       },
-      "Block": {
-        "type": "object",
-        "properties": {
-          "locatorURL": {
-            "description": "URL to locate the block in storage",
-            "type": "string",
-            "example": "block://unstable_v0/zgAQynPEQLEMsQwAAwAACAwYqTcAFGcAAAAAAAAACjgVchcAG7bpGFuQrFTOk54YW5Fr9V76LmidjehN6GOLBD7YhQAAAACS2SJheGlvbWVyc2Z0ODNheGlvbXRyYWNlc2RldnlreDdjeXJ12SxzMzovL2F4aW9tLWNsb3VkLWRldmVsb3BtZW50LWRhdGFiYXNlLTY1amJtLw=="
-          },
-          "memoryEstimate": {
-            "description": "Estimated memory usage in bytes",
-            "type": "integer",
-            "format": "int64",
-            "example": 100000
-          },
-          "recordCount": {
-            "description": "Number of records in the block",
-            "type": "integer",
-            "format": "int32",
-            "example": 10000
-          }
-        }
-      },
-      "BlockFailure": {
-        "type": "object",
-        "properties": {
-          "block": {
-            "$ref": "#/components/schemas/Block"
-          },
-          "error": {
-            "description": "Error message describing the failure",
-            "type": "string",
-            "example": "Failed to parse block data"
-          },
-          "errorCode": {
-            "description": "Error code for categorizing the failure",
-            "type": "string",
-            "example": "PARSE_ERROR"
-          }
-        }
-      },
-      "BlockSuccess": {
-        "type": "object",
-        "properties": {
-          "block": {
-            "$ref": "#/components/schemas/Block"
-          },
-          "events": {
-            "description": "Number of events processed",
-            "type": "integer",
-            "format": "int64",
-            "example": 5000
-          }
-        }
-      },
-      "BlocksRequest": {
-        "type": "object",
-        "required": [
-          "apl",
-          "startTime",
-          "endTime"
-        ],
-        "properties": {
-          "apl": {
-            "description": "The APL query to execute for finding matching blocks",
-            "type": "string",
-            "example": "['my-dataset'] | where status_code >= 400"
-          },
-          "endTime": {
-            "description": "The end time for the query time range",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-01-02T00:00:00Z"
-          },
-          "startTime": {
-            "description": "The start time for the query time range",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-01-01T00:00:00Z"
-          }
-        }
-      },
-      "BlocksResponse": {
-        "type": "object",
-        "properties": {
-          "blocks": {
-            "description": "List of blocks matching the query",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Block"
-            }
-          }
-        }
-      },
       "BucketInfo": {
         "description": "The standard mode of operation for Kirby is to create buckets on the _time column,",
         "type": "object",
@@ -4034,6 +4123,41 @@
           },
           "size": {
             "description": "An integer or float representing the fixed bucket size.\nWhen the bucket field is _time this value is in nanoseconds."
+          }
+        }
+      },
+      "Changes": {
+        "type": "object",
+        "required": [
+          "collections"
+        ],
+        "properties": {
+          "collections": {
+            "description": "Map of collection name to the RFC3339 time of its last change.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      },
+      "ClaudeCodeConfig": {
+        "description": "Claude Code routine. Axiom sends a fixed text body when the monitor fires.",
+        "type": "object",
+        "required": [
+          "routineId",
+          "token"
+        ],
+        "properties": {
+          "routineId": {
+            "description": "Routine ID from a Claude Code API trigger",
+            "type": "string",
+            "example": "trig_01ABCDEFGHJKLMNOPQRSTUVW"
+          },
+          "token": {
+            "description": "Bearer token for the routine",
+            "type": "string"
           }
         }
       },
@@ -4143,40 +4267,6 @@
           "retentionDays": 30
         }
       },
-      "CreateFlowExport": {
-        "type": "object",
-        "required": [
-          "destinationId",
-          "name",
-          "apl",
-          "start",
-          "end"
-        ],
-        "properties": {
-          "apl": {
-            "description": "The APL query to execute for the export",
-            "type": "string"
-          },
-          "destinationId": {
-            "description": "The destination to export to",
-            "type": "string"
-          },
-          "end": {
-            "description": "The RFC3339-formatted time of the end of the export range",
-            "type": "string",
-            "format": "date-time"
-          },
-          "name": {
-            "description": "The name of the export",
-            "type": "string"
-          },
-          "start": {
-            "description": "The RFC3339-formatted time of the start of the export range",
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
       "CreateUserRequest": {
         "description": "Object representing a new user creation request",
         "type": "object",
@@ -4200,6 +4290,25 @@
             "description": "Role to assign to the new user",
             "type": "string",
             "example": "member"
+          }
+        }
+      },
+      "CursorConfig": {
+        "description": "Cursor automation webhook. Axiom sends a fixed context body when the monitor fires.",
+        "type": "object",
+        "required": [
+          "webhookUrl",
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "description": "Bearer token for the automation webhook",
+            "type": "string"
+          },
+          "webhookUrl": {
+            "description": "Automation webhook URL from a Cursor automation",
+            "type": "string",
+            "example": "https://api2.cursor.sh/automations/webhook/00000000-0000-0000-0000-000000000000"
           }
         }
       },
@@ -4321,7 +4430,8 @@
           "createdAt",
           "updatedAt",
           "createdBy",
-          "updatedBy"
+          "updatedBy",
+          "labelIds"
         ],
         "properties": {
           "createdAt": {
@@ -4336,6 +4446,19 @@
           },
           "id": {
             "type": "string"
+          },
+          "labelIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            }
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Label"
+            },
+            "x-omitempty": true
           },
           "uid": {
             "type": "string"
@@ -4448,7 +4571,8 @@
           "created",
           "updatedAt",
           "who",
-          "kind"
+          "kind",
+          "labelIds"
         ],
         "properties": {
           "canWrite": {
@@ -4490,6 +4614,21 @@
             ],
             "example": "axiom:events:v1"
           },
+          "labelIds": {
+            "description": "IDs of labels assigned to this dataset.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            }
+          },
+          "labels": {
+            "description": "Resolved labels assigned to this dataset.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Label"
+            },
+            "x-omitempty": true
+          },
           "mapFields": {
             "type": "array",
             "items": {
@@ -4499,6 +4638,12 @@
           "name": {
             "description": "Unique dataset name",
             "type": "string"
+          },
+          "reclaimableFields": {
+            "description": "Number of unused fields a vacuum can reclaim, when the dataset is a vacuum candidate",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false
           },
           "retentionDays": {
             "description": "Number of days to retain data in the dataset",
@@ -4516,6 +4661,11 @@
           },
           "useRetentionPeriod": {
             "description": "Whether to use the retention period",
+            "type": "boolean",
+            "x-omitempty": false
+          },
+          "vacuumCandidate": {
+            "description": "Whether the dataset has unused fields that a vacuum can reclaim",
             "type": "boolean",
             "x-omitempty": false
           },
@@ -4561,6 +4711,162 @@
             "description": "Unit of the field",
             "type": "string"
           }
+        }
+      },
+      "DatasetSchemaHealth": {
+        "type": "object",
+        "required": [
+          "fieldCount"
+        ],
+        "properties": {
+          "active30d": {
+            "description": "Fields with a non-null value in the last 30 days. Omitted if presence stats fail.",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "fieldCount": {
+            "description": "Number of fields in the dataset catalog.",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false
+          },
+          "fieldLimit": {
+            "description": "Organization field limit. Null when the org has no field cap.",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false,
+            "nullable": true
+          },
+          "growth": {
+            "description": "Fields first registered in each window. Fields with no firstSeen are skipped.",
+            "type": "object",
+            "required": [
+              "7d",
+              "30d"
+            ],
+            "properties": {
+              "30d": {
+                "description": "Fields first registered in the last 30 days.",
+                "type": "integer",
+                "format": "int64",
+                "x-go-name": "ThirtyDay",
+                "x-omitempty": false
+              },
+              "7d": {
+                "description": "Fields first registered in the last 7 days.",
+                "type": "integer",
+                "format": "int64",
+                "x-go-name": "SevenDay",
+                "x-omitempty": false
+              }
+            },
+            "x-omitempty": false
+          },
+          "headroom": {
+            "description": "fieldLimit minus fieldCount. Can be negative. Null when fieldLimit is null.",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false,
+            "nullable": true
+          },
+          "inactive30d": {
+            "description": "Fields with no non-null value in the last 30 days. Omitted if presence stats fail.",
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "topGrowthSources": {
+            "description": "Parent paths with the most fields first registered in the last 7 days.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetSchemaHealthGrowthSource"
+            },
+            "x-omitempty": false
+          }
+        }
+      },
+      "DatasetSchemaHealthGrowthSource": {
+        "type": "object",
+        "required": [
+          "prefix",
+          "newFields7d"
+        ],
+        "properties": {
+          "newFields7d": {
+            "description": "Fields first registered under this prefix in the last 7 days.",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false
+          },
+          "prefix": {
+            "description": "Parent dotted path of the new fields.",
+            "type": "string"
+          }
+        }
+      },
+      "DatasetUnusedFields": {
+        "type": "object",
+        "required": [
+          "fieldCount",
+          "unused"
+        ],
+        "properties": {
+          "fieldCount": {
+            "description": "Number of fields in the dataset catalog.",
+            "type": "integer",
+            "format": "int64",
+            "x-omitempty": false
+          },
+          "unused": {
+            "description": "Catalog fields with a name or type absent from blocks.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnusedField"
+            },
+            "x-omitempty": false
+          }
+        }
+      },
+      "DeleteDatasetFieldsRequest": {
+        "type": "object",
+        "required": [
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "example": {
+          "fields": [
+            "field1",
+            "field2"
+          ]
+        }
+      },
+      "DeleteDatasetFieldsResult": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-omitempty": false
+          },
+          "jobId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "fields": [
+            "field1",
+            "field2"
+          ]
         }
       },
       "DiscordConfig": {
@@ -4674,178 +4980,6 @@
           }
         }
       },
-      "FlowDestination": {
-        "description": "Flow destination configuration schema.",
-        "type": "object",
-        "required": [
-          "kind",
-          "name",
-          "failureMode",
-          "properties"
-        ],
-        "properties": {
-          "failureMode": {
-            "type": "string",
-            "enum": [
-              "waitAndRetry",
-              "abort",
-              "continue"
-            ]
-          },
-          "id": {
-            "type": "string",
-            "readOnly": true
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "axiom",
-              "azureBlobStorageClientSecret",
-              "gcs",
-              "http",
-              "httpAuthorization",
-              "httpBasic",
-              "s3Compat"
-            ]
-          },
-          "name": {
-            "type": "string"
-          },
-          "properties": {
-            "description": "Flow properties for the specific flow type.",
-            "type": "object",
-            "properties": {
-              "axiom": {
-                "$ref": "#/components/schemas/axiomProperties"
-              },
-              "azureBlobStorageClientSecret": {
-                "$ref": "#/components/schemas/azureBlobStorageClientSecretProperties"
-              },
-              "gcs": {
-                "$ref": "#/components/schemas/gcsProperties"
-              },
-              "http": {
-                "$ref": "#/components/schemas/httpProperties"
-              },
-              "httpAuthorization": {
-                "$ref": "#/components/schemas/httpAuthorizationProperties"
-              },
-              "httpBasic": {
-                "$ref": "#/components/schemas/httpBasicProperties"
-              },
-              "s3Compat": {
-                "$ref": "#/components/schemas/s3CompatProperties"
-              }
-            }
-          }
-        }
-      },
-      "FlowExport": {
-        "type": "object",
-        "properties": {
-          "apl": {
-            "description": "The APL of the export",
-            "type": "string",
-            "readOnly": true
-          },
-          "createdAt": {
-            "description": "The RFC3339-formatted time the export was created at",
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true
-          },
-          "createdBy": {
-            "type": "string",
-            "readOnly": true
-          },
-          "destinationId": {
-            "description": "The destination ID",
-            "type": "string",
-            "readOnly": true
-          },
-          "end": {
-            "description": "The RFC3339-formatted time of the end of the export range",
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true
-          },
-          "errorMessages": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "readOnly": true
-          },
-          "errorRate": {
-            "description": "Error Rate",
-            "type": "number",
-            "format": "double",
-            "readOnly": true
-          },
-          "eventsIn": {
-            "description": "Number of events received",
-            "type": "integer",
-            "readOnly": true
-          },
-          "eventsOut": {
-            "description": "Number of events delivered",
-            "type": "integer",
-            "readOnly": true
-          },
-          "id": {
-            "type": "string",
-            "readOnly": true
-          },
-          "lastActivity": {
-            "description": "The RFC3339-formatted time of the last activity",
-            "type": "string",
-            "format": "date-time",
-            "x-isnullable": true,
-            "readOnly": true
-          },
-          "name": {
-            "description": "The name of the export",
-            "type": "string",
-            "readOnly": true
-          },
-          "progress": {
-            "description": "Progress",
-            "type": "number",
-            "format": "double",
-            "readOnly": true
-          },
-          "start": {
-            "description": "The RFC3339-formatted time of the start of the export range",
-            "type": "string",
-            "format": "date-time",
-            "readOnly": true
-          },
-          "state": {
-            "description": "State",
-            "type": "string",
-            "enum": [
-              "requested",
-              "running",
-              "stopped",
-              "aborted",
-              "finished",
-              "expired"
-            ],
-            "readOnly": true
-          },
-          "stoppedAt": {
-            "description": "The RFC3339-formatted time the export was stopped at",
-            "type": "string",
-            "format": "date-time",
-            "x-isnullable": true,
-            "readOnly": true
-          },
-          "stoppedBy": {
-            "type": "string",
-            "readOnly": true
-          }
-        }
-      },
       "Group": {
         "description": "Defines a group of users for organizational purposes",
         "type": "object",
@@ -4946,6 +5080,372 @@
           "name": {
             "description": "Name of the token",
             "type": "string"
+          }
+        }
+      },
+      "Job": {
+        "type": "object",
+        "required": [
+          "jobID"
+        ],
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "datasetCanonicalID": {
+            "type": "string"
+          },
+          "datasetID": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "jobID": {
+            "type": "string"
+          },
+          "lastUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "numUpdates": {
+            "type": "integer"
+          },
+          "orgID": {
+            "type": "string"
+          },
+          "progress": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "x-go-type": {
+          "import": {
+            "package": "github.com/axiomhq/axiom/pkg/foundations/common/jobs"
+          },
+          "type": "Job"
+        }
+      },
+      "JobCreateResponse": {
+        "type": "object",
+        "required": [
+          "jobID"
+        ],
+        "properties": {
+          "jobID": {
+            "type": "string"
+          }
+        },
+        "x-go-type": {
+          "import": {
+            "alias": "corejobs",
+            "package": "github.com/axiomhq/axiom/pkg/core/common/jobs"
+          },
+          "type": "CreateResponse"
+        }
+      },
+      "Label": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "color"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "$ref": "#/components/schemas/LabelID"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "LabelAssignedResource": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "dataset": {
+            "description": "Set only for frontend-generated integration dashboards.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Uses the same public identifier as LabelAssignmentTarget.id.",
+            "type": "string"
+          },
+          "templateId": {
+            "description": "Set only for frontend-generated integration dashboards.",
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "dashboard",
+              "integration_dashboard",
+              "dataset",
+              "monitor",
+              "notifier"
+            ]
+          }
+        }
+      },
+      "LabelAssignmentResult": {
+        "type": "object",
+        "required": [
+          "target",
+          "labelIds"
+        ],
+        "properties": {
+          "labelIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            }
+          },
+          "target": {
+            "$ref": "#/components/schemas/LabelAssignmentTarget"
+          }
+        }
+      },
+      "LabelAssignmentTarget": {
+        "description": "A resource that supports organization labels. Single-identifier targets use id; frontend-generated integration dashboards use templateId and dataset.",
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "dataset": {
+            "description": "Required only for frontend-generated integration dashboards and rejected for other target types. Use the current dataset name. Assignments use the underlying dataset instance, so permanent deletion and recreation do not restore old labels.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Public identifier for the resource. Use the dashboard UID for a dashboard, the dataset name for a dataset, and the ID returned by the monitor, notifier, or backend-provided integration dashboard APIs.",
+            "type": "string"
+          },
+          "templateId": {
+            "description": "Stable frontend-owned template key for a frontend-generated integration dashboard, such as k8s.stats. Requires dataset and rejects id. Whitespace and control characters are rejected.",
+            "type": "string",
+            "maxLength": 128
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "dashboard",
+              "integration_dashboard",
+              "dataset",
+              "monitor",
+              "notifier"
+            ]
+          }
+        }
+      },
+      "LabelAssignmentsQuery": {
+        "type": "object",
+        "required": [
+          "targets"
+        ],
+        "properties": {
+          "targets": {
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/LabelAssignmentTarget"
+            }
+          }
+        }
+      },
+      "LabelAssignmentsReplace": {
+        "type": "object",
+        "required": [
+          "target",
+          "labelIds"
+        ],
+        "properties": {
+          "labelIds": {
+            "type": "array",
+            "maxItems": 500,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            }
+          },
+          "target": {
+            "$ref": "#/components/schemas/LabelAssignmentTarget"
+          }
+        }
+      },
+      "LabelColor": {
+        "type": "object",
+        "required": [
+          "type",
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "red",
+              "coral",
+              "orange",
+              "amber",
+              "yellow",
+              "lime",
+              "green",
+              "teal",
+              "blue",
+              "iris",
+              "purple",
+              "pink"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "palette"
+            ]
+          }
+        }
+      },
+      "LabelDetails": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "color",
+          "resources_count",
+          "assigned_resources"
+        ],
+        "properties": {
+          "assigned_resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LabelAssignedResource"
+            }
+          },
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "$ref": "#/components/schemas/LabelID"
+          },
+          "name": {
+            "type": "string"
+          },
+          "resources_count": {
+            "$ref": "#/components/schemas/LabelResourcesCount"
+          }
+        }
+      },
+      "LabelID": {
+        "type": "string",
+        "x-go-type": {
+          "import": {
+            "package": "github.com/axiomhq/axiom/pkg/core/ids"
+          },
+          "type": "LabelID"
+        }
+      },
+      "LabelResourcesCount": {
+        "type": "object",
+        "required": [
+          "dashboards",
+          "monitors",
+          "datasets",
+          "notifiers",
+          "total"
+        ],
+        "properties": {
+          "dashboards": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "datasets": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "monitors": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "notifiers": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "LabelSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "color",
+          "resources_count"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "$ref": "#/components/schemas/LabelID"
+          },
+          "name": {
+            "type": "string"
+          },
+          "resources_count": {
+            "$ref": "#/components/schemas/LabelResourcesCount"
+          }
+        }
+      },
+      "LabelUpdate": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 512,
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1
           }
         }
       },
@@ -5206,17 +5706,6 @@
             "maximum": 7,
             "example": 7
           },
-          "createdAt": {
-            "description": "Timestamp when the monitor was created",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-03-20T10:00:00Z"
-          },
-          "createdBy": {
-            "description": "ID of the user who created the monitor",
-            "type": "string",
-            "example": "usr_789xyz"
-          },
           "description": {
             "description": "Detailed description of the monitor's purpose",
             "type": "string",
@@ -5342,12 +5831,6 @@
               "AnomalyDetection"
             ],
             "example": "Threshold"
-          },
-          "updatedAt": {
-            "description": "Timestamp when the monitor was last updated",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-03-20T10:30:00Z"
           }
         }
       },
@@ -5360,13 +5843,60 @@
           {
             "type": "object",
             "required": [
-              "id"
+              "id",
+              "labelIds"
             ],
             "properties": {
+              "createdAt": {
+                "description": "Timestamp when the monitor was created",
+                "type": "string",
+                "format": "date-time",
+                "example": "2024-03-20T10:00:00Z"
+              },
+              "createdBy": {
+                "description": "ID of the user who created the monitor",
+                "type": "string",
+                "example": "usr_789xyz"
+              },
+              "datasets": {
+                "description": "Dataset names referenced by the monitor query.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "production-logs"
+                ]
+              },
               "id": {
                 "description": "Unique identifier for the monitor",
                 "type": "string",
                 "example": "mon_xyz789"
+              },
+              "labelIds": {
+                "description": "IDs of labels assigned to this monitor.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LabelID"
+                }
+              },
+              "labels": {
+                "description": "Resolved labels assigned to this monitor.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Label"
+                },
+                "x-omitempty": true
+              },
+              "lastError": {
+                "description": "Most recent error encountered while evaluating the monitor.",
+                "type": "string"
+              },
+              "updatedAt": {
+                "description": "Timestamp when the monitor was last updated",
+                "type": "string",
+                "format": "date-time",
+                "example": "2024-03-20T10:30:00Z"
               }
             }
           }
@@ -5419,8 +5949,29 @@
           }
         }
       },
+      "NewLabel": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 512,
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1
+          }
+        }
+      },
       "Notifier": {
-        "description": "Configuration for a notification channel. Notifiers can be configured for various services like:\n- Slack\n- Email\n- PagerDuty\n- OpsGenie\n- Discord\n- Microsoft Teams\n- Custom Webhooks\n",
+        "description": "Configuration for a notification channel. Notifiers can be configured for various services like:\n- Slack\n- Email\n- PagerDuty\n- OpsGenie\n- Discord\n- Microsoft Teams\n- Custom Webhooks\n- Cursor\n- Claude Code\n",
         "type": "object",
         "required": [
           "name",
@@ -5465,6 +6016,12 @@
       "NotifierProperties": {
         "description": "Configuration options for different notification channels. Only one channel should be configured per notifier.",
         "properties": {
+          "claudeCode": {
+            "$ref": "#/components/schemas/ClaudeCodeConfig"
+          },
+          "cursor": {
+            "$ref": "#/components/schemas/CursorConfig"
+          },
           "customWebhook": {
             "$ref": "#/components/schemas/CustomNotifierConfig"
           },
@@ -5501,11 +6058,30 @@
             "$ref": "#/components/schemas/Notifier"
           },
           {
+            "type": "object",
+            "required": [
+              "labelIds"
+            ],
             "properties": {
               "id": {
                 "description": "Unique identifier for the notifier",
                 "type": "string",
                 "example": "notify_slack_prod"
+              },
+              "labelIds": {
+                "description": "IDs of labels assigned to this notifier.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LabelID"
+                }
+              },
+              "labels": {
+                "description": "Resolved labels assigned to this notifier.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Label"
+                },
+                "x-omitempty": true
               }
             }
           }
@@ -5618,6 +6194,40 @@
           }
         }
       },
+      "OrgPreview": {
+        "type": "object",
+        "required": [
+          "name",
+          "defaultEdgeDeployment",
+          "expiresAt",
+          "datasetCount",
+          "ingestedBytes"
+        ],
+        "properties": {
+          "datasetCount": {
+            "description": "Number of datasets currently in the organization.",
+            "type": "integer",
+            "format": "int64"
+          },
+          "defaultEdgeDeployment": {
+            "description": "The edge deployment (region) the organization was created in.",
+            "type": "string"
+          },
+          "expiresAt": {
+            "description": "When the temporary organization expires and becomes eligible for deletion.",
+            "type": "string",
+            "format": "date-time"
+          },
+          "ingestedBytes": {
+            "description": "Bytes ingested into the organization over the past 24 hours.",
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "PagerDutyConfig": {
         "description": "Configuration for PagerDuty integration",
         "properties": {
@@ -5651,12 +6261,12 @@
       "ProvisionOrg": {
         "type": "object",
         "properties": {
-          "name": {
-            "description": "Optional display name for the organization. If omitted, a name is auto-generated and the owner can rename it later.",
+          "edgeDeployment": {
+            "description": "Optional edge deployment (region) the organization is created in. If omitted, the environment's default region is used.\n",
             "type": "string"
           },
-          "edgeDeployment": {
-            "description": "Optional edge deployment (region) the organization is created in. If omitted, the environment's default region is used.",
+          "name": {
+            "description": "Optional display name for the organization. If omitted, a name is auto-generated and the owner can rename it later.\n",
             "type": "string"
           }
         }
@@ -5672,10 +6282,8 @@
           "token"
         ],
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
+          "claimUrl": {
+            "description": "URL a human follows to claim ownership of the temporary org.",
             "type": "string"
           },
           "defaultEdgeDeployment": {
@@ -5685,12 +6293,14 @@
             "type": "string",
             "format": "date-time"
           },
-          "claimUrl": {
-            "description": "URL a human follows to claim ownership of the temporary org.",
+          "id": {
+            "type": "string"
+          },
+          "name": {
             "type": "string"
           },
           "token": {
-            "description": "Full-permission API token the agent uses to create datasets, ingest, and query. Returned once and never retrievable again.",
+            "description": "Full-permission API token the agent uses to create datasets, ingest, and query. Returned once and never retrievable again.\n",
             "type": "string"
           }
         }
@@ -6261,56 +6871,6 @@
           }
         }
       },
-      "TransformRequest": {
-        "type": "object",
-        "required": [
-          "blocks",
-          "apl",
-          "startTime",
-          "endTime",
-          "resultURLs"
-        ],
-        "properties": {
-          "apl": {
-            "description": "The APL query to apply for transformation",
-            "type": "string",
-            "example": "['my-dataset'] | where status_code >= 400 | project timestamp, service, error_message"
-          },
-          "blocks": {
-            "description": "List of block locator URLs to transform",
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "block://unstable_v0/zgAQynPEQLEMsQwAAwAACAwYqTcAFGcAAAAAAAAACjgVchcAG7bpGFuQrFTOk54YW5Fr9V76LmidjehN6GOLBD7YhQAAAACS2SJheGlvbWVyc2Z0ODNheGlvbXRyYWNlc2RldnlreDdjeXJ12SxzMzovL2F4aW9tLWNsb3VkLWRldmVsb3BtZW50LWRhdGFiYXNlLTY1amJtLw=="
-            ]
-          },
-          "endTime": {
-            "description": "The end time for the transformation",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-01-02T00:00:00Z"
-          },
-          "resultURLs": {
-            "description": "List of URLs where transformation results should be uploaded",
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "example": [
-              "https://output-bucket.s3.amazonaws.com/transformed/result1.jsonl?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...",
-              "https://output-bucket.s3.amazonaws.com/transformed/result2.jsonl?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=..."
-            ]
-          },
-          "startTime": {
-            "description": "The start time for the transformation",
-            "type": "string",
-            "format": "date-time",
-            "example": "2024-01-01T00:00:00Z"
-          }
-        }
-      },
       "TrimOptions": {
         "type": "object",
         "required": [
@@ -6324,6 +6884,27 @@
         },
         "example": {
           "maxDuration": "1h"
+        }
+      },
+      "UnusedField": {
+        "type": "object",
+        "required": [
+          "name",
+          "types"
+        ],
+        "properties": {
+          "name": {
+            "description": "Catalog field name.",
+            "type": "string"
+          },
+          "types": {
+            "description": "Catalog types that are not stored in blocks.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-omitempty": false
+          }
         }
       },
       "UpdateCurrentUserRequest": {
@@ -6569,83 +7150,10 @@
           }
         }
       },
-      "axiomProperties": {
-        "type": "object",
-        "required": [
-          "dataset",
-          "token"
-        ],
-        "properties": {
-          "dataset": {
-            "description": "Name of the destination dataset",
-            "type": "string"
-          },
-          "token": {
-            "description": "Axiom ingest API token",
-            "type": "string"
-          },
-          "url": {
-            "description": "Axiom ingest API endpoint",
-            "type": "string"
-          }
-        }
-      },
-      "azureBlobStorageClientSecretProperties": {
-        "type": "object",
-        "required": [
-          "clientId",
-          "clientSecret",
-          "tenantID",
-          "url"
-        ],
-        "properties": {
-          "clientId": {
-            "description": "Client ID of the service principal",
-            "type": "string"
-          },
-          "clientSecret": {
-            "description": "Client secret of the service principal",
-            "type": "string"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson"
-            ]
-          },
-          "maximumEvents": {
-            "description": "Maximum number of events to send in a single file",
-            "type": "integer"
-          },
-          "tenantID": {
-            "description": "AD Tenant ID",
-            "type": "string"
-          },
-          "url": {
-            "description": "URL of the container",
-            "type": "string"
-          }
-        }
-      },
       "datasetCapabilities": {
         "type": "object",
         "additionalProperties": {
           "properties": {
-            "data": {
-              "description": "Data Management capability",
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "delete"
-                ]
-              },
-              "x-omitempty": true
-            },
             "ingest": {
               "description": "Ingest capability",
               "type": "array",
@@ -6696,7 +7204,7 @@
               "x-omitempty": true
             },
             "trim": {
-              "description": "Data Trimming capability",
+              "description": "Data Trimming and Deletion capability",
               "type": "array",
               "items": {
                 "type": "string",
@@ -6731,173 +7239,6 @@
               },
               "x-omitempty": true
             }
-          }
-        }
-      },
-      "gcsProperties": {
-        "type": "object",
-        "required": [
-          "credentialsJson",
-          "bucket"
-        ],
-        "properties": {
-          "bucket": {
-            "description": "Name of the destination bucket",
-            "type": "string"
-          },
-          "credentialsJson": {
-            "description": "Service account or refresh token JSON credentials",
-            "type": "string"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson"
-            ]
-          }
-        }
-      },
-      "httpAuthorizationProperties": {
-        "type": "object",
-        "required": [
-          "authorization",
-          "url"
-        ],
-        "properties": {
-          "authorization": {
-            "description": "Authorization header value",
-            "type": "string"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson",
-              "textTemplate"
-            ]
-          },
-          "headers": {
-            "description": "HTTP headers to send with each request",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "maximumConnections": {
-            "description": "Maximum number of connections to the target server",
-            "type": "integer"
-          },
-          "maximumEvents": {
-            "description": "Maximum number of events to send in a single request",
-            "type": "integer"
-          },
-          "textTemplateEncoderBody": {
-            "description": "Text Encoder Template, only available if format is textTemplate",
-            "type": "string"
-          },
-          "url": {
-            "description": "URL of the destination endpoint",
-            "type": "string"
-          }
-        }
-      },
-      "httpBasicProperties": {
-        "type": "object",
-        "required": [
-          "username",
-          "url"
-        ],
-        "properties": {
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson",
-              "textTemplate"
-            ]
-          },
-          "headers": {
-            "description": "HTTP headers to send with each request",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "maximumConnections": {
-            "description": "Maximum number of connections to the target server",
-            "type": "integer"
-          },
-          "maximumEvents": {
-            "description": "Maximum number of events to send in a single request",
-            "type": "integer"
-          },
-          "password": {
-            "description": "Password of the destination endpoint",
-            "type": "string"
-          },
-          "textTemplateEncoderBody": {
-            "description": "Text Encoder Template, only available if format is textTemplate",
-            "type": "string"
-          },
-          "url": {
-            "description": "URL of the destination endpoint",
-            "type": "string"
-          },
-          "username": {
-            "description": "Username of the destination endpoint",
-            "type": "string"
-          }
-        }
-      },
-      "httpProperties": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "properties": {
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson",
-              "textTemplate"
-            ]
-          },
-          "headers": {
-            "description": "HTTP headers to send with each request",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "maximumConnections": {
-            "description": "Maximum number of connections to the target server",
-            "type": "integer"
-          },
-          "maximumEvents": {
-            "description": "Maximum number of events to send in a single request",
-            "type": "integer"
-          },
-          "textTemplateEncoderBody": {
-            "description": "Text Encoder Template, only available if format is textTemplate",
-            "type": "string"
-          },
-          "url": {
-            "description": "URL of the destination endpoint",
-            "type": "string"
           }
         }
       },
@@ -6997,8 +7338,8 @@
             },
             "x-omitempty": true
           },
-          "flows": {
-            "description": "Flows capability",
+          "integrations": {
+            "description": "Integrations capability",
             "type": "array",
             "items": {
               "type": "string",
@@ -7011,8 +7352,8 @@
             },
             "x-omitempty": true
           },
-          "integrations": {
-            "description": "Integrations capability",
+          "labels": {
+            "description": "Labels capability",
             "type": "array",
             "items": {
               "type": "string",
@@ -7114,17 +7455,6 @@
         "type": "object",
         "additionalProperties": {
           "properties": {
-            "data": {
-              "description": "Controls data management operations like deletion",
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "delete"
-                ]
-              },
-              "x-omitempty": true
-            },
             "ingest": {
               "description": "Controls the ability to ingest data into datasets",
               "type": "array",
@@ -7175,7 +7505,7 @@
               "x-omitempty": true
             },
             "trim": {
-              "description": "Controls data trimming operations for storage optimization",
+              "description": "Controls data trimming and deletion operations",
               "type": "array",
               "items": {
                 "type": "string",
@@ -7310,8 +7640,8 @@
             },
             "x-omitempty": true
           },
-          "flows": {
-            "description": "Controls the management of data flows and pipelines",
+          "integrations": {
+            "description": "Controls the management of third-party integrations",
             "type": "array",
             "items": {
               "type": "string",
@@ -7324,8 +7654,8 @@
             },
             "x-omitempty": true
           },
-          "integrations": {
-            "description": "Controls the management of third-party integrations",
+          "labels": {
+            "description": "Controls the management of labels",
             "type": "array",
             "items": {
               "type": "string",
@@ -7454,51 +7784,6 @@
           }
         }
       },
-      "s3CompatProperties": {
-        "type": "object",
-        "required": [
-          "accessKeyId",
-          "secretAccessKey",
-          "hostname",
-          "bucket"
-        ],
-        "properties": {
-          "accessKeyId": {
-            "description": "AWS access key identifier",
-            "type": "string"
-          },
-          "bucket": {
-            "description": "Name of the destination bucket",
-            "type": "string"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "ndjson",
-              "headerlessCsv",
-              "csv",
-              "parquetFlat",
-              "sparseNdjson"
-            ]
-          },
-          "hostname": {
-            "description": "Hostname of the S3 compatible storage",
-            "type": "string"
-          },
-          "maximumEvents": {
-            "description": "Maximum number of events to send in a single file",
-            "type": "integer"
-          },
-          "region": {
-            "description": "Region of the destination bucket",
-            "type": "string"
-          },
-          "secretAccessKey": {
-            "description": "AWS secret access key",
-            "type": "string"
-          }
-        }
-      },
       "viewCapabilities": {
         "type": "object",
         "additionalProperties": {
@@ -7559,9 +7844,17 @@
               "$ref": "#/components/schemas/LayoutItem"
             }
           },
+          "sections": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Section"
+            }
+          },
           "refreshTime": {
             "type": "integer",
             "enum": [
+              0,
               15,
               60,
               300
@@ -7646,6 +7939,9 @@
             "$ref": "#/components/schemas/StatisticChart"
           },
           {
+            "$ref": "#/components/schemas/GaugeChart"
+          },
+          {
             "$ref": "#/components/schemas/NoteChart"
           },
           {
@@ -7656,6 +7952,9 @@
           },
           {
             "$ref": "#/components/schemas/SpacerChart"
+          },
+          {
+            "$ref": "#/components/schemas/VisualizeChart"
           }
         ]
       },
@@ -7664,6 +7963,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -7705,6 +8007,11 @@
       },
       "ChartHideHeader": {
         "type": "boolean"
+      },
+      "SectionId": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
       },
       "OverrideDashboardTimeRange": {
         "anyOf": [
@@ -8126,6 +8433,9 @@
           "id": {
             "$ref": "#/components/schemas/ChartId"
           },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -8139,6 +8449,21 @@
           },
           "query": {
             "$ref": "#/components/schemas/HeatmapChartQuery"
+          },
+          "colorScheme": {
+            "type": "string",
+            "enum": [
+              "Blue",
+              "Orange",
+              "Red",
+              "Purple",
+              "Teal",
+              "Yellow",
+              "Green",
+              "Pink",
+              "Grey",
+              "Brown"
+            ]
           }
         },
         "required": [
@@ -8212,6 +8537,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8354,49 +8682,14 @@
         },
         "additionalProperties": false
       },
-      "DeleteDatasetFieldsRequest": {
-        "type": "object",
-        "required": [
-          "fields"
-        ],
-        "properties": {
-          "fields": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "example": {
-          "fields": [
-            "field1",
-            "field2"
-          ]
-        }
-      },
-      "DeleteDatasetFieldsResult": {
-        "type": "object",
-        "properties": {
-          "fields": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "x-omitempty": false
-          }
-        },
-        "example": {
-          "fields": [
-            "field1",
-            "field2"
-          ]
-        }
-      },
       "PieChart": {
         "type": "object",
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8427,6 +8720,9 @@
           "id": {
             "$ref": "#/components/schemas/ChartId"
           },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -8455,6 +8751,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8488,6 +8787,9 @@
           "id": {
             "$ref": "#/components/schemas/ChartId"
           },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -8516,6 +8818,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8657,11 +8962,104 @@
         },
         "additionalProperties": false
       },
+      "GaugeChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Gauge"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/SimpleChartQuery"
+          },
+          "segments": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GaugeChartSegment"
+            }
+          },
+          "colorScale": {
+            "type": "string",
+            "enum": [
+              "green-to-red",
+              "red-to-green"
+            ]
+          },
+          "showRing": {
+            "type": "boolean"
+          },
+          "labelMode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "boundaries",
+              "intervals"
+            ]
+          },
+          "showSparkline": {
+            "type": "boolean"
+          },
+          "scaleToTimeRange": {
+            "type": "boolean"
+          },
+          "scaleBaseDurationMs": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "customUnits": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query",
+          "segments"
+        ],
+        "additionalProperties": false,
+        "title": "Gauge"
+      },
+      "GaugeChartSegment": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "number"
+          },
+          "to": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "additionalProperties": false
+      },
       "NoteChart": {
         "type": "object",
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8694,6 +9092,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -8762,6 +9163,9 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
           },
           "type": {
             "type": "string",
@@ -9080,6 +9484,9 @@
           "id": {
             "$ref": "#/components/schemas/ChartId"
           },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -9090,6 +9497,14 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "variant": {
+            "type": "string",
+            "enum": [
+              "transparent",
+              "dashed",
+              "solid"
+            ]
           }
         },
         "required": [
@@ -9098,6 +9513,634 @@
         ],
         "additionalProperties": false,
         "title": "Spacer"
+      },
+      "VisualizeChart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChartId"
+          },
+          "sectionId": {
+            "$ref": "#/components/schemas/SectionId"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Visualize"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "query": {
+            "$ref": "#/components/schemas/SimpleChartQuery"
+          },
+          "visualization": {
+            "$ref": "#/components/schemas/VisualizeConfiguration"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "query",
+          "visualization"
+        ],
+        "additionalProperties": false,
+        "title": "Visualize"
+      },
+      "VisualizeConfiguration": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ScatterVisualization"
+          },
+          {
+            "$ref": "#/components/schemas/BarVisualization"
+          },
+          {
+            "$ref": "#/components/schemas/HorizontalBarVisualization"
+          },
+          {
+            "$ref": "#/components/schemas/HistogramVisualization"
+          },
+          {
+            "$ref": "#/components/schemas/FrequencyBarVisualization"
+          },
+          {
+            "$ref": "#/components/schemas/VisualizeHeatmap"
+          }
+        ]
+      },
+      "ScatterVisualization": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "scatter"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/ScatterVisualizationBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/ScatterVisualizationSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Scatter"
+      },
+      "VisualizeConfigurationVersion": {
+        "type": "number",
+        "enum": [
+          1
+        ]
+      },
+      "ScatterVisualizationBindings": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "$ref": "#/components/schemas/VisualizeAxisColumnRef"
+          },
+          "y": {
+            "$ref": "#/components/schemas/VisualizeNumericColumnRef"
+          },
+          "series": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeAxisColumnRef": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "type": {
+            "$ref": "#/components/schemas/VisualizeAxisFieldType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeAxisFieldType": {
+        "type": "string",
+        "enum": [
+          "datetime",
+          "integer",
+          "float"
+        ]
+      },
+      "VisualizeNumericColumnRef": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "type": {
+            "$ref": "#/components/schemas/VisualizeNumericFieldType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeNumericFieldType": {
+        "type": "string",
+        "enum": [
+          "integer",
+          "float"
+        ]
+      },
+      "VisualizeCategoricalColumnRef": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "type": {
+            "$ref": "#/components/schemas/VisualizeCategoricalFieldType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeCategoricalFieldType": {
+        "type": "string",
+        "enum": [
+          "string",
+          "boolean"
+        ]
+      },
+      "ScatterVisualizationSettings": {
+        "type": "object",
+        "properties": {
+          "colors": {
+            "$ref": "#/components/schemas/VisualizeColorSettings"
+          },
+          "xAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          },
+          "legend": {
+            "$ref": "#/components/schemas/VisualizeLegendSettings"
+          }
+        },
+        "additionalProperties": false
+      },
+      "VisualizeColorSettings": {
+        "type": "object",
+        "properties": {
+          "palette": {
+            "type": "string",
+            "enum": [
+              "axiom",
+              "polychrome"
+            ]
+          },
+          "assignment": {
+            "type": "string",
+            "enum": [
+              "series-name",
+              "series-order"
+            ]
+          }
+        },
+        "required": [
+          "palette",
+          "assignment"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeAxisSettings": {
+        "type": "object",
+        "properties": {
+          "scale": {
+            "type": "string",
+            "enum": [
+              "linear",
+              "log"
+            ]
+          },
+          "range": {
+            "type": "string",
+            "enum": [
+              "fit",
+              "includeZero"
+            ]
+          }
+        },
+        "required": [
+          "scale",
+          "range"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeLegendSettings": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "string",
+            "enum": [
+              "none",
+              "bottom",
+              "right"
+            ]
+          }
+        },
+        "required": [
+          "position"
+        ],
+        "additionalProperties": false
+      },
+      "BarVisualization": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "bar"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/BarVisualizationBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/VisualizeBarSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Bar"
+      },
+      "BarVisualizationBindings": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          },
+          "value": {
+            "$ref": "#/components/schemas/VisualizeNumericColumnRef"
+          },
+          "series": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          }
+        },
+        "required": [
+          "category",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeBarSettings": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/VisualizeStandardAggregationSettings"
+          },
+          {
+            "$ref": "#/components/schemas/VisualizePercentileAggregationSettings"
+          }
+        ]
+      },
+      "VisualizeStandardAggregationSettings": {
+        "type": "object",
+        "properties": {
+          "aggregation": {
+            "$ref": "#/components/schemas/VisualizeStandardAggregation"
+          },
+          "categoryLimit": {
+            "$ref": "#/components/schemas/VisualizeCategoryLimit"
+          },
+          "colors": {
+            "$ref": "#/components/schemas/VisualizeColorSettings"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          },
+          "legend": {
+            "$ref": "#/components/schemas/VisualizeLegendSettings"
+          }
+        },
+        "required": [
+          "aggregation",
+          "categoryLimit"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeStandardAggregation": {
+        "type": "string",
+        "enum": [
+          "avg",
+          "sum",
+          "count",
+          "min",
+          "max"
+        ]
+      },
+      "VisualizeCategoryLimit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 100
+      },
+      "VisualizePercentileAggregationSettings": {
+        "type": "object",
+        "properties": {
+          "aggregation": {
+            "type": "string",
+            "enum": [
+              "percentile"
+            ]
+          },
+          "percentile": {
+            "$ref": "#/components/schemas/VisualizePercentile"
+          },
+          "categoryLimit": {
+            "$ref": "#/components/schemas/VisualizeCategoryLimit"
+          },
+          "colors": {
+            "$ref": "#/components/schemas/VisualizeColorSettings"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          },
+          "legend": {
+            "$ref": "#/components/schemas/VisualizeLegendSettings"
+          }
+        },
+        "required": [
+          "aggregation",
+          "percentile",
+          "categoryLimit"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizePercentile": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "HorizontalBarVisualization": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "horizontalBar"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/HorizontalBarVisualizationBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/VisualizeBarSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Horizontal bar"
+      },
+      "HorizontalBarVisualizationBindings": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          },
+          "value": {
+            "$ref": "#/components/schemas/VisualizeNumericColumnRef"
+          },
+          "series": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          }
+        },
+        "required": [
+          "category",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "HistogramVisualization": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "histogram"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/HistogramVisualizationBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/HistogramVisualizationSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Histogram"
+      },
+      "HistogramVisualizationBindings": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/VisualizeNumericColumnRef"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "HistogramVisualizationSettings": {
+        "type": "object",
+        "properties": {
+          "binCount": {
+            "$ref": "#/components/schemas/VisualizeBinCount"
+          },
+          "colors": {
+            "$ref": "#/components/schemas/VisualizeColorSettings"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          }
+        },
+        "required": [
+          "binCount"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeBinCount": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 200
+      },
+      "FrequencyBarVisualization": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "frequencyBar"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/FrequencyBarVisualizationBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/FrequencyBarVisualizationSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Frequency bar"
+      },
+      "FrequencyBarVisualizationBindings": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          }
+        },
+        "required": [
+          "category"
+        ],
+        "additionalProperties": false
+      },
+      "FrequencyBarVisualizationSettings": {
+        "type": "object",
+        "properties": {
+          "categoryLimit": {
+            "$ref": "#/components/schemas/VisualizeCategoryLimit"
+          },
+          "colors": {
+            "$ref": "#/components/schemas/VisualizeColorSettings"
+          },
+          "yAxis": {
+            "$ref": "#/components/schemas/VisualizeAxisSettings"
+          }
+        },
+        "required": [
+          "categoryLimit"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeHeatmap": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/VisualizeConfigurationVersion"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "heatmap"
+            ]
+          },
+          "bindings": {
+            "$ref": "#/components/schemas/VisualizeHeatmapBindings"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/VisualizeHeatmapSettings"
+          }
+        },
+        "required": [
+          "version",
+          "type",
+          "bindings",
+          "settings"
+        ],
+        "additionalProperties": false,
+        "title": "Heatmap"
+      },
+      "VisualizeHeatmapBindings": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          },
+          "y": {
+            "$ref": "#/components/schemas/VisualizeCategoricalColumnRef"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      },
+      "VisualizeHeatmapSettings": {
+        "type": "object",
+        "properties": {
+          "categoryLimit": {
+            "$ref": "#/components/schemas/VisualizeCategoryLimit"
+          }
+        },
+        "required": [
+          "categoryLimit"
+        ],
+        "additionalProperties": false
       },
       "LayoutItem": {
         "type": "object",
@@ -9156,6 +10199,27 @@
           "y",
           "w",
           "h"
+        ],
+        "additionalProperties": false
+      },
+      "Section": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/SectionId"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "defaultCollapsed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "title"
         ],
         "additionalProperties": false
       },
