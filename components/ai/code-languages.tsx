@@ -43,6 +43,8 @@ export function CodeGlyphIcon(props: SVGProps<SVGSVGElement>) {
 const CODE_LANGUAGES: Record<string, CodeLanguage> = {
   kusto: { label: 'APL', Icon: AxiomMarkIcon },
   apl: { label: 'APL', Icon: AxiomMarkIcon },
+  mpl: { label: 'MPL', Icon: AxiomMarkIcon },
+  promql: { label: 'PromQL' },
   sql: { label: 'SQL', Icon: Database },
   spl: { label: 'SPL', Icon: Database },
   splunk: { label: 'SPL', Icon: Database },
@@ -75,7 +77,8 @@ const CODE_LANGUAGES: Record<string, CodeLanguage> = {
 };
 
 /**
- * MPL queries share the `kusto` fence with APL; their tell is the source
+ * MPL queries should use the `mpl` fence. Older ones share the `kusto` fence
+ * with APL; their tell is the source
  * line — a backtick-quoted `dataset`:`metric` pair, optionally preceded by
  * `set …;` directives (see the MPL query-structure reference).
  */
@@ -87,7 +90,7 @@ export function resolveCodeLanguage(
 ): CodeLanguage {
   if (!lang) return { label: 'code' };
   const id = lang.toLowerCase();
-  if ((id === 'kusto' || id === 'apl' || id === 'mpl') && code && MPL_SOURCE.test(code)) {
+  if ((id === 'kusto' || id === 'apl') && code && MPL_SOURCE.test(code)) {
     return { label: 'MPL', Icon: AxiomMarkIcon };
   }
   const entry = CODE_LANGUAGES[id];

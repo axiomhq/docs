@@ -30,6 +30,17 @@ function schemaType(
   return schema.format ? `${type}<${schema.format}>` : type;
 }
 
+// Schema columns are fixed-width, so long names and types must wrap at
+// readable points (camelCase humps, separators, before `<`) rather than
+// spilling into the neighbouring column.
+export function breakable(value: string): ReactNode[] {
+  return value
+    .split(/(?<=[a-z0-9])(?=[A-Z])|(?<=[_.\-/])|(?=<)/)
+    .flatMap((part, index) =>
+      index === 0 ? [part] : [<wbr key={index} />, part],
+    );
+}
+
 // The dark palette sits at 1.9–2.5:1 on the light tints, so the light theme
 // repoints to darker text values that clear AA (>=4.5:1) on the same tints.
 const METHOD_COLORS: Record<string, string> = {
@@ -217,7 +228,7 @@ function SchemaTable({
               key={row.key}
             >
               <td
-                className="api-schema-name relative whitespace-nowrap py-[9px] px-2.5 border-t-0! border-l-0! border-r! border-r-(--border-tertiary)! border-b! border-b-(--border-tertiary)! align-top"
+                className="api-schema-name relative wrap-anywhere py-[9px] px-2.5 border-t-0! border-l-0! border-r! border-r-(--border-tertiary)! border-b! border-b-(--border-tertiary)! align-top"
                 style={{ paddingLeft: 10 + row.depth * 18 }}
               >
                 {row.depth > 0 && (
@@ -229,15 +240,15 @@ function SchemaTable({
                   </span>
                 )}
                 <code className="p-0! border-0! bg-transparent! font-mono text-(--text-primary)! text-[13px]! font-[550]">
-                  {row.name}
+                  {breakable(row.name)}
                 </code>
               </td>
-              <td className="api-schema-type whitespace-nowrap py-[9px] px-2.5 border-t-0! border-l-0! border-r! border-r-(--border-tertiary)! border-b! border-b-(--border-tertiary)! align-top">
+              <td className="api-schema-type wrap-anywhere py-[9px] px-2.5 border-t-0! border-l-0! border-r! border-r-(--border-tertiary)! border-b! border-b-(--border-tertiary)! align-top">
                 <code className="mr-[7px] p-0! border-0! bg-transparent! text-(--text-quaternary)! font-mono! text-[10px]! leading-[14px]! font-[450]! tracking-[.04em] uppercase">
-                  {schemaType(document, row.field)}
+                  {breakable(schemaType(document, row.field))}
                 </code>
                 {row.required && (
-                  <b className="mr-[7px] text-(--color-warning-text)! font-mono! text-[10px]! leading-[14px]! font-[450]! tracking-[.04em] uppercase">
+                  <b className="inline-block mr-[7px] text-(--color-warning-text)! font-mono! text-[10px]! leading-[14px]! font-[450]! tracking-[.04em] uppercase">
                     Required
                   </b>
                 )}
