@@ -431,22 +431,25 @@ Available operators:
 
 ### Offset
 
-Use `offset` to read a source from an earlier time window. This lets you compare a metric with its own past values, for example this hour against the same hour yesterday.
+Use `offset` to read a source from an earlier or later time window. This lets you compare a metric with its own values at another time, for example this hour against the same hour yesterday.
 
 **Syntax:**
 
 ```mpl
-| offset -<duration>
+| offset <duration>
 ```
 
-- **duration**: How far back to read. Use the same time units as in [time ranges](#time-ranges), such as `5m`, `1h`, `1d`, or `1w`. The minus sign is required.
+- **duration**: How far to move the window. A negative duration such as `-1h` reads earlier data. A positive duration such as `+1h` or `1h` reads later data. Use the same time units as in [time ranges](#time-ranges), such as `5m`, `1h`, `1d`, or `1w`.
 
 `offset` must come immediately after the source, before any other operation. Each source can have one `offset`.
 
-Axiom keeps the time range of the query and shifts the window it reads data from. Axiom then moves the returned timestamps forward by the same amount, so the results line up with the query’s time range. For example, if the query’s time range is 10:00 to 11:00 and you use `offset -1h`, Axiom reads data from 9:00 to 10:00, and the value at 10:15 in the results is the value measured at 9:15.
+Axiom keeps the time range of the query and shifts the window it reads data from. Axiom then moves the returned timestamps by the same amount in the opposite direction, so the results line up with the query’s time range. For example, if the query’s time range is 10:00 to 11:00:
+
+- With `offset -1h`, Axiom reads data from 9:00 to 10:00, and the value at 10:15 in the results is the value measured at 9:15.
+- With `offset +1h`, Axiom reads data from 11:00 to 12:00, and the value at 10:15 in the results is the value measured at 11:15.
 
 <Note>
-In PromQL, `offset 1h` reads data from one hour earlier. In MPL, the sign matches the direction in time, so you write `offset -1h`. MPL doesn’t support positive offsets.
+In PromQL, `offset 1h` reads data from one hour earlier. In MPL, the sign matches the direction in time, so you write `offset -1h`. In MPL, `offset 1h` reads data from one hour later.
 </Note>
 
 **Examples:**
