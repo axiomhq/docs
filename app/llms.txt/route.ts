@@ -1,4 +1,6 @@
 import { getNavigation, type NavigationItem } from '@/lib/navigation';
+import { openApiSpecIds } from '@/lib/openapi';
+import { DASHBOARD_SCHEMA_URL, OPENAPI_SPEC_LABELS, openApiSpecUrl } from '@/lib/published-schemas';
 import { source } from '@/lib/source';
 
 export const dynamic = 'force-static';
@@ -36,6 +38,11 @@ export function GET() {
     '> Axiom is a data platform for ingesting, storing, and querying logs, traces, and other event data. This documentation covers the Axiom Console, sending data, the Axiom Processing Language (APL), and the REST API.',
     '',
     `Every page below is served as plain Markdown at the linked \`.md\` URL. The entire corpus in one file: [llms-full.txt](${ORIGIN}/docs/llms-full.txt). A standalone APL language reference: [llms-apl.md](${ORIGIN}/docs/llms-apl.md).`,
+    '',
+    '## Machine-readable schemas',
+    '',
+    `- [Dashboard JSON Schema](${DASHBOARD_SCHEMA_URL}): JSON Schema for the \`dashboard\` document sent to the create and update dashboard endpoints. Explained in [Dashboard JSON](${ORIGIN}/docs/restapi/dashboard-json.md).`,
+    ...openApiSpecIds.map((id) => `- [OpenAPI spec ${id}](${openApiSpecUrl(id)}): ${OPENAPI_SPEC_LABELS[id] ?? `${id} API`}.`),
   ];
 
   for (const { title, section } of SECTIONS) {

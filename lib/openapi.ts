@@ -16,6 +16,12 @@ const documents: Record<string, JsonObject> = {
   'v1-edge-hec': edgeHec,
 };
 
+export const openApiSpecIds = Object.keys(documents);
+
+export function getOpenApiDocument(specId: string): JsonObject | undefined {
+  return Object.hasOwn(documents, specId) ? documents[specId] : undefined;
+}
+
 export type ApiOperationData = {
   document: JsonObject;
   specId: string;
