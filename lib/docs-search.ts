@@ -1,4 +1,5 @@
 import { createFromSource } from 'fumadocs-core/search/server';
+import { pageMarkdown } from '@/lib/page-markdown';
 import { source } from '@/lib/source';
 import { plainSearchText, rankDocsSearchResults } from '@/lib/docs-search-rank';
 
@@ -48,7 +49,7 @@ export async function readDocsPage(url: string): Promise<DocsPageContext | null>
   const page = source.getPages().find((candidate) => candidate.url === pathname);
   if (!page || !('getText' in page.data)) return null;
 
-  const content = await page.data.getText('processed');
+  const content = await pageMarkdown(page);
   return {
     title: page.data.title,
     url: page.url,
