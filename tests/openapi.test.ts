@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  apiOperationMarkdown,
   getApiOperation,
   getApiOperationSections,
   resolveSchema,
@@ -58,5 +59,21 @@ describe('OpenAPI migration', () => {
       { title: 'Response', url: '#response', depth: 2 },
     ]);
     expect(getApiOperationSections('missing get /nothing')).toEqual([]);
+  });
+
+  it('renders the spec-backed operation as Markdown around the page prose', () => {
+    const markdown = apiOperationMarkdown('v2 post /dashboards', 'Page prose.');
+
+    expect(markdown.startsWith('`POST /v2/dashboards`')).toBe(true);
+    const order = ['Create a dashboard from a dashboard document payload.', 'Page prose.', '## Body', '## Request', '## Response'];
+    const positions = order.map((text) => markdown.indexOf(text));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(markdown).toContain('| `dashboard.owner` | `string` | Yes | User ID of the dashboard owner.');
+    expect(markdown).toContain("curl -X POST 'https://api.axiom.co/v2/dashboards'");
+    expect(markdown).toContain('| `409` | Dashboard already exists | `application/json` |');
+
+    expect(apiOperationMarkdown('v2 get /dashboards')).toContain('| `labelIds` | `string[]` | query | No |');
+    expect(apiOperationMarkdown('missing get /nothing', 'Page prose.')).toBe('Page prose.');
   });
 });
