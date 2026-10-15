@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Warm the already-running docs dev server after an orb wakes.
+#
+# A wake restores the orb's memory snapshot, so the docs service keeps running,
+# but its first /docs request after a long archive is slow (11-13 s after 8 h).
+# `amp orb services ensure` sends an already-running service one 10 s health
+# probe, so that first request fails it. This hook pays the penalty first.
+# It never starts, restarts or installs anything.
+set -uo pipefail
+
+log() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" "$*"; }
+
+# The unit name and PORT are what `amp orb services ensure --json` reports for
+# the docs service ("unit" and "port"); systemd keeps both while it runs.
+unit=amp-svc-docs.service
+if [[ "$(systemctl show "$unit" -p ActiveState --value 2>/dev/null)" != active ]]; then
+  log "docs service is not running; nothing to warm"
+  exit 0
+fi
+port="$(systemctl show "$unit" -p Environment --value | tr ' ' '\n' | sed -n 's/^PORT=//p')"
+if [[ ! "$port" =~ ^[0-9]+$ ]]; then
+  log "docs service has no PORT; nothing to warm"
+  exit 0
+fi
+
+for _ in {1..20}; do
+  (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && break
+  sleep 0.5
+done
+
+# Same path as the docs health check in .amp/services.yaml.
+log "GET /docs on port $port"
+result="$(curl --silent --output /dev/null --max-time 120 --write-out '%{http_code} %{time_total}s' "http://127.0.0.1:$port/docs")"
+log "GET /docs status ${result% *} in ${result#* } (curl exit $?)"
