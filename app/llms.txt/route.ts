@@ -41,7 +41,7 @@ export function GET() {
     '',
     '## Machine-readable schemas',
     '',
-    `- [Dashboard JSON Schema](${DASHBOARD_SCHEMA_URL}): JSON Schema (draft 2020-12) for the \`dashboard\` document sent to the create and update dashboard endpoints. Explained in [Dashboard JSON](${ORIGIN}/docs/restapi/dashboard-json.md).`,
+    `- [Dashboard JSON Schema](${DASHBOARD_SCHEMA_URL}): JSON Schema for the \`dashboard\` document sent to the create and update dashboard endpoints. Explained in [Dashboard JSON](${ORIGIN}/docs/restapi/dashboard-json.md).`,
     ...openApiSpecIds.map((id) => `- [OpenAPI spec ${id}](${openApiSpecUrl(id)}): ${OPENAPI_SPEC_LABELS[id] ?? `${id} API`}.`),
   ];
 
