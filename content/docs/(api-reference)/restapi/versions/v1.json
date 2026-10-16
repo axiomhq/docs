@@ -129,7 +129,7 @@
         "tags": [
           "Datasets"
         ],
-        "description": "Query",
+        "description": "Runs an APL query through `api.axiom.co` and returns the result in the requested `format`. Results are routed through US East 1 (AWS); use the edge query endpoint to keep results in the edge deployment.",
         "operationId": "queryApl",
         "parameters": [
           {
@@ -211,8 +211,21 @@
               }
             }
           },
+          "400": {
+            "description": "The query is invalid or the format is unsupported."
+          },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "430": {
+            "description": "Query prevented because the organization reached its query limit.",
             "content": {
               "application/json": {
                 "schema": {
@@ -388,7 +401,7 @@
         "tags": [
           "Datasets"
         ],
-        "description": "Ingest (Legacy)",
+        "description": "Ingests JSON, NDJSON, CSV, or Logplex events into an events or logs dataset through `api.axiom.co`. Prefer the edge ingest endpoint.",
         "operationId": "ingestIntoDataset",
         "parameters": [
           {
@@ -483,12 +496,35 @@
               }
             }
           },
+          "400": {
+            "description": "The dataset name is invalid or reserved, the dataset isn't an events or logs dataset, or it belongs to a different edge deployment."
+          },
           "401": {
-            "description": "Forbidden",
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token can't ingest into this dataset, the dataset is shared, or the organization is suspended.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
                 }
               }
             }
@@ -509,7 +545,7 @@
         "tags": [
           "Datasets"
         ],
-        "description": "Query (Legacy)",
+        "description": "Runs a structured (non-APL) query against a dataset. Every response carries `Deprecation`, `Sunset`, and `Link` headers.",
         "operationId": "queryDataset",
         "parameters": [
           {
@@ -556,32 +592,30 @@
         "responses": {
           "200": {
             "description": "Result",
-            "headers": {
-              "X-QueryLimit-Limit": {
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "X-QueryLimit-Remaining": {
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "X-QueryLimit-Reset": {
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "X-Axiom-History-Query-Id": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Result"
+                }
+              }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "Date the endpoint was deprecated (2026-09-18)",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "End-of-life date (2026-10-31T23:59:59Z)",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Successor and docs links",
+                "schema": {
+                  "type": "string"
                 }
               }
             }
@@ -595,6 +629,9 @@
                 }
               }
             }
+          },
+          "430": {
+            "description": "Query prevented because the organization reached its query limit."
           }
         },
         "security": [
@@ -604,7 +641,8 @@
             ]
           }
         ],
-        "x-codegen-request-body-name": "payload"
+        "x-codegen-request-body-name": "payload",
+        "deprecated": true
       }
     },
     "/datasets/{dataset_name}/trim": {
@@ -612,7 +650,7 @@
         "tags": [
           "Datasets"
         ],
-        "description": "Trim dataset",
+        "description": "Queues a job that deletes data older than `maxDuration` from a dataset and returns the job ID. Deletion runs asynchronously and can take several hours to complete.",
         "operationId": "trimDataset",
         "parameters": [
           {
@@ -637,11 +675,17 @@
         },
         "responses": {
           "200": {
-            "description": "TrimResult",
+            "description": "Job created.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TrimResult"
+                  "type": "object",
+                  "properties": {
+                    "jobID": {
+                      "type": "string",
+                      "description": "ID of the trim job"
+                    }
+                  }
                 }
               }
             }
@@ -897,264 +941,264 @@
         "example": {
           "format": "tabular",
           "status": {
-              "elapsedTime": 260650,
-              "minCursor": "0d8q6stroluyo-07c3957e7400015c-0000c875",
-              "maxCursor": "0d8q6stroluyo-07c3957e7400015c-0000c877",
-              "blocksExamined": 4,
-              "blocksCached": 0,
-              "blocksMatched": 0,
-              "rowsExamined": 197604,
-              "rowsMatched": 197604,
-              "numGroups": 0,
-              "isPartial": false,
-              "cacheStatus": 1,
-              "minBlockTime": "2025-03-26T12:03:14Z",
-              "maxBlockTime": "2025-03-26T12:12:42Z"
+            "elapsedTime": 260650,
+            "minCursor": "0d8q6stroluyo-07c3957e7400015c-0000c875",
+            "maxCursor": "0d8q6stroluyo-07c3957e7400015c-0000c877",
+            "blocksExamined": 4,
+            "blocksCached": 0,
+            "blocksMatched": 0,
+            "rowsExamined": 197604,
+            "rowsMatched": 197604,
+            "numGroups": 0,
+            "isPartial": false,
+            "cacheStatus": 1,
+            "minBlockTime": "2025-03-26T12:03:14Z",
+            "maxBlockTime": "2025-03-26T12:12:42Z"
           },
           "tables": [
-              {
-                  "name": "0",
-                  "sources": [
-                      {
-                          "name": "dataset-name"
-                      }
-                  ],
-                  "fields": [
-                      {
-                          "name": "_sysTime",
-                          "type": "datetime"
-                      },
-                      {
-                          "name": "_time",
-                          "type": "datetime"
-                      },
-                      {
-                          "name": "content_type",
-                          "type": "string"
-                      },
-                      {
-                          "name": "geo.city",
-                          "type": "string"
-                      },
-                      {
-                          "name": "geo.country",
-                          "type": "string"
-                      },
-                      {
-                          "name": "id",
-                          "type": "string"
-                      },
-                      {
-                          "name": "is_tls",
-                          "type": "boolean"
-                      },
-                      {
-                          "name": "message",
-                          "type": "string"
-                      },
-                      {
-                          "name": "method",
-                          "type": "string"
-                      },
-                      {
-                          "name": "req_duration_ms",
-                          "type": "float"
-                      },
-                      {
-                          "name": "resp_body_size_bytes",
-                          "type": "integer"
-                      },
-                      {
-                          "name": "resp_header_size_bytes",
-                          "type": "integer"
-                      },
-                      {
-                          "name": "server_datacenter",
-                          "type": "string"
-                      },
-                      {
-                          "name": "status",
-                          "type": "string"
-                      },
-                      {
-                          "name": "uri",
-                          "type": "string"
-                      },
-                      {
-                          "name": "user_agent",
-                          "type": "string"
-                      },
-                      {
-                          "name": "is_ok_2    ",
-                          "type": "boolean"
-                      },
-                      {
-                          "name": "city_str_len",
-                          "type": "integer"
-                      }
-                  ],
-                  "order": [
-                      {
-                          "field": "_time",
-                          "desc": true
-                      }
-                  ],
-                  "groups": [],
-                  "range": {
-                      "field": "_time",
-                      "start": "1970-01-01T00:00:00Z",
-                      "end": "2025-03-26T12:12:43Z"
-                  },
-                  "columns": [
-                      [
-                          "2025-03-26T12:12:42.68112905Z",
-                          "2025-03-26T12:12:42.68112905Z",
-                          "2025-03-26T12:12:42.68112905Z"
-                      ],
-                      [
-                          "2025-03-26T12:12:42Z",
-                          "2025-03-26T12:12:42Z",
-                          "2025-03-26T12:12:42Z"
-                      ],
-                      [
-                          "text/html",
-                          "text/plain-charset=utf-8",
-                          "image/jpeg"
-                      ],
-                      [
-                          "Ojinaga",
-                          "Humboldt",
-                          "Nevers"
-                      ],
-                      [
-                          "Mexico",
-                          "United States",
-                          "France"
-                      ],
-                      [
-                          "8af366cf-6f25-42e6-bbb4-d860ab535a60",
-                          "032e7f68-b0ab-47c0-a24a-35af566359e5",
-                          "4d2c7baa-ff28-4b1f-9db9-8e6c0ed5a9c9"
-                      ],
-                      [
-                          false,
-                          false,
-                          true
-                      ],
-                      [
-                          "QCD permutations were not solvable in linear time, expected compressed time",
-                          "QCD permutations were not solvable in linear time, expected compressed time",
-                          "Expected a new layer of particle physics but got a Higgs Boson"
-                      ],
-                      [
-                          "GET",
-                          "GET",
-                          "GET"
-                      ],
-                      [
-                          1.396373193863436,
-                          0.16252390534308514,
-                          0.4093416175186162
-                      ],
-                      [
-                          3448,
-                          2533,
-                          1906
-                      ],
-                      [
-                          84,
-                          31,
-                          29
-                      ],
-                      [
-                          "DCA",
-                          "GRU",
-                          "FRA"
-                      ],
-                      [
-                          "201",
-                          "200",
-                          "200"
-                      ],
-                      [
-                          "/api/v1/buy/commit/id/go",
-                          "/api/v1/textdata/cnfigs",
-                          "/api/v1/bank/warn"
-                      ],
-                      [
-                          "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; AS; rv:11.0) like Gecko",
-                          "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
-                          "Mozilla/5.0 (Windows; U; MSIE 9.0; WIndows NT 9.0; en-US))"
-                      ],
-                      [
-                          true,
-                          true,
-                          true
-                      ],
-                      [
-                          7,
-                          8,
-                          6
-                      ]
-                  ]
-              }
-            ],
-            "datasetNames": [
-                "dataset-name"
-            ],
-            "fieldsMetaMap": {
-                "dataset-name": [
-                    {
-                        "name": "status",
-                        "type": "",
-                        "unit": "",
-                        "hidden": false,
-                        "description": "HTTP status code"
-                    },
-                    {
-                        "name": "resp_header_size_bytes",
-                        "type": "integer",
-                        "unit": "none",
-                        "hidden": false,
-                        "description": ""
-                    },
-                    {
-                        "name": "geo.city",
-                        "type": "string",
-                        "unit": "",
-                        "hidden": false,
-                        "description": "the city"
-                    },
-                    {
-                        "name": "resp_body_size_bytes",
-                        "type": "integer",
-                        "unit": "decbytes",
-                        "hidden": false,
-                        "description": ""
-                    },
-                    {
-                        "name": "content_type",
-                        "type": "string",
-                        "unit": "",
-                        "hidden": false,
-                        "description": ""
-                    },
-                    {
-                        "name": "geo.country",
-                        "type": "string",
-                        "unit": "",
-                        "hidden": false,
-                        "description": ""
-                    },
-                    {
-                        "name": "req_duration_ms",
-                        "type": "float",
-                        "unit": "ms",
-                        "hidden": false,
-                        "description": "Request duration"
-                    }
+            {
+              "name": "0",
+              "sources": [
+                {
+                  "name": "dataset-name"
+                }
+              ],
+              "fields": [
+                {
+                  "name": "_sysTime",
+                  "type": "datetime"
+                },
+                {
+                  "name": "_time",
+                  "type": "datetime"
+                },
+                {
+                  "name": "content_type",
+                  "type": "string"
+                },
+                {
+                  "name": "geo.city",
+                  "type": "string"
+                },
+                {
+                  "name": "geo.country",
+                  "type": "string"
+                },
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "is_tls",
+                  "type": "boolean"
+                },
+                {
+                  "name": "message",
+                  "type": "string"
+                },
+                {
+                  "name": "method",
+                  "type": "string"
+                },
+                {
+                  "name": "req_duration_ms",
+                  "type": "float"
+                },
+                {
+                  "name": "resp_body_size_bytes",
+                  "type": "integer"
+                },
+                {
+                  "name": "resp_header_size_bytes",
+                  "type": "integer"
+                },
+                {
+                  "name": "server_datacenter",
+                  "type": "string"
+                },
+                {
+                  "name": "status",
+                  "type": "string"
+                },
+                {
+                  "name": "uri",
+                  "type": "string"
+                },
+                {
+                  "name": "user_agent",
+                  "type": "string"
+                },
+                {
+                  "name": "is_ok_2    ",
+                  "type": "boolean"
+                },
+                {
+                  "name": "city_str_len",
+                  "type": "integer"
+                }
+              ],
+              "order": [
+                {
+                  "field": "_time",
+                  "desc": true
+                }
+              ],
+              "groups": [],
+              "range": {
+                "field": "_time",
+                "start": "1970-01-01T00:00:00Z",
+                "end": "2025-03-26T12:12:43Z"
+              },
+              "columns": [
+                [
+                  "2025-03-26T12:12:42.68112905Z",
+                  "2025-03-26T12:12:42.68112905Z",
+                  "2025-03-26T12:12:42.68112905Z"
+                ],
+                [
+                  "2025-03-26T12:12:42Z",
+                  "2025-03-26T12:12:42Z",
+                  "2025-03-26T12:12:42Z"
+                ],
+                [
+                  "text/html",
+                  "text/plain-charset=utf-8",
+                  "image/jpeg"
+                ],
+                [
+                  "Ojinaga",
+                  "Humboldt",
+                  "Nevers"
+                ],
+                [
+                  "Mexico",
+                  "United States",
+                  "France"
+                ],
+                [
+                  "8af366cf-6f25-42e6-bbb4-d860ab535a60",
+                  "032e7f68-b0ab-47c0-a24a-35af566359e5",
+                  "4d2c7baa-ff28-4b1f-9db9-8e6c0ed5a9c9"
+                ],
+                [
+                  false,
+                  false,
+                  true
+                ],
+                [
+                  "QCD permutations were not solvable in linear time, expected compressed time",
+                  "QCD permutations were not solvable in linear time, expected compressed time",
+                  "Expected a new layer of particle physics but got a Higgs Boson"
+                ],
+                [
+                  "GET",
+                  "GET",
+                  "GET"
+                ],
+                [
+                  1.396373193863436,
+                  0.16252390534308514,
+                  0.4093416175186162
+                ],
+                [
+                  3448,
+                  2533,
+                  1906
+                ],
+                [
+                  84,
+                  31,
+                  29
+                ],
+                [
+                  "DCA",
+                  "GRU",
+                  "FRA"
+                ],
+                [
+                  "201",
+                  "200",
+                  "200"
+                ],
+                [
+                  "/api/v1/buy/commit/id/go",
+                  "/api/v1/textdata/cnfigs",
+                  "/api/v1/bank/warn"
+                ],
+                [
+                  "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; AS; rv:11.0) like Gecko",
+                  "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",
+                  "Mozilla/5.0 (Windows; U; MSIE 9.0; WIndows NT 9.0; en-US))"
+                ],
+                [
+                  true,
+                  true,
+                  true
+                ],
+                [
+                  7,
+                  8,
+                  6
                 ]
+              ]
             }
+          ],
+          "datasetNames": [
+            "dataset-name"
+          ],
+          "fieldsMetaMap": {
+            "dataset-name": [
+              {
+                "name": "status",
+                "type": "",
+                "unit": "",
+                "hidden": false,
+                "description": "HTTP status code"
+              },
+              {
+                "name": "resp_header_size_bytes",
+                "type": "integer",
+                "unit": "none",
+                "hidden": false,
+                "description": ""
+              },
+              {
+                "name": "geo.city",
+                "type": "string",
+                "unit": "",
+                "hidden": false,
+                "description": "the city"
+              },
+              {
+                "name": "resp_body_size_bytes",
+                "type": "integer",
+                "unit": "decbytes",
+                "hidden": false,
+                "description": ""
+              },
+              {
+                "name": "content_type",
+                "type": "string",
+                "unit": "",
+                "hidden": false,
+                "description": ""
+              },
+              {
+                "name": "geo.country",
+                "type": "string",
+                "unit": "",
+                "hidden": false,
+                "description": ""
+              },
+              {
+                "name": "req_duration_ms",
+                "type": "float",
+                "unit": "ms",
+                "hidden": false,
+                "description": "Request duration"
+              }
+            ]
+          }
         },
         "x-go-type": {
           "hints": {

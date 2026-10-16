@@ -49,7 +49,7 @@ describe('apiOperationMarkdown', () => {
 
   it('keeps multi-line descriptions inside their list item', () => {
     expect(apiOperationMarkdown('v2 get /apl-starred-queries')).toContain(
-      '- `who` (query; string): - If the value of `who` is undefined, the request returns queries starred by the authenticated user.\n  - If the value',
+      '- `who` (query; string): - If the value of `who` is your own user ID, the request returns queries saved by the authenticated user.\n  - If the value',
     );
   });
 
