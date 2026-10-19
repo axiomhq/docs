@@ -92,7 +92,7 @@ exporters:
     endpoint: https://AXIOM_DOMAIN
     headers:
       authorization: Bearer API_TOKEN
-      x-axiom-metrics-dataset: DATASET_NAME
+      x-axiom-dataset: DATASET_NAME
 
 service:
   pipelines:
@@ -111,7 +111,6 @@ service:
 <Info>
 <ReplaceDomain />
 <ReplaceDatasetToken />
-When configuring metrics, use the `x-axiom-metrics-dataset` header instead of `x-axiom-dataset`.
 </Info>
 
 When using the OTLP/HTTP endpoint, the following endpoint URLs should be used in your SDK exporter OTel configuration.
@@ -123,6 +122,20 @@ When using the OTLP/HTTP endpoint, the following endpoint URLs should be used in
 <Note>
 The `/v1/metrics` endpoint accepts OTLP data encoded as Protobuf (`application/x-protobuf`) or JSON (`application/json`). Protobuf payloads are smaller, so prefer Protobuf when you send large volumes of metrics.
 </Note>
+
+## Use one set of headers for all signals
+
+To send logs, metrics, and traces to separate datasets with one set of headers, set `x-axiom-logs-dataset`, `x-axiom-metrics-dataset`, and `x-axiom-traces-dataset`. If a signal header isn't set, Axiom uses `x-axiom-dataset` for that signal.
+
+For example, configure an OpenTelemetry SDK with these environment variables:
+
+```bash
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://AXIOM_DOMAIN
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer API_TOKEN,x-axiom-logs-dataset=LOGS_DATASET_NAME,x-axiom-metrics-dataset=METRICS_DATASET_NAME,x-axiom-traces-dataset=TRACES_DATASET_NAME"
+```
+
+The SDK adds `/v1/logs`, `/v1/metrics`, and `/v1/traces` to the base URL.
 
 ## OpenTelemetry for Go
 
