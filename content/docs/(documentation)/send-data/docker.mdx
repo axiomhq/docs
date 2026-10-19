@@ -1,9 +1,9 @@
 ---
 title: 'Send data from Docker to Axiom'
-description: 'This page explains how to send logs and metrics from Docker containers to Axiom with Vector, the OpenTelemetry Collector, Fluent Bit, Fluentd, Filebeat, or the Docker syslog logging driver.'
+description: 'This page explains how to send logs and metrics from Docker containers to Axiom with Vector, the OpenTelemetry Collector, Fluent Bit, Fluentd, or Filebeat.'
 overview: 'Platform for building, shipping, and running containerized apps'
 sidebarTitle: Docker
-keywords: ['docker', 'axiom documentation', 'documentation', 'axiom', 'guide', 'container logs', 'docker logs', 'logging driver', 'docker compose', 'json-file', 'vector', 'opentelemetry', 'fluent bit', 'fluentd', 'filebeat', 'syslog']
+keywords: ['docker', 'axiom documentation', 'documentation', 'axiom', 'guide', 'container logs', 'docker logs', 'logging driver', 'docker compose', 'json-file', 'vector', 'opentelemetry', 'fluent bit', 'fluentd', 'filebeat']
 ---
 
 import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
@@ -26,9 +26,8 @@ This page covers the methods that work with Axiom and explains when to use each.
 | [Fluent Bit](#send-docker-logs-with-fluent-bit) | Docker’s `fluentd` logging driver pushes logs to the Fluent Bit `forward` input. | Container name and ID, stream | A lightweight forwarder. Docker pushes the logs, so the forwarder needs no socket or file access. |
 | [Fluentd](#send-docker-logs-with-fluentd) | Docker’s `fluentd` logging driver pushes logs to the Fluentd `forward` input. | Container name and ID, stream | Environments that already run Fluentd. |
 | [Filebeat](#send-docker-logs-with-filebeat) | The `filestream` input with the `container` parser tails the `json-file` log files. | Container ID, name, image, and labels | Environments that already run Elastic Beats. |
-| [Syslog](#send-docker-logs-with-the-syslog-logging-driver) | Docker’s `syslog` logging driver sends logs to the Axiom Syslog Proxy. | Tag, severity | Environments that already standardize on syslog. |
 
-Vector, the OpenTelemetry Collector, and Filebeat work with Docker’s default logging configuration. The Fluent Bit, Fluentd, and syslog methods change the logging driver of your containers. In that case, `docker logs` still works because Docker keeps a local cache of the latest logs, unless you set the `cache-disabled` option to `true`.
+Vector, the OpenTelemetry Collector, and Filebeat work with Docker’s default logging configuration. The Fluent Bit and Fluentd methods change the logging driver of your containers. In that case, `docker logs` still works because Docker keeps a local cache of the latest logs, unless you set the `cache-disabled` option to `true`.
 
 ## How Docker logging works
 
@@ -37,7 +36,7 @@ Keep the following in mind when you choose and configure a method:
 - **Logging drivers:** Set the default driver and its options for all new containers in `/etc/docker/daemon.json` and restart Docker. Override the driver for a single container with the `--log-driver` and `--log-opt` flags of `docker run`, or for a Docker Compose service with the `logging` key. Existing containers keep the logging configuration they were created with. Recreate them to apply changes. All values in `log-opts` are strings, so quote numbers and booleans in `daemon.json`.
 - **Log files:** The default `json-file` driver writes one JSON object per line with the keys `log`, `stream`, and `time` to `/var/lib/docker/containers/CONTAINER_ID/CONTAINER_ID-json.log`. Set the `max-size` and `max-file` options to rotate these files so they don’t fill the disk.
 - **Long lines:** Docker splits log lines longer than 16 KB into several partial messages. Vector merges them back into one event by default. The file-based collectors ship each part as its own event unless you configure a multiline parser.
-- **Tags:** The `fluentd` and `syslog` drivers label each message with a tag. By default, the tag is the first 12 characters of the container ID. Use `--log-opt tag="{{.Name}}"` to tag messages with the container name instead. Other template values are `{{.ID}}`, `{{.FullID}}`, `{{.ImageName}}`, `{{.ImageID}}`, and `{{.ImageFullID}}`.
+- **Tags:** The `fluentd` driver labels each message with a tag. By default, the tag is the first 12 characters of the container ID. Use `--log-opt tag="{{.Name}}"` to tag messages with the container name instead. Other template values are `{{.ID}}`, `{{.FullID}}`, `{{.ImageName}}`, `{{.ImageID}}`, and `{{.ImageFullID}}`.
 - **Timestamps:** Axiom uses the `_time` field as the event time. If an event has no `_time` field, Axiom assigns the time of ingest. Each configuration on this page maps the timestamp that Docker records to `_time`, so your events keep the time at which they were written.
 
 ## Send Docker logs with Vector
@@ -499,46 +498,3 @@ Use the open-source software (OSS) version 8.12.1 or lower of Filebeat. Other ve
 </Info>
 
 Filebeat stores the log line in the `message` field, the output stream in `stream`, and the Docker log timestamp in `@timestamp`. Axiom’s Elasticsearch-compatible API uses `@timestamp` as the event time.
-
-## Send Docker logs with the syslog logging driver
-
-Docker’s built-in `syslog` logging driver sends each log line as a syslog message. The [Axiom Syslog Proxy](/send-data/syslog-proxy) receives these messages over TCP or UDP and sends them to Axiom. Use this method only if your environment already standardizes on syslog. Syslog has no delivery feedback, so prefer Vector or Fluent Bit for new setups.
-
-The Axiom Syslog Proxy listens without TLS, so run it on the Docker host or on a private network.
-
-1. Start the Axiom Syslog Proxy:
-
-    ```bash
-    docker run -d --name axiom-syslog-proxy \
-      -p 601:601/tcp \
-      -p 514:514/udp \
-      -e AXIOM_TOKEN=API_TOKEN \
-      -e AXIOM_DATASET=DATASET_NAME \
-      axiomhq/axiom-syslog-proxy
-    ```
-
-1. Start your containers with the `syslog` logging driver in RFC 5424 format:
-
-    ```bash
-    docker run -d \
-      --log-driver=syslog \
-      --log-opt syslog-address=tcp://127.0.0.1:601 \
-      --log-opt syslog-format=rfc5424 \
-      --log-opt tag="{{.Name}}" \
-      nginx
-    ```
-
-<Info>
-<ReplaceDatasetToken />
-</Info>
-
-The proxy stores the log line in `message`, the tag in `application`, the host name in `hostname`, and the sender’s address in `remoteAddress`. Lines written to `stdout` get the severity `info` and lines written to `stderr` get the severity `err`.
-
-## Troubleshoot
-
-- **No events arrive in Axiom:** Check the collector’s own logs, for example with `docker logs vector`. Make sure the API token has permission to ingest into the dataset and that `AXIOM_DOMAIN` is the base domain of your edge deployment.
-- **Permission denied on the Docker socket:** The user that runs Vector or the Collector must be allowed to access `/var/run/docker.sock`. Add the user to the `docker` group, or run the collector container as root.
-- **A container fails to start with the `fluentd` driver:** Docker can’t reach the forwarder at `fluentd-address`. Start the forwarder first, or set `fluentd-async` to `true` so Docker buffers the logs until the forwarder is reachable.
-- **Changes to `daemon.json` have no effect:** Restart Docker after editing the file. Containers that already exist keep their previous logging configuration until you recreate them.
-- **Events show the ingest time instead of the log time:** The `_time` field is missing from the events. Check that the transform, filter, or output option that maps the Docker timestamp to `_time` is in place.
-- **Long log lines arrive as several events:** Docker splits lines longer than 16 KB. Vector merges the parts by default. For the file-based collectors, configure a multiline parser.
