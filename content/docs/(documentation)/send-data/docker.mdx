@@ -29,16 +29,6 @@ This page covers the methods that work with Axiom and explains when to use each.
 
 Vector, the OpenTelemetry Collector, and Filebeat work with Docker’s default logging configuration. The Fluent Bit and Fluentd methods change the logging driver of your containers. In that case, `docker logs` still works because Docker keeps a local cache of the latest logs, unless you set the `cache-disabled` option to `true`.
 
-## How Docker logging works
-
-Keep the following in mind when you choose and configure a method:
-
-- **Logging drivers:** Set the default driver and its options for all new containers in `/etc/docker/daemon.json` and restart Docker. Override the driver for a single container with the `--log-driver` and `--log-opt` flags of `docker run`, or for a Docker Compose service with the `logging` key. Existing containers keep the logging configuration they were created with. Recreate them to apply changes. All values in `log-opts` are strings, so quote numbers and booleans in `daemon.json`.
-- **Log files:** The default `json-file` driver writes one JSON object per line with the keys `log`, `stream`, and `time` to `/var/lib/docker/containers/CONTAINER_ID/CONTAINER_ID-json.log`. Set the `max-size` and `max-file` options to rotate these files so they don’t fill the disk.
-- **Long lines:** Docker splits log lines longer than 16 KB into several partial messages. Vector merges them back into one event by default. The file-based collectors ship each part as its own event unless you configure a multiline parser.
-- **Tags:** The `fluentd` driver labels each message with a tag. By default, the tag is the first 12 characters of the container ID. Use `--log-opt tag="{{.Name}}"` to tag messages with the container name instead. Other template values are `{{.ID}}`, `{{.FullID}}`, `{{.ImageName}}`, `{{.ImageID}}`, and `{{.ImageFullID}}`.
-- **Timestamps:** Axiom uses the `_time` field as the event time. If an event has no `_time` field, Axiom assigns the time of ingest. Each configuration on this page maps the timestamp that Docker records to `_time`, so your events keep the time at which they were written.
-
 ## Send Docker logs with Vector
 
 Vector’s `docker_logs` source collects the output of all containers through the Docker socket and adds the container name, ID, image, and labels to each event. The `axiom` sink sends the events to Axiom. This is the recommended method if you don’t already run another collector.
