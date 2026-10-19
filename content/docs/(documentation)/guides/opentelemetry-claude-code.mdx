@@ -18,15 +18,6 @@ Claude Code has built-in [OpenTelemetry support](https://code.claude.com/docs/en
 - Create three datasets for metrics, logs, and traces in a [correlation group](/query-data/correlations). To create all three at once, go to **Datasets > Correlations > New correlation group**, select **From new datasets**, and enter a prefix such as `claude`. Axiom creates `claude-metrics`, `claude-logs`, and `claude-traces`.
 - [Create an API token in Axiom](/reference/tokens) with ingest permissions for the three datasets only.
 
-## How Axiom routes OpenTelemetry data
-
-Axiom routes data to datasets via headers, and the header differs by signal type:
-
-- Logs and traces use `x-axiom-dataset`
-- Metrics use `x-axiom-metrics-dataset`
-
-This means signal-specific header configuration is required rather than a single shared `OTEL_EXPORTER_OTLP_HEADERS` value.
-
 ## Configure environment variables
 
 Create a file named `setup-otel.sh` with the following content:
@@ -57,18 +48,12 @@ export OTEL_LOGS_EXPORTER=otlp
 export CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1
 export OTEL_TRACES_EXPORTER=otlp
 
-# Use http/protobuf for all signals
+# Send all signals to Axiom over http/protobuf
 export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://${AXIOM_HOST}
 
-# Separate endpoints per signal type
-export OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=https://${AXIOM_HOST}/v1/metrics
-export OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=https://${AXIOM_HOST}/v1/logs
-export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://${AXIOM_HOST}/v1/traces
-
-# Separate headers per signal type (Axiom routes to datasets via different headers)
-export OTEL_EXPORTER_OTLP_METRICS_HEADERS="Authorization=Bearer ${AXIOM_API_TOKEN},x-axiom-metrics-dataset=${AXIOM_METRICS_DATASET}"
-export OTEL_EXPORTER_OTLP_LOGS_HEADERS="Authorization=Bearer ${AXIOM_API_TOKEN},x-axiom-dataset=${AXIOM_LOGS_DATASET}"
-export OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer ${AXIOM_API_TOKEN},x-axiom-dataset=${AXIOM_TRACES_DATASET}"
+# Route logs, metrics, and traces to separate datasets
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer ${AXIOM_API_TOKEN},x-axiom-logs-dataset=${AXIOM_LOGS_DATASET},x-axiom-metrics-dataset=${AXIOM_METRICS_DATASET},x-axiom-traces-dataset=${AXIOM_TRACES_DATASET}"
 
 # Shorter intervals for testing (default: 60s metrics, 5s logs)
 export OTEL_METRIC_EXPORT_INTERVAL=10000
@@ -120,7 +105,7 @@ In the logs dataset, click an event, and then click **View trace**. Because the 
 </Steps>
 
 <Tip>
-If one signal arrives but the other doesn't, double-check the headers. The most common mistake is using `x-axiom-dataset` for metrics instead of `x-axiom-metrics-dataset`.
+If one signal arrives but another doesn't, make sure that each signal header names the matching dataset of your correlation group. For more information, see [Use one set of headers for all signals](/send-data/opentelemetry#use-one-set-of-headers-for-all-signals).
 </Tip>
 
 ## Production considerations
@@ -155,12 +140,8 @@ When moving from testing to production, consider these adjustments:
 | `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA` | Set to `1` to enable trace export, which is in beta. |
 | `OTEL_TRACES_EXPORTER` | Set to `otlp` to enable OTLP traces export. |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | Protocol for all signals. Use `http/protobuf` for Axiom. |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Axiom metrics endpoint URL. |
-| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | Axiom logs endpoint URL. |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Axiom traces endpoint URL. |
-| `OTEL_EXPORTER_OTLP_METRICS_HEADERS` | Headers for metrics including authorization and dataset. |
-| `OTEL_EXPORTER_OTLP_LOGS_HEADERS` | Headers for logs including authorization and dataset. |
-| `OTEL_EXPORTER_OTLP_TRACES_HEADERS` | Headers for traces including authorization and dataset. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Axiom base URL for all signals. |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Authorization and dataset headers for all signals. |
 | `OTEL_METRIC_EXPORT_INTERVAL` | Metrics export interval in milliseconds. Default: 60000. |
 | `OTEL_LOGS_EXPORT_INTERVAL` | Logs export interval in milliseconds. Default: 5000. |
 | `OTEL_LOG_USER_PROMPTS` | Set to `1` to log full prompt content. |
