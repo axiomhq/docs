@@ -2370,12 +2370,12 @@ test('reloading after a client changes the URL still lands on the fragment headi
 
 test('table of contents skips headings in inactive tabs', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/docs/use-cases/llm-observability/redaction-policies#built-in-redaction-policies');
+  await page.goto('/docs/use-cases/llm-observability/redaction-policies#axiomdefault-policy');
 
-  // "OpenTelemetryDefault policy" sits in the hidden second tab; it must not
-  // claim the reading line.
+  // "OpenTelemetryDefault policy" sits in the hidden second tab, directly
+  // after the active heading; it must not claim the reading line.
   const toc = page.getByRole('complementary', { name: 'On this page' });
-  await expect(toc.getByRole('link', { name: 'Built-in redaction policies' })).toHaveAttribute('aria-current', 'location');
+  await expect(toc.getByRole('link', { name: 'AxiomDefault policy' })).toHaveAttribute('aria-current', 'location');
   await expect(toc.getByRole('link', { name: 'OpenTelemetryDefault policy' })).not.toHaveAttribute('aria-current');
 });
 
