@@ -2325,35 +2325,43 @@ test('grouped MDX accordions keep only one item open', async ({ page }) => {
   );
 });
 
-test('MDX tabs with a param restore and share their selection through the URL', async ({ page }) => {
-  await page.goto('/docs/console/intelligence/mcp-server?client=claude&plan=free#quick-setup');
+test('MCP quick setup restores and shares the client through the URL', async ({ page }) => {
+  await page.goto('/docs/console/intelligence/mcp-server?client=windsurf#quick-setup');
 
-  // Nested groups: the plan tabs live inside the Claude client panel.
-  await expect(page.getByRole('tab', { name: 'Claude', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('tab', { name: 'Free', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('tabpanel', { name: 'Free', exact: true })).toContainText('Claude Desktop');
+  await expect(page.getByRole('radio', { name: 'Devin Desktop' })).toBeChecked();
+  await expect(page.getByRole('region', { name: 'Devin Desktop setup' })).toContainText('devin mcp add -s user axiom');
 
-  await page.getByRole('tab', { name: 'Claude Code', exact: true }).click();
-  await expect(page).toHaveURL(/\?client=claude-code&plan=free#quick-setup$/);
-  await expect(page.getByRole('tabpanel', { name: 'Claude Code', exact: true })).toContainText('claude mcp add');
+  await page.locator('label', { has: page.getByRole('radio', { name: 'Cursor' }) }).click();
+  await expect(page).toHaveURL(/\?client=cursor#quick-setup$/);
+  await expect(page.getByRole('link', { name: 'Add to Cursor' })).toHaveAttribute(
+    'href',
+    'cursor://anysphere.cursor-deeplink/mcp/install?name=axiom&config=eyJ1cmwiOiJodHRwczovL21jcC5heGlvbS5jby9tY3AifQ%3D%3D',
+  );
 
-  // Reloading the shared URL reopens the same tab after hydration.
   await page.reload();
-  await expect(page.getByRole('tab', { name: 'Claude Code', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('radio', { name: 'Cursor' })).toBeChecked();
 });
 
-test('reloading after a tab changes the URL still lands on the fragment heading', async ({ page }) => {
-  await page.goto('/docs/console/intelligence/mcp-server?client=claude&plan=free#quick-setup');
+test('MCP quick setup shows Claude Code for an unknown client', async ({ page }) => {
+  await page.goto('/docs/console/intelligence/mcp-server?client=emacs#quick-setup');
+
+  await expect(page.getByRole('radio', { name: 'Claude Code' })).toBeChecked();
+  await expect(page.getByRole('region', { name: 'Claude Code setup' })).toContainText('claude mcp add --transport http --scope user axiom');
+  await expect(page).toHaveURL(/\?client=emacs#quick-setup$/);
+});
+
+test('reloading after a client changes the URL still lands on the fragment heading', async ({ page }) => {
+  await page.goto('/docs/console/intelligence/mcp-server?client=claude#quick-setup');
   const quickSetup = page.getByRole('heading', { name: 'Quick setup', level: 3 });
   await expect(quickSetup).toBeInViewport();
 
-  // The tab click rewrites the URL in place; Chrome then skips its own
+  // The client choice rewrites the URL in place; Chrome then skips its own
   // fragment jump on reload because the page scrolls in an inner viewport.
-  await page.getByRole('tab', { name: 'ChatGPT', exact: true }).click();
-  await expect(page).toHaveURL(/\?client=chatgpt&plan=free#quick-setup$/);
+  await page.locator('label', { has: page.getByRole('radio', { name: 'ChatGPT' }) }).click();
+  await expect(page).toHaveURL(/\?client=chatgpt#quick-setup$/);
   await page.reload();
 
-  await expect(page.getByRole('tab', { name: 'ChatGPT', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('radio', { name: 'ChatGPT' })).toBeChecked();
   await expect(quickSetup).toBeInViewport();
   const headingBox = (await quickSetup.boundingBox())!;
   const viewportBox = (await page.locator('.docs-scroll-viewport').boundingBox())!;
@@ -2362,13 +2370,13 @@ test('reloading after a tab changes the URL still lands on the fragment heading'
 
 test('table of contents skips headings in inactive tabs', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/docs/console/intelligence/mcp-server#quick-setup');
+  await page.goto('/docs/use-cases/llm-observability/redaction-policies#built-in-redaction-policies');
 
-  // "Header-based authentication" sits in the hidden "Other" client tab; it
-  // must not claim the reading line.
+  // "OpenTelemetryDefault policy" sits in the hidden second tab; it must not
+  // claim the reading line.
   const toc = page.getByRole('complementary', { name: 'On this page' });
-  await expect(toc.getByRole('link', { name: 'Quick setup' })).toHaveAttribute('aria-current', 'location');
-  await expect(toc.getByRole('link', { name: 'Header-based authentication' })).not.toHaveAttribute('aria-current');
+  await expect(toc.getByRole('link', { name: 'Built-in redaction policies' })).toHaveAttribute('aria-current', 'location');
+  await expect(toc.getByRole('link', { name: 'OpenTelemetryDefault policy' })).not.toHaveAttribute('aria-current');
 });
 
 test('MDX tabs without a param keep selection out of the URL', async ({ page }) => {
