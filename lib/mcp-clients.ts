@@ -3,6 +3,7 @@ import type { StructuredData } from 'fumadocs-core/mdx-plugins';
 export const MCP_SERVER_URL = 'https://mcp.axiom.co/mcp';
 export const MCP_PAGE_PATH = '/docs/console/intelligence/mcp-server';
 export const MCP_DOCS_URL = `https://axiom.co${MCP_PAGE_PATH}`;
+export const MCP_SETUP_PROMPT_URL = 'https://axiom.co/docs/mcp/setup-prompt.md';
 
 export type McpClientId =
   | 'claude-code'
@@ -376,7 +377,10 @@ function clientMarkdown(client: McpClient) {
 }
 
 export function mcpClientsMarkdown() {
-  return mcpClients.map(clientMarkdown).join('\n\n');
+  return [
+    `To have an AI agent set up Axiom MCP Server for you, give it the [setup prompt](${MCP_SETUP_PROMPT_URL}).`,
+    ...mcpClients.map(clientMarkdown),
+  ].join('\n\n');
 }
 
 function clientSearchText(client: McpClient) {

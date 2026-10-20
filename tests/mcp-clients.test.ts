@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MCP_PAGE_PATH,
   MCP_SERVER_URL,
+  MCP_SETUP_PROMPT_URL,
   findMcpClient,
   mcpClients,
   mcpClientsMarkdown,
@@ -72,6 +73,10 @@ describe('mcpSetupPrompt', () => {
 
 describe('mcpClientsMarkdown', () => {
   const markdown = mcpClientsMarkdown();
+
+  it('opens with a link to the setup prompt', () => {
+    expect(markdown.split('\n\n')[0]).toContain(`[setup prompt](${MCP_SETUP_PROMPT_URL})`);
+  });
 
   it('lists every client with install links and fenced snippets', () => {
     for (const client of mcpClients) expect(markdown).toContain(`#### ${client.label}\n`);
