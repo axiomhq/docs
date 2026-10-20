@@ -50,13 +50,6 @@ export type McpClient = {
   checked: string;
 };
 
-export const MCP_CLIENT_GROUPS: { id: McpClientGroup; label: string }[] = [
-  { id: 'terminal', label: 'Terminal agents' },
-  { id: 'editor', label: 'Editors' },
-  { id: 'chat', label: 'Chat apps' },
-  { id: 'other', label: 'Anything else' },
-];
-
 function query(params: Record<string, string>) {
   return Object.entries(params)
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)

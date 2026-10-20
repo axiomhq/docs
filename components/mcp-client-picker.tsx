@@ -9,7 +9,6 @@ import { Button, ButtonLink } from '@/components/ui/button';
 import { copyToClipboard } from '@/lib/clipboard';
 import { captureDocsEvent } from '@/lib/docs-analytics';
 import {
-  MCP_CLIENT_GROUPS,
   defaultMcpClient,
   findMcpClient,
   mcpCheckedLabel,
@@ -92,28 +91,19 @@ export function McpClientPicker({ snippets }: { snippets: Record<string, McpSnip
           Copy setup prompt
         </Button>
       </div>
-      <div className="mcp-setup-groups">
-        {MCP_CLIENT_GROUPS.map((group) => (
-          <fieldset key={group.id}>
-            <legend>{group.label}</legend>
-            <div className="mcp-setup-chips">
-              {mcpClients
-                .filter((option) => option.group === group.id)
-                .map((option) => (
-                  <label key={option.id} className="mcp-setup-chip">
-                    <input
-                      type="radio"
-                      className="sr-only"
-                      name="mcp-client"
-                      value={option.id}
-                      checked={option.id === client.id}
-                      onChange={() => choose(option.id)}
-                    />
-                    {option.label}
-                  </label>
-                ))}
-            </div>
-          </fieldset>
+      <div className="mcp-setup-chips" role="radiogroup" aria-label="MCP client">
+        {mcpClients.map((option) => (
+          <label key={option.id} className="mcp-setup-chip">
+            <input
+              type="radio"
+              className="sr-only"
+              name="mcp-client"
+              value={option.id}
+              checked={option.id === client.id}
+              onChange={() => choose(option.id)}
+            />
+            {option.label}
+          </label>
         ))}
       </div>
       <section className="mcp-setup-panel" aria-label={`${client.label} setup`}>

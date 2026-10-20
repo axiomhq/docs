@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { captureDocsEvent, copyToClipboard } = vi.hoisted(() => ({
@@ -11,7 +11,7 @@ vi.mock('@/lib/docs-analytics', () => ({ captureDocsEvent }));
 vi.mock('@/lib/clipboard', () => ({ copyToClipboard }));
 
 import { McpClientPicker, McpCodeBlock, inline } from '@/components/mcp-client-picker';
-import { mcpSetupPrompt } from '@/lib/mcp-clients';
+import { mcpClients, mcpSetupPrompt } from '@/lib/mcp-clients';
 
 const page = '/docs/console/intelligence/mcp-server';
 
@@ -45,6 +45,15 @@ describe('McpClientPicker', () => {
 
     expect(screen.getByRole('radio', { name: 'Devin Desktop' })).toBeChecked();
     expect(events('docs_mcp_setup_viewed')).toEqual([{ client: 'devin', preselected: true }]);
+  });
+
+  it('lists every client in one radio group with Claude Code first', () => {
+    renderPicker();
+
+    const radios = within(screen.getByRole('radiogroup', { name: 'MCP client' })).getAllByRole('radio');
+    expect(radios.map((radio) => radio.getAttribute('value'))).toEqual(mcpClients.map((client) => client.id));
+    expect(radios[0]).toHaveAccessibleName('Claude Code');
+    expect(radios[0]).toBeChecked();
   });
 
   it('shows Claude Code for an unknown client and does not count it as preselected', () => {
