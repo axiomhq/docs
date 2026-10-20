@@ -1,5 +1,8 @@
+import type { StructuredData } from 'fumadocs-core/mdx-plugins';
+
 export const MCP_SERVER_URL = 'https://mcp.axiom.co/mcp';
-export const MCP_DOCS_URL = 'https://axiom.co/docs/console/intelligence/mcp-server';
+export const MCP_PAGE_PATH = '/docs/console/intelligence/mcp-server';
+export const MCP_DOCS_URL = `https://axiom.co${MCP_PAGE_PATH}`;
 
 export type McpClientId =
   | 'claude-code'
@@ -374,4 +377,18 @@ function clientMarkdown(client: McpClient) {
 
 export function mcpClientsMarkdown() {
   return mcpClients.map(clientMarkdown).join('\n\n');
+}
+
+function clientSearchText(client: McpClient) {
+  return [client.label, client.install?.label, ...(client.steps ?? []), client.command, client.config?.intro, client.signIn, ...(client.notes ?? [])]
+    .filter(Boolean)
+    .join(' ');
+}
+
+export function withMcpClientsSearch(url: string, data: StructuredData): StructuredData {
+  if (url !== MCP_PAGE_PATH) return data;
+  return {
+    ...data,
+    contents: [...data.contents, ...mcpClients.map((client) => ({ heading: 'quick-setup', content: clientSearchText(client) }))],
+  };
 }

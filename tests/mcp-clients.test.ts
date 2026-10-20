@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MCP_PAGE_PATH,
   MCP_SERVER_URL,
   findMcpClient,
   mcpClients,
   mcpClientsMarkdown,
   mcpSetupPrompt,
+  withMcpClientsSearch,
   type McpClientId,
 } from '@/lib/mcp-clients';
 
@@ -76,5 +78,24 @@ describe('mcpClientsMarkdown', () => {
     expect(markdown).toContain(`[Add to Cursor](${installHref('cursor')})`);
     expect(markdown).toContain('```json\n{\n  "mcpServers": {\n    "axiom": {\n      "url": "https://mcp.axiom.co/mcp"');
     expect(markdown).toContain('1. In ChatGPT, go to **Plugins**');
+  });
+});
+
+describe('withMcpClientsSearch', () => {
+  const data = {
+    headings: [{ id: 'quick-setup', content: 'Quick setup' }],
+    contents: [{ heading: 'quick-setup', content: 'Choose your client.' }],
+  };
+
+  it('indexes every client under Quick setup on the MCP page only', () => {
+    const indexed = withMcpClientsSearch(MCP_PAGE_PATH, data);
+
+    expect(indexed.headings).toEqual(data.headings);
+    expect(indexed.contents.slice(0, 1)).toEqual(data.contents);
+    expect(indexed.contents).toHaveLength(1 + mcpClients.length);
+    expect(indexed.contents.every((item) => item.heading === 'quick-setup')).toBe(true);
+    expect(indexed.contents.find((item) => item.content.startsWith('Devin Desktop'))?.content).toContain('Windsurf');
+    expect(indexed.contents.find((item) => item.content.startsWith('Codex'))?.content).toContain('codex mcp add axiom');
+    expect(withMcpClientsSearch('/docs/getting-started', data)).toBe(data);
   });
 });
