@@ -1,4 +1,5 @@
 import { createFromSource } from 'fumadocs-core/search/server';
+import { withMcpClientsSearch } from '@/lib/mcp-clients';
 import { pageMarkdown } from '@/lib/page-markdown';
 import { source } from '@/lib/source';
 import { plainSearchText, rankDocsSearchResults } from '@/lib/docs-search-rank';
@@ -17,7 +18,15 @@ export type DocsPageContext = {
   content: string;
 };
 
-export const docsSearch = createFromSource(source);
+export const docsSearch = createFromSource(source, {
+  buildIndex: (page) => ({
+    title: page.data.title,
+    description: page.data.description,
+    url: page.url,
+    id: page.url,
+    structuredData: withMcpClientsSearch(page.url, page.data.structuredData),
+  }),
+});
 const pageTitles = new Map(source.getPages().map((page) => [page.url, page.data.title]));
 
 export async function searchDocs(query: string, limit = 8): Promise<DocsSearchResult[]> {

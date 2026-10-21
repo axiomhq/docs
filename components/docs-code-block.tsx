@@ -29,6 +29,7 @@ export type DocsCodeBlockProps = Omit<ComponentProps<'pre'>, 'ref'> & {
   icon?: string;
   /** Playground URL hoisted from the adjacent link by rehype-playground-code. */
   'data-playground'?: string;
+  onCopied?: () => void;
 };
 
 const LANGUAGE_CLASS = /language-([\w#+-]+)/;
@@ -56,7 +57,7 @@ function findLanguage(children: ReactNode): string | undefined {
 
 export const DocsCodeBlock = forwardRef<HTMLDivElement, DocsCodeBlockProps>(
   function DocsCodeBlock(
-    { icon, className, children, 'data-playground': playgroundHref, ...preProps },
+    { icon, className, children, 'data-playground': playgroundHref, onCopied, ...preProps },
     ref,
   ) {
     const preRef = useRef<HTMLPreElement>(null);
@@ -112,7 +113,9 @@ export const DocsCodeBlock = forwardRef<HTMLDivElement, DocsCodeBlockProps>(
             aria-label={copied ? 'Copied' : 'Copy code'}
             // Copies the rendered text so placeholder substitutions
             // (AXIOM_DOMAIN → the reader's value) come along.
-            onClick={() => void copy(preRef.current?.innerText ?? '')}
+            onClick={async () => {
+              if (await copy(preRef.current?.innerText ?? '')) onCopied?.();
+            }}
           >
             {copied ? <CheckIcon className="size-[11px]" /> : <CopyIcon className="size-[11px]" />}
           </Button>
