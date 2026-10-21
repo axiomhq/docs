@@ -6,10 +6,7 @@ keywords: ["MCP", "Model Context Protocol", "MCP server", "Axiom MCP", "Claude M
 ---
 
 import Prerequisites from "@/content/snippets/minimal-prerequisites.mdx"
-import ReplaceToken from "@/content/snippets/replace-token.mdx"
-import PrerequisiteToken from "@/content/snippets/prerequisite-token.mdx"
 import ReplaceOrgId from "@/content/snippets/replace-org-id.mdx"
-import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
 
 Axiom MCP Server is a [Model Context Protocol](https://modelcontextprotocol.io/) server implementation that enables AI agents to query your data using Axiom Processing Language (APL).
 
@@ -77,129 +74,15 @@ If your AI agent doesn’t support browser-based OAuth (for example, Agent Build
 
     If your agent only supports the Authorization header, pass the organization ID as a URL parameter: `https://mcp.axiom.co/mcp?org-id=ORGANIZATION_ID`
 
-Optional: run Axiom MCP Server locally for more control.
-
-<Accordion title="Local setup">
-
-## Local setup
-
-With the local setup:
-
-- You run the server yourself.
-- You authenticate with an API token instead of OAuth 2.0.
-- You can’t use the MCP [prompts](/console/intelligence/mcp-server/tools#prompts).
-
-### Install
-
-Run the following to install the latest built binary from [GitHub](https://github.com/axiomhq/axiom-mcp/releases):
-
-```bash
-go install github.com/axiomhq/axiom-mcp@latest
-```
-
-### Create API token
-
-<PrerequisiteToken />
-
-### Configure
-
-Configure your AI agent with a [config file](#config-file) or [environment variables](#environment-variables).
-
-#### Config file
-
-1. Create a config file where you specify the authentication and configuration details. For example:
-
-    ```bash config.txt
-    token API_TOKEN
-    url https://api.axiom.co
-    query-rate 1
-    query-burst 1
-    datasets-rate 1
-    datasets-burst 1
-    monitors-rate 1
-    monitors-burst 1
-    ```
-
-    <Info>
-    <ReplaceToken />
-    </Info>
-
-    Optionally, configure the rate and the burst limits at the query, dataset, and monitor levels. The rate limit is the maximum number of requests that your AI agent can make per second. The burst limit is the maximum number of requests that your AI agent can make in a short period (burst) before the rate limit applies to further requests.
-
-1. In the settings of your AI agent, reference the binary file of Axiom MCP Server and the config file you have previously created.
-
-    For example, if you use the Claude desktop app, add `axiom` to the `mcpServers` section of the Claude configuration file. The default path is `~/Library/Application Support/Claude/claude_desktop_config.json` on MacOS and `%APPDATA%\Claude\claude_desktop_config.json` on Windows.
-
-    ```json claude_desktop_config.json
-    {
-      "mcpServers": {
-        "axiom": {
-          "command": "PATH_AXIOM_MCP_BINARY",
-          "args": [
-            "--config",
-            "PATH_AXIOM_MCP_CONFIG"
-          ]
-        }
-      }
-    }
-    ```
-
-    <Info>
-    Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of Axiom MCP Server.
-
-    Replace `PATH_AXIOM_MCP_CONFIG` with the path the config file you have previously created.
-    </Info>
-
-#### Environment variables
-
-In the settings of your AI agent, use environment variables to specify the authentication details and the binary file of Axiom MCP Server.
-
-For example, if you use the Claude desktop app, add `axiom` to the `mcpServers` section of the Claude configuration file. The default path is `~/Library/Application Support/Claude/claude_desktop_config.json` on MacOS and `%APPDATA%\Claude\claude_desktop_config.json` on Windows.
-
-```json claude_desktop_config.json
-{
-  "mcpServers": {
-    "axiom": {
-      "command": "PATH_AXIOM_MCP_BINARY",
-      "env": {
-        "AXIOM_TOKEN": "API_TOKEN",
-        "AXIOM_URL": "https://api.axiom.co",
-        "AXIOM_QUERY_RATE": "1",
-        "AXIOM_QUERY_BURST": "1",
-        "AXIOM_DATASETS_RATE": "1",
-        "AXIOM_DATASETS_BURST": "1",
-        "AXIOM_MONITORS_RATE": "1",
-        "AXIOM_MONITORS_BURST": "1"
-      }
-    }
-  }
-}
-```
-
-<Info>
-Replace `PATH_AXIOM_MCP_BINARY` with the path the binary file of Axiom MCP Server.
-
-<ReplaceToken />
-
-<ReplaceDomain />
-</Info>
-
-Optionally, configure the rate and the burst limits at the query, dataset, and monitor levels. The rate limit is the maximum number of requests that your AI agent can make per second. The burst limit is the maximum number of requests that your AI agent can make in a short period (burst) before the rate limit applies to further requests.
-
-</Accordion>
-
 ## Token hygiene
 
 The remote MCP Server uses OAuth for authentication which handles credential isolation automatically. Agents never see your tokens. You can [revoke access](#revoke-access) at any time.
 
-For the local setup or when using [Axiom Skills](/console/intelligence/skills), you configure API tokens directly. For detailed guidance on secure token configuration, see [Token hygiene for AI agents](/console/intelligence/ai-agents-overview#token-hygiene-for-ai-agents).
+When you use [Axiom Skills](/console/intelligence/skills), you configure API tokens directly. For detailed guidance on secure token configuration, see [Token hygiene for AI agents](/console/intelligence/ai-agents-overview#token-hygiene-for-ai-agents).
 
 ## Limit query costs
 
-Query cost limits let you cap the hourly and daily query costs of an AI agent so it can query your data autonomously without creating unexpected costs:
-
-- For the local setup, set query cost limits on the API token you create for the agent.
-- For the remote MCP Server, the agent acts as your user account through OAuth, so set query cost limits on your roles instead.
+Query cost limits let you cap the hourly and daily query costs of an AI agent so it can query your data autonomously without creating unexpected costs. With MCP Server, the agent acts as your user account through OAuth, so set query cost limits on your roles.
 
 For more information, see [Set query cost limits for AI agents](/console/intelligence/query-cost-limits).
 

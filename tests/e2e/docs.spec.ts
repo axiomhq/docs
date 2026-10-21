@@ -2387,21 +2387,3 @@ test('MDX tabs without a param keep selection out of the URL', async ({ page }) 
   await expect(tab).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(/\/redaction-policies$/);
 });
-
-test('fragment navigation reveals content inside a closed MDX accordion', async ({ page }) => {
-  await page.goto('/docs/console/intelligence/mcp-server');
-
-  const trigger = page.getByRole('button', { name: 'Local setup', exact: true });
-  const panel = page
-    .locator('[data-slot="accordion"]')
-    .filter({ has: trigger })
-    .locator('[data-slot="accordion-content"]');
-  await expect(panel).toHaveAttribute('hidden', 'until-found');
-
-  await page.evaluate(() => {
-    window.location.hash = 'local-setup';
-  });
-
-  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.getByRole('heading', { name: 'Local setup', level: 2 })).toBeVisible();
-});
