@@ -249,7 +249,7 @@ export const mcpClients: McpClient[] = [
       'Click **Connect** and sign in to Axiom in your browser.',
     ],
     notes: [
-      'Custom connectors work on every Claude plan. Free plans can add one. On Team and Enterprise plans, an owner may need to add the connector first in **Organization settings > Connectors**.',
+      'Custom connectors work on every Claude plan, including Free. On Team and Enterprise plans, an owner may need to add the connector first in **Organization settings > Connectors**.',
     ],
     docs: 'https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp',
     checked: '2026-10-20',
