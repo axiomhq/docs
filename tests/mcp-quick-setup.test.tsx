@@ -84,6 +84,13 @@ describe('McpClientPicker', () => {
     expect(screen.getByRole('link', { name: 'Add to Claude' })).toHaveAttribute('target', '_blank');
   });
 
+  it('opens Claude from old links that also carry a plan', () => {
+    renderPicker('?client=claude&plan=free');
+
+    expect(screen.getByRole('radio', { name: 'Claude' })).toBeChecked();
+    expect(screen.queryByText('Set it up manually')).toBeNull();
+  });
+
   it('tracks the setup prompt copy, one-click installs and docs links', async () => {
     renderPicker('?client=goose');
 
