@@ -265,6 +265,7 @@ export const mcpClients: McpClient[] = [
       'Set up OAuth authentication, review the warning, and then click **I understand and want to continue**.',
       'Click **Create as a plugin**, and then sign in to Axiom in your browser.',
     ],
+    notes: ['The **Axiom** plugin in ChatGPT’s plugin directory is an unrelated app. To connect Axiom, use the steps above.'],
     docs: 'https://developers.openai.com/apps-sdk/deploy/connect-chatgpt',
     checked: '2026-10-20',
   },
