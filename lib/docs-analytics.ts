@@ -1,6 +1,7 @@
 'use client';
 
 import posthog from 'posthog-js';
+import type { McpClientId, McpSetupAction } from '@/lib/mcp-clients';
 
 export type SearchEntryPoint =
   | 'header'
@@ -67,6 +68,9 @@ type DocsAnalyticsEvents = {
   docs_playground_opened: Record<string, never>;
   docs_console_opened: { placement: 'header' };
   docs_edit_opened: { page_path: string };
+  docs_mcp_setup_viewed: { client: McpClientId; preselected: boolean };
+  docs_mcp_client_selected: { client: McpClientId; previous_client: McpClientId };
+  docs_mcp_setup_action: { client: McpClientId; action: McpSetupAction };
   docs_page_feedback_submitted: {
     helpful: boolean;
     page_path: string;

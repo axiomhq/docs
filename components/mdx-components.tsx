@@ -36,6 +36,7 @@ import {
 import { Notice } from "./notice";
 import { Accordion, AccordionGroup } from "./mdx-accordion";
 import { DocsTabs } from "./docs-tabs";
+import { McpQuickSetup } from "./mcp-quick-setup";
 import { tabValues } from "@/lib/tab-values";
 
 // play.axiom.co links come in two shapes: runnable APL query links
@@ -351,6 +352,7 @@ export const mdxComponents: MDXComponents = {
   Accordion,
   AccordionGroup,
   LanguageComparisons: QueryLanguageComparisons,
+  McpQuickSetup,
   CodeGroup,
   Tabs,
   Tab,

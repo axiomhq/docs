@@ -13,31 +13,32 @@ type DocsTabsProps = {
   param?: string;
 };
 
-// The URL only changes through selectTab, which also sets state, so no
+// The URL only changes through select, which also sets state, so no
 // subscription is needed to keep the snapshot fresh.
 const emptySubscribe = () => () => {};
 
-// Controlled tab shell (Fumadocs' styled Tabs cannot be controlled). The
-// root's chrome comes from `.docs-tabs > div` in globals.css. Without
+// Static pages render the first tab (server snapshot); after hydration the
+// URL's choice is adopted before paint. Unknown values fall back. Without
 // `param`, selection is local state only; with it, the URL is shareable.
-// Each `param` should be unique on its page — nested groups need distinct
-// names.
-export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
-  const [picked, setPicked] = useState<string>();
-  // Static pages render the first tab (server snapshot); after hydration
-  // the URL's choice is adopted before paint. Unknown values fall back.
+export function useUrlChoice<T extends string>(
+  param: string | undefined,
+  values: readonly T[],
+  resolve: (raw: string) => string = (raw) => raw,
+) {
+  const [picked, setPicked] = useState<T>();
   const requested = useSyncExternalStore(
     emptySubscribe,
     () =>
       param ? new URLSearchParams(window.location.search).get(param) : null,
     () => null,
   );
-  const value =
-    picked ??
-    (requested && values.includes(requested) ? requested : values[0]);
+  const fromUrl =
+    requested === null
+      ? undefined
+      : values.find((value) => value === resolve(requested));
+  const value = picked ?? fromUrl ?? values[0];
 
-  function selectTab(next: string) {
-    if (!values.includes(next)) return;
+  function select(next: T) {
     setPicked(next);
     if (!param) return;
     // replaceState keeps other params and the heading hash, adds no history
@@ -45,6 +46,19 @@ export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
     const url = new URL(window.location.href);
     url.searchParams.set(param, next);
     window.history.replaceState(null, "", url);
+  }
+
+  return { value, select };
+}
+
+// Controlled tab shell (Fumadocs' styled Tabs cannot be controlled). The
+// root's chrome comes from `.docs-tabs > div` in globals.css. Each `param`
+// should be unique on its page — nested groups need distinct names.
+export function DocsTabs({ children, items, values, param }: DocsTabsProps) {
+  const { value, select } = useUrlChoice(param, values);
+
+  function selectTab(next: string) {
+    if (values.includes(next)) select(next);
   }
 
   return (
