@@ -260,14 +260,14 @@ export const mcpClients: McpClient[] = [
     group: 'chat',
     steps: [
       'In ChatGPT, go to **Plugins**, click **+**, and then click **Add custom MCP server**.',
-      'Enter the name `Axiom` and a short description.',
-      'Under **Connection**, enter the MCP server URL `https://mcp.axiom.co/mcp`.',
-      'Set up OAuth authentication, review the warning, and then click **I understand and want to continue**.',
+      'In **Name**, enter `Axiom`. **Description** is optional.',
+      'Under **Connection**, select **Server URL**, and then enter `https://mcp.axiom.co/mcp`.',
+      'Leave **Authentication** set to **OAuth**, and then select the **I understand and want to continue** checkbox.',
       'Click **Create as a plugin**, and then sign in to Axiom in your browser.',
     ],
     notes: ['The **Axiom** plugin in ChatGPT’s plugin directory is an unrelated app. To connect Axiom, use the steps above.'],
     docs: 'https://developers.openai.com/apps-sdk/deploy/connect-chatgpt',
-    checked: '2026-10-20',
+    checked: '2026-10-21',
   },
   {
     id: 'goose',
