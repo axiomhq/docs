@@ -21,7 +21,7 @@ At the time this file was created, active redesign work is on `feat/fumadocs-red
 
 ## Runtime and package management
 
-- Node.js: `24.18.0`, pinned in `.node-version`.
+- Node.js: `24.22.1`, pinned in `.node-version`.
 - Package manager: `pnpm 11.9.0`, pinned in `package.json`.
 - Framework: Next.js App Router, currently Next 16.
 - Documentation framework: Fumadocs with `fumadocs-mdx`; API operations use the custom renderer backed by checked-in OpenAPI documents.
