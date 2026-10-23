@@ -136,31 +136,63 @@ If you include the `_time` field in the ingested data, follow these requirements
 
 ### Requirements for log level fields
 
-Stream, query results, trace logs, and the event timeline use the same rules to choose an event's display level. These rules leave stored event fields and monitor conditions unchanged.
+Axiom uses log levels to help you spot errors and warnings in Stream, query results, and trace logs. The event timeline groups events by the same levels. Axiom reads the level from your event’s fields; your stored data and monitor conditions stay unchanged.
 
-An explicit log level takes priority over words in a message. For example, an event with `level: "info"` and `message: "error error error"` displays as `info`.
+For example, this event displays as `info`, even though its message contains the word `error`:
+
+```json
+{"level": "info", "message": "Recovered from a connection error"}
+```
+
+Axiom chooses the level in three steps:
+
+1. Check supported fields in [priority order](/reference/limits#field-priority). Use the first recognized value.
+2. If none supplies a level, look for a keyword at the start of the [message](/reference/limits#message-fallback).
+3. If nothing matches, display `unknown` in a neutral color.
+
+#### Inspect a log level
+
+Hover over an event’s severity marker to see which field and value determined the level. In the event details, click the level badge to highlight that field. For a value inside JSON text, Axiom highlights the field that contains the JSON.
+
+The tooltip also identifies the source, such as **OTel** or **AWS Lambda**, and links to its documentation. **Text levels** means Axiom used a field such as `level` without identifying a single source format. **Message** means the level came from a keyword in the message. **Override** means it came from `_row_status` in a dashboard query.
+
+If Axiom finds no level, the tooltip shows `unknown` without a source field. If a field supplies `unknown`, for example OCSF `severity_id: 0`, the tooltip shows that field.
 
 #### Field priority
 
-Axiom checks each event in this order and stops at the first recognized value. Missing fields and unrecognized values fall through to the next rule. Within each table row, fields are checked from left to right.
+Axiom checks the following fields from top to bottom, and from left to right within each row. It skips missing fields and unrecognized values. Once a value matches, later fields don’t affect the level.
 
-| Priority | Fields | Accepted values |
+| Priority | Fields | Values |
 | --- | --- | --- |
-| 1 | `_row_status` | A dashboard query's display override. Accepts the text levels below. |
-| 2 | `severity_id` with a nonnegative integer `class_uid`, including 0 | OCSF severity IDs. Code 99 uses nonempty sibling `severity` text, or `other` otherwise. |
-| 3 | `severity_text`, `severity_number`, `severityText`, `severityNumber` | OpenTelemetry text or numeric levels, according to the field name. |
-| 4 | `level`, `severity`, `log.level`, `@level`, `@severity` | Text levels. Numeric `severity` uses the Syslog scale only when `hostname`, `application`, and `message` are all strings, including empty strings. |
+| 1 | `_row_status` | Dashboard override using a [text level](/reference/limits#recognized-values). |
+| 2 | `severity_id` with `class_uid` | [OCSF severity IDs](/reference/limits#supported-schemas). |
+| 3 | `severity_text`, `severity_number`, `severityText`, `severityNumber` | [OpenTelemetry text or numeric levels](/reference/limits#supported-schemas). |
+| 4 | `level`, `severity`, `log.level`, `@level`, `@severity` | Text levels. `severity` also accepts Syslog codes when the event has Syslog headers. |
 | 5 | `record.level`, `record.severity` | Text levels. |
-| 6 | `data.log_level` | Convex levels: `DEBUG`, `INFO`, `LOG`, `WARN`, and `ERROR`. |
-| 7 | `record.error` | Text levels. Exception objects and error descriptions aren't recognized. |
-| 8 | `log.syslog.severity.code`, `log.syslog.severity.name` | Syslog codes 0–7, then text levels. The name field also accepts `informational` as `info`; numeric strings in the name field aren't codes. |
-| 9 | `type` and `record` fields | Supported AWS Lambda platform events, described below. |
+| 6 | `data.log_level` | Convex console log levels. |
+| 7 | `record.error` | Text levels, such as `error`. Error descriptions and exception objects don’t match. |
+| 8 | `log.syslog.severity.code`, `log.syslog.severity.name` | Syslog codes or names. |
+| 9 | `type` and `record` fields | [AWS Lambda platform events](/reference/limits#aws-lambda-platform-events). |
 
-Axiom reads dotted field names and their nested equivalents, including maps stored as JSON text. For example, both `{"record.level": "info"}` and `{"record": {"level": "info"}}` supply `record.level`. Axiom chooses the longest non-null column name before reading nested keys. This also supports intermediate map columns such as `log.syslog` with a nested `severity.code` value. Array elements aren't read as map keys; use a virtual field to extract them.
+<Accordion title="Nested fields and map fields">
+
+Axiom reads both dotted field names and nested values. These events all supply `record.level`:
+
+```json
+{"record.level": "info"}
+{"record": {"level": "info"}}
+{"record": "{\"level\": \"info\"}"}
+```
+
+The same applies to deeper paths. For example, `log.syslog` can be a map containing `severity.code`.
+
+If more than one representation exists, Axiom uses the longest column name with a non-null value before reading nested keys. For example, a `record.level` column takes priority over `level` inside a `record` map. To read a level from an array element, extract it with a [virtual field](/query-data/virtual-fields).
+
+</Accordion>
 
 #### Recognized values
 
-Text values match exactly, ignoring capitalization. For example, `ERROR` matches, but `errorful` and `error: request failed` don't. Native levels remain distinct even when they share a color: `debug` and `info` have different labels and event timeline groups.
+Text values match exactly, ignoring capitalization. `ERROR` matches `error`; `errorful` and `error: request failed` don’t.
 
 | Display level | Text values |
 | --- | --- |
@@ -177,31 +209,113 @@ Text values match exactly, ignoring capitalization. For example, `ERROR` matches
 | `success` | `success` |
 | `unknown` | `unknown` |
 
+Levels keep their names even when they share a color. For example, `debug` and `info` are both blue, but appear separately in the event timeline. OCSF levels such as `low` and `high` also keep their names.
+
 #### Supported schemas
 
-Axiom interprets each event separately, so one dataset can contain several formats. A generic `level` or `severity` field alone doesn't identify a source. Dataset names don't determine the format.
+Numeric levels mean different things in different formats. For example, `5` means `debug` in OpenTelemetry, `notice` in Syslog, and `critical` in OCSF. Axiom uses the fields on each event to choose the right meaning. A dataset with mixed sources doesn’t need a single format, and its name doesn’t affect detection.
 
-| Format | Recognized fields | Level interpretation |
-| --- | --- | --- |
-| [OpenTelemetry](https://opentelemetry.io/docs/specs/otel/logs/data-model/#severity-fields) | `severity_text`, `severity_number`, `severityText`, or `severityNumber` | Numbers 1–4 → `trace`, 5–8 → `debug`, 9–12 → `info`, 13–16 → `warn`, 17–20 → `error`, 21–24 → `fatal`. Text fields also accept numbered short names such as `WARN2` and `FATAL4`. |
-| [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs-log-level.html) | `axiom.awsLambdaExtensionVersion`, or all five legacy fields: `lambda.initializationType`, `lambda.region`, `lambda.name`, `lambda.memorySizeMB`, and `lambda.version`. | Application logs use explicit text levels or message fallback. Supported `platform.*` event types also supply levels through the rules below. |
-| [Convex](https://docs.convex.dev/production/integrations/log-streams#log-event-schema) | `convex.deployment_name` | In `data.log_level`, `DEBUG` → `debug`, `INFO` and `LOG` → `info`, `WARN` → `warn`, `ERROR` → `error`. This field also supplies levels without deployment metadata. `data.status` doesn't set the console log level. |
-| [OCSF](https://schema.ocsf.io/1.2.0/classes/authentication) | `class_uid` and `severity_id`; ID interpretation requires `class_uid` to be a nonnegative integer, including 0. | IDs 0 → `unknown`, 1 → `informational`, 2 → `low`, 3 → `medium`, 4 → `high`, 5 → `critical`, 6 → `fatal`. ID 99 uses nonempty source-defined `severity` text, or `other` otherwise. |
-| [Syslog](https://www.rfc-editor.org/rfc/rfc5424.html#section-6.2.1) | `log.syslog.severity.code`, `log.syslog.severity.name`, or `severity`, `hostname`, `application`, and `message` together. | Codes 0 → `emergency`, 1 → `alert`, 2 → `critical`, 3 → `error`, 4 → `warn`, 5 → `notice`, 6 → `info`, 7 → `debug`. The header form requires string values for `hostname`, `application`, and `message`. Named levels also accept `informational` as `info`. |
-| Text levels | Generic fields in the priority table. This is a fallback, not a detected schema. | The exact text values above; numbers have no default meaning. |
+Expand a format below for its supported fields and values.
 
-Numeric fields also accept exact decimal strings such as `"17"` for OpenTelemetry. OpenTelemetry `0` means unspecified and continues to the next rule. Out-of-range values, padded strings such as `"017"`, and decorated values such as `"Severity(17)"` aren't recognized. Syslog's combined priority value (PRI) and `event.severity` aren't interpreted as Syslog severity codes.
+<AccordionGroup>
+<Accordion title="OpenTelemetry (OTel)">
+
+Axiom recognizes `severity_text`, `severity_number`, `severityText`, and `severityNumber`. Text fields accept the [text levels above](/reference/limits#recognized-values), plus numbered names such as `WARN2` and `FATAL4`. Numeric fields use these ranges:
+
+| Number | Display level |
+| --- | --- |
+| 1–4 | `trace` |
+| 5–8 | `debug` |
+| 9–12 | `info` |
+| 13–16 | `warn` |
+| 17–20 | `error` |
+| 21–24 | `fatal` |
+
+`0` means unspecified, so Axiom continues to the next field. For more information, see [OpenTelemetry severity fields](https://opentelemetry.io/docs/specs/otel/logs/data-model/#severity-fields).
+
+</Accordion>
+<Accordion title="AWS Lambda">
+
+Lambda application logs use text levels such as `level` or `record.level`, followed by [message fallback](/reference/limits#message-fallback). Logs generated by the Lambda service use the [platform event rules below](/reference/limits#aws-lambda-platform-events).
+
+Axiom identifies Lambda logs by `axiom.awsLambdaExtensionVersion`. For older extension versions, all five of these fields identify Lambda: `lambda.initializationType`, `lambda.region`, `lambda.name`, `lambda.memorySizeMB`, and `lambda.version`. A field named `level` alone doesn’t identify Lambda.
+
+For more information, see [AWS Lambda log levels](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs-log-level.html).
+
+</Accordion>
+<Accordion title="Convex">
+
+Axiom reads Convex console log levels from `data.log_level`:
+
+| Value | Display level |
+| --- | --- |
+| `DEBUG` | `debug` |
+| `INFO`, `LOG` | `info` |
+| `WARN` | `warn` |
+| `ERROR` | `error` |
+
+Matching ignores capitalization. The `convex.deployment_name` field identifies the event as Convex; `data.log_level` still supplies a level without it.
+
+The function execution status in `data.status` doesn’t set a console log level. Use that field directly in queries and monitors for function failures. For more information, see the [Convex log event schema](https://docs.convex.dev/production/integrations/log-streams#log-event-schema).
+
+</Accordion>
+<Accordion title="Open Cybersecurity Schema Framework (OCSF)">
+
+Axiom reads `severity_id` when `class_uid` is a nonnegative integer, including `0`. This keeps OCSF IDs separate from other numeric scales.
+
+| ID | Display level |
+| --- | --- |
+| 0 | `unknown` |
+| 1 | `informational` |
+| 2 | `low` |
+| 3 | `medium` |
+| 4 | `high` |
+| 5 | `critical` |
+| 6 | `fatal` |
+| 99 | The event’s `severity` text, converted to lowercase, or `other` if the text is empty or absent. |
+
+For ID `99`, Axiom uses `other` if `severity` isn’t a string. For more information, see the severity attributes in the [OCSF schema](https://schema.ocsf.io/1.2.0/classes/authentication).
+
+</Accordion>
+<Accordion title="Syslog">
+
+Axiom reads codes from `log.syslog.severity.code` and names from `log.syslog.severity.name`.
+
+| Code | Display level |
+| --- | --- |
+| 0 | `emergency` |
+| 1 | `alert` |
+| 2 | `critical` |
+| 3 | `error` |
+| 4 | `warn` |
+| 5 | `notice` |
+| 6 | `info` |
+| 7 | `debug` |
+
+Names accept the [text levels above](/reference/limits#recognized-values), plus `informational` as `info`. A numeric string in the name field isn’t treated as a code.
+
+Axiom also reads these codes and names from `severity` when `hostname`, `application`, and `message` are all strings. Empty strings count. Without those headers, a numeric `severity` value has no default meaning.
+
+Axiom doesn’t read severity from the combined Syslog priority value (PRI) or from `event.severity`. For more information, see [Syslog severity levels](https://www.rfc-editor.org/rfc/rfc5424.html#section-6.2.1).
+
+</Accordion>
+</AccordionGroup>
+
+Numeric fields accept numbers and their exact decimal strings. For example, `severity_number: 17` and `severity_number: "17"` both display as `error`. Values outside the supported ranges, leading zeros such as `"017"`, and text such as `"Severity(17)"` don’t match.
 
 ##### AWS Lambda platform events
 
-When earlier fields don't supply a recognized level, Axiom checks these exact `type` values and their `record` fields. The `platform.` prefix is required. Platform field values in this table are case-sensitive.
+Axiom uses these rules when earlier fields haven’t supplied a level. Event types include the `platform.` prefix, and their field values are case-sensitive. For example, `type: "platform.extension"` with `record.state: "Ready"` displays as `info`.
+
+<Accordion title="Platform event levels">
 
 | Event type | Condition | Display level |
 | --- | --- | --- |
 | `platform.start`, `platform.logsSubscription`, `platform.logSubscription`, `platform.telemetrySubscription` | Any | `info` |
 | `platform.logsDropped` | Any | `warn` |
 | `platform.fault` | Any | `error` |
-| `platform.initStart`, `platform.restoreStart` | Nonempty string `record.runtimeVersion` | `info`; missing or empty → `debug` |
+| `platform.initStart`, `platform.restoreStart` | `record.runtimeVersion` is a nonempty string | `info` |
+| `platform.initStart`, `platform.restoreStart` | `record.runtimeVersion` is missing or empty | `debug` |
 | `platform.initRuntimeDone`, `platform.restoreRuntimeDone`, `platform.runtimeDone` | `record.status` is `success` | `debug` |
 | `platform.report`, `platform.restoreReport` | `record.status` is `success` or absent | `info` |
 | `platform.initReport` | `record.initializationType` is `on-demand` | `debug` |
@@ -209,45 +323,53 @@ When earlier fields don't supply a recognized level, Axiom checks these exact `t
 | `platform.extension` | `record.state` is `Ready` | `info` |
 | `platform.extension` | `record.state` is `InitError`, `ExitError`, `ShutdownFailed`, or `LaunchError` | `warn` |
 
-For the runtime and report events above, a `record.status` of `failure`, `error`, or `timeout` produces `warn`. For `platform.initReport`, that status takes precedence over the initialization type. Unfamiliar or malformed platform values stay neutral as `unknown`; a missing status on a legacy report retains `info`.
+For runtime and report events, `record.status` values of `failure`, `error`, and `timeout` produce `warn`. On `platform.initReport`, a failure status takes priority over the initialization type.
+
+Other or malformed values produce `unknown`. For example, an unrecognized extension state stays neutral. A report without a status retains `info` for compatibility with older Lambda logs. A platform event that produces `unknown` doesn’t continue to message fallback.
+
+</Accordion>
 
 #### Message fallback
 
-If no earlier rule resolves a level, Axiom checks string values in `message`, `msg`, `@message`, `text`, `record`, and `data.message`, in that order. For each value, Axiom checks only the first 100 characters and first two lines. The first complete severity keyword wins. Axiom doesn't scan the entire event or count repeated keywords. The word `unknown` isn't a message keyword. A recognized Lambda platform event that resolves to `unknown` stops detection before message fallback.
+If no field supplies a level, Axiom checks the text in `message`, `msg`, `@message`, `text`, `record`, and `data.message`, in that order.
+
+For each string, it reads at most the first 100 characters and the first two lines. The first complete [severity word](/reference/limits#recognized-values) determines the level, ignoring capitalization. Repeated words don’t add weight. The word `unknown` is excluded from this check.
 
 For example:
 
-| Event | Display level | Reason |
+| Event | Display level | Why |
 | --- | --- | --- |
-| `{"level": "info", "message": "error error error"}` | `info` | The explicit level wins. |
-| `{"message": "WARN retry; error"}` | `warn` | The first keyword wins. |
-| `{"message": "request started\nerror: connection refused\nretry scheduled"}` | `error` | The keyword is on the second line. |
-| `{"message": "request started\nconnecting to database\nerror: connection refused"}` | `unknown` | The keyword is outside the first two lines. |
-| `{"severityNumber": 17}` | `error` | The numeric level is recognized. |
+| `{"level": "info", "message": "error error error"}` | `info` | The explicit level takes priority. |
+| `{"message": "WARN retry; error"}` | `warn` | `WARN` is the first keyword. |
+| `{"message": "request started\nerror: connection refused\nretry scheduled"}` | `error` | `error` appears on the second line. |
+| `{"message": "request started\nconnecting to database\nerror: connection refused"}` | `unknown` | `error` appears after the first two lines. |
 
-If nothing matches, the event displays as neutral `unknown`.
-
-#### Inspect a log level
-
-Hover over an event's severity marker to see its display level, the field that determined it, and that field's original value. The tooltip links to the relevant level reference, including the official documentation for detected schemas.
-
-The tooltip's format label describes the detected format or matching rule: **OTel**, **AWS Lambda**, **Convex**, **OCSF**, **Syslog**, **Text levels**, **Message**, or **Override**. A generic field such as `level` uses the detected format when the event matches exactly one schema. Otherwise, it uses **Text levels**. **Message** identifies keyword fallback. When no rule finds a level, `unknown` has no deciding field. An explicit `unknown`, such as OCSF ID 0, retains its source field.
-
-In the event details view, click a level badge with a source field to highlight that field. If the value is inside JSON text, Axiom highlights the containing field.
+If nothing matches, Axiom displays `unknown`.
 
 #### Map a custom field
 
-To use a custom severity field, create a [virtual field](/query-data/virtual-fields#creating-a-virtual-field) named `level` or `severity` that returns a recognized value. For example, if `app_log_level` contains values such as `INFO` and `ERROR`, create a virtual field named `level` with this expression:
+If your logs use another field name, create a [virtual field](/query-data/virtual-fields#creating-a-virtual-field) named `level` or `severity`. Return one of the recognized values from that field to use it for highlighting.
 
-```kusto
-tostring(app_log_level)
-```
+For example, if `app_log_level` contains `INFO` and `ERROR`, create a virtual field with the following settings:
 
-Virtual fields follow the same field priority as stored fields. A virtual field named `severity` doesn't override a recognized `level` or an earlier field.
+- **Name:** `level`
+- **Expression:** `tostring(app_log_level)`
 
-<Note>
-Severity detection uses field priority and a bounded message fallback. Native levels such as `debug`, `fatal`, and OCSF `low` now retain their own labels and timeline groups. A bare numeric `severity` field no longer uses the OpenTelemetry scale; map it to `severity_number` for that interpretation. Trace logs follow the same field priority; `severity.text` and `_severity` no longer have separate trace-only handling. `status.code`, arbitrary `type` values, partial text matches, and decorated numbers such as `Severity(17)` no longer determine severity. The supported `type: "platform.fault"` value and exact text levels in `record.error` remain recognized. Map custom fields or values to a supported severity field to preserve highlighting. Existing monitor conditions continue to read their specified fields.
-</Note>
+This works for existing events without sending the data again. Virtual fields follow the same [priority order](/reference/limits#field-priority) as stored fields. For example, a virtual field named `severity` doesn’t take priority over an existing recognized `level` value.
+
+<Accordion title="Changes from earlier log level detection">
+
+If your events display differently after this update, check the following:
+
+- Levels such as `debug`, `fatal`, and OCSF `low` keep their own labels and timeline groups, even when they share a color.
+- A numeric `severity` field no longer uses the OpenTelemetry scale. To use that scale, map the value to `severity_number`.
+- Trace logs use the same fields as Stream and query results. If your trace logs rely on `severity.text` or `_severity`, map them to a supported field.
+- `status.code` and arbitrary `type` values don’t set a level. The supported Lambda platform event types still do, including `platform.fault`.
+- Partial matches and values such as `Severity(17)` don’t set a level. `record.error` still accepts exact text levels.
+
+Use a virtual field to map these fields or values. Monitor conditions continue to read the fields specified in their queries.
+
+</Accordion>
 
 ## Temporary account-specific limits
 
