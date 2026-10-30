@@ -53,6 +53,21 @@ Each element of `charts` is an object with the following fields:
 
 Charts that run a query take it in the `query` field. Use `query.apl` for an APL query or `query.mpl` for an MPL query. The other fields depend on the chart type. In the JSON Schema, the definition for each chart type is in `$defs`, named after the type. For example, `$defs.TimeSeriesChart` and `$defs.NoteChart`.
 
+A `TimeSeries` chart can display several queries. List them in the `queries` array, which has at least two elements, and set `query` to the first element of the array. Each element has the structure of `query` and takes an optional `name` that labels the series of that query in the legend and in the results table. Other chart types take a single query.
+
+```json
+{
+  "id": "latency",
+  "type": "TimeSeries",
+  "name": "Latency",
+  "query": { "apl": "['http-logs'] | summarize percentile(req_duration_ms, 50) by bin_auto(_time)", "name": "p50" },
+  "queries": [
+    { "apl": "['http-logs'] | summarize percentile(req_duration_ms, 50) by bin_auto(_time)", "name": "p50" },
+    { "apl": "['http-logs'] | summarize percentile(req_duration_ms, 99) by bin_auto(_time)", "name": "p99" }
+  ]
+}
+```
+
 ## Layout
 
 The dashboard is a grid with 12 columns. Each chart needs one element in `layout`:
@@ -81,6 +96,7 @@ JSON Schema can't express some rules that a valid dashboard follows:
 - Every chart has a layout element whose `i` is the chart's `id`, and every layout element refers to a chart.
 - Every `sectionId` is the `id` of an element in `sections`.
 - `SmartFilter` charts have no `sectionId`. Filter bars apply to the entire dashboard.
+- If a `TimeSeries` chart has `queries`, `query` is the first element of `queries`.
 
 ## Example
 
