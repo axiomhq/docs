@@ -22,6 +22,7 @@ const apiGroupNames: Record<string, string> = {
   'Dashboard endpoints': 'Dashboards',
   'Dataset endpoints': 'Datasets',
   'Edge endpoints': 'Edge',
+  'Label endpoints': 'Labels',
   'Map field endpoints': 'Map fields',
   'Monitor endpoints': 'Monitors',
   'Notifier endpoints': 'Notifiers',
