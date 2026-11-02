@@ -251,7 +251,7 @@
         "operationId": "getDatasets",
         "parameters": [
           {
-            "description": "Exclude resolved label objects from each dataset response. The labelIds field is still returned.",
+            "description": "Exclude resolved label objects from each dataset response. The labelIds and labelNames fields are still returned.",
             "name": "exclude",
             "in": "query",
             "schema": {
@@ -262,7 +262,34 @@
             }
           },
           {
-            "description": "Return datasets assigned every specified label ID.",
+            "description": "Filter by label names in your organization. Repeat the parameter for multiple names, for example ?label=prod&label=team-a. Names match case-insensitively after whitespace normalization; duplicates count once. Commas are part of a name, not separators. Reading resources never creates missing labels.",
+            "name": "label",
+            "in": "query",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500
+            }
+          },
+          {
+            "description": "How to combine label names: any (the default) requires at least one requested label on a resource; all requires every requested label on that same resource. For example, ?label=prod&label=team-a matches either label, while ?label=prod&label=team-a&labelMatch=all requires both. Unknown names have no matches with any and make all return no resources. Without label parameters, labelMatch has no effect.",
+            "name": "labelMatch",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "any",
+                "all"
+              ],
+              "default": "any"
+            }
+          },
+          {
+            "description": "Return datasets assigned every specified label ID. When combined with label names, both filters must match; labelMatch applies only to names.",
             "name": "labelIds",
             "in": "query",
             "style": "form",
@@ -325,7 +352,7 @@
         "x-axiom-preview": true
       },
       "post": {
-        "description": "Creates a dataset. The `name` must be unique in your organization, and `retentionDays` can't exceed the retention window of your plan.",
+        "description": "Creates a dataset. The `name` must be unique in your organization, and `retentionDays` can't exceed the retention window of your plan. `labelIds` replaces assignments when supplied; [] clears them. Omitted or null `labelIds` preserves assignments on updates and creates an unlabeled resource on creation. IDs must belong to existing labels in your organization and are validated before saving.",
         "tags": [
           "Datasets"
         ],
@@ -414,7 +441,7 @@
             }
           },
           {
-            "description": "Exclude resolved label objects from the dataset response. The labelIds field is still returned.",
+            "description": "Exclude resolved label objects from the dataset response. The labelIds and labelNames fields are still returned.",
             "name": "exclude",
             "in": "query",
             "schema": {
@@ -451,7 +478,7 @@
         "x-axiom-preview": true
       },
       "put": {
-        "description": "Updates the `description` and `retentionDays` of a dataset. Both values are replaced, so omitting `description` clears it, and omitting `retentionDays` or setting it to `0` applies your plan's default retention.",
+        "description": "Updates the `description` and `retentionDays` of a dataset. Both values are replaced, so omitting `description` clears it, and omitting `retentionDays` or setting it to `0` applies your plan's default retention. `labelIds` replaces assignments when supplied; [] clears them. Omitted or null `labelIds` preserves assignments on updates and creates an unlabeled resource on creation. IDs must belong to existing labels in your organization and are validated before saving.",
         "tags": [
           "Datasets"
         ],
@@ -1278,6 +1305,328 @@
         "x-axiom-not-suspended": true
       }
     },
+    "/labels": {
+      "get": {
+        "description": "Returns labels as JSON, or the labels Agent Skill when the request negotiates text/markdown.",
+        "tags": [
+          "labels"
+        ],
+        "summary": "List labels",
+        "operationId": "listLabels",
+        "parameters": [
+          {
+            "description": "Filter labels by name.",
+            "name": "name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Labels",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelSummary"
+                  }
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelSummary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "labels|read"
+            ]
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "labels"
+        ],
+        "summary": "Create a label",
+        "operationId": "createLabel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLabel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created label",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid label payload"
+          },
+          "409": {
+            "description": "A label with this name already exists"
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "labels|create"
+            ]
+          }
+        ]
+      }
+    },
+    "/labels/{id}": {
+      "get": {
+        "tags": [
+          "labels"
+        ],
+        "summary": "Get a label",
+        "operationId": "getLabel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^lbl_"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Label details, including assigned resources.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid label ID"
+          },
+          "404": {
+            "description": "Label not found"
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "labels|read"
+            ]
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "labels"
+        ],
+        "summary": "Update a label",
+        "operationId": "updateLabel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^lbl_"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated label",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid label ID or payload"
+          },
+          "404": {
+            "description": "Label not found"
+          },
+          "409": {
+            "description": "A label with this name already exists"
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "labels|update"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "labels"
+        ],
+        "summary": "Delete a label",
+        "operationId": "deleteLabel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^lbl_"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Label deleted"
+          },
+          "400": {
+            "description": "Invalid label ID"
+          },
+          "404": {
+            "description": "Label not found"
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "labels|delete"
+            ]
+          }
+        ]
+      }
+    },
+    "/labels/assignments": {
+      "put": {
+        "description": "Replaces the complete label set for one target atomically, ignoring label IDs that do not exist in the caller's organization and removing stale assignments. The response contains only existing label IDs. Concurrent replacements use last-write-wins semantics. The operation requires only the target resource's update permission: dashboards|update, datasets|update, monitors|update, or notifiers|update. Datasets must also be readable, writable, and owned by the caller's organization. Monitor dataset permissions match those required to read the monitor. A target that uses the wrong identifier for its type returns 400. An unknown target type, duplicate label IDs, and more than 500 label IDs fail request validation with 422. A target that does not exist or is not owned by the caller's organization returns 404.",
+        "tags": [
+          "labels"
+        ],
+        "summary": "Replace labels assigned to a resource target",
+        "operationId": "replaceLabelAssignments",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelAssignmentsReplace"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The target's complete label set after the atomic replacement.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelAssignmentResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The target uses the wrong identifier for its type."
+          },
+          "403": {
+            "description": "The caller lacks the target resource's update permission, or the dataset is shared or not writable."
+          },
+          "404": {
+            "description": "The target does not exist or is not owned by the caller's organization."
+          },
+          "422": {
+            "description": "Request validation failed. The payload contains an unknown target type, duplicate label IDs, or more than 500 label IDs."
+          }
+        },
+        "security": [
+          {
+            "Auth": []
+          }
+        ]
+      },
+      "post": {
+        "description": "Accepts 1-500 unique resource targets and preserves their request order. Returns exactly one result per target. An eligible target without assignments, a target that does not exist, and a target that the caller cannot access all return an empty labelIds array. The response does not distinguish these cases. labelIds is a set with no meaningful order. The operation is safe and idempotent despite using POST. Eligible targets are owned saved dashboards, visible integration dashboards, readable datasets, visible monitors, and visible notifiers. Each target is checked using its resource's read permission; missing permissions yield empty labelIds for that target. Dashboards shared into the organization are not eligible. A target that uses the wrong identifier for its type returns 400. An unknown target type, duplicate targets, and more than 500 targets fail request validation with 422. An internal failure while resolving targets fails the whole request instead of returning empty label sets.",
+        "tags": [
+          "labels"
+        ],
+        "summary": "List label assignments for resource targets",
+        "operationId": "listLabelAssignments",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelAssignmentsQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "One result for each requested target, in request order. labelIds is empty when the target has no assignments, does not exist, or is not accessible to the caller. The response does not distinguish those cases. labelIds is a set with no meaningful order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelAssignmentResult"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A target uses the wrong identifier for its type."
+          },
+          "422": {
+            "description": "Request validation failed. The request contains an unknown target type, duplicate targets, or more than 500 targets."
+          }
+        },
+        "security": [
+          {
+            "Auth": []
+          }
+        ]
+      }
+    },
     "/monitors": {
       "get": {
         "description": "Lists monitors in the organization, sorted by name. Only returns monitors that query at least one dataset visible to the caller. Labels are resolved unless `exclude=labels`.",
@@ -1287,7 +1636,7 @@
         "operationId": "getMonitors",
         "parameters": [
           {
-            "description": "Exclude resolved label objects from each monitor response. The labelIds field is still returned.",
+            "description": "Exclude resolved label objects from each monitor response. The labelIds and labelNames fields are still returned.",
             "name": "exclude",
             "in": "query",
             "schema": {
@@ -1298,7 +1647,34 @@
             }
           },
           {
-            "description": "Return monitors assigned every specified label ID.",
+            "description": "Filter by label names in your organization. Repeat the parameter for multiple names, for example ?label=prod&label=team-a. Names match case-insensitively after whitespace normalization; duplicates count once. Commas are part of a name, not separators. Reading resources never creates missing labels.",
+            "name": "label",
+            "in": "query",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500
+            }
+          },
+          {
+            "description": "How to combine label names: any (the default) requires at least one requested label on a resource; all requires every requested label on that same resource. For example, ?label=prod&label=team-a matches either label, while ?label=prod&label=team-a&labelMatch=all requires both. Unknown names have no matches with any and make all return no resources. Without label parameters, labelMatch has no effect.",
+            "name": "labelMatch",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "any",
+                "all"
+              ],
+              "default": "any"
+            }
+          },
+          {
+            "description": "Return monitors assigned every specified label ID. When combined with label names, both filters must match; labelMatch applies only to names.",
             "name": "labelIds",
             "in": "query",
             "style": "form",
@@ -1342,13 +1718,13 @@
         "x-axiom-preview": true
       },
       "post": {
-        "description": "Creates a monitor. Axiom runs the monitor's query once before saving it and rejects the request if the query fails, for example because it's invalid or references a dataset that doesn't exist.",
+        "description": "Creates a monitor. Axiom runs the monitor's query once before saving it and rejects the request if the query fails, for example because it's invalid or references a dataset that doesn't exist. `labelIds` replaces assignments when supplied; [] clears them. Omitted or null `labelIds` preserves assignments on updates and creates an unlabeled resource on creation. IDs must belong to existing labels in your organization and are validated before saving.",
         "tags": [
           "Monitors"
         ],
         "operationId": "createMonitor",
         "requestBody": {
-          "$ref": "#/components/requestBodies/Monitor"
+          "$ref": "#/components/requestBodies/MonitorUpsertRequest"
         },
         "responses": {
           "200": {
@@ -1393,7 +1769,7 @@
             }
           },
           {
-            "description": "Exclude resolved label objects from the monitor response. The labelIds field is still returned.",
+            "description": "Exclude resolved label objects from the monitor response. The labelIds and labelNames fields are still returned.",
             "name": "exclude",
             "in": "query",
             "schema": {
@@ -1428,7 +1804,7 @@
         ]
       },
       "put": {
-        "description": "Replaces a monitor's configuration with the request body, so omitted fields reset to their defaults. Axiom runs the new query once before saving, and the update clears the monitor's current alert state.",
+        "description": "Replaces a monitor's configuration with the request body, so omitted fields reset to their defaults. Axiom runs the new query once before saving, and the update clears the monitor's current alert state. `labelIds` replaces assignments when supplied; [] clears them. Omitted or null `labelIds` preserves assignments on updates and creates an unlabeled resource on creation. IDs must belong to existing labels in your organization and are validated before saving.",
         "tags": [
           "Monitors"
         ],
@@ -1445,7 +1821,7 @@
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/Monitor"
+          "$ref": "#/components/requestBodies/MonitorUpsertRequest"
         },
         "responses": {
           "200": {
@@ -1590,7 +1966,7 @@
         "operationId": "getNotifiers",
         "parameters": [
           {
-            "description": "Exclude resolved label objects from each notifier response. The labelIds field is still returned.",
+            "description": "Exclude resolved label objects from each notifier response. The labelIds and labelNames fields are still returned.",
             "name": "exclude",
             "in": "query",
             "schema": {
@@ -1598,6 +1974,33 @@
               "enum": [
                 "labels"
               ]
+            }
+          },
+          {
+            "description": "Filter by label names in your organization. Repeat the parameter for multiple names, for example ?label=prod&label=team-a. Names match case-insensitively after whitespace normalization; duplicates count once. Commas are part of a name, not separators. Reading resources never creates missing labels.",
+            "name": "label",
+            "in": "query",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500
+            }
+          },
+          {
+            "description": "How to combine label names: any (the default) requires at least one requested label on a resource; all requires every requested label on that same resource. For example, ?label=prod&label=team-a matches either label, while ?label=prod&label=team-a&labelMatch=all requires both. Unknown names have no matches with any and make all return no resources. Without label parameters, labelMatch has no effect.",
+            "name": "labelMatch",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "any",
+                "all"
+              ],
+              "default": "any"
             }
           }
         ],
@@ -1614,6 +2017,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
           }
         },
         "security": [
@@ -1626,7 +2032,7 @@
         "x-axiom-preview": true
       },
       "post": {
-        "description": "Creates a notifier. Set exactly one channel under `properties`, such as `slack`, `email`, or `webhook`. Returns `400` if the channel type isn't enabled for your organization.",
+        "description": "Creates a notifier. Set exactly one channel under `properties`, such as `slack`, `email`, or `webhook`. Returns `400` if the channel type isn't enabled for your organization. `labelIds` replaces assignments when supplied; [] clears them. Omitted or null `labelIds` preserves assignments on updates and creates an unlabeled resource on creation. IDs must belong to existing labels in your organization and are validated before saving.",
         "tags": [
           "Monitors"
         ],
@@ -1635,7 +2041,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Notifier"
+                "$ref": "#/components/schemas/NotifierUpsertRequest"
               }
             }
           },
@@ -1685,7 +2091,7 @@
             }
           },
           {
-            "description": "Exclude resolved label objects from the notifier response. The labelIds field is still returned.",
+            "description": "Exclude resolved label objects from the notifier response. The labelIds and labelNames fields are still returned.",
             "name": "exclude",
             "in": "query",
             "schema": {
@@ -1721,7 +2127,7 @@
         "x-axiom-preview": true
       },
       "put": {
-        "description": "Replaces a notifier's name, channel `properties`, and `disabledUntil` with the request body, so omitted fields are cleared. Label assignments are unchanged.",
+        "description": "Replaces a notifier's name, channel `properties`, and `disabledUntil` with the request body, so omitted fields are cleared. `labelIds` replaces assignments when supplied; [] clears them. Omitted or null `labelIds` preserves assignments on updates and creates an unlabeled resource on creation. IDs must belong to existing labels in your organization and are validated before saving.",
         "tags": [
           "Monitors"
         ],
@@ -1741,7 +2147,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Notifier"
+                "$ref": "#/components/schemas/NotifierUpsertRequest"
               }
             }
           },
@@ -3560,7 +3966,7 @@
           "dashboards"
         ],
         "summary": "List dashboards",
-        "description": "Lists dashboards visible to the caller, sorted by name and paginated with `limit` and `offset`. Labels are resolved unless `exclude=labels`.",
+        "description": "Lists managed and integration dashboards visible to the caller, sorted by name and paginated together with `limit` and `offset`. Integration dashboards are read-only and have no save version or audit metadata. Labels are resolved unless `exclude=labels`.",
         "operationId": "listDashboards",
         "security": [
           {
@@ -3710,7 +4116,7 @@
           "dashboards"
         ],
         "summary": "Get dashboard",
-        "description": "Retrieves a dashboard by UID, including its current `version`. Labels are resolved unless `exclude=labels`.",
+        "description": "Retrieves a managed dashboard by UID, or a visible integration dashboard by its stable ID. Managed dashboards include their current `version`; integration dashboards are read-only. Labels are resolved unless `exclude=labels`.",
         "operationId": "getDashboard",
         "security": [
           {
@@ -4114,11 +4520,11 @@
         },
         "required": true
       },
-      "Monitor": {
+      "MonitorUpsertRequest": {
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/Monitor"
+              "$ref": "#/components/schemas/MonitorUpsertRequest"
             }
           }
         },
@@ -4335,6 +4741,19 @@
             "type": "string",
             "format": "date-time",
             "example": "2024-03-20T15:30:00Z"
+          }
+        }
+      },
+      "AmpConfig": {
+        "description": "Amp Orb webhook. The receiving plugin must accept {\"text\": \"<monitor summary>\"}.",
+        "type": "object",
+        "required": [
+          "webhookUrl"
+        ],
+        "properties": {
+          "webhookUrl": {
+            "description": "Secret HTTPS URL from the Amp plugin createWebhook registration. Returned encrypted on reads; submit it unchanged to retain it on updates.",
+            "type": "string"
           }
         }
       },
@@ -4639,6 +5058,25 @@
           }
         }
       },
+      "ChatGPTWorkspaceAgentConfig": {
+        "description": "Published ChatGPT Workspace Agent API channel. Axiom sends {\"input\": \"<monitor summary>\"}.",
+        "type": "object",
+        "required": [
+          "triggerId",
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "description": "ChatGPT access token with the Workspace Agents scope",
+            "type": "string"
+          },
+          "triggerId": {
+            "description": "API channel trigger ID beginning with agtch_",
+            "type": "string",
+            "example": "agtch_example"
+          }
+        }
+      },
       "ClaudeCodeConfig": {
         "description": "Claude Code routine. Axiom sends a fixed text body when the monitor fires.",
         "type": "object",
@@ -4741,6 +5179,15 @@
               "axiom:events:v1"
             ],
             "example": "axiom:events:v1"
+          },
+          "labelIds": {
+            "description": "Existing label IDs; replaces assignments when supplied, clears with [], and preserves them when omitted or null.",
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            },
+            "x-omitempty": false
           },
           "name": {
             "description": "Dataset unique name",
@@ -4922,21 +5369,23 @@
         "required": [
           "uid",
           "id",
-          "version",
+          "type",
           "dashboard",
-          "createdAt",
-          "updatedAt",
-          "createdBy",
-          "updatedBy",
           "labelIds"
         ],
         "properties": {
           "createdAt": {
+            "description": "Creation time, present only for managed dashboards.",
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true,
+            "x-nullable": true
           },
           "createdBy": {
-            "type": "string"
+            "description": "Creator, present only for managed dashboards.",
+            "type": "string",
+            "nullable": true,
+            "x-nullable": true
           },
           "dashboard": {
             "$ref": "#/components/schemas/DashboardDocument"
@@ -4950,6 +5399,14 @@
               "$ref": "#/components/schemas/LabelID"
             }
           },
+          "labelNames": {
+            "description": "Names of assigned labels, including with exclude=labels; [] when unassigned.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-omitempty": false
+          },
           "labels": {
             "type": "array",
             "items": {
@@ -4957,19 +5414,41 @@
             },
             "x-omitempty": true
           },
+          "type": {
+            "description": "Managed dashboards are saved documents; integration dashboards are read-only and generated for matching datasets.",
+            "type": "string",
+            "enum": [
+              "managed",
+              "integration"
+            ]
+          },
           "uid": {
+            "description": "Managed dashboard UID, or stable integration dashboard ID for read requests.",
             "type": "string"
           },
           "updatedAt": {
+            "description": "Last save time, present only for managed dashboards.",
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true,
+            "x-nullable": true
           },
           "updatedBy": {
-            "type": "string"
+            "description": "Last editor, present only for managed dashboards.",
+            "type": "string",
+            "nullable": true,
+            "x-nullable": true
+          },
+          "updatedByAgent": {
+            "description": "true when the last save came from the MCP server",
+            "type": "boolean"
           },
           "version": {
+            "description": "Save version, present only for managed dashboards.",
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "nullable": true,
+            "x-nullable": true
           }
         }
       },
@@ -4981,6 +5460,15 @@
         "properties": {
           "dashboard": {
             "$ref": "#/components/schemas/DashboardDocument"
+          },
+          "labelIds": {
+            "description": "Existing label IDs; replaces assignments when supplied, clears with [], and preserves them when omitted or null.",
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            },
+            "x-omitempty": false
           },
           "message": {
             "type": "string"
@@ -5069,7 +5557,8 @@
           "updatedAt",
           "who",
           "kind",
-          "labelIds"
+          "labelIds",
+          "labelNames"
         ],
         "properties": {
           "canWrite": {
@@ -5080,6 +5569,10 @@
             "description": "The RFC3339-formatted time when the dataset was created.",
             "type": "string",
             "format": "date-time"
+          },
+          "createdByAgent": {
+            "description": "true when the MCP server created this dataset",
+            "type": "boolean"
           },
           "description": {
             "description": "Dataset description",
@@ -5117,6 +5610,14 @@
             "items": {
               "$ref": "#/components/schemas/LabelID"
             }
+          },
+          "labelNames": {
+            "description": "Names of assigned labels, including with exclude=labels; [] when unassigned.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-omitempty": false
           },
           "labels": {
             "description": "Resolved labels assigned to this dataset.",
@@ -5395,6 +5896,9 @@
             "description": "Discord bot token for authentication",
             "type": "string",
             "example": "Bot 123456789012345678"
+          },
+          "messageTemplate": {
+            "$ref": "#/components/schemas/MessageTemplate"
           }
         }
       },
@@ -5405,6 +5909,9 @@
             "description": "Discord webhook URL",
             "type": "string",
             "example": "https://discord.com/api/webhooks/123456789012345678/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          },
+          "messageTemplate": {
+            "$ref": "#/components/schemas/MessageTemplate"
           }
         }
       },
@@ -5476,6 +5983,9 @@
               "oncall@example.com",
               "alerts@example.com"
             ]
+          },
+          "messageTemplate": {
+            "$ref": "#/components/schemas/MessageTemplate"
           }
         }
       },
@@ -5597,6 +6107,20 @@
           }
         }
       },
+      "JiraServiceManagementConfig": {
+        "description": "Configuration for Jira Service Management Ops alerts using an API integration",
+        "type": "object",
+        "required": [
+          "apiKey"
+        ],
+        "properties": {
+          "apiKey": {
+            "description": "API key of the Jira Service Management API integration",
+            "type": "string",
+            "example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          }
+        }
+      },
       "Job": {
         "type": "object",
         "required": [
@@ -5662,8 +6186,7 @@
         },
         "x-go-type": {
           "import": {
-            "alias": "corejobs",
-            "package": "github.com/axiomhq/axiom/pkg/core/common/jobs"
+            "package": "github.com/axiomhq/axiom/pkg/foundations/common/jobs"
           },
           "type": "CreateResponse"
         }
@@ -6180,9 +6703,28 @@
           }
         }
       },
+      "MessageTemplate": {
+        "description": "Go templates that replace the title and body of the notifier's default message. An empty field keeps the default.\nVariables include {{.Title}}, {{.Body}}, {{.Name}}, {{.Action}}, {{.Value}}, {{.Threshold}}, {{.Labels}}, {{.Groups}} and {{.MatchedEvent}}.\nIf a template fails when a notification is sent, the default message is sent and the delivery records the error.\n",
+        "type": "object",
+        "properties": {
+          "body": {
+            "description": "Template for the message body",
+            "type": "string",
+            "example": "Value {{.Value}} crossed {{.Threshold}}.{{range .Groups}}\n{{index .Values \"service\"}}: {{.Value}}{{end}}"
+          },
+          "title": {
+            "description": "Template for the message title",
+            "type": "string",
+            "example": "{{if eq .Action \"Open\"}}🔥{{else}}✅{{end}} {{.Name}}"
+          }
+        }
+      },
       "MicrosoftTeamsConfig": {
         "description": "Configuration for Microsoft Teams notifications",
         "properties": {
+          "messageTemplate": {
+            "$ref": "#/components/schemas/MessageTemplate"
+          },
           "microsoftTeamsUrl": {
             "description": "Microsoft Teams webhook URL",
             "type": "string",
@@ -6237,12 +6779,24 @@
             "example": "2024-04-01T00:00:00Z",
             "nullable": true
           },
+          "includeChart": {
+            "description": "Whether to include a query chart in triggered notifications",
+            "type": "boolean",
+            "example": false
+          },
           "intervalMinutes": {
             "description": "How frequently the monitor should run, in minutes.\nMinimum value is 1 minute.\n",
             "type": "integer",
             "format": "int64",
             "minimum": 1,
             "example": 5
+          },
+          "lookbackDays": {
+            "description": "NewValues monitors only. A combination counts as new when it was not seen in this many days.\n",
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 7
           },
           "mplQuery": {
             "description": "MPL (Metrics Processing Language) query string for metrics-based monitoring.\nUse this as an alternative to aplQuery for metrics datasets.\nAt least one of aplQuery or mplQuery must be provided.\n",
@@ -6336,16 +6890,38 @@
             "example": 3
           },
           "type": {
-            "description": "Type of monitoring check to perform:\n- Threshold: Compares a numeric value against a threshold\n- MatchEvent: Looks for specific events or patterns\n- AnomalyDetection: Identifies unusual patterns based on historical data\n",
+            "description": "Type of monitoring check to perform:\n- Threshold: Compares a numeric value against a threshold\n- MatchEvent: Looks for specific events or patterns\n- AnomalyDetection: Identifies unusual patterns based on historical data\n- NewValues: Alerts when the query returns a combination of its columns (aggregates and _time are ignored) not seen within lookbackDays. Each run covers the time since the previous run, so rangeMinutes is ignored.\n",
             "type": "string",
             "enum": [
               "Threshold",
               "MatchEvent",
-              "AnomalyDetection"
+              "AnomalyDetection",
+              "NewValues"
             ],
             "example": "Threshold"
           }
         }
+      },
+      "MonitorUpsertRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Monitor"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "labelIds": {
+                "description": "Existing label IDs; replaces assignments when supplied, clears with [], and preserves them when omitted or null.",
+                "type": "array",
+                "maxItems": 500,
+                "items": {
+                  "$ref": "#/components/schemas/LabelID"
+                },
+                "x-omitempty": false
+              }
+            }
+          }
+        ]
       },
       "MonitorWithId": {
         "description": "Monitor configuration with its unique identifier",
@@ -6357,7 +6933,8 @@
             "type": "object",
             "required": [
               "id",
-              "labelIds"
+              "labelIds",
+              "labelNames"
             ],
             "properties": {
               "createdAt": {
@@ -6370,6 +6947,10 @@
                 "description": "ID of the user who created the monitor",
                 "type": "string",
                 "example": "usr_789xyz"
+              },
+              "createdByAgent": {
+                "description": "true when the MCP server created this monitor",
+                "type": "boolean"
               },
               "datasets": {
                 "description": "Dataset names referenced by the monitor query.",
@@ -6392,6 +6973,14 @@
                 "items": {
                   "$ref": "#/components/schemas/LabelID"
                 }
+              },
+              "labelNames": {
+                "description": "Names of assigned labels, including with exclude=labels; [] when unassigned.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "x-omitempty": false
               },
               "labels": {
                 "description": "Resolved labels assigned to this monitor.",
@@ -6484,7 +7073,7 @@
         }
       },
       "Notifier": {
-        "description": "Configuration for a notification channel. Notifiers can be configured for various services like:\n- Slack\n- Email\n- PagerDuty\n- OpsGenie\n- Discord\n- Microsoft Teams\n- Custom Webhooks\n- Cursor\n- Claude Code\n",
+        "description": "Configuration for a notification channel. Notifiers can be configured for various services like:\n- Slack\n- Email\n- PagerDuty\n- OpsGenie\n- Discord\n- Microsoft Teams\n- Custom Webhooks\n- Cursor\n- Claude Code\n- Jira Service Management\n",
         "type": "object",
         "required": [
           "name",
@@ -6504,10 +7093,24 @@
             "readOnly": true,
             "example": "alice@example.com"
           },
+          "createdByAgent": {
+            "description": "true when the MCP server created this notifier",
+            "type": "boolean"
+          },
+          "disabled": {
+            "description": "Whether repeated delivery failures disabled the notifier. False when a user snoozed it with disabledUntil. Ignored on requests",
+            "type": "boolean",
+            "x-omitempty": false
+          },
           "disabledUntil": {
             "description": "ISO timestamp until which the notifier is disabled (null if enabled)",
             "type": "string",
             "example": "2024-03-20T15:00:00Z"
+          },
+          "lastError": {
+            "description": "The delivery error that disabled the notifier. Empty for email notifiers and when disabled is false. Ignored on requests",
+            "type": "string",
+            "x-omitempty": false
           },
           "name": {
             "description": "Human-readable name for the notifier",
@@ -6529,6 +7132,12 @@
       "NotifierProperties": {
         "description": "Configuration options for different notification channels. Only one channel should be configured per notifier.",
         "properties": {
+          "amp": {
+            "$ref": "#/components/schemas/AmpConfig"
+          },
+          "chatgptWorkspaceAgent": {
+            "$ref": "#/components/schemas/ChatGPTWorkspaceAgentConfig"
+          },
           "claudeCode": {
             "$ref": "#/components/schemas/ClaudeCodeConfig"
           },
@@ -6547,6 +7156,9 @@
           "email": {
             "$ref": "#/components/schemas/EmailConfig"
           },
+          "jiraServiceManagement": {
+            "$ref": "#/components/schemas/JiraServiceManagementConfig"
+          },
           "microsoftTeams": {
             "$ref": "#/components/schemas/MicrosoftTeamsConfig"
           },
@@ -6564,6 +7176,27 @@
           }
         }
       },
+      "NotifierUpsertRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Notifier"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "labelIds": {
+                "description": "Existing label IDs; replaces assignments when supplied, clears with [], and preserves them when omitted or null.",
+                "type": "array",
+                "maxItems": 500,
+                "items": {
+                  "$ref": "#/components/schemas/LabelID"
+                },
+                "x-omitempty": false
+              }
+            }
+          }
+        ]
+      },
       "NotifierWithId": {
         "description": "Notifier configuration with its unique identifier",
         "allOf": [
@@ -6573,7 +7206,8 @@
           {
             "type": "object",
             "required": [
-              "labelIds"
+              "labelIds",
+              "labelNames"
             ],
             "properties": {
               "id": {
@@ -6587,6 +7221,14 @@
                 "items": {
                   "$ref": "#/components/schemas/LabelID"
                 }
+              },
+              "labelNames": {
+                "description": "Names of assigned labels, including with exclude=labels; [] when unassigned.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "x-omitempty": false
               },
               "labels": {
                 "description": "Resolved labels assigned to this notifier.",
@@ -7124,6 +7766,9 @@
       "SlackConfig": {
         "description": "Configuration for Slack notifications using incoming webhooks",
         "properties": {
+          "messageTemplate": {
+            "$ref": "#/components/schemas/MessageTemplate"
+          },
           "slackUrl": {
             "description": "Slack incoming webhook URL",
             "type": "string",
@@ -7440,6 +8085,15 @@
           "description": {
             "type": "string"
           },
+          "labelIds": {
+            "description": "Existing label IDs; replaces assignments when supplied, clears with [], and preserves them when omitted or null.",
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+              "$ref": "#/components/schemas/LabelID"
+            },
+            "x-omitempty": false
+          },
           "retentionDays": {
             "description": "Number of days to retain data in the dataset",
             "type": "integer",
@@ -7594,6 +8248,14 @@
             }
           },
           "description": {
+            "type": "string"
+          },
+          "edgeDeployment": {
+            "description": "Region of the source datasets; ignored in requests",
+            "type": "string"
+          },
+          "edgeDeploymentUrl": {
+            "description": "URL of the edge deployment; ignored in requests",
             "type": "string"
           },
           "name": {
@@ -8512,6 +9174,97 @@
         "minLength": 1,
         "maxLength": 200
       },
+      "ChartMetadata": {
+        "type": "object",
+        "properties": {
+          "requires": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dataset": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                }
+              },
+              "required": [
+                "dataset",
+                "fields"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "noData": {
+            "type": "object",
+            "properties": {
+              "coverName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "iconName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "iconColor": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "buttonLabel": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "buttonLink": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "additionalProperties": false
+          },
+          "zeroData": {
+            "type": "object",
+            "properties": {
+              "coverName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "iconName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "iconColor": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "buttonLabel": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "buttonLink": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
       "ChartModified": {
         "type": "integer",
         "minimum": 0,
@@ -8851,97 +9604,6 @@
           "alias",
           "expr"
         ],
-        "additionalProperties": false
-      },
-      "ChartMetadata": {
-        "type": "object",
-        "properties": {
-          "requires": {
-            "nullable": true,
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "dataset": {
-                  "type": "string",
-                  "maxLength": 200
-                },
-                "fields": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "maxLength": 500
-                  }
-                }
-              },
-              "required": [
-                "dataset",
-                "fields"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "noData": {
-            "type": "object",
-            "properties": {
-              "coverName": {
-                "type": "string",
-                "maxLength": 200
-              },
-              "iconName": {
-                "type": "string",
-                "maxLength": 200
-              },
-              "iconColor": {
-                "type": "string",
-                "maxLength": 200
-              },
-              "message": {
-                "type": "string",
-                "maxLength": 1000
-              },
-              "buttonLabel": {
-                "type": "string",
-                "maxLength": 200
-              },
-              "buttonLink": {
-                "type": "string",
-                "maxLength": 2000
-              }
-            },
-            "additionalProperties": false
-          },
-          "zeroData": {
-            "type": "object",
-            "properties": {
-              "coverName": {
-                "type": "string",
-                "maxLength": 200
-              },
-              "iconName": {
-                "type": "string",
-                "maxLength": 200
-              },
-              "iconColor": {
-                "type": "string",
-                "maxLength": 200
-              },
-              "message": {
-                "type": "string",
-                "maxLength": 1000
-              },
-              "buttonLabel": {
-                "type": "string",
-                "maxLength": 200
-              },
-              "buttonLink": {
-                "type": "string",
-                "maxLength": 2000
-              }
-            },
-            "additionalProperties": false
-          }
-        },
         "additionalProperties": false
       },
       "HeatmapChart": {
@@ -9424,6 +10086,11 @@
             "type": "string",
             "maxLength": 100
           },
+          "roundTo": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
           "invertTheme": {
             "type": "boolean"
           },
@@ -9590,9 +10257,12 @@
             "maxLength": 100000
           },
           "variant": {
+            "nullable": true,
             "type": "string",
             "enum": [
-              "default"
+              "",
+              "default",
+              "plain"
             ]
           }
         },
@@ -10672,9 +11342,8 @@
           },
           "y": {
             "nullable": true,
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
+            "type": "number",
+            "minimum": 0
           },
           "w": {
             "type": "integer",
@@ -10682,8 +11351,8 @@
             "maximum": 12
           },
           "h": {
-            "type": "integer",
-            "minimum": 1,
+            "type": "number",
+            "minimum": 0.5,
             "maximum": 100
           },
           "minW": {

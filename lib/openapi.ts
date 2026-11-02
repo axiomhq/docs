@@ -34,6 +34,17 @@ export type ApiOperationData = {
 };
 
 export function resolveSchema(document: JsonObject, schema: JsonObject | undefined, depth = 0): JsonObject | undefined {
+  if (Array.isArray(schema?.allOf) && depth <= 12) {
+    // Composed schemas (for example `Monitor` plus `labelIds`) document the union of their members.
+    const { allOf, ...rest } = schema;
+    return allOf.reduce((merged: JsonObject, member: JsonObject) => {
+      const resolved = resolveSchema(document, member, depth + 1) ?? {};
+      const next = { ...resolved, ...merged };
+      if (merged.properties || resolved.properties) next.properties = { ...merged.properties, ...resolved.properties };
+      if (merged.required || resolved.required) next.required = [...new Set([...(merged.required ?? []), ...(resolved.required ?? [])])];
+      return next;
+    }, resolveSchema(document, rest, depth + 1) ?? {});
+  }
   if (!schema?.$ref || depth > 12) return schema;
   const parts = String(schema.$ref).replace(/^#\//, '').split('/');
   const target = parts.reduce((value: JsonObject | undefined, part: string) => value?.[part], document as JsonObject | undefined);
