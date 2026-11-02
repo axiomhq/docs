@@ -42,6 +42,18 @@ describe('OpenAPI migration', () => {
     expect(dashboard.required).toContain('name');
   });
 
+  it('merges allOf members into one documented schema', () => {
+    const endpoint = getApiOperation('v2 post /monitors')!;
+    const body = resolveSchema(endpoint.document, endpoint.operation.requestBody)!;
+    const schema = resolveSchema(endpoint.document, body.content['application/json'].schema)!;
+
+    // `Monitor` contributes the base fields; the second member adds `labelIds`.
+    expect(schema.properties.name.type).toBe('string');
+    expect(schema.properties.labelIds.type).toBe('array');
+    expect(schema.required).toContain('name');
+    expect(schemaExample(endpoint.document, schema)).toHaveProperty('labelIds');
+  });
+
   it('builds the page TOC only from sections rendered by the operation', () => {
     expect(getApiOperationSections('v2 get /dashboards')).toEqual([
       { title: 'Parameters', url: '#parameters', depth: 2 },
