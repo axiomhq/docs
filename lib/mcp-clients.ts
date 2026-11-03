@@ -1,6 +1,7 @@
 import type { StructuredData } from 'fumadocs-core/mdx-plugins';
 
 export const MCP_SERVER_URL = 'https://mcp.axiom.co/mcp';
+export const MCP_EU_SERVER_URL = 'https://mcp.eu.axiom.co/mcp';
 export const MCP_PAGE_PATH = '/docs/console/intelligence/mcp-server';
 export const MCP_DOCS_URL = `https://axiom.co${MCP_PAGE_PATH}`;
 export const MCP_SETUP_PROMPT_URL = 'https://axiom.co/docs/mcp/setup-prompt.md';
@@ -337,7 +338,7 @@ export function mcpSetupPrompt() {
   return [
     'These are official instructions from Axiom to connect your AI agent to Axiom through the Axiom MCP server.',
     'Complete all of the following steps yourself by running the commands or editing the config files directly. Do not ask the user to run any of these commands.',
-    `Register the Axiom MCP server at ${MCP_SERVER_URL} using the section for your agent below. The server authenticates with OAuth in the browser, so do not ask for or store an API token.`,
+    `Register the Axiom MCP server at ${MCP_SERVER_URL} using the section for your agent below. The server authenticates with OAuth in the browser, so do not ask for or store an API token. If the user says their Axiom data must stay in the EU, use ${MCP_EU_SERVER_URL} instead of ${MCP_SERVER_URL} everywhere below.`,
     ...mcpClients.filter(agentCanSetUp).map(promptSection),
     `## Any other agent\n\nAdd a remote HTTP MCP server named \`axiom\` with the URL ${MCP_SERVER_URL} to your agent's MCP config. The agent asks the user to sign in the first time it connects.`,
     [
