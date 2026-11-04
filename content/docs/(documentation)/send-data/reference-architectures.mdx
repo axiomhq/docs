@@ -6,6 +6,7 @@ keywords: ["architecture", "opentelemetry", "vector", "collector", "agent", "agg
 
 import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceToken from "@/content/snippets/replace-token.mdx"
 
 Successfully adopting a new platform at scale requires a robust and reliable data collection strategy. In complex distributed systems, how you collect and forward telemetry is as important as the platform that analyzes it.
 
@@ -97,21 +98,14 @@ Axiom natively supports the OpenTelemetry Line Protocol (OTLP). Configuring the 
 
 ```yaml
 exporters:
-  # Exporter for logs and traces
   otlphttp:
     compression: zstd
     endpoint: https://AXIOM_DOMAIN
     headers:
       authorization: Bearer API_TOKEN
-      x-axiom-dataset: DATASET_NAME
-  
-  # Exporter for metrics
-  otlphttp/metrics:
-    compression: zstd
-    endpoint: https://AXIOM_DOMAIN
-    headers:
-      authorization: Bearer API_TOKEN
-      x-axiom-metrics-dataset: DATASET_NAME
+      x-axiom-logs-dataset: LOGS_DATASET_NAME
+      x-axiom-metrics-dataset: METRICS_DATASET_NAME
+      x-axiom-traces-dataset: TRACES_DATASET_NAME
 
 service:
   pipelines:
@@ -141,14 +135,17 @@ service:
         batch:
           send_batch_max_size: 8192
       exporters:
-        - otlphttp/metrics
+        - otlphttp
 ```
 
 <Info>
 <ReplaceDomain />
-<ReplaceDatasetToken />
-When configuring metrics, use the `x-axiom-metrics-dataset` header instead of `x-axiom-dataset`.
+<ReplaceToken />
+
+Replace `LOGS_DATASET_NAME`, `METRICS_DATASET_NAME`, and `TRACES_DATASET_NAME` with the names of your datasets.
 </Info>
+
+The metrics dataset must be of type **Metrics**. For more information, see [Use one set of headers for all signals](/send-data/opentelemetry#use-one-set-of-headers-for-all-signals).
 
 ### Vector
 
