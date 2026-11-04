@@ -1,0 +1,392 @@
+---
+title: 'Deploy Ceph for EventDB'
+sidebarTitle: Deploy Ceph
+description: 'What self-hosted EventDB needs from a Ceph cluster you operate: an S3 endpoint from the RGW, a CephFS StorageClass for the shared write-ahead log, and the topology, device, credential, and operating requirements that make the axiom-eventdb Helm chart work against it.'
+keywords: ['self-hosted', 'eventdb', 'ceph', 'rook', 'rgw', 'cephfs', 's3', 'object storage', 'readwritemany', 'prerequisites', 'bare metal']
+---
+
+The `axiom-eventdb` chart does not deploy Ceph. It consumes two things the cluster already provides: an S3-compatible object store for EventDB's blocks, and a ReadWriteMany `StorageClass` for the shared write-ahead log. Ceph provides both, through the RGW gateway and CephFS, and it is the path Axiom validates on bare metal. Deploying and operating it is your job; this page is the specification of what EventDB needs from it.
+
+Any S3-compatible store works in place of the RGW (`objectStorage.provider: minio`, `seaweedfs`, `hetzner`, or `s3`), and any RWX class in place of CephFS (`eventdb.wal.provider: nfs` for an NFS export or a vendor filer, `efs`, `filestore` on GKE, or `juicefs` through the chart's optional subchart). If you already run one of those, skip this page and follow [Deploy on bare metal](/self-hosted/deploy-bare-metal) with its values.
+
+<Note>
+**Tested versions.** Axiom validates EventDB against Rook `v1.20.3` running Ceph `v20.2.2` (`quay.io/ceph/ceph:v20.2.2`), installed from the upstream `rook-release` Helm repository as two releases: `rook-ceph` (the operator, which installs the CRDs) and then `rook-ceph-cluster`. A Ceph deployed any other way, with `cephadm` or an existing cluster, is fine as long as the endpoint and the StorageClass below exist.
+</Note>
+
+## What EventDB needs from Ceph
+
+| Need | Ceph resource | Reaches the chart as |
+| :--- | :--- | :--- |
+| Object storage for blocks | A `CephObjectStore` with its RGW gateway, a `CephObjectStoreUser`, and the `eventdb` bucket | `objectStorage.provider: ceph`, `objectStorage.endpoint`, the `eventdb-s3-credentials` Secret |
+| A ReadWriteMany volume for the shared WAL | A `CephFilesystem` and its StorageClass | `eventdb.wal.provider: cephfs`, `eventdb.wal.storageClass` |
+
+Nothing else. The chart itself needs no RBD, though the block StorageClass that PostgreSQL, Valkey, and NATS claim from may well be a Ceph RBD class such as the `ceph-block` class the upstream cluster chart creates by default.
+
+The two halves are independent. You can take object storage from Ceph and the WAL from another RWX class, or the WAL from CephFS and blocks from a cloud bucket.
+
+## Step 1: Plan the topology
+
+Ceph places replicas by host. Everything below assumes the defaults the chart was validated with: pools replicated three ways with `failureDomain: host`, three monitors that refuse to share a node, and two managers.
+
+| Daemon | Count | Placement |
+| :--- | :--- | :--- |
+| Monitors | 3, `allowMultiplePerNode: false` | One per storage node; their stores live under `dataDirHostPath` on the node's OS disk. |
+| Managers | 2 | Storage nodes. |
+| OSDs | One per raw device | Storage nodes only. |
+| RGW | 2 or more instances | Storage nodes, next to the OSDs. |
+| MDS | 1 active, 1 standby | Storage nodes. |
+
+So a production Ceph needs at least three storage nodes, and the loss of any one leaves the object store and the filesystem readable and writable. Put them on separate power feeds or racks. Rack or zone failure domains are a change to the pool specs below; use them when the storage nodes span real fault boundaries.
+
+Dedicate the storage nodes. Object-storage I/O and query CPU should not compete, so label and taint them, and give the Ceph daemons a placement that tolerates the taint. The EventDB workloads never carry that toleration, so they cannot land there:
+
+```bash
+for node in <storage-node-1> <storage-node-2> <storage-node-3>; do
+  kubectl label node "$node" axiom.co/role=storage axiom.co/ceph-osd=true --overwrite
+  kubectl taint node "$node" axiom.co/storage=true:NoSchedule --overwrite
+done
+```
+
+`axiom.co/role=storage` is what the placement below selects on. `axiom.co/ceph-osd=true` is the label that admits a node's devices to the OSD inventory in Step 2, and it is additive: labelling a further node later has Rook prepare its devices within minutes, with no change to the values.
+
+<Note>
+**Sizing.** Follow Ceph's own hardware guidance for the daemons: on the order of a core and 4 GiB of memory per OSD, 1 to 2 GiB for each monitor and manager, 2 GiB for the MDS, and a core or two per RGW instance. Capacity: Ceph keeps three copies, so plan the raw pool at three times the block volume you intend to keep, plus growth, and keep raw usage under 75%.
+</Note>
+
+## Step 2: Prepare the devices
+
+Give the OSDs the NVMe the nodes carry. Rook hands `ceph-volume` every block device the inventory matches, and `ceph-volume` accepts a device only if it is **raw**: no partition table, no filesystem, no LVM, no Ceph signature. Rook refuses to wipe anything, so a disk left over from an earlier install reads as "in use" until you clear it yourself, for example with `sgdisk --zap-all` followed by `wipefs -a`, on a device you are certain about.
+
+- **Never the OS disk.** The inventory below matches by kernel name, and an OS disk carries a partition table, so it is skipped, but a filter that is too broad is still the wrong thing to have in a values file. Name what you mean.
+- **A raw partition counts.** A single-disk node contributes to Ceph by carving a raw partition for the OSD next to the OS partitions; Rook matches the partition's kernel name.
+- **An NVMe that must stay out of Ceph** gets a filesystem or a partition table, which makes it "in use" to `ceph-volume`.
+- **Device class.** Ceph classes a real NVMe as `nvme`, not `ssd`. With a single class of device on every storage node nothing needs pinning; on mixed media, pin the latency-sensitive pools (the CephFS metadata pool first) to `nvme` with `deviceClass` in the pool specs.
+- **Kernel modules.** Every node that runs EventDB pods needs the `cephfs` kernel module so the WAL can mount, and `rbd` if the block class is Ceph RBD. Load them with `modprobe cephfs rbd` and persist the change in `/etc/modules-load.d/`. Nodes without the `cephfs` module, such as GKE's Container-Optimized OS, need `mounter: fuse` in the CephFS StorageClass instead.
+
+If your storage nodes have no raw disks to give, Rook can also run PVC-backed OSDs (`storageClassDeviceSets`) from a StorageClass that supports `volumeMode: Block`. Rancher's `local-path` provisioner does not; OpenEBS LocalPV, TopoLVM, Longhorn, and CSI drivers over a SAN do. That path is Rook's to document; the rest of this page assumes raw devices.
+
+## Step 3: Install Rook and the Ceph cluster
+
+Install the operator first. It registers the CRDs and watches the namespace the cluster will live in:
+
+```bash
+CEPH_NAMESPACE=rook-ceph
+
+helm repo add rook-release https://charts.rook.io/release
+helm repo update
+
+helm upgrade --install rook-ceph rook-release/rook-ceph \
+  --version v1.20.3 \
+  --namespace $CEPH_NAMESPACE --create-namespace \
+  --set monitoring.enabled=true          # optional; needs Prometheus Operator
+```
+
+Then the cluster. The values below are the shape EventDB was validated with: the placement from Step 1, the OSD inventory from Step 2, an object store for the blocks, and a filesystem for the WAL. Adjust the names and the namespace to yours; the chart only ever sees the endpoint and the StorageClass name.
+
+```yaml
+# ceph-values.yaml, for rook-release/rook-ceph-cluster
+operatorNamespace: rook-ceph
+
+cephImage:
+  # Mirror this into your registry for a disconnected site.
+  repository: quay.io/ceph/ceph
+  tag: v20.2.2
+
+monitoring:
+  # Optional, with the operator's monitoring.enabled: Ceph mgr and exporter
+  # metrics, and Rook's maintained health and capacity alert rules.
+  enabled: false
+  createPrometheusRules: false
+
+cephClusterSpec:
+  dataDirHostPath: /var/lib/rook
+  placement:
+    all:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: axiom.co/role
+                  operator: In
+                  values: [storage]
+      tolerations:
+        - key: axiom.co/storage
+          operator: Exists
+          effect: NoSchedule
+    # Rook inventories only the nodes the OSD placement admits, so the
+    # axiom.co/ceph-osd label is what puts a node's devices into Ceph.
+    osd:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: axiom.co/ceph-osd
+                  operator: In
+                  values: ["true"]
+      tolerations:
+        - key: axiom.co/storage
+          operator: Exists
+          effect: NoSchedule
+  mon:
+    count: 3
+    allowMultiplePerNode: false
+  mgr:
+    count: 2
+    allowMultiplePerNode: false
+    # The rook orchestrator module stays off; see "Operate" below.
+    modules:
+      - name: rook
+        enabled: false
+  dashboard:
+    enabled: true
+    ssl: true
+  cephConfig:
+    mgr:
+      log_max_recent: "500"
+  storage:
+    # Every raw NVMe disk or raw NVMe partition on every node that carries
+    # the axiom.co/ceph-osd=true label. Nothing else is touched.
+    useAllNodes: true
+    useAllDevices: false
+    deviceFilter: "^nvme"
+    nodes: []
+    config:
+      osdsPerDevice: "1"
+
+# The upstream chart's default block pool and its ceph-block StorageClass
+# are a good block class for PostgreSQL, Valkey and NATS. Keep them.
+
+# The RGW S3 gateway EventDB writes its blocks to.
+cephObjectStores:
+  - name: eventdb-store
+    spec:
+      metadataPool:
+        failureDomain: host
+        replicated:
+          size: 3
+      dataPool:
+        failureDomain: host
+        replicated:
+          size: 3
+      # Deleting the CephObjectStore by mistake must not delete the blocks.
+      preservePoolsOnDelete: true
+      gateway:
+        port: 80
+        instances: 2
+      hosting:
+        # Every hostname EventDB will address the RGW by. Without it, RGW
+        # answers requests for that name with a 400.
+        dnsNames:
+          - ceph-rgw.eventdb.localhost
+    storageClass:
+      enabled: false
+    ingress:
+      enabled: false
+
+# The CephFS that backs EventDB's shared write-ahead log.
+cephFileSystems:
+  - name: ceph-filesystem
+    spec:
+      # A CephFilesystem deletion deletes the filesystem and its data by
+      # default. reclaimPolicy: Retain on the StorageClass does NOT cover
+      # this: it governs claim deletion, not the resource.
+      preserveFilesystemOnDelete: true
+      metadataPool:
+        failureDomain: host
+        replicated:
+          size: 3
+      dataPools:
+        - name: data0
+          failureDomain: host
+          replicated:
+            size: 3
+      metadataServer:
+        # The WAL is a handful of files per ingest pod, not a large
+        # namespace; one active MDS with a warm standby is enough.
+        activeCount: 1
+        activeStandby: true
+        resources:
+          requests:
+            cpu: 500m
+            memory: 2Gi
+          limits:
+            memory: 4Gi
+    storageClass:
+      enabled: true
+      # This name is what eventdb.wal.storageClass will carry.
+      name: ceph-filesystem
+      pool: data0
+      # Keep the WAL's volume if its claim is ever deleted by mistake.
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+      # CephFS is not topology constrained; bind immediately so the claim is
+      # ready before the first pod schedules rather than during it.
+      volumeBindingMode: Immediate
+      parameters:
+        csi.storage.k8s.io/provisioner-secret-name: rook-csi-cephfs-provisioner
+        csi.storage.k8s.io/provisioner-secret-namespace: "{{ .Release.Namespace }}"
+        csi.storage.k8s.io/controller-expand-secret-name: rook-csi-cephfs-provisioner
+        csi.storage.k8s.io/controller-expand-secret-namespace: "{{ .Release.Namespace }}"
+        csi.storage.k8s.io/node-stage-secret-name: rook-csi-cephfs-node
+        csi.storage.k8s.io/node-stage-secret-namespace: "{{ .Release.Namespace }}"
+        # Uncomment on nodes without the cephfs kernel module.
+        # mounter: fuse
+```
+
+```bash
+helm upgrade --install rook-ceph-cluster rook-release/rook-ceph-cluster \
+  --version v1.20.3 \
+  --namespace $CEPH_NAMESPACE \
+  --values ceph-values.yaml
+```
+
+Helm returns once the resources exist. Rook then runs one prepare Job per node, forms the monitor quorum, brings up the OSDs, and creates the pools, the gateway, and the filesystem; on first boot that takes several minutes.
+
+```bash
+kubectl -n $CEPH_NAMESPACE get cephcluster -w
+# wait for PHASE Ready and HEALTH HEALTH_OK
+
+kubectl -n $CEPH_NAMESPACE get cephobjectstore,cephfilesystem
+kubectl -n $CEPH_NAMESPACE rollout status deployment/rook-ceph-rgw-eventdb-store-a --timeout=600s
+kubectl get storageclass ceph-filesystem
+```
+
+If fewer OSDs appear than devices you expected, the prepare Job log says which device was rejected and why:
+
+```bash
+kubectl -n $CEPH_NAMESPACE logs -l app=rook-ceph-osd-prepare --tail=50
+```
+
+## Step 4: Create the S3 user and credentials
+
+EventDB authenticates to the RGW with a static access key pair. Declare a user on the object store and let Rook mint its keys:
+
+```yaml
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStoreUser
+metadata:
+  name: eventdb
+  namespace: rook-ceph
+spec:
+  store: eventdb-store
+  displayName: Axiom EventDB
+```
+
+Rook writes the keys into a Secret named `rook-ceph-object-user-eventdb-store-eventdb` in the Ceph namespace, under `AccessKey` and `SecretKey`. The chart reads them from a Secret named `eventdb-s3-credentials` in the release namespace, under `access-key` and `secret-key`. Copy them across:
+
+```bash
+NAMESPACE=axiom-system
+kubectl create namespace $NAMESPACE 2>/dev/null || true
+
+USER_SECRET=rook-ceph-object-user-eventdb-store-eventdb
+kubectl -n $NAMESPACE create secret generic eventdb-s3-credentials \
+  --from-literal=access-key="$(kubectl -n $CEPH_NAMESPACE get secret $USER_SECRET -o jsonpath='{.data.AccessKey}' | base64 -d)" \
+  --from-literal=secret-key="$(kubectl -n $CEPH_NAMESPACE get secret $USER_SECRET -o jsonpath='{.data.SecretKey}' | base64 -d)"
+```
+
+The user needs to read, write, list, and delete in the bucket. A user created this way may also create buckets, which is what the chart's default of `objectStorage.createBucket: true` relies on: an idempotent Job creates the `eventdb` bucket on the first install. If your RGW policy forbids that, create the bucket yourself and set `createBucket: false`.
+
+<Warning>
+Do not put lifecycle or expiration rules on the bucket, and leave object versioning off. EventDB manages retention per dataset and deletes its own blocks. A lifecycle rule deletes objects EventDB still references, which is **data loss**.
+</Warning>
+
+## Step 5: Make the endpoint reachable
+
+EventDB checks the scheme of `objectStorage.endpoint` against its hostname: plain HTTP is accepted only for `localhost`, `127.0.0.1`, `::1`, and `*.localhost` names. Every other hostname must be HTTPS with a certificate the pods trust. An in-cluster RGW answers over HTTP on its Service name, which is not such a name, so pick one of:
+
+- **TLS on the RGW.** Give the gateway a certificate through the `CephObjectStore` gateway's `securePort` and `sslCertificateRef`, as Rook's object store documentation describes, and set `objectStorage.endpoint` to the HTTPS URL. This is the choice for a cluster shared with other workloads.
+- **A `*.localhost` alias, per release.** Keep `objectStorage.endpoint` at `http://ceph-rgw.eventdb.localhost:80` and map that name onto an IP in every EventDB pod's `/etc/hosts` with `eventdb.hostAliases`. It takes an IP, so create a Service of your own in front of the RGW pods now; unlike the Service Rook manages, yours keeps its ClusterIP for as long as you keep it. The selector below is Rook's own daemon labelling and matches only pods in its own namespace, so the Service lives beside the RGW:
+
+  ```bash
+  kubectl apply -n $CEPH_NAMESPACE -f - <<EOF
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: ceph-rgw-alias
+  spec:
+    selector:
+      app: rook-ceph-rgw
+      rook_cluster: $CEPH_NAMESPACE
+      rook_object_store: eventdb-store
+    ports:
+      - name: http
+        port: 80
+        targetPort: 8080   # the RGW container always listens on 8080
+  EOF
+
+  RGW_IP=$(kubectl -n $CEPH_NAMESPACE get service ceph-rgw-alias -o jsonpath='{.spec.clusterIP}')
+  echo "$RGW_IP"
+  ```
+
+  Keep the IP for the chart values. [Deploy on bare metal](/self-hosted/deploy-bare-metal#step-6-write-the-values-file) uses it.
+- **A CoreDNS rewrite, cluster-wide.** On k3s, whose CoreDNS imports the `kube-system/coredns-custom` ConfigMap, the chart can map the name itself: `localDns.enabled: true`, `localDns.hostname: ceph-rgw.eventdb.localhost`, and `localDns.target: rook-ceph-rgw-eventdb-store.rook-ceph.svc.cluster.local`. It changes name resolution for every workload on the cluster and is ignored by any DNS that is not CoreDNS, so it is for single-purpose clusters only.
+
+Whichever you choose, the hostname must be in the object store's `hosting.dnsNames`, or the RGW rejects requests for it.
+
+## Step 6: Verify before installing EventDB
+
+Prove both halves with the identity EventDB will use, so that a problem surfaces here rather than as a crash-looping ingest pod.
+
+**The S3 endpoint.** Port-forward the gateway and list with the keys from Step 4:
+
+```bash
+kubectl -n $CEPH_NAMESPACE port-forward service/rook-ceph-rgw-eventdb-store 18333:80 &
+
+AWS_ACCESS_KEY_ID=$(kubectl -n $NAMESPACE get secret eventdb-s3-credentials -o jsonpath='{.data.access-key}' | base64 -d) \
+AWS_SECRET_ACCESS_KEY=$(kubectl -n $NAMESPACE get secret eventdb-s3-credentials -o jsonpath='{.data.secret-key}' | base64 -d) \
+AWS_DEFAULT_REGION=us-east-1 \
+aws --endpoint-url http://127.0.0.1:18333 s3 ls
+```
+
+An empty listing is success; an `AccessDenied` or a connection error is what to fix now.
+
+**The CephFS class.** Claim a volume the way the chart will and check that it binds:
+
+```bash
+kubectl -n $NAMESPACE apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cephfs-check
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ceph-filesystem
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+
+kubectl -n $NAMESPACE get pvc cephfs-check -w   # STATUS Bound
+kubectl -n $NAMESPACE delete pvc cephfs-check
+```
+
+A claim that stays `Pending` with no provisioner event while the cluster, filesystem, and MDS all report `Ready` means the CephFS CSI driver is not serving the class. Rook 1.20 runs CSI through the ceph-csi-operator; check that a `Driver` resource of `csi.ceph.io` exists for CephFS in the Ceph namespace and that the provisioner and node-plugin pods are running, and consult Rook's CSI documentation for the release you installed. Fix it before installing EventDB: with the chart's `volumeBindingMode: Immediate` class, `eventdb-wal` binds at install or never.
+
+## What to carry into the chart values
+
+| Ceph fact | Chart value |
+| :--- | :--- |
+| The RGW endpoint, as a URL with scheme | `objectStorage.provider: ceph`, `objectStorage.endpoint` |
+| The bucket and whether the user may create it | `objectStorage.bucket: eventdb`, `objectStorage.createBucket` |
+| The user's keys | The `eventdb-s3-credentials` Secret, keys `access-key` and `secret-key` |
+| The `*.localhost` alias IP, if used | `eventdb.hostAliases`, or `localDns` on k3s |
+| The CephFS StorageClass name | `eventdb.wal.provider: cephfs`, `eventdb.wal.storageClass: ceph-filesystem` |
+| The RBD StorageClass name, if used for the datastores | `postgresql.cluster.storage.storageClass`, `walStorage.storageClass`, `valkey.replica.persistence.storageClass` |
+
+The chart ships `values-cephfs.example.yaml` as an overlay with exactly the WAL half of this table.
+
+## Operate
+
+**Keep the `rook` mgr module off.** The values above list Ceph's `rook` orchestrator module as disabled and cap `mgr/log_max_recent` at 500. The module is not what runs Ceph; the operator does that. It is the plugin that lets the Ceph side see Rook, for `ceph orch` and the dashboard's Hosts and Services pages, and its availability probe lists every pod in the namespace, unfiltered. The prometheus module, which Rook enables whether or not anything scrapes it, calls that probe every 15 seconds; on a busy namespace the Kubernetes client logs about 1 MB per probe at DEBUG and the manager keeps it in its in-memory recent-log ring. On Axiom's validation clusters the manager grew about 4 MB per minute and was OOM-killed at its 1 GiB limit every three and a half hours. Turn the module on only if you need the orchestrator pages, and keep the log cap either way.
+
+**Monitor it.** Turn on `monitoring.enabled` on both Rook releases and `createPrometheusRules` on the cluster release once Prometheus Operator is installed. Rook's maintained rules cover `CephHealthError`, `CephOSDDown`, `CephMonQuorumLost`, `CephMdsMissingReplicas`, near-full pools, and degraded placement groups. The operating targets are `HEALTH_OK` and raw usage under 75%: the object store is the ceiling for everything EventDB does.
+
+**Grow it by labelling.** Label another node `axiom.co/ceph-osd=true` and Rook prepares its NVMe; Ceph rebalances onto the new OSDs on its own. To retire a node, follow Rook's OSD removal procedure: mark its OSDs out, wait for the data to move, then purge them, and only then remove the label.
+
+**Upgrade the operator before the cluster.** Bump the `rook-ceph` release first and wait for the cluster to return to `Ready` and `HEALTH_OK`; then bump `rook-ceph-cluster` and its `cephImage`. Rook upgrades the daemons in order, monitors first, and refuses to proceed while the cluster is not healthy. Do not set `skipUpgradeChecks` to get past that. Ceph stays available throughout a healthy upgrade, and so do EventDB's ingest and queries.
+
+**Never delete the resources that hold data.** `preservePoolsOnDelete` and `preserveFilesystemOnDelete` keep the pools if a `CephObjectStore` or `CephFilesystem` is deleted by mistake, and `reclaimPolicy: Retain` keeps the WAL's volume if its claim is; recover by recreating the resource with the same name and pools. Nothing protects against uninstalling the `rook-ceph-cluster` release with its data still wanted.
+
+**Know what to expect from it.** On NVMe OSDs the WAL's `fsync` path measured 6.4 ms at the 99th percentile on Axiom's bare-metal validation cluster, which is well inside what ingest needs. Throughput is a different matter: an RGW on nodes it shares with the EventDB workloads has far less to give than S3 or GCS, which is why the compaction scheduler carries object-store rate limits (`eventdb.compactor.storageReadRateLimit` and `storageWriteRateLimit`) and why this page keeps the RGW on dedicated storage nodes with the fastest network the site has.
+
+**It shares fate with what it protects.** A Ceph on the same cluster as EventDB goes down with the cluster. That is acceptable for blocks and for the WAL, whose source of truth Ceph itself replicates three ways. It is not acceptable for the [PostgreSQL backups](/self-hosted/backup-restore), which must go to a bucket outside this cluster, because a backup that dies with the thing it protects is not one.
