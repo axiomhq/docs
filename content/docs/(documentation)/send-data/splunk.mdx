@@ -41,7 +41,7 @@ var SplunkLogger = require('splunk-logging').Logger;
 
 var config = {
   token: 'API_TOKEN',
-  url: 'https://hec.AXIOM_DOMAIN/services/collector/event?index=DATASET_NAME',
+  url: 'https://hec.AXIOM_DOMAIN:443/services/collector/event?index=DATASET_NAME',
 };
 
 var Logger = new SplunkLogger(config);
@@ -79,34 +79,39 @@ logging.getLogger('').addHandler(splunk)
 logging.warning('Hello from Axiom!')
 ```
 
-### Send logs from Go using the Docker Splunk client
+### Send logs from Go using `net/http`
 
 ```go
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"time"
-
-	"github.com/docker/docker/daemon/logger/splunk"
 )
 
 func main() {
-	// Create new Splunk client
-	client := splunk.NewClient(
-		nil,
-		"https://hec.AXIOM_DOMAIN/services/collector",
-		"API_TOKEN",
-		"my-source",
-		"my-sourcetype",
-		"DATASET_NAME",
-	)
+	event := map[string]any{
+		"time":       time.Now().Unix(),
+		"sourcetype": "httpevent",
+		"event": map[string]any{
+			"message": "hello from Axiom",
+			"level":   "info",
+		},
+	}
+	body, _ := json.Marshal(event)
 
-	if err := client.Log(map[string]interface{}{"msg": "hello from Axiom"}); err != nil {
+	req, _ := http.NewRequest(http.MethodPost, "https://hec.AXIOM_DOMAIN/services/collector/event?index=DATASET_NAME", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Splunk API_TOKEN")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
 		panic(err)
 	}
-
-	if err := client.LogWithTime(time.Now(), map[string]interface{}{"msg": "hello again from Axiom"}); err != nil {
-		panic(err)
-	}
+	defer resp.Body.Close()
+	fmt.Println(resp.Status)
 }
 ```
