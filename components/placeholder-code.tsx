@@ -5,17 +5,25 @@ import { ChevronDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { DocsCodeBlock, type DocsCodeBlockProps } from '@/components/docs-code-block';
 import { captureDocsEvent } from '@/lib/docs-analytics';
+import {
+  getPlaceholderSnapshot,
+  getServerPlaceholderSnapshot,
+  parsePlaceholderSnapshot,
+  setPlaceholderValues,
+  subscribePlaceholderValues,
+  type PlaceholderKey,
+  type PlaceholderValues,
+} from '@/lib/placeholder-values';
 
-const storageKey = 'axiom-docs-placeholders';
 const fields = {
   AXIOM_DOMAIN: { label: 'Edge domain', placeholder: 'us-east-1.aws.edge.axiom.co', options: ['', 'us-east-1.aws.edge.axiom.co', 'eu-central-1.aws.edge.axiom.co'] },
   API_TOKEN: { label: 'API token', placeholder: 'xaat-api-token' },
   DATASET_NAME: { label: 'Dataset name', placeholder: 'dataset-name' },
   ORGANIZATION_ID: { label: 'Organization ID', placeholder: 'org-id' },
-} as const;
+} as const satisfies Record<PlaceholderKey, unknown>;
 
-type FieldKey = keyof typeof fields;
-type Values = Partial<Record<FieldKey, string>>;
+type FieldKey = PlaceholderKey;
+type Values = PlaceholderValues;
 
 const fieldKeys = Object.keys(fields) as FieldKey[];
 const trackedFields = new Set<FieldKey>();
@@ -32,6 +40,12 @@ function replaceSourceText(source: string, values: Values) {
   return source.replace(placeholderPattern(), (key) => fieldValue(key as FieldKey, values));
 }
 
+// A domain prefilled from Console may name an edge deployment newer than the
+// built-in list; keep it selectable so the reader can see what's applied.
+function selectOptions(options: readonly string[], value: string | undefined) {
+  return value && !options.includes(value) ? [...options, value] : options;
+}
+
 function textOf(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(textOf).join('');
@@ -39,28 +53,11 @@ function textOf(node: ReactNode): string {
   return '';
 }
 
-function getValuesSnapshot() {
-  return sessionStorage.getItem(storageKey) ?? '{}';
-}
-
-function getServerValuesSnapshot() {
-  return '{}';
-}
-
-function subscribeValues(callback: () => void) {
-  window.addEventListener('axiom-placeholder-change', callback);
-  return () => window.removeEventListener('axiom-placeholder-change', callback);
-}
-
-function parseValues(snapshot: string): Values {
-  try { return JSON.parse(snapshot) as Values; } catch { return {}; }
-}
-
 export function PlaceholderPre({ source: sourceProp, ...props }: DocsCodeBlockProps & { source?: string }) {
   const source = useMemo(() => sourceProp ?? textOf(props.children), [props.children, sourceProp]);
   const usedFields = useMemo(() => fieldKeys.filter((key) => new RegExp(`\\b${key}\\b`).test(source)), [source]);
-  const valuesSnapshot = useSyncExternalStore(subscribeValues, getValuesSnapshot, getServerValuesSnapshot);
-  const values = useMemo(() => parseValues(valuesSnapshot), [valuesSnapshot]);
+  const valuesSnapshot = useSyncExternalStore(subscribePlaceholderValues, getPlaceholderSnapshot, getServerPlaceholderSnapshot);
+  const values = useMemo(() => parsePlaceholderSnapshot(valuesSnapshot), [valuesSnapshot]);
   const [hydrated, setHydrated] = useState(false);
   const codeBlockRef = useRef<HTMLDivElement>(null);
   const originalText = useRef(new WeakMap<Text, string>());
@@ -87,9 +84,7 @@ export function PlaceholderPre({ source: sourceProp, ...props }: DocsCodeBlockPr
   }, [hydrated, values]);
 
   function update(key: FieldKey, value: string) {
-    const next = { ...values, [key]: value || undefined };
-    sessionStorage.setItem(storageKey, JSON.stringify(next));
-    window.dispatchEvent(new Event('axiom-placeholder-change'));
+    setPlaceholderValues({ [key]: value || undefined });
     if (!trackedFields.has(key)) {
       trackedFields.add(key);
       captureDocsEvent('docs_example_customized', { field_name: key });
@@ -101,8 +96,9 @@ export function PlaceholderPre({ source: sourceProp, ...props }: DocsCodeBlockPr
     {hydrated && usedFields.length > 0 && <div className="placeholder-config ph-no-capture mt-0 mx-0 mb-6 py-[14px] px-4 flex flex-col gap-2.5 border-x border-b border-(--border-primary) rounded-t-none rounded-b-md bg-(--bg-inert)" aria-label="Customize this example" data-ph-no-capture>
       {usedFields.map((key) => {
         const field = fields[key];
-        return <label className="grid grid-cols-[110px_1fr] items-center gap-3 text-(--text-tertiary) font-sans text-[12px] leading-4 font-medium max-sm:grid-cols-[1fr] max-sm:gap-[5px]" key={key}><span>{field.label}</span>{'options' in field ? <span className="relative min-w-0"><select className="min-w-0 h-8 px-2.5 py-0 border border-(--border-primary) rounded-md outline-none text-(--text-secondary) bg-(--bg-canvas) font-mono text-[12px] leading-4 font-normal focus:border-(--color-accent) focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-accent)_18%,transparent)] w-full appearance-none pr-8" value={values[key] ?? ''} onChange={(event) => update(key, event.target.value)}>{field.options.map((option) => <option value={option} key={option}>{option || 'Select edge deployment'}</option>)}</select><ChevronDown size={14} aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-(--text-quaternary)" /></span> : <input className="min-w-0 h-8 px-2.5 py-0 border border-(--border-primary) rounded-md outline-none text-(--text-secondary) bg-(--bg-canvas) font-mono text-[12px] leading-4 font-normal focus:border-(--color-accent) focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-accent)_18%,transparent)] font-mono! text-[12px]! leading-4! font-normal!" value={values[key] ?? ''} placeholder={field.placeholder} autoComplete="off" data-1p-ignore data-ph-no-capture onChange={(event) => update(key, event.target.value)} />}</label>;
+        return <label className="grid grid-cols-[110px_1fr] items-center gap-3 text-(--text-tertiary) font-sans text-[12px] leading-4 font-medium max-sm:grid-cols-[1fr] max-sm:gap-[5px]" key={key}><span>{field.label}</span>{'options' in field ? <span className="relative min-w-0"><select className="min-w-0 h-8 px-2.5 py-0 border border-(--border-primary) rounded-md outline-none text-(--text-secondary) bg-(--bg-canvas) font-mono text-[12px] leading-4 font-normal focus:border-(--color-accent) focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-accent)_18%,transparent)] w-full appearance-none pr-8" value={values[key] ?? ''} onChange={(event) => update(key, event.target.value)}>{selectOptions(field.options, values[key]).map((option) => <option value={option} key={option}>{option || 'Select edge deployment'}</option>)}</select><ChevronDown size={14} aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-(--text-quaternary)" /></span> : <input className="min-w-0 h-8 px-2.5 py-0 border border-(--border-primary) rounded-md outline-none text-(--text-secondary) bg-(--bg-canvas) font-mono text-[12px] leading-4 font-normal focus:border-(--color-accent) focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-accent)_18%,transparent)] font-mono! text-[12px]! leading-4! font-normal!" value={values[key] ?? ''} placeholder={field.placeholder} autoComplete="off" data-1p-ignore data-ph-no-capture onChange={(event) => update(key, event.target.value)} />}</label>;
       })}
+      {usedFields.some((key) => values[key]) && <button type="button" className="self-end h-6 px-2 -mr-2 -mb-1 border-0 rounded-[3px] bg-transparent text-(--text-tertiary) font-sans text-[12px] leading-4 font-medium cursor-pointer hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-(--color-accent)" onClick={() => setPlaceholderValues(Object.fromEntries(usedFields.map((key) => [key, undefined])))}>Clear values</button>}
     </div>}
   </>;
 }
