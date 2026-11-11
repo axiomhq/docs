@@ -19,7 +19,7 @@ To create a new values monitor, follow these steps:
 1. Configure the monitor using the following options:
     - **Run every** is how often the monitor runs. Each run checks the events since the previous run, so the monitor has no separate time range.
     - **Forget values after** is the lookback period in days. A value counts as new when the monitor hasn’t seen it in this many days. The default is 365 days.
-    - **Learn from** is the number of previous days of events that the monitor records as already seen before it first runs. The possible values are 0, 1, 7, 14, and 30 days, and the value can’t exceed **Forget values after**. The default is 30 days. For more information, see [Learning period](#learning-period).
+    - **Learn from** is the number of previous days of events that the monitor records as already seen before it first runs. The possible values are 0, 1, 7, 14, and 30 days, and the value can’t exceed **Forget values after**. The default is 30 days. If your query aggregates, set this to 0 days. For more information, see [Learning period](#learning-period).
 1. Click **Add notifier**, and then select the notifiers that define how you want to receive notifications for this monitor. For more information, see [Notifiers](/monitor-data/notifiers-overview).
 1. Write an Axiom Processing Language (APL) query whose results contain the column you want to watch, and then click **Run query** to preview the results. For example, the following query returns the error messages of a service:
 
@@ -44,6 +44,20 @@ New values monitors only support APL queries on event datasets. They don’t sup
 When you create a new values monitor, Axiom records the values that the query returns over the learning period as already seen. This prevents the first runs of the monitor from alerting on values that already appear in your data.
 
 If you set **Learn from** to 0 days, the monitor doesn’t look at past events. Instead, the first run that returns values records them without sending notifications, and the monitor only alerts on values that appear after this run. Values that appeared before the monitor was created but are rare, such as a weekly job, can trigger notifications when they next appear.
+
+### Queries that aggregate
+
+If your query aggregates, for example with `summarize`, set **Learn from** to 0 days.
+
+To record the values of the learning period, Axiom runs your query once over the whole period. Each later run of the monitor only covers the events since the previous run. An aggregation over the whole learning period returns different results from the same aggregation over a single run, so the recorded values don’t match the values that the monitor checks later. For example, the following query returns the clients that send at least 200 requests:
+
+```kusto
+['http-logs']
+| summarize requests = count() by client
+| where requests >= 200
+```
+
+Over a learning period of 30 days, a client that sends a few requests each day reaches 200 requests, and the monitor records it as already seen. The monitor then doesn’t alert on this client when it first sends 200 requests within a single run.
 
 ## Notifications
 
