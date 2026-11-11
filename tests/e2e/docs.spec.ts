@@ -2173,6 +2173,39 @@ test('placeholder forms update and copy every matching code example', async ({ p
   await expect(compositeNameForm.getByPlaceholder('dataset-name')).toHaveCount(0);
 });
 
+test('Console links prefill domain and dataset across pages', async ({ page }) => {
+  await page.goto('/docs/restapi/query?domain=https://eu-central-1.aws.edge.axiom.co&dataset=boat-otel#query-data');
+
+  await expect(page).toHaveURL(/\/docs\/restapi\/query#query-data$/);
+  await expect(page.getByText('Code examples use your values')).toBeVisible();
+  const form = page.locator('.placeholder-config').first();
+  const codeBlock = form.locator('xpath=preceding-sibling::div[contains(@class,"docs-code-block")][1]');
+  await expect(form.locator('select')).toHaveValue('eu-central-1.aws.edge.axiom.co');
+  await expect(form.getByPlaceholder('dataset-name')).toHaveValue('boat-otel');
+  await expect(form.getByPlaceholder('xaat-api-token')).toHaveValue('');
+  await expect(codeBlock.locator('pre')).toContainText('https://eu-central-1.aws.edge.axiom.co/v1/query/_apl');
+  await expect(codeBlock.locator('pre')).toContainText('"apl": "boat-otel | limit 10"');
+  await expect(codeBlock.locator('pre')).toContainText('API_TOKEN');
+
+  await page.goto('/docs/getting-started');
+  const persistedForm = page.locator('.placeholder-config').filter({ has: page.getByPlaceholder('dataset-name') }).first();
+  await expect(persistedForm.getByPlaceholder('dataset-name')).toHaveValue('boat-otel');
+  await persistedForm.getByRole('button', { name: 'Clear values' }).click();
+  await expect(persistedForm.getByPlaceholder('dataset-name')).toHaveValue('');
+  await expect(persistedForm.locator('xpath=preceding-sibling::div[contains(@class,"docs-code-block")][1]').locator('pre')).toContainText('DATASET_NAME');
+  await expect(persistedForm.getByRole('button', { name: 'Clear values' })).toHaveCount(0);
+
+  await page.goto('/docs/restapi/query?client=go&domain=evil.example.com&dataset=%24(id)');
+  await expect(page).toHaveURL(/\/docs\/restapi\/query\?client=go$/);
+  const untouched = page.locator('.placeholder-config').first();
+  const untouchedCode = untouched.locator('xpath=preceding-sibling::div[contains(@class,"docs-code-block")][1]').locator('pre');
+  await expect(untouched.locator('select')).toHaveValue('');
+  await expect(untouched.getByPlaceholder('dataset-name')).toHaveValue('');
+  await expect(untouchedCode).toContainText('https://AXIOM_DOMAIN/v1/query/_apl');
+  await expect(untouchedCode).not.toContainText(/evil|\$\(id\)/);
+  await expect(page.getByText('Code examples use your values')).toHaveCount(0);
+});
+
 test('article copy keeps a distinct contrast hierarchy in both themes', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/docs/platform-overview/architecture');
