@@ -2,14 +2,14 @@
 title: 'Annotate charts'
 description: 'Add context to charts in Query, dashboards, and monitor previews with annotations for deployments, outages, and incidents.'
 sidebarTitle: Annotate
-keywords: ['axiom documentation', 'documentation', 'axiom', 'annotation', 'span', 'trace']
+keywords: ['axiom documentation', 'documentation', 'axiom', 'annotations', 'deployments', 'query', 'monitors']
 ---
 
 import Prerequisites from "@/content/snippets/minimal-prerequisites.mdx"
 import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 import ReplaceToken from "@/content/snippets/replace-token.mdx"
 
-Annotations mark events on charts in Query, dashboards, and monitor previews. Each annotation belongs to one or more datasets and marks a point in time or, with an end time, a time interval. For example, use annotations to mark the time of the following:
+Annotations mark events on charts in Query, dashboards, and monitor previews. Each annotation is associated with one or more datasets and marks a point in time or, with an end time, a time interval. The same annotation appears on supported charts that query those datasets. For example, use annotations to mark the time of the following:
 
 - Deployments
 - Server outages
@@ -20,48 +20,116 @@ This adds context to the trends displayed in your charts and makes it easier to 
 
 <Prerequisites />
 - [Send data](/send-data/methods) to your Axiom dataset.
-- [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete annotations.
+- To view annotations, use an account with permission to read annotations.
+- For API requests and GitHub Actions, [create an API token](/reference/tokens) with the annotation permissions for the operations you use: create, read, update, or delete.
+
+## Show and hide annotations in Query
+
+Annotations appear for the queried dataset within the selected time range. To inspect an annotation, hold the pointer over its marker on the chart. Click or tap the marker to keep its details open. Press Escape to close pinned details.
+
+### Event timeline
+
+To display annotations on the event timeline:
+
+1. Open **Query**, select a dataset, and run a query that returns events.
+1. Select a time range that includes the annotation.
+1. Open **Chart options** and enable **Show chart** and **Show annotations**.
+
+### Aggregation charts
+
+To choose annotation types on a time series or heatmap chart:
+
+1. Run a query that produces a time series or heatmap for the dataset associated with the annotation.
+1. Select a time range that includes the annotation.
+1. Open **Chart options** and select **Annotations**.
+1. Select the annotation types to display, or select **Show all annotations** or **Hide all annotations**.
+
+If the results contain several charts, open the relevant chart’s submenu before selecting **Annotations**. Annotation controls are available for time series and percentile charts, and for a heatmap when it is the only aggregation chart. Scatter plots and categorical charts do not display annotations.
+
+For more information, see [Query results](/query-data/query-results#configure-chart-options).
+
+## Show and hide annotations on dashboards
+
+To choose annotation types across a dashboard:
+
+1. Open the dashboard and select a time range that includes the annotation.
+1. In the dashboard toolbar, click **Annotations**.
+1. Select the annotation types to display. Use **All annotations** to show or hide all listed types.
+
+Use **Search annotations** to filter the type list. While a search is active, **All matches** changes only the matching types. Clear the search to manage all types.
+
+To access the same controls while editing a time series or heatmap element, expand **Chart** in the settings panel and click **Manage** in **Annotations**. If the panel is hidden, click **Settings**. For more information, see [Configure dashboard elements](/dashboard-elements/configure#annotations).
+
+The annotation’s datasets determine which charts display it. The annotation controls filter by type, such as `deploy`. Dashboard annotation choices affect the current view and are not saved as dashboard settings. Controls in an individual element’s chart settings use the same visibility choices across the dashboard.
+
+## Show and hide annotations in monitor previews
+
+Threshold and anomaly monitor preview charts display annotations for the monitor’s dataset and preview time range. These annotations help you compare deployments and incidents with the data used to evaluate the monitor.
+
+To choose annotation types in a monitor preview:
+
+1. Open a threshold or anomaly monitor in the monitor editor.
+1. Select a preview time range that includes the annotation and run the query to produce a supported time series or heatmap chart.
+1. In the settings panel, expand **Chart**. If the panel is hidden, click **Settings**.
+1. In **Annotations**, click **Manage**.
+1. Select the annotation types to display, or select **Show all annotations** or **Hide all annotations**.
+
+The visibility choices last for the session and are not saved with the monitor. **Manage** supports time series and percentile results, or a heatmap when it is the only aggregation chart. Run the preview query and select a range with annotations to make the controls available.
+
+For more information, see [Configure monitors](/monitor-data/configure-monitors).
+
+## Display limits
+
+Chart annotation requests cover at most 100 days. If the selected chart range is longer, Axiom loads annotations only for the latest 100 days of that range. To inspect older annotations, select a shorter range around the event.
+
+The public Playground does not load organization annotations.
+
+Annotation controls list the types found for the selected datasets and time range. If no annotations exist in that range, change the range or create an annotation for the dataset.
+
+## Troubleshoot missing annotations
+
+If an annotation does not appear, check the following:
+
+- The annotation's `datasets` list includes the dataset used by the chart.
+- The chart's time range includes the annotation's time or overlaps its time interval.
+- The annotation’s type is visible in the annotation controls.
+- The annotation’s point in time or time interval overlaps the latest 100 days of the selected chart range.
+- For event queries, **Show chart** and **Show annotations** are enabled.
+- Your user or API token has permission to read annotations.
 
 ## Create annotations
 
 Create annotations in one of the following ways:
 
 - [Use a GitHub Action](#create-annotations-with-github-actions)
-- [Send a request to the Axiom API](#create-annotations-with-axiom-api)
+- [Send a request to the Axiom API](#create-annotations-using-axiom-api)
 
-If you use the Axiom Vercel integration, annotations are automatically created for deployments.
-
-Axiom automatically creates an annotation if a monitor triggers.
+The [Axiom Vercel integration](/apps/vercel) also creates annotations when deployments complete.
 
 ### Create annotations with GitHub Actions
 
-You can configure GitHub Actions using YAML syntax. For more information, see the [GitHub documentation](https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions#create-an-example-workflow).
+Configure GitHub Actions using YAML syntax. For more information, see the [GitHub documentation](https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions#create-an-example-workflow).
 
-To create an annotation when a deployment happens in GitHub, add the following to the end of your GitHub Action file:
+To create an annotation after a deployment, add the following step after the deployment step in your GitHub Actions workflow:
 
-    ```yml
-    - name: Add annotation in Axiom when a deployment happens
-      uses: axiomhq/annotation-action@v0.2.0
-      with:
-        axiomToken: ${{ secrets.API_TOKEN }}
-        datasets: DATASET_NAME
-        type: "production-release"
-        time: "2024-01-01T00:00:00Z"                                    # optional, defaults to now
-        endTime: "2024-01-01T01:00:00Z"                                 # optional, defaults to null
-        title: "Production deployment"                                  # optional
-        description: "Commit ${{ github.event.head_commit.message }}"   # optional
-        url: "https://example.com"                                      # optional, defaults to job URL
-    ```
+```yml
+- name: Add annotation in Axiom when a deployment happens
+  uses: axiomhq/annotation-action@v0.2.0
+  with:
+    axiomToken: ${{ secrets.API_TOKEN }}
+    datasets: DATASET_NAME
+    type: "production-release"
+    title: "Production deployment"
+    description: "Commit ${{ github.event.head_commit.message }}"
+```
 
 <Info>
 <ReplaceDatasetToken />
 </Info>
 
-Customize the other fields of the code above such as the title, the description, and the URL.
+The action uses the current time and links to the workflow run by default. Optional: Set `time` for a historical event, `endTime` for an interval, or `url` for a different link. For the available inputs, see the [annotation action](https://github.com/axiomhq/annotation-action).
 
-This creates an annotation in Axiom each time you deploy in GitHub.
-
-### Create annotations with Axiom API
+### Create annotations using Axiom API
 
 To create an annotation using the Axiom API, use the following API request:
 
@@ -83,11 +151,11 @@ curl -X 'POST' 'https://api.axiom.co/v2/annotations' \
 <ReplaceDatasetToken />
 </Info>
 
-Customize the other fields of the code above such as the title, the description, and the URL. For more information on the allowed fields, see [Annotation object](#annotation-object).
+Replace `time` with the event timestamp, or omit it to use the time of the API request. A start time in the future is rejected. Customize the title, description, and URL. For more information on the allowed fields, see [Annotation object](#annotation-object).
 
 **Example response**
 
-```bash
+```json
 {
   "datasets": ["my-dataset"],
   "description": "Deploy new feature to the sales form",
@@ -99,7 +167,7 @@ Customize the other fields of the code above such as the title, the description,
 }
 ```
 
-The API response from Axiom contains an `id` field. This is the annotation ID that you can later use to change or delete the annotation.
+The API response contains an `id` field. Use this annotation ID to change or delete the annotation.
 
 ## Get information about annotations
 
@@ -114,12 +182,15 @@ curl -X 'GET' 'https://api.axiom.co/v2/annotations' \
 <ReplaceToken />
 </Info>
 
-Use the following parameters in the endpoint URL to filter for a specific time interval and dataset:
-- `start` is an ISO timestamp that specifies the beginning of the time interval.
-- `end` is an ISO timestamp that specifies the end of the time interval.
+Without filters, this endpoint returns all annotations in the organization. Use the following parameters to filter the results:
+
+- `start` is an RFC 3339 timestamp that specifies the beginning of the time interval.
+- `end` is an RFC 3339 timestamp that specifies the end of the time interval.
 - `datasets` is the list of datasets whose annotations you want to get information about. Separate datasets by commas, for example `datasets=my-dataset1,my-dataset2`.
 
-The example below gets information about annotations about occurrences between March 16th and 19th, 2024 and added to the dataset `my-dataset`:
+Set both `start` and `end`, or omit both. The end is at or after the start, and the range is at most 100 days. Results include annotations whose time interval overlaps the requested range.
+
+The following example lists annotations for `my-dataset` between March 16 and 19, 2024:
 
 ```bash
 curl -X 'GET' 'https://api.axiom.co/v2/annotations?start=2024-03-16T00:00:00.000Z&end=2024-03-19T23:59:59.999Z&datasets=my-dataset' \
@@ -151,7 +222,7 @@ curl -X 'GET' 'https://api.axiom.co/v2/annotations?start=2024-03-16T00:00:00.000
 ]
 ```
 
-The API response from Axiom contains an `id` field. This is the annotation ID that you can later use to change or delete the annotation. For more information on the other fields, see [Annotation object](#annotation-object).
+The API response contains an `id` field. Use this annotation ID to change or delete the annotation. For more information on the other fields, see [Annotation object](#annotation-object).
 
 To get information about a specific annotation, use the following API request:
 
@@ -167,7 +238,7 @@ Replace `ANNOTATION_ID` with the ID of the annotation.
 
 **Example response**
 
-```bash
+```json
 {
   "datasets": ["my-dataset"],
   "description": "Deploy new feature to the sales form",
@@ -197,12 +268,12 @@ curl -X 'PUT' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
 <Info>
 Replace `ANNOTATION_ID` with the ID of the annotation. For more information about how to determine the annotation ID, see [Get information about annotations](#get-information-about-annotations).
 <ReplaceToken />
-In the payload, specify the properties of the annotation that you want to change. The example above adds an `endTime` field to the annotation created above. For more information on the allowed fields, see [Annotation object](#annotation-object).
+In the payload, specify the properties to change. Omitted fields keep their current values. Empty strings and an empty `datasets` list also keep their current values; they do not clear a field. The example above adds an `endTime` field to the annotation created above. For more information on the allowed fields, see [Annotation object](#annotation-object).
 </Info>
 
 **Example response**
 
-```bash
+```json
 {
   "datasets": ["my-dataset"],
   "description": "Deploy new feature to the sales form",
@@ -231,77 +302,20 @@ Replace `ANNOTATION_ID` with the ID of the annotation. For more information abou
 
 ## Annotation object
 
-Annotations are represented as objects with the following fields:
+Annotations have the following fields:
 
-- `datasets` is the list of dataset names for which the annotation appears on charts.
-- `id` is the unique ID of the annotation.
-- `description` is an explanation of the event the annotation marks on the charts.
-- `time` is an ISO timestamp value that specifies the time the annotation marks on the charts.
-- `title` is a summary of the annotation that appears on the charts.
-- `type` is the type of the event marked by the annotation. For example, production deployment.
-- `url` is the URL relevant for the event marked by the annotation. For example, link to GitHub pull request.
-- Optional: `endTime` is an ISO timestamp value that specifies the end time of the annotation.
+| Field | Description |
+| --- | --- |
+| `datasets` | Required when creating an annotation. One or more existing dataset names. |
+| `id` | Unique annotation ID returned by Axiom. Use it to retrieve, update, or delete the annotation. |
+| `time` | Event start time in RFC 3339 format. If omitted on creation, Axiom uses the request time. Future start times are rejected. |
+| `endTime` | Optional end time in RFC 3339 format, at or after `time`. Omit it for a point in time. If it equals `time` on creation, Axiom stores a point in time. |
+| `type` | Required when creating an annotation. A name of at most 256 characters using lowercase letters, numbers, and hyphens, such as `production-deployment`. Used to group annotations in display controls. |
+| `title` | Optional summary. Axiom truncates values longer than 256 Unicode characters and ends the result with an ellipsis. |
+| `description` | Optional explanation of the event. Axiom truncates values longer than 512 Unicode characters and ends the result with an ellipsis. |
+| `url` | Optional link to the deployment, incident, or other related resource. Maximum length: 512 characters. |
 
-## Show and hide annotations in Query
-
-Annotations appear for the queried dataset within the selected time range. To inspect an annotation, hold the pointer over its marker on the chart.
-
-### Event timeline
-
-To display annotations on the event timeline:
-
-1. Open **Query**, select a dataset, and run a query that returns events.
-1. Select a time range that includes the annotation.
-1. Open the chart options and enable **Show chart** and **Show annotations**.
-
-### Aggregation charts
-
-To choose annotation types on a time series or heatmap chart:
-
-1. Run a query that produces a time series or heatmap for the dataset associated with the annotation.
-1. Select a time range that includes the annotation.
-1. Open the chart options and select **Annotations**.
-1. Select the annotation types to display, or select **Show all annotations** or **Hide all annotations**.
-
-For more information, see [Query results](/query-data/query-results#chart-options).
-
-## Show and hide annotations on dashboards
-
-To choose annotation types across a dashboard:
-
-1. Open the dashboard and select a time range that includes the annotation.
-1. In the dashboard toolbar, click **Annotations**.
-1. Select the annotation types to display, or show or hide all types.
-
-To choose annotation types for an individual time series or heatmap element, open its chart settings and use **Annotations**. For more information, see [Configure dashboard elements](/dashboard-elements/configure#annotations).
-
-The annotation's datasets determine which charts display it. The annotation controls filter by type, such as `deploy`.
-
-## Show and hide annotations in monitor previews
-
-Monitor preview charts display annotations for the monitor's dataset and preview time range. These annotations help you compare deployments and incidents with the data used to evaluate the monitor.
-
-To choose annotation types in a monitor preview:
-
-1. Open the monitor editor and run the query to produce a supported time series or heatmap chart.
-1. Select a preview time range that includes the annotation.
-1. Open **Settings**, then expand **Chart**.
-1. In **Annotations**, click **Manage**.
-1. Select the annotation types to display, or select **Show all annotations** or **Hide all annotations**.
-
-The visibility choices last for the session and are not saved with the monitor. The controls become available after a query run returns a supported chart with annotations in its time range.
-
-For more information, see [Configure monitors](/monitor-data/configure-monitors).
-
-## Troubleshoot missing annotations
-
-If an annotation does not appear, check the following:
-
-- The annotation's `datasets` list includes the dataset used by the chart.
-- The chart's time range includes the annotation's time or overlaps its time interval.
-- The annotation's type is visible in the annotation controls.
-- For event queries, **Show chart** and **Show annotations** are enabled.
-- Your user or API token has permission to read annotations.
+For the full request and response schemas, see [Create annotation](/restapi/endpoints/createAnnotation), [List annotations](/restapi/endpoints/getAnnotations), and [Update annotation](/restapi/endpoints/updateAnnotation).
 
 ## Example use case
 
@@ -348,6 +362,6 @@ You get a chart similar to the example below displaying form submission errors a
 ### Inspect issue
 
 1. From the chart, you see that the number of errors started to rise after the deployment of a new feature to the sales form. This correlation allows you to form the hypothesis that the errors might be caused by the deployment.
-1. You decide to investigate the deployment by clicking on the link associated with the annotation. The link takes you to the GitHub pull request.
+1. You decide to investigate the deployment by clicking on the link associated with the annotation. The link opens the resource specified in the annotation’s `url` field, such as a deployment or GitHub pull request.
 1. You inspect the code changes in depth and discover the cause of the errors.
 1. You quickly fix the issue in another deployment.
