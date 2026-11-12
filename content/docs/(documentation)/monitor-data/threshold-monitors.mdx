@@ -20,7 +20,7 @@ To create a threshold monitor, follow these steps:
     - The frequency is how often the monitor runs. This is a positive integer number of minutes.
     - The range is the time range for your query. This is a positive integer number of minutes. The end time is the time the monitor runs.
     - **Alert on no data** triggers the monitor when your query doesn’t return any data. Your query returns no data if no events match your filters and an aggregation used in the query is undefined. For example, you take the average of a field not present in any matching events. The monitor sends a notification when data returns after a no-data alert state. Notifications about crossing the threshold take precedence over notifications about data returning after a no-data state.
-    - You can group by attributes when defining your query. By default, your monitor enters the alert state if any of the values returned for the group-by attributes cross the threshold, and remains in the alert state until none of the values returned cross the threshold. To trigger the monitor separately for each group that crosses the threshold, enable **Notify by group**. At most one trigger notification is sent per monitor run. This option only has an effect if the monitor’s query groups by a non-time field.
+    - You can group by attributes when defining your query. By default, your monitor enters the alert state if any of the values returned for the group-by attributes cross the threshold, and remains in the alert state until none of the values returned cross the threshold. To trigger the monitor separately for each group that crosses the threshold, enable **Notify by group**. At most one trigger notification is sent per monitor run, or one for each level change on a monitor with [threshold levels](#threshold-levels). This option only has an effect if the monitor’s query groups by a non-time field.
 1. Click **Add notifier**, and then select the notifiers that define how you want to receive notifications for this monitor. For more information, see [Notifiers](#notifiers).
 1. To define your query, use one of the following options:
     - To use the visual query builder, click **Simple query builder**. Click **Visualize** to select an aggregation method, and then click **Run query** to preview the results in a chart. The monitor enters the alert state if any points on the chart cross the threshold. Optionally, use filters to specify which events to aggregate, and group by fields to split the aggregation across the values of these fields.
@@ -28,6 +28,88 @@ To create a threshold monitor, follow these steps:
 1. Click **Create**.
 
 You have created a threshold monitor, and Axiom alerts you when the results from your query cross the threshold.
+
+## Threshold levels
+
+<Note>
+Threshold levels are in private preview and available to selected organizations. Until Axiom enables them for your organization, a monitor can have at most one level. You can set levels only with the `thresholds` field of the [create monitor](/restapi/endpoints/createMonitor) and [update monitor](/restapi/endpoints/updateMonitor) API endpoints. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
+</Note>
+
+Instead of a single threshold, a threshold monitor can have up to four named levels. For example, a monitor that tracks CPU usage can warn your team at 80% and page the on-call engineer at 95%. Each level has the following properties:
+
+- `name` identifies the level in notifications. Each level needs a unique name.
+- `severity` is one of `critical`, `error`, `warning`, or `info`. Each level needs a different severity. PagerDuty uses the severity of the level as the severity of its alert, and Opsgenie maps it to the priority of its alert.
+- `value` is the threshold of the level. The comparison operator applies to every level, and the more severe a level, the further its value lies in the direction of the operator. For example, with the operator `Above`, a `critical` level needs a higher value than a `warning` level. With the operator `Below`, it needs a lower value.
+- `recovery` is optional and defaults to `value`. For more information, see [Recovery thresholds](#recovery-thresholds).
+
+Levels work with the operators `Above`, `AboveOrEqual`, `Below`, and `BelowOrEqual`.
+
+The following example defines two levels for a monitor that alerts when the results are above the threshold:
+
+```json
+{
+  "operator": "Above",
+  "threshold": 95,
+  "thresholds": [
+    { "name": "Heads up", "severity": "warning", "value": 80, "recovery": 75 },
+    { "name": "Page on-call", "severity": "critical", "value": 95, "recovery": 90 }
+  ]
+}
+```
+
+When you get a monitor with levels, `threshold` is the value of the most severe level. When you get a monitor without levels, `thresholds` contains one level with only a value, equal to `threshold`.
+
+When you update a monitor, keep the following in mind:
+
+- Every update request to a monitor with more than one level must include `thresholds`, even if you don’t change the levels. Otherwise, the request fails with status code `400`.
+- On a monitor with a single named level, an update request without `thresholds` sets the value of that level to `threshold`.
+- To remove the levels, set `thresholds` to an empty list (`[]`). The monitor then uses `threshold` as its only threshold.
+- You can’t change the type of a monitor that has levels.
+
+### Recovery thresholds
+
+A recovery threshold stops an alert from flapping when the results hover around the value of a level. When the results cross the value of a level, the alert enters that level. The alert stays at that level until the results cross its recovery value, even if they no longer cross its value. The recovery value must lie on the resolving side of the level’s value: at or below the value for `Above` and `AboveOrEqual`, and at or above the value for `Below` and `BelowOrEqual`.
+
+In the preceding example, the alert enters the `Page on-call` level when the results go above 95, and stays there until the results drop to 90 or below. If the results are then still above 75, the alert moves down to the `Heads up` level. It resolves when the results drop to 75 or below.
+
+The alert moves up to a more severe level as soon as the results cross the value of that level. If the monitor triggers only after several positive results (`triggerAfterNPositiveResults` and `triggerFromNRuns` in the API), this rule applies when the alert opens and each time it moves up a level.
+
+If you enable **Alert on no data**, an alert raised because the query returns no data is at the most severe level. If you enable **Notify by group**, each group has its own level.
+
+### Notifications for level changes
+
+The monitor notifies every notifier you add to it each time the alert does one of the following:
+
+- Opens at a level.
+- Escalates to a more severe level.
+- De-escalates to a less severe level.
+- Resolves, unless the monitor skips resolve notifications (`skipResolved` in the API).
+
+While the results stay at the same level, including while they’re between the value and the recovery value of the level, the monitor doesn’t send notifications. The exceptions are monitors that notify on every run (`notifyEveryRun` in the API), and data returning after a no-data alert.
+
+Every level notifies the same notifiers because a monitor has one list of notifiers. To route notifications by severity, use the routing rules of your incident management tool. For more information about how PagerDuty and Opsgenie handle levels, see [PagerDuty notifier](/monitor-data/pagerduty#threshold-levels) and [Opsgenie notifier](/monitor-data/opsgenie-notifier#threshold-levels).
+
+### Template variables for levels
+
+A message template customizes the title and body of Slack, Discord, Microsoft Teams, and email notifications using the [Go template syntax](https://pkg.go.dev/text/template). Set it in the `messageTemplate` field of the monitor. On a threshold monitor with levels, message templates can use the following variables:
+
+| Variable | Description |
+| --- | --- |
+| `.Level.Name` | The name of the level the alert moves to. Empty when the alert resolves. |
+| `.Level.Severity` | The severity of the level the alert moves to: `critical`, `error`, `warning`, or `info`. Empty when the alert resolves. |
+| `.Level.Value` | The value of the level the alert moves to. `0` when the alert resolves. |
+| `.Level.Recovery` | The recovery value of the level the alert moves to. Equal to `.Level.Value` when the level has no recovery value. `0` when the alert resolves. |
+| `.PreviousLevel.Name`, `.PreviousLevel.Severity`, `.PreviousLevel.Value`, `.PreviousLevel.Recovery` | The level the alert moves from, with the same fields as `.Level`. Empty or `0` when the alert opens. |
+| `.Transition` | How the alert moves between levels: `open`, `escalate`, `deescalate`, or `resolve`. |
+| `.Groups[].Level` | The level of each group, with the same fields as `.Level`. For example, `{{range .Groups}}{{.Level.Name}}{{end}}`. |
+
+On monitors without named levels, these variables are empty or `0`. `.Transition` is also empty when the monitor sends a notification on every run without a level change. On a monitor with levels, `.Threshold` is the value of the level the alert moves to, or the level it leaves when it resolves.
+
+The following example template shows the severity and level in the notification title:
+
+```text
+{{if eq .Transition "resolve"}}Resolved: {{.Name}} (was {{.PreviousLevel.Name}}){{else}}[{{.Level.Severity}}] {{.Name}}: {{.Level.Name}}{{end}}
+```
 
 ## Examples
 
