@@ -50,19 +50,27 @@ When you create a new values monitor, Axiom records the values that the query re
 
 If you set **Learn from** to 0 days, the monitor doesn’t look at past events. Instead, the first run that returns values records them without sending notifications, and the monitor only alerts on values that appear after this run. Values that appeared before the monitor was created but are rare, such as a weekly job, can trigger notifications when they next appear.
 
-### Queries that aggregate
+## Queries that aggregate
 
-If your query aggregates, for example with `summarize`, set **Learn from** to 0 days.
+Aggregate in your query when a value is only worth an alert once it passes a bar. Without an aggregation, the monitor alerts on a value the first time a single event holds it. With an aggregation, you decide how much activity a value needs before it counts.
 
-To record the values of the learning period, Axiom runs your query once over the whole period. Each later run of the monitor only covers the events since the previous run. An aggregation over the whole learning period returns different results from the same aggregation over a single run, so the recorded values don’t match the values that the monitor checks later. For example, the following query returns the clients that send at least 200 requests:
+For example, you want to know about new clients of your API, but not about every scanner that sends a handful of requests. The following query only returns the clients that send at least 200 requests from at least 3 IP addresses within a run:
 
 ```kusto
 ['http-logs']
-| summarize requests = count() by client
-| where requests >= 200
+| summarize requests = count(), sources = dcount(client_ip) by client
+| where requests >= 200 and sources >= 3
 ```
 
-Over a learning period of 30 days, a client that sends a few requests each day reaches 200 requests, and the monitor records it as already seen. The monitor then doesn’t alert on this client when it first sends 200 requests within a single run.
+Watch the `client` column. The monitor alerts you the first time a client passes the bar, and ignores the clients that stay below it.
+
+Other uses of the same pattern include the following:
+
+- A new error message that affects at least 10 users.
+- A new country that at least 5 accounts sign in from.
+- A new container image that runs on at least 3 hosts.
+
+Because the results of a query that aggregates depend on the time range it runs over, Axiom recommends setting **Learn from** to 0 days for these queries.
 
 ## Notifications
 
