@@ -1,6 +1,6 @@
 ---
-title: 'Annotate dashboard elements'
-description: 'This page explains how to use annotations to add context to your dashboard elements.'
+title: 'Annotate charts'
+description: 'Add context to charts in Query and dashboards with annotations for deployments, outages, and incidents.'
 sidebarTitle: Annotate
 keywords: ['axiom documentation', 'documentation', 'axiom', 'annotation', 'span', 'trace']
 ---
@@ -9,7 +9,7 @@ import Prerequisites from "@/content/snippets/minimal-prerequisites.mdx"
 import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 import ReplaceToken from "@/content/snippets/replace-token.mdx"
 
-Annotating charts lets you add context to your charts. For example, use annotations to mark the time of the following:
+Annotations mark events on charts in Query and dashboards. Each annotation belongs to one or more datasets and marks a point in time or, with an end time, a time interval. For example, use annotations to mark the time of the following:
 
 - Deployments
 - Server outages
@@ -61,7 +61,7 @@ Customize the other fields of the code above such as the title, the description,
 
 This creates an annotation in Axiom each time you deploy in GitHub.
 
-### Create annotations using Axiom API
+### Create annotations with Axiom API
 
 To create an annotation using the Axiom API, use the following API request:
 
@@ -103,7 +103,7 @@ The API response from Axiom contains an `id` field. This is the annotation ID th
 
 ## Get information about annotations
 
-To get information about all datasets in your org, use the following API request:
+To list annotations in your organization, use the following API request:
 
 ```bash
 curl -X 'GET' 'https://api.axiom.co/v2/annotations' \
@@ -221,7 +221,7 @@ To delete an existing annotation, use the following API request:
 
 ```bash
 curl -X 'DELETE' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
-  -H 'Authorization: Bearer API_TOKEN' \
+  -H 'Authorization: Bearer API_TOKEN'
 ```
 
 <Info>
@@ -242,13 +242,50 @@ Annotations are represented as objects with the following fields:
 - `url` is the URL relevant for the event marked by the annotation. For example, link to GitHub pull request.
 - Optional: `endTime` is an ISO timestamp value that specifies the end time of the annotation.
 
+## Show and hide annotations in Query
+
+Annotations appear for the queried dataset within the selected time range. To inspect an annotation, hold the pointer over its marker on the chart.
+
+### Event timeline
+
+To display annotations on the event timeline:
+
+1. Open **Query**, select a dataset, and run a query that returns events.
+1. Select a time range that includes the annotation.
+1. Open the chart options and enable **Show chart** and **Show annotations**.
+
+### Aggregation charts
+
+To choose annotation types on a time series or heatmap chart:
+
+1. Run a query that produces a time series or heatmap for the dataset associated with the annotation.
+1. Select a time range that includes the annotation.
+1. Open the chart options and select **Annotations**.
+1. Select the annotation types to display, or select **Show all annotations** or **Hide all annotations**.
+
+For more information, see [Query results](/query-data/query-results#chart-options).
+
 ## Show and hide annotations on dashboards
 
-To show and hide annotations on a dashboard, follow these steps:
+To choose annotation types across a dashboard:
 
-1. Go to the dashboard where you see annotations. For example, the prebuilt Vercel dashboard automatically shows annotations about deployments.
-1. Click <Icon icon="sliders-simple" iconType="light"/> **Toggle annotations**.
-1. Select the datasets whose annotations you want to display on the charts.
+1. Open the dashboard and select a time range that includes the annotation.
+1. In the dashboard toolbar, click **Annotations**.
+1. Select the annotation types to display, or show or hide all types.
+
+To choose annotation types for an individual time series or heatmap element, open its chart settings and use **Annotations**. For more information, see [Configure dashboard elements](/dashboard-elements/configure#annotations).
+
+The annotation's datasets determine which charts display it. The annotation controls filter by type, such as `deploy`.
+
+## Troubleshoot missing annotations
+
+If an annotation does not appear, check the following:
+
+- The annotation's `datasets` list includes the dataset used by the chart.
+- The chart's time range includes the annotation's time or overlaps its time interval.
+- The annotation's type is visible in the annotation controls.
+- For event queries, **Show chart** and **Show annotations** are enabled.
+- Your user or API token has permission to read annotations.
 
 ## Example use case
 
