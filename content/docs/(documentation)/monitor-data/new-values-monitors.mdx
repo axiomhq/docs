@@ -32,7 +32,7 @@ To create a new values monitor, follow these steps:
     The query can filter, transform, and aggregate events. For more information, see [Introduction to APL](/apl/introduction).
 1. In the preview, select the checkbox in the header of the column you want to watch. You can watch one column. You can’t watch `_time` or the result of an aggregation, such as `count()`. If the results contain a single column that you can watch, Axiom selects it for you.
 1. Configure the monitor using the following options:
-    - **Run every** is how often the monitor runs. Each run checks the events since the previous run, so the monitor has no separate time range.
+    - **Run every** is how often the monitor runs. By default, each run checks the events since the previous run. To check a longer period in each run, see [Time range of each run](#time-range-of-each-run).
     - **Forget values after** is the lookback period in days. A value counts as new when the monitor hasn’t seen it in this many days. The default is 365 days.
     - **Learn from** is the number of previous days of events that the monitor records as already seen before it first runs. The possible values are 0, 1, 7, 14, and 30 days, and the value can’t exceed **Forget values after**. The default is 30 days. If your query aggregates, set this to 0 days. For more information, see [Learning period](#learning-period).
 1. Click **Add notifier**, and then select the notifiers that define how you want to receive notifications for this monitor. For more information, see [Notifiers](/monitor-data/notifiers-overview).
@@ -54,7 +54,7 @@ If you set **Learn from** to 0 days, the monitor doesn’t look at past events. 
 
 Aggregate in your query when a value is only worth an alert once it passes a bar. Without an aggregation, the monitor alerts on a value the first time a single event holds it. With an aggregation, you decide how much activity a value needs before it counts.
 
-For example, you want to know about new clients of your API, but not about every scanner that sends a handful of requests. The following query only returns the clients that send at least 200 requests from at least 3 IP addresses within a run:
+For example, you want to know about new clients of your API, but not about every scanner that sends a handful of requests. The following query only returns the clients that send at least 200 requests from at least 3 IP addresses within the time range of a run:
 
 ```kusto
 ['http-logs']
@@ -69,6 +69,8 @@ Other uses of the same pattern include the following:
 - A new error message that affects at least 10 users.
 - A new country that at least 5 accounts sign in from.
 - A new container image that runs on at least 3 hosts.
+
+By default, the aggregation only covers the events since the previous run. To aggregate over a longer period, for example the last hour while the monitor runs every 5 minutes, see [Time range of each run](#time-range-of-each-run).
 
 Because the results of a query that aggregates depend on the time range it runs over, Axiom recommends setting **Learn from** to 0 days for these queries.
 
@@ -87,11 +89,23 @@ A new values monitor doesn’t resolve. It doesn’t send a notification when a 
 
 If a monitor exceeds a limit, its runs fail. To stay within the limits, watch a column with fewer distinct values, filter your query, or shorten the lookback period. For example, watch an error message after removing the IDs and numbers it contains, rather than the raw message.
 
+## Time range of each run
+
+By default, each run of a new values monitor queries the time since the previous run. To query a longer period in each run, set `rangeMinutes` when you create or update the monitor using the [API](/restapi/endpoints/createMonitor). Each run then queries the last `rangeMinutes` minutes. `rangeMinutes` can’t be less than the interval between runs.
+
+For example, a monitor that runs every 5 minutes with `rangeMinutes` set to 60 checks the last hour of events every 5 minutes. With a query that aggregates, this lets you alert on a new client that sends at least 200 requests within an hour, and still find out within 5 minutes of the client passing the bar.
+
+When the time ranges of consecutive runs overlap, a value doesn’t trigger repeated notifications. The monitor records each value it alerts on, and later runs treat it as already seen.
+
+A longer time range means that each run queries more data.
+
 ## Data that arrives late
 
-Each run of a new values monitor only checks the events whose `_time` falls between the previous run and the current run. If an event arrives in Axiom after the run that covers its `_time`, no run checks it, and the monitor doesn’t alert on its value.
+By default, each run of a new values monitor only checks the events whose `_time` falls between the previous run and the current run. If an event arrives in Axiom after the run that covers its `_time`, no run checks it, and the monitor doesn’t alert on its value.
 
 If your data can arrive late, set `secondDelay` when you create or update the monitor using the [API](/restapi/endpoints/createMonitor). This shifts the time range of each run into the past by the number of seconds you specify. For example, with a delay of 900 seconds, a run at 10:15 checks the events up to 10:00.
+
+A [time range](#time-range-of-each-run) longer than the interval between runs also helps. Later runs check a late event as long as its `_time` falls within their time range.
 
 ## Examples
 
