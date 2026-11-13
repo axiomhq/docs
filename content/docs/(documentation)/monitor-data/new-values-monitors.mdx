@@ -1,0 +1,47 @@
+---
+title: 'New values monitors'
+description: 'This section explains how to create monitors that alert you the first time a value appears in your data.'
+sidebarTitle: 'New values'
+keywords: ['axiom documentation', 'documentation', 'axiom', 'monitors', 'new values', 'first seen', 'notifiers', 'alerts']
+---
+
+New values monitors alert you the first time a value appears in a field of your query results. For example, get a notification for a new error type, a new service that calls your API, or a sign-in from a new country.
+
+The monitor remembers each value of the field that it watches. When a run returns a value that the monitor hasn’t seen in the period that you set, Axiom sends a notification. Axiom sends one notification for each new value.
+
+## Create new values monitor
+
+To create a new values monitor, follow these steps:
+
+1. Click the **Monitors** tab, and then click **New monitor**.
+1. In **Monitor type**, select **New values**.
+1. Name your monitor and add a description.
+1. Write an APL query that returns the field to watch, and then click **Run** to preview the results. For example:
+
+    ```kusto
+    ['DATASET_NAME']
+    | where level == 'error'
+    | project ['error.type']
+    ```
+
+    Both event queries and queries that group with `summarize ... by` work. You can’t use metrics queries. For more information, see [Introduction to APL](/apl/introduction).
+1. In the results preview, select the checkbox in the header of the field to watch. Axiom selects the first field that you can watch by default. You can’t watch aggregation results or the internal fields `_time`, `_sysTime`, and `_cursor`.
+1. Configure the monitor using the following options:
+    - **Run every** is how often the monitor runs.
+    - **Range** is how much recent data each run queries. It can’t be shorter than **Run every**.
+    - **Forget values after** is the number of days that the monitor remembers a value. After this period, the value counts as new again. The default is 365 days.
+    - **Learn from** records the values from a number of previous days before the first run, so existing values don’t alert. The possible values are **None**, **1 day**, **7 days**, **14 days**, and **30 days**. The default is 30 days. It can’t be longer than **Forget values after**. If you select **None**, the first run records values without sending notifications. If your query aggregates, Axiom recommends **None**.
+1. Add the notifiers that define how you want to receive notifications for this monitor. For more information, see [Notifiers](/monitor-data/notifiers-overview).
+1. Click **Save**.
+
+You have created a new values monitor. Axiom alerts you the first time the watched field returns a value that the monitor hasn’t seen.
+
+## Edit new values monitor
+
+When you change the query, the watched field, **Run every**, **Range**, or the delay of an existing monitor, Axiom clears the values that the monitor has learned. The monitor then learns again from the period in **Learn from**, or from its next run if **Learn from** is **None**. The editor warns you before you save a change that clears the learned values.
+
+Changes to **Forget values after** and **Learn from** keep the learned values.
+
+## Examples
+
+For real-world use cases, see [Monitor examples](/monitor-data/monitor-examples).
