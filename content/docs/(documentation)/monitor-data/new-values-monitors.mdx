@@ -1,0 +1,119 @@
+---
+title: 'New values monitors'
+description: 'This page explains how to create new values monitors that alert you when a column of your query results holds a value that Axiom hasn’t seen recently.'
+sidebarTitle: 'New values'
+keywords: ['axiom documentation', 'documentation', 'axiom', 'monitors', 'new values', 'first seen', 'notifiers', 'slack', 'email', 'pagerduty', 'webhook', 'opsgenie', 'discord']
+---
+
+New values monitors alert you when a column of your query results holds a value that Axiom hasn’t seen in that column recently. Use them when the first appearance of something is worth knowing about. For example:
+
+- **Reliability:** A new error message in your service after a deploy, or a new exception type in a background job.
+- **Security:** A new IP address on your network, a new country that a user signs in from, or a new AWS API call in your audit logs.
+- **Infrastructure:** A new host, container image, or service version that starts sending data, or a new domain that your workloads resolve.
+- **Product:** A new customer that calls your API, a new client version in the user agents of your requests, or a new tool that your AI agent uses.
+
+Each time the monitor runs, Axiom compares the values of the watched column in the query results with the values that the monitor recorded during the lookback period. Axiom sends a notification for each value that it hasn’t seen in this period, and then records the value so that it doesn’t alert on it again until the lookback period has passed without the value appearing.
+
+## Create new values monitor
+
+To create a new values monitor, follow these steps:
+
+1. Click the **Monitors** tab, and then click **New monitor**.
+1. In **Monitor type**, select **New values**.
+1. Name your monitor and add a description.
+1. Write an Axiom Processing Language (APL) query whose results contain the column you want to watch, and then click **Run** to preview the results. For example, the following query returns the error messages of a service:
+
+    ```kusto
+    ['my-logs']
+    | where level == 'error'
+    | project message
+    ```
+
+    The query can filter, transform, and aggregate events. For more information, see [Introduction to APL](/apl/introduction).
+1. In the preview, select the checkbox in the header of the column you want to watch. You can watch one column. You can’t watch the result of an aggregation, such as `count()`, or the internal fields `_time`, `_sysTime`, and `_cursor`. Axiom selects the first column that you can watch by default.
+1. Configure the monitor using the following options:
+    - **Run every** is how often the monitor runs.
+    - **Range** is how much recent data each run queries. It can’t be shorter than **Run every**. For more information, see [Time range of each run](#time-range-of-each-run).
+    - **Forget values after** is the lookback period in days. A value counts as new when the monitor hasn’t seen it in this many days. The default is 365 days.
+    - **Learn from** is the number of previous days of events that the monitor records as already seen before it first runs. The possible values are **None**, **1 day**, **7 days**, **14 days**, and **30 days**, and the value can’t exceed **Forget values after**. The default is 30 days. If your query aggregates, select **None**. For more information, see [Learning period](#learning-period).
+1. Click **Add notifier**, and then select the notifiers that define how you want to receive notifications for this monitor. For more information, see [Notifiers](/monitor-data/notifiers-overview).
+1. Click **Save**.
+
+You have created a new values monitor. Axiom alerts you each time the watched column holds a value that the monitor hasn’t seen during the lookback period.
+
+<Info>
+New values monitors only support APL queries on event datasets. They don’t support metrics datasets.
+</Info>
+
+## Learning period
+
+When you create a new values monitor, Axiom records the values that the query returns over the learning period as already seen. This prevents the first runs of the monitor from alerting on values that already appear in your data.
+
+If you set **Learn from** to **None**, the monitor doesn’t look at past events. Instead, the first run that returns values records them without sending notifications, and the monitor only alerts on values that appear after this run. Values that appeared before the monitor was created but are rare, such as a weekly job, can trigger notifications when they next appear.
+
+## Queries that aggregate
+
+Aggregate in your query when a value is only worth an alert once it passes a bar. Without an aggregation, the monitor alerts on a value the first time a single event holds it. With an aggregation, you decide how much activity a value needs before it counts.
+
+For example, you want to know about new clients of your API, but not about every scanner that sends a handful of requests. The following query only returns the clients that send at least 200 requests from at least 3 IP addresses within the time range of a run:
+
+```kusto
+['http-logs']
+| summarize requests = count(), sources = dcount(client_ip) by client
+| where requests >= 200 and sources >= 3
+```
+
+Watch the `client` column. The monitor alerts you the first time a client passes the bar, and ignores the clients that stay below it.
+
+Other uses of the same pattern include the following:
+
+- A new error message that affects at least 10 users.
+- A new country that at least 5 accounts sign in from.
+- A new container image that runs on at least 3 hosts.
+
+Each run aggregates over the time set in **Range**. To aggregate over a longer period, for example the last hour while the monitor runs every 5 minutes, see [Time range of each run](#time-range-of-each-run).
+
+Because the results of a query that aggregates depend on the time range it runs over, Axiom recommends setting **Learn from** to **None** for these queries.
+
+## Notifications
+
+A new values monitor sends one notification for each new value. Each notification contains the new value. Notifications sent to [custom webhook notifiers](/monitor-data/custom-webhook-notifier) also contain one row of the query results that holds the new value, in `.MatchedEvent`.
+
+A run sends at most 9 notifications. If a run finds between 10 and 1,000 new values, the monitor doesn’t record the ones it didn’t send notifications for, so they trigger a notification in a later run if they appear again. If a run finds more than 1,000 new values, it fails. For more information, see [Limits](#limits).
+
+A new values monitor doesn’t resolve. It doesn’t send a notification when a value stops appearing.
+
+## Limits
+
+- Within the lookback period, the watched column can hold fewer than 50,000 distinct values.
+- A single run can find at most 1,000 new values.
+
+If a monitor exceeds a limit, its runs fail. To stay within the limits, watch a column with fewer distinct values, filter your query, or shorten the lookback period. For example, watch an error message after removing the IDs and numbers it contains, rather than the raw message.
+
+## Time range of each run
+
+**Range** sets how much recent data each run of a new values monitor queries. By default, it equals **Run every**, so each run queries the time since the previous run. To query a longer period in each run, set a longer **Range**. It can’t be shorter than **Run every**. In the [API](/restapi/endpoints/createMonitor), this setting is `rangeMinutes`.
+
+For example, a monitor that runs every 5 minutes with **Range** set to 60 minutes checks the last hour of events every 5 minutes. With a query that aggregates, this lets you alert on a new client that sends at least 200 requests within an hour, and still find out within 5 minutes of the client passing the bar.
+
+When the time ranges of consecutive runs overlap, a value doesn’t trigger repeated notifications. The monitor records each value it alerts on, and later runs treat it as already seen.
+
+A longer time range means that each run queries more data.
+
+## Data that arrives late
+
+By default, each run of a new values monitor only checks the events whose `_time` falls within its **Range**, which ends at the time of the run. If an event arrives in Axiom after every run that covers its `_time`, no run checks it, and the monitor doesn’t alert on its value.
+
+If your data can arrive late, set **Delay** in the **Evaluation** settings of the monitor. In the [API](/restapi/endpoints/createMonitor), this setting is `secondDelay`. The delay shifts the time range of each run into the past. For example, with a delay of 15 minutes, a run at 10:15 checks the events up to 10:00.
+
+A [time range](#time-range-of-each-run) longer than the interval between runs also helps. Later runs check a late event as long as its `_time` falls within their time range.
+
+## Edit new values monitor
+
+When you change the query, the watched column, **Run every**, **Range**, or **Delay** of an existing monitor, Axiom clears the values that the monitor has recorded. The monitor then learns again from the period in **Learn from**, or from its next run if **Learn from** is **None**. The editor warns you before you save a change that clears the recorded values.
+
+Changes to **Forget values after** and **Learn from** keep the recorded values.
+
+## Examples
+
+For real-world use cases, see [Monitor examples](/monitor-data/monitor-examples).
