@@ -1,65 +1,78 @@
 ---
-title: 'Annotate dashboard elements'
-description: 'This page explains how to use annotations to add context to your dashboard elements.'
-sidebarTitle: Annotate
-keywords: ['axiom documentation', 'documentation', 'axiom', 'annotation', 'span', 'trace']
+title: 'Annotations'
+description: 'This page explains how to use annotations in Query, dashboards, and monitors.'
+keywords: ['axiom documentation', 'documentation', 'axiom', 'annotations', 'deployments', 'query', 'monitors']
 ---
 
-import Prerequisites from "@/content/snippets/minimal-prerequisites.mdx"
 import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 import ReplaceToken from "@/content/snippets/replace-token.mdx"
 
-Annotating charts lets you add context to your charts. For example, use annotations to mark the time of the following:
+Annotations show when deployments, outages, or other configured events happened alongside your data. Mark a point or interval in time across Query, dashboards, and monitors to put changes in context.
 
-- Deployments
-- Server outages
-- Incidents
-- Feature flags
+## Prerequisites
 
-This adds context to the trends displayed in your charts and makes it easier to investigate issues in your app or system.
-
-<Prerequisites />
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
 - [Send data](/send-data/methods) to your Axiom dataset.
-- [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete annotations.
+- To view annotations in Console, use an account with permission to read annotations.
+- For API requests and GitHub Actions, [create an API token](/reference/tokens) with the annotation permissions for the operations you use: create, read, update, or delete.
+
+## Show and hide annotations in Console
+
+### Query [#show-and-hide-annotations-in-query]
+
+Annotations appear on time series and percentile charts, and on heatmaps when the query returns a single chart. Use **Chart options** to show or hide annotations for the queried dataset and selected time range.
+
+### Dashboards [#show-and-hide-annotations-on-dashboards]
+
+To choose the annotation types to display, click **Annotations** in the dashboard toolbar.
+
+In the chart editor, expand **Chart** and click **Manage** in **Annotations**.
+
+Each chart shows annotations for the datasets it queries. Your selections apply across the dashboard and aren't saved with it.
+
+### Monitors [#show-and-hide-annotations-in-monitors]
+
+Threshold and anomaly monitor charts show annotations for the monitor’s dataset and the chart’s time range.
+
+<p id="monitor-detail-pages" className="scroll-mt-[32px]">
+  In <strong>Recent activity</strong>, click <strong>Annotations</strong> beside the time range and select the types to display. On phones, open <strong>Recent activity options</strong> (<code>⋯</code>) and select <strong>Annotations</strong>.
+</p>
+
+<p id="show-and-hide-annotations-in-monitor-previews" className="scroll-mt-[32px]">
+  In the monitor editor, run the preview query. Expand <strong>Chart</strong> in the settings panel and click <strong>Manage</strong> in <strong>Annotations</strong>.
+</p>
+
+Your selections aren't saved with the monitor.
+
+## Display limits
+
+For time ranges longer than 100 days, charts show annotations only for the latest 100 days of that range. To view older annotations, select a shorter range around the event.
 
 ## Create annotations
 
-Create annotations in one of the following ways:
-
-- [Use a GitHub Action](#create-annotations-with-github-actions)
-- [Send a request to the Axiom API](#create-annotations-with-axiom-api)
-
-If you use the Axiom Vercel integration, annotations are automatically created for deployments.
-
-Axiom automatically creates an annotation if a monitor triggers.
+Create annotations with a [GitHub Action](#create-annotations-with-github-actions) or the [Axiom API](#create-annotations-using-axiom-api). The [Axiom Vercel integration](/apps/vercel) also creates annotations when deployments complete.
 
 ### Create annotations with GitHub Actions
 
-You can configure GitHub Actions using YAML syntax. For more information, see the [GitHub documentation](https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions#create-an-example-workflow).
+Add the [Axiom annotation action](https://github.com/axiomhq/annotation-action) after the deployment step in your workflow:
 
-To create an annotation when a deployment happens in GitHub, add the following to the end of your GitHub Action file:
-
-    ```yml
-    - name: Add annotation in Axiom when a deployment happens
-      uses: axiomhq/annotation-action@v0.2.0
-      with:
-        axiomToken: ${{ secrets.API_TOKEN }}
-        datasets: DATASET_NAME
-        type: "production-release"
-        time: "2024-01-01T00:00:00Z"                                    # optional, defaults to now
-        endTime: "2024-01-01T01:00:00Z"                                 # optional, defaults to null
-        title: "Production deployment"                                  # optional
-        description: "Commit ${{ github.event.head_commit.message }}"   # optional
-        url: "https://example.com"                                      # optional, defaults to job URL
-    ```
+```yml
+- name: Add deployment annotation
+  uses: axiomhq/annotation-action@v0.2.0
+  with:
+    axiomToken: ${{ secrets.API_TOKEN }}
+    datasets: DATASET_NAME
+    type: "production-release"
+    title: "Production deployment"
+    description: "Commit ${{ github.event.head_commit.message }}"
+```
 
 <Info>
 <ReplaceDatasetToken />
 </Info>
 
-Customize the other fields of the code above such as the title, the description, and the URL.
-
-This creates an annotation in Axiom each time you deploy in GitHub.
+By default, the action uses the current time and links to the workflow run.
 
 ### Create annotations using Axiom API
 
@@ -87,7 +100,7 @@ Customize the other fields of the code above such as the title, the description,
 
 **Example response**
 
-```bash
+```json
 {
   "datasets": ["my-dataset"],
   "description": "Deploy new feature to the sales form",
@@ -103,7 +116,7 @@ The API response from Axiom contains an `id` field. This is the annotation ID th
 
 ## Get information about annotations
 
-To get information about all datasets in your org, use the following API request:
+To list annotations in your organization, use the following API request:
 
 ```bash
 curl -X 'GET' 'https://api.axiom.co/v2/annotations' \
@@ -114,12 +127,15 @@ curl -X 'GET' 'https://api.axiom.co/v2/annotations' \
 <ReplaceToken />
 </Info>
 
-Use the following parameters in the endpoint URL to filter for a specific time interval and dataset:
-- `start` is an ISO timestamp that specifies the beginning of the time interval.
-- `end` is an ISO timestamp that specifies the end of the time interval.
+Without filters, this endpoint returns all annotations in your organization. Use the following parameters to filter by time range or dataset:
+
+- `start` is an RFC 3339 timestamp that specifies the beginning of the time interval.
+- `end` is an RFC 3339 timestamp that specifies the end of the time interval.
 - `datasets` is the list of datasets whose annotations you want to get information about. Separate datasets by commas, for example `datasets=my-dataset1,my-dataset2`.
 
-The example below gets information about annotations about occurrences between March 16th and 19th, 2024 and added to the dataset `my-dataset`:
+Set both `start` and `end`, or omit both. Use a range of 100 days or less, with `end` at or after `start`. Results include annotations that overlap the range.
+
+The following example lists annotations for `my-dataset` between March 16 and 19, 2024:
 
 ```bash
 curl -X 'GET' 'https://api.axiom.co/v2/annotations?start=2024-03-16T00:00:00.000Z&end=2024-03-19T23:59:59.999Z&datasets=my-dataset' \
@@ -167,7 +183,7 @@ Replace `ANNOTATION_ID` with the ID of the annotation.
 
 **Example response**
 
-```bash
+```json
 {
   "datasets": ["my-dataset"],
   "description": "Deploy new feature to the sales form",
@@ -197,12 +213,12 @@ curl -X 'PUT' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
 <Info>
 Replace `ANNOTATION_ID` with the ID of the annotation. For more information about how to determine the annotation ID, see [Get information about annotations](#get-information-about-annotations).
 <ReplaceToken />
-In the payload, specify the properties of the annotation that you want to change. The example above adds an `endTime` field to the annotation created above. For more information on the allowed fields, see [Annotation object](#annotation-object).
+In the payload, specify the fields to change. Omitted fields keep their current values. Empty text values and an empty `datasets` list leave existing values unchanged. The example adds `endTime` to the annotation created above. For more information, see [Annotation object](#annotation-object).
 </Info>
 
 **Example response**
 
-```bash
+```json
 {
   "datasets": ["my-dataset"],
   "description": "Deploy new feature to the sales form",
@@ -221,7 +237,7 @@ To delete an existing annotation, use the following API request:
 
 ```bash
 curl -X 'DELETE' 'https://api.axiom.co/v2/annotations/ANNOTATION_ID' \
-  -H 'Authorization: Bearer API_TOKEN' \
+  -H 'Authorization: Bearer API_TOKEN'
 ```
 
 <Info>
@@ -233,22 +249,16 @@ Replace `ANNOTATION_ID` with the ID of the annotation. For more information abou
 
 Annotations are represented as objects with the following fields:
 
-- `datasets` is the list of dataset names for which the annotation appears on charts.
+- `datasets` is the list of dataset names for which the annotation appears on charts. Specify at least one existing dataset when creating an annotation.
 - `id` is the unique ID of the annotation.
-- `description` is an explanation of the event the annotation marks on the charts.
-- `time` is an ISO timestamp value that specifies the time the annotation marks on the charts.
-- `title` is a summary of the annotation that appears on the charts.
-- `type` is the type of the event marked by the annotation. For example, production deployment.
-- `url` is the URL relevant for the event marked by the annotation. For example, link to GitHub pull request.
-- Optional: `endTime` is an ISO timestamp value that specifies the end time of the annotation.
+- `time` is the start time of the annotation, in RFC 3339 format. If you omit this field when creating an annotation, Axiom uses the time of the API request. Axiom rejects future start times.
+- Optional: `endTime` is the end time of the annotation, in RFC 3339 format. Specify an end time at or after `time`. Omit this field when creating an annotation to mark a point in time.
+- `type` is the type of event marked by the annotation. For example, `production-deployment`. Specify this field when creating an annotation. Use lowercase letters, numbers, and hyphens.
+- Optional: `title` is a summary of the annotation that appears on the charts.
+- Optional: `description` is an explanation of the event the annotation marks on the charts.
+- Optional: `url` is the URL relevant for the event marked by the annotation. For example, a link to a GitHub pull request.
 
-## Show and hide annotations on dashboards
-
-To show and hide annotations on a dashboard, follow these steps:
-
-1. Go to the dashboard where you see annotations. For example, the prebuilt Vercel dashboard automatically shows annotations about deployments.
-1. Click <Icon icon="sliders-simple" iconType="light"/> **Toggle annotations**.
-1. Select the datasets whose annotations you want to display on the charts.
+For more information, see [Create annotation](/restapi/endpoints/createAnnotation), [List all annotations](/restapi/endpoints/getAnnotations), and [Update annotation](/restapi/endpoints/updateAnnotation).
 
 ## Example use case
 
@@ -288,13 +298,13 @@ You decide to investigate and run a query to display the number of form submissi
 
 You get a chart similar to the example below displaying form submission errors and annotations about the time of important events such as deployments.
 
-<Frame caption="Example histogram with annotation">
-  <img src="/docs/doc-assets/shots/annotation-chart-example.png" alt="Example histogram with annotation" />
+<Frame caption="Form submission errors with a deployment annotation">
+  <img src="/docs/doc-assets/shots/annotation-chart-example.png" alt="Form submission errors with a deployment annotation" />
 </Frame>
 
 ### Inspect issue
 
 1. From the chart, you see that the number of errors started to rise after the deployment of a new feature to the sales form. This correlation allows you to form the hypothesis that the errors might be caused by the deployment.
-1. You decide to investigate the deployment by clicking on the link associated with the annotation. The link takes you to the GitHub pull request.
+1. You click the annotation’s link to investigate the deployment.
 1. You inspect the code changes in depth and discover the cause of the errors.
 1. You quickly fix the issue in another deployment.
