@@ -14,9 +14,9 @@ For setup, see [Axiom MCP Server](/console/intelligence/mcp-server).
 | Category | Read | Write |
 | --- | --- | --- |
 | Query | `queryDataset`, `getSavedQueries` | — |
-| Datasets | `listDatasets`, `getDatasetFields` | `createDataset` |
+| Datasets | `listDatasets`, `getDatasetFields` | `createDataset`, `deleteDatasetFields` |
 | Metrics | `listMetrics`, `listMetricTags`, `getMetricTagValues`, `searchMetrics`, `queryMetrics` | — |
-| Dashboards | `listDashboards`, `getDashboard`, `exportDashboard` | `createDashboard`, `updateDashboard`, `updateDashboardChart`, `deleteDashboard` |
+| Dashboards | `listDashboards`, `getDashboard`, `exportDashboard` | `createDashboard`, `replaceDashboard`, `updateDashboardChart`, `deleteDashboard` |
 | Monitors and notifiers | `checkMonitors`, `getMonitor`, `getMonitorHistory`, `listNotifiers` | `createMonitor`, `updateMonitor`, `deleteMonitor`, `createNotifier`, `updateNotifier`, `deleteNotifier` |
 | Service map | `services-getMap`, `services-getChanges`, `services-getEdgeHistory` | — |
 | Feedback | — | `sendFeedback` |
@@ -53,6 +53,14 @@ List fields in an events or traces dataset, including field names and types. For
 Create a new dataset in the current organization.
 
 **Example:** “Create an events dataset named `app-logs`.”
+</ParamField>
+
+<ParamField path="deleteDatasetFields" type="Write">
+Queue deletion of fields from an events dataset. The tool asks you to confirm the dataset and the fields before it deletes anything. If your client can’t show the confirmation, or you decline, nothing is deleted. Use exact field names from `getDatasetFields`, up to 50 fields per call. You can queue one deletion per dataset every 5 minutes. The deletion is asynchronous and can take several hours.
+
+The tool can’t delete system fields such as `_time` and `_sysTime`, map fields, or fields in datasets that are metrics datasets, shared, schema-locked, or managed by Axiom such as `axiom-audit`. Deleting fields can’t be undone. For more information, see [Delete fields](/reference/datasets#delete-fields).
+
+**Example:** “Delete the fields `debug_blob` and `tmp_id` from the dataset `logs`.”
 </ParamField>
 
 ## Metrics
@@ -113,14 +121,14 @@ Create a dashboard from a JSON document.
 **Example:** “Create a dashboard that charts error rate for `logs` over the last 24 hours.”
 </ParamField>
 
-<ParamField path="updateDashboard" type="Write">
-Update a dashboard by UID.
+<ParamField path="replaceDashboard" type="Write">
+Replace the whole document of a dashboard by UID. Use it to add or remove charts, or to change the layout, sections, or dashboard settings.
 
-**Example:** “Update dashboard `abc123` to add a panel for p99 latency.”
+**Example:** “Add a chart for p99 latency to dashboard `abc123`.”
 </ParamField>
 
 <ParamField path="updateDashboardChart" type="Write">
-Patch a single chart in an existing dashboard by chart ID.
+Change a single chart in an existing dashboard by chart ID. Only the fields you change are sent.
 
 **Example:** “Change the time range on chart `chart-1` in dashboard `abc123` to the last 6 hours.”
 </ParamField>
@@ -176,15 +184,15 @@ Delete a monitor by ID.
 </ParamField>
 
 <ParamField path="createNotifier" type="Write">
-Create a new notifier.
+Create an email notifier. For other notifier types such as Slack or webhooks, the tool doesn’t create the notifier. Instead, it gives you a link to the Notifiers page in the Axiom Console where you configure and save the notifier yourself. This keeps credentials such as tokens and webhook URLs out of the conversation with the agent.
 
-**Example:** “Create a Slack notifier for the `#alerts` channel.”
+**Example:** “Create an email notifier that sends alerts to `oncall@example.com`.”
 </ParamField>
 
 <ParamField path="updateNotifier" type="Write">
-Update an existing notifier by ID.
+Update an existing email notifier by ID. For other notifier types, the tool doesn’t update the notifier. Instead, it gives you a link to the notifier in the Axiom Console where you edit and save it yourself.
 
-**Example:** “Update notifier `ntf_123` to point at a different webhook URL.”
+**Example:** “Update notifier `ntf_123` to send alerts to `oncall@example.com`.”
 </ParamField>
 
 <ParamField path="deleteNotifier" type="Write">

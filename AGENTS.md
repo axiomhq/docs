@@ -264,7 +264,7 @@ Do not add credentials, request/response bodies, search text, free-form document
 - Search and AI prompting intentionally share the same custom dialog; the assistant bundle loads only when Ask AI is opened.
 - Theme preference uses local storage through `next-themes`.
 - API language preference uses local storage.
-- Interactive code placeholders may use browser storage.
+- Interactive code placeholders use the `axiom-docs-placeholders` key: `AXIOM_DOMAIN` and `DATASET_NAME` in local storage, `API_TOKEN` and `ORGANIZATION_ID` in session storage. Console links may prefill only the domain and dataset through `?domain=` and `?dataset=`; `lib/placeholder-values.ts` validates both and strips them from the URL.
 - API credentials use session storage only.
 
 When adding persistence, document the key, choose the least durable storage that satisfies the feature, and add hydration-safe behavior and tests.

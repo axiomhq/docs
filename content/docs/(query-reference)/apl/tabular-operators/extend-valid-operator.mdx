@@ -3,7 +3,7 @@ title: extend-valid
 description: 'This page explains how to use the extend-valid operator in APL.'
 ---
 
-The `extend-valid` operator in Axiom Processing Language (APL) allows you to extend a set of fields with new calculated values, where these calculations are based on conditions of validity for each row. It’s particularly useful when working with datasets that contain missing or invalid data, as it enables you to calculate and assign values only when certain conditions are met. This operator helps you keep your data clean by applying calculations to valid data points, and leaving invalid or missing values untouched.
+The `extend-valid` operator in Axiom Processing Language (APL) allows you to extend a set of fields with new calculated values, where these calculations are based on conditions of validity for each row. It’s particularly useful when working with datasets that contain missing or invalid data, as it enables you to calculate and assign values only when certain conditions are met. This operator helps you keep your data clean by keeping only the rows where the calculated value is valid, and removing the other rows from the results.
 
 This is a shorthand operator to create a field while also doing basic checking on the validity of the field. In many cases, additional checks are required and it’s recommended in those cases a combination of an [extend](/apl/tabular-operators/extend-operator) and a [where](/apl/tabular-operators/where-operator) operator are used. The basic checks that Axiom preform depend on the type of the expression:
 
@@ -30,7 +30,7 @@ You can use `extend-valid` to perform conditional transformations on large datas
 
 ### Returns
 
-The operator returns a table where the specified fields are extended with new values based on the given expression for valid rows. The original value remains unchanged.
+The operator returns the rows of the input where the given expressions evaluate to valid values, extended with the new fields. Rows where an expression evaluates to an invalid value, such as null or an empty string, are removed from the output.
 
 ## Use case examples
 
@@ -54,9 +54,8 @@ In this use case, you normalize the HTTP request methods by converting them to u
 |---------------------|--------|--------------|
 | 2023-10-01 12:00:00 | get    | GET          |
 | 2023-10-01 12:01:00 | POST   | POST         |
-| 2023-10-01 12:02:00 | NULL   | NULL         |
 
-In this query, the `toupper` function converts the `method` field to uppercase, but only for valid entries. If the `method` field is null, the result remains null.
+In this query, the `toupper` function converts the `method` field to uppercase. If the `method` field is null or empty, the row is removed from the results.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
@@ -78,9 +77,8 @@ In this use case, you extract the first part of the service namespace (before th
 |---------------------|-------------------------|--------------|
 | 2023-10-01 12:00:00 | opentelemetry-demo     | opentelemetry       |
 | 2023-10-01 12:01:00 | opentelemetry-prod     | opentelemetry       |
-| 2023-10-01 12:02:00 | NULL                    | NULL         |
 
-In this query, the `extract` function pulls the first part of the service namespace. It only applies to valid `service.namespace` values, leaving nulls unchanged.
+In this query, the `extract` function pulls the first part of the service namespace. Rows where `service.namespace` is null or doesn't contain a hyphen are removed from the results.
 
 </Tab>
 <Tab title="Security logs">
@@ -101,11 +99,9 @@ In this use case, you extract the first letter of the city names from the `geo.c
 | _time               | geo.city | city_first_letter |
 |---------------------|--------------|-----------|
 | 2023-10-01 12:00:00 | New York     | N       |
-| 2023-10-01 12:01:00 | NULL         | NULL      |
 | 2023-10-01 12:02:00 | London       | L    |
-| 2023-10-01 12:03:00 | 1Paris       | NULL    |
 
-In this query, the `extract` function retrieves the first letter of the city names from the `geo.city` field for valid entries. If the `geo.city` field is null or starts with a non-alphabetical character, no city name is extracted, and the result remains null.
+In this query, the `extract` function retrieves the first letter of the city names from the `geo.city` field for valid entries. If the `geo.city` field is null or starts with a non-alphabetical character, no letter is extracted, and the row is removed from the results.
 
 </Tab>
 </Tabs>

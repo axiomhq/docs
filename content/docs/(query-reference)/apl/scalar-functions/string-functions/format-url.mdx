@@ -17,7 +17,7 @@ format_url(url_parts)
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| url_parts | dynamic | Yes | A dynamic object containing URL components: scheme, host, path, port, fragment, user, password, query. |
+| url_parts | dynamic | Yes | A dynamic object containing URL components: scheme, host, path, port, fragment, user, password, query. All values must be strings, including `port`, except `query` which is a dictionary of query parameters. Values of any other type are ignored. |
 
 ### Returns
 
@@ -60,12 +60,12 @@ Build URLs from trace attributes to identify the full endpoints being called.
 
 ```kusto
 ['otel-demo-traces']
-| extend service_url = format_url(dynamic({'scheme': 'http', 'host': 'localhost', 'port': 8080, 'path': strcat('/', ['service.name'])}))
+| extend service_url = format_url(dynamic({'scheme': 'http', 'host': 'localhost', 'port': '8080', 'path': strcat('/', ['service.name'])}))
 | project _time, ['service.name'], service_url, trace_id
 | limit 10
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20service_url%20%3D%20format_url(dynamic(%7B%27scheme%27%3A%20%27http%27%2C%20%27host%27%3A%20%27localhost%27%2C%20%27port%27%3A%208080%2C%20%27path%27%3A%20strcat(%27%2F%27%2C%20%5B%27service.name%27%5D)%7D))%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20service_url%2C%20trace_id%20%7C%20limit%2010%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B%27otel-demo-traces%27%5D%20%7C%20extend%20service_url%20%3D%20format_url(dynamic(%7B%27scheme%27%3A%20%27http%27%2C%20%27host%27%3A%20%27localhost%27%2C%20%27port%27%3A%20%278080%27%2C%20%27path%27%3A%20strcat(%27%2F%27%2C%20%5B%27service.name%27%5D)%7D))%20%7C%20project%20_time%2C%20%5B%27service.name%27%5D%2C%20service_url%2C%20trace_id%20%7C%20limit%2010%22%7D)
 
 **Output**
 
@@ -126,7 +126,7 @@ In Splunk SPL, you typically concatenate URL parts manually with `eval`. APL's `
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend full_url = format_url(dynamic({'scheme': 'https', 'host': host, 'port': 443, 'path': path}))
+| extend full_url = format_url(dynamic({'scheme': 'https', 'host': host, 'port': '443', 'path': path}))
 ```
 </CodeGroup>
 
@@ -142,7 +142,7 @@ SELECT CONCAT(scheme, '://', host, COALESCE(CONCAT(':', port), ''), path) AS url
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend url = format_url(dynamic({'scheme': scheme, 'host': host, 'port': port, 'path': path}))
+| extend url = format_url(dynamic({'scheme': scheme, 'host': host, 'port': tostring(port), 'path': path}))
 ```
 </CodeGroup>
 

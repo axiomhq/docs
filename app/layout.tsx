@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import { DocsShell } from '@/components/docs-shell';
 import { DocsToaster } from '@/components/docs-toaster';
+import { PlaceholderPrefill } from '@/components/placeholder-prefill';
 import { DocsSearchProvider } from '@/components/docs-search-provider';
 import { getNavigation } from '@/lib/navigation';
 import { siteGraph, structuredDataProps } from '@/lib/structured-data';
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               {children}
             </DocsShell>
             <DocsToaster />
+            <PlaceholderPrefill />
           </DocsSearchProvider>
         </RootProvider>
       </body>
