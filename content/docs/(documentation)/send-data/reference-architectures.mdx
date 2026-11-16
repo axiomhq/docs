@@ -96,6 +96,23 @@ Axiom natively supports the OpenTelemetry Line Protocol (OTLP). Configuring the 
 **Example Collector Configuration (`otel-collector-config.yaml`):**
 
 ```yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  batch:
+  batch/metrics:
+    send_batch_max_size: 8192
+
 exporters:
   # Exporter for logs and traces
   otlphttp:
@@ -137,9 +154,8 @@ service:
       receivers:
         - otlp
       processors:
-        memory_limiter:
-        batch:
-          send_batch_max_size: 8192
+        - memory_limiter
+        - batch/metrics
       exporters:
         - otlphttp/metrics
 ```
