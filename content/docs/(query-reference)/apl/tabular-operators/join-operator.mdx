@@ -12,55 +12,32 @@ This operator is useful when you want to:
 - Enrich existing data with supplementary details.
 
 <Note>
-    The `join` operator is currently in public preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
-
-    The preview of the `join` operator works with variable limits depending on the structure of your dataset. For the left side of the join, the limit is 50,000 rows when the dataset has fewer than 100 fields. This limit decreases linearly as the field count increases. For example, the limit is 25,000 rows when your dataset has 200 fields, 12,500 rows at 400 fields, and 10,000 rows at more than 500 fields. The right side of the join has a consistent limit of 50,000 rows.
-
-    You can’t use the `join` operator in dashboard queries. To combine data from multiple datasets in a dashboard, rewrite your query without using joins or use alternative approaches such as virtual fields or pre-aggregated data.
+    The `join` operator is in public preview. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
 </Note>
 
 ## Kinds of join
 
-The kinds of join and their typical use cases are the following:
+The `join` operator supports the following kinds of join:
 
 - `inner` (default): Returns rows where the join conditions exist in both datasets. All matching rows from the right dataset are included for each matching row in the left dataset. Useful to retain all matches without limiting duplicates.
-- `innerunique`:  Matches rows from both datasets where the join conditions exist in both. For each row in the left dataset, only the first matching row from the right dataset is returned. Optimized for performance when duplicate matching rows on the right dataset are irrelevant.
-- `leftouter`:  Returns all rows from the left dataset. If a match exists in the right dataset, the matching rows are included; otherwise, columns from the right dataset are `null`. Retains all data from the left dataset, enriching it with matching data from the right dataset.
-- `rightouter`: Returns all rows from the right dataset. If a match exists in the left dataset, the matching rows are included; otherwise, columns from the left dataset are `null`. Retains all data from the right dataset, enriching it with matching data from the left dataset.
-- `fullouter`: Returns all rows from both datasets. Matching rows are combined, while non-matching rows from either dataset are padded with `null` values. Combines both datasets while retaining unmatched rows from both sides.
-- `leftanti`: Returns rows from the left dataset that have no matches in the right dataset. Identifies rows in the left dataset that don’t have corresponding entries in the right dataset.
-- `rightanti`: Returns rows from the right dataset that have no matches in the left dataset. Identifies rows in the right dataset that don’t have corresponding entries in the left dataset.
-- `leftsemi`: Returns rows from the left dataset that have at least one match in the right dataset. Only columns from the left dataset are included. Filters rows in the left dataset based on existence in the right dataset.
-- `rightsemi`: Returns rows from the right dataset that have at least one match in the left dataset. Only columns from the right dataset are included. Filters rows in the right dataset based on existence in the left dataset.
+- `innerunique`: Keeps one row for each join key in the left dataset. For each of these rows, returns all matching rows from the right dataset. Useful when duplicate rows in the left dataset are irrelevant.
+- `leftouter`: Returns all rows from the left dataset. If a match exists in the right dataset, the matching rows are included. Otherwise, columns from the right dataset are `null`. Retains all data from the left dataset, enriching it with matching data from the right dataset.
 
-<Note>
-    The preview of the `join` operator currently only supports the following types of join:
-        - `inner`
-        - `innerunique`
-        - `leftouter`
-</Note>
+APL doesn’t support these kinds of join: `rightouter`, `fullouter`, `leftanti`, `rightanti`, `leftsemi`, and `rightsemi`.
 
 ### Summary of kinds of join
 
 | Kind of join      | Behavior                                                          | Matches returned           |
 |--------------------|-----------------------------------------------------------------------|--------------------------------|
 | `inner`            | All matches between left and right datasets                            | Multiple matches allowed       |
-| `innerunique`      | First match for each row in the left dataset                            | Only unique matches            |
+| `innerunique`      | One left row for each join key, with all right matches                  | One left row per key           |
 | `leftouter`        | All rows from the left, with matching rows from the right or `null`  | Left-dominant                  |
-| `rightouter`       | All rows from the right, with matching rows from the left or `null`  | Right-dominant                 |
-| `fullouter`        | All rows from both datasets, with unmatched rows padded with `null`    | Complete join                  |
-| `leftanti`         | Rows in the left dataset with no matches in the right dataset            | No matches                     |
-| `rightanti`        | Rows in the right dataset with no matches in the left dataset            | No matches                     |
-| `leftsemi`         | Rows in the left dataset with at least one match in the right dataset    | Matching rows (left dataset only)|
-| `rightsemi`        | Rows in the right dataset with at least one match in the left dataset    | Matching rows (right dataset only)|
 
 ### Choose the right kind of join
 
 - Use `inner` for standard joins where you need all matches.
-- Use `leftouter` or `rightouter` when you need to retain all rows from one dataset.
-- Use `leftanti` or `rightanti` to find rows that don’t match.
-- Use `fullouter` for complete combinations of both datasets.
-- Use `leftsemi` or `rightsemi` to filter rows based on existence in another dataset.
+- Use `innerunique` when duplicate join keys in the left dataset are irrelevant.
+- Use `leftouter` when you need to retain all rows from the left dataset.
 
 ## Usage
 
@@ -85,6 +62,23 @@ LeftDataset
 ### Returns
 
 The `join` operator returns a new table containing rows that match the specified join condition. The fields from the left and right datasets are included.
+
+## Limits
+
+Axiom queries each side of the join separately. Each side has a row limit that grows when the side has fewer fields.
+
+To stay within the limits:
+
+- Filter and aggregate each side before the join.
+- Project only the fields that you need on each side.
+- Specify the smaller dataset as the left side of the join.
+
+If a side exceeds its limit, Axiom truncates that side, and the result can be incomplete. The query returns one of these warnings:
+
+- `Left-hand side of join was truncated by a row limit; results may be incomplete`
+- `Right-hand side of join was truncated by a row limit; results may be incomplete`
+
+If the left side has many fields, the query can fail with a `join limit` error instead of returning a warning. To avoid the error, project fewer fields on the left side.
 
 ## Use case example
 
@@ -115,7 +109,7 @@ This query links user activity in HTTP logs to trace data to investigate perform
 <LanguageComparisons>
 <Accordion title="Splunk SPL users">
 
-The `join` operator in APL works similarly to the `join` command in Splunk SPL. However, APL provides additional flexibility by supporting various join types (for example, `inner`, `outer`, `leftouter`). Splunk uses a single default join type.
+The `join` operator in APL works similarly to the `join` command in Splunk SPL. APL supports three kinds of join (`inner`, `innerunique`, and `leftouter`). Splunk uses a single default join type.
 
 <CodeGroup>
 ```sql Splunk example
