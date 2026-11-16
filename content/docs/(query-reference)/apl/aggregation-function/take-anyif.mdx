@@ -1,0 +1,160 @@
+---
+title: take_anyif
+description: 'This page explains how to use the take_anyif aggregation in APL.'
+---
+
+The `take_anyif` aggregation in APL returns the value of an expression from an arbitrary row in each group for which a predicate evaluates to true. Use `take_anyif` when you want a representative value from the rows that meet a condition, and you want to keep the other rows in the group for other aggregations in the same query.
+
+This aggregation is particularly useful in scenarios like the following:
+
+- Return an example URI of a failed request next to the total number of requests for each HTTP method.
+- Retrieve the trace ID of a slow span for each service in OpenTelemetry traces.
+- Get a sample value for each of several conditions in a single query.
+
+`take_anyif` doesn’t guarantee which row it selects, and the result can change between runs of the same query.
+
+## Usage
+
+### Syntax
+
+```kusto
+| summarize take_anyif(expression, predicate)
+```
+
+### Parameters
+
+| Parameter    | Description                                                              |
+|--------------|--------------------------------------------------------------------------|
+| `expression` | The expression whose value you want to return.                           |
+| `predicate`  | The condition that a row must meet for the aggregation to consider it. |
+
+### Returns
+
+Returns the value of the expression from an arbitrary row for which the predicate evaluates to true, for each group or for the entire dataset if you don’t specify a grouping. `take_anyif` skips null values and empty strings. If the predicate isn’t true for any row in the group, the result is null.
+
+### Name fields
+
+By default, the output field has the name of the input field. For example, `take_anyif(uri, status == '500')` returns a field called `uri`. To specify the field name that appears in the output, use the syntax `name = take_anyif(expression, predicate)`.
+
+### Alias
+
+`anyif` is an alias of `take_anyif` that Axiom supports for compatibility with older Kusto queries. Unless you name the output field, `anyif(field, predicate)` returns a field called `anyif_field`. For example, `anyif(uri, status == '500')` returns `anyif_uri`. Use `take_anyif` in new queries.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Get an example URI of a request that failed with a server error, together with the total number of requests, for each HTTP method in the `['sample-http-logs']` dataset.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize example_uri = take_anyif(uri, toint(status) >= 500), requests = count() by method
+```
+
+**Output**
+
+| method | example_uri               | requests |
+|--------|---------------------------|----------|
+| POST   | /api/v1/textdata/cnfigs   | 52077    |
+| DELETE | /api/v1/pub/sub/list      | 10557    |
+| GET    | /api/v1/messages          | 83226    |
+| PUT    | /api/v1/buy/commit/id/go  | 41588    |
+
+This query counts all requests for each HTTP method and returns the URI of one of the failed requests. Because the condition is part of the aggregation and not a `where` clause, the count includes the successful requests too.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Get the trace ID of a slow span for each service in the `['otel-demo-traces']` dataset.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| summarize slow_trace = take_anyif(trace_id, duration > 500ms), spans = count() by ['service.name']
+```
+
+**Output**
+
+| service.name   | slow_trace                       | spans |
+|----------------|----------------------------------|-------|
+| accounting     | 6fd3b3902aeb1e364961d8c6f094feb0 | 88    |
+| flagd          | 609b4570a1fb244254e287ffca00aae8 | 8823  |
+| frontend-proxy | 609b4570a1fb244254e287ffca00aae8 | 20308 |
+| frontend-web   | 1e5ebbe29e0395b15d567e9bccd9be4f | 7867  |
+
+This query returns the trace ID of one span that took longer than 500 milliseconds for each service, next to the total number of spans of the service.
+
+</Tab>
+<Tab title="Security logs">
+
+Get an example URI that returned the status code `500`, together with the number of such requests, for each country in the `['sample-http-logs']` dataset.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize failed_uri = take_anyif(uri, status == '500'), failed_requests = countif(status == '500') by ['geo.country']
+```
+
+**Output**
+
+| geo.country | failed_uri                 | failed_requests |
+|-------------|----------------------------|-----------------|
+| India       | /api/v1/textdata/cnfigs    | 2803            |
+| Mexico      | /api/v1/purchases/user/id  | 833             |
+| Brazil      | /api/v1/payment/roll       | 1879            |
+
+This query returns one URI that failed with the status code `500` and the number of failed requests for each country.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- [take_any](/apl/aggregation-function/take-any): Returns the value of one or more expressions from an arbitrary row, without a condition.
+- [countif](/apl/aggregation-function/countif): Counts the rows for which the predicate evaluates to true.
+- [make_set_if](/apl/aggregation-function/make-set-if): Returns all distinct values of an expression in rows for which the predicate evaluates to true.
+- [arg_max](/apl/aggregation-function/arg-max): Returns the row where an expression evaluates to the maximum value.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically combine `stats first()` with an `eval` condition to return a value from one of the events that meet a condition. In APL, `take_anyif` takes the condition as its second parameter.
+
+<CodeGroup>
+```sql Splunk example
+| stats first(eval(if(status >= 500, uri, null()))) as example_uri by method
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize example_uri = take_anyif(uri, toint(status) >= 500) by method
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you typically combine `ANY_VALUE` with a `CASE` expression or a `FILTER` clause to return an arbitrary value from the rows that meet a condition. APL’s `take_anyif` provides a more concise alternative.
+
+<CodeGroup>
+```sql SQL example
+SELECT method, ANY_VALUE(CASE WHEN status >= 500 THEN uri END) AS example_uri
+FROM sample_http_logs
+GROUP BY method;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize example_uri = take_anyif(uri, toint(status) >= 500) by method
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>

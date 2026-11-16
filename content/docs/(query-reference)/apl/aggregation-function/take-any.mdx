@@ -1,0 +1,175 @@
+---
+title: take_any
+description: 'This page explains how to use the take_any aggregation in APL.'
+---
+
+The `take_any` aggregation in APL returns the value of one or more expressions from an arbitrary row in each group. Use `take_any` when you want a representative value for a group and it doesn’t matter which row the value comes from. If you don’t group your data, `take_any` returns values from an arbitrary row of the whole dataset.
+
+This aggregation is particularly useful in scenarios like the following:
+
+- Get a sample request, such as its URI and status code, for each HTTP method or country in log data.
+- Retrieve an example trace ID and span ID for each service in OpenTelemetry traces.
+- Return a field that has the same value for every row in a group without adding it to the `by` clause.
+
+`take_any` doesn’t guarantee which row it selects, and the result can change between runs of the same query. To select a row deterministically, use [arg_min](/apl/aggregation-function/arg-min) or [arg_max](/apl/aggregation-function/arg-max).
+
+## Usage
+
+### Syntax
+
+```kusto
+| summarize take_any(expression1[, expression2, ...])
+```
+
+### Parameters
+
+| Parameter                    | Description                                                                                                                              |
+|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| `expression1, expression2` | The expressions whose values you want to return. Use `*` as a wildcard to return all fields that aren’t part of the `by` clause. |
+
+### Returns
+
+Returns the value of each expression from an arbitrary row for each group, or for the entire dataset if you don’t specify a grouping.
+
+- If you specify a single expression, `take_any` skips null values and empty strings. It returns a null value only if the group contains no other values.
+- If you specify several expressions or the wildcard `*`, all returned values come from the same row.
+
+### Name fields
+
+By default, the output field has the name of the input field. For example, `take_any(method)` returns a field called `method`. If the expression isn’t a field, Axiom assigns a generic name such as `Column1`. To specify the field name that appears in the output, use the syntax `name = take_any(expression)`.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize sample_method = take_any(method) by ['geo.country']
+```
+
+**Output**
+
+| geo.country | sample_method |
+|-------------|---------------|
+| France      | PUT           |
+| Germany     | PUT           |
+
+### Alias
+
+`any` is an alias of `take_any` that Axiom supports for compatibility with older Kusto queries. Unless you name the output field, `any(field)` returns a field called `any_field`. For example, `any(status)` returns `any_status`. Use `take_any` in new queries.
+
+## Use case examples
+
+<Tabs>
+<Tab title="Log analysis">
+
+Get a sample request for each country in the `['sample-http-logs']` dataset.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| summarize take_any(method, status, uri) by ['geo.country']
+```
+
+**Output**
+
+| geo.country    | method | status | uri                     |
+|----------------|--------|--------|-------------------------|
+| France         | PUT    | 301    | /api/v1/sell/bucket     |
+| Germany        | PUT    | 201    | /api/v1/cloud/prod/try  |
+| United Kingdom | PUT    | 201    | /api/v1/messages/users  |
+
+This query returns the HTTP method, status code, and URI of one request for each country. All three values come from the same request.
+
+</Tab>
+<Tab title="OpenTelemetry traces">
+
+Get an example span for each service in the `['otel-demo-traces']` dataset.
+
+**Query**
+
+```kusto
+['otel-demo-traces']
+| summarize take_any(trace_id, span_id, name) by ['service.name']
+```
+
+**Output**
+
+| service.name    | trace_id                         | span_id          | name                                                |
+|-----------------|----------------------------------|------------------|-----------------------------------------------------|
+| frontend        | f554f919d88fd4dc6573d127ca433ba7 | b9892b1dee08be05 | oteldemo.RecommendationService/ListRecommendations  |
+| fraud-detection | e495c83bc23d70f4403dafc0ef21ece0 | 2c5327bf0dbaf7db | receive orders                                      |
+| flagd           | bf3660b393389116e7bb231bc8581c1b | 24811a39ebf1ad7b | resolveBoolean                                      |
+
+This query returns the trace ID, span ID, and name of one span for each service. Use the result as a starting point to explore what each service does.
+
+</Tab>
+<Tab title="Security logs">
+
+Get an example of a failed request for each country in the `['sample-http-logs']` dataset.
+
+**Query**
+
+```kusto
+['sample-http-logs']
+| where toint(status) >= 500
+| summarize take_any(uri, method, ['geo.city']) by ['geo.country']
+```
+
+**Output**
+
+| geo.country | uri                        | method | geo.city              |
+|-------------|----------------------------|--------|-----------------------|
+| India       | /api/v1/textdata/cnfigs    | POST   | Nellore               |
+| Mexico      | /api/v1/purchases/user/id  | GET    | Tecax                 |
+| Brazil      | /api/v1/payment/roll       | POST   | Conceição do Araguaia |
+
+This query returns the URI, HTTP method, and city of one request that failed with a server error for each country.
+
+</Tab>
+</Tabs>
+
+## List of related aggregations
+
+- [take_anyif](/apl/aggregation-function/take-anyif): Returns the value of an expression from an arbitrary row for which the predicate evaluates to true.
+- [arg_max](/apl/aggregation-function/arg-max): Returns the row where an expression evaluates to the maximum value.
+- [arg_min](/apl/aggregation-function/arg-min): Returns the row where an expression evaluates to the minimum value.
+- [make_set](/apl/aggregation-function/make-set): Returns all distinct values of an expression instead of a single value.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="Splunk SPL users">
+
+In Splunk SPL, you typically use `stats first()` to return a value from one event in each group. In APL, `take_any` returns a value from an arbitrary row and doesn’t depend on the order of events.
+
+<CodeGroup>
+```sql Splunk example
+| stats first(uri) as uri by method
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize take_any(uri) by method
+```
+</CodeGroup>
+
+</Accordion>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, the `ANY_VALUE` aggregate function returns an arbitrary value from each group. APL’s `take_any` does the same and accepts several expressions at once.
+
+<CodeGroup>
+```sql SQL example
+SELECT method, ANY_VALUE(uri) AS uri
+FROM sample_http_logs
+GROUP BY method;
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize take_any(uri) by method
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>
