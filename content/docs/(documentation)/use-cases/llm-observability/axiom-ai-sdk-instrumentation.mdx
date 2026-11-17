@@ -23,7 +23,133 @@ Install the Axiom AI SDK by running the following:
 npm i @axiomhq/ai
 ```
 
-Set the `AXIOM_TOKEN` and `AXIOM_DATASET` environment variables using an [API token](/reference/tokens) and the name of a dataset you want to send telemetry to.
+## Send telemetry to Axiom
+
+Axiom AI SDK creates spans with the OpenTelemetry API, but it doesn’t export them and doesn’t read your Axiom credentials. To send telemetry to Axiom, register an OpenTelemetry tracer provider that exports traces to Axiom, and then pass a tracer to `initAxiomAI`. Without this setup, no telemetry reaches Axiom.
+
+1. Run the following in your terminal to install the OpenTelemetry packages:
+
+    ```sh
+    npm i @opentelemetry/api @opentelemetry/sdk-node @opentelemetry/exporter-trace-otlp-http
+    ```
+
+1. Store the following environment variables in an `.env` file in the root of your project:
+
+    ```bash .env
+    AXIOM_URL="https://AXIOM_DOMAIN"
+    AXIOM_TOKEN="API_TOKEN"
+    AXIOM_DATASET="DATASET_NAME"
+    ```
+
+    - Replace `AXIOM_DOMAIN` with the base domain of your edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+    - Replace `API_TOKEN` with an [API token](/reference/tokens) that can ingest data into the dataset.
+    - Replace `DATASET_NAME` with the name of the dataset where you want to send telemetry.
+
+1. Create an instrumentation file that registers the tracer provider and initializes Axiom AI SDK. Load it before the rest of your app.
+
+    <Tabs>
+    <Tab title="Node.js">
+
+    Create the file `src/instrumentation.ts` with the following content:
+
+    ```ts /src/instrumentation.ts
+    import { trace } from '@opentelemetry/api';
+    import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+    import { NodeSDK } from '@opentelemetry/sdk-node';
+    import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
+
+    const { AXIOM_URL, AXIOM_TOKEN, AXIOM_DATASET } = process.env;
+
+    if (!AXIOM_URL || !AXIOM_TOKEN || !AXIOM_DATASET) {
+      throw new Error('Set the AXIOM_URL, AXIOM_TOKEN, and AXIOM_DATASET environment variables');
+    }
+
+    export const sdk = new NodeSDK({
+      serviceName: 'my-ai-app', // Replace with your service name
+      // Export traces to your Axiom dataset
+      traceExporter: new OTLPTraceExporter({
+        url: `${AXIOM_URL}/v1/traces`,
+        headers: {
+          Authorization: `Bearer ${AXIOM_TOKEN}`,
+          'X-Axiom-Dataset': AXIOM_DATASET,
+        },
+      }),
+    });
+
+    // Register the tracer provider globally so that Axiom AI SDK spans use it
+    sdk.start();
+
+    // Initialize Axiom AI SDK with a tracer from the registered provider
+    const tracer = trace.getTracer('my-ai-app');
+    initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
+    ```
+
+    Import the instrumentation file at the top of your app’s entry point, before any other imports:
+
+    ```ts /src/index.ts
+    import './instrumentation';
+    ```
+
+    Make sure the environment variables are set when the process starts. For example, run your app with `node --env-file=.env`.
+
+    <Note>
+    The SDK sends spans to Axiom in batches in the background. In short-lived processes such as scripts, call `await sdk.shutdown()` before the process exits so that the remaining spans are sent to Axiom.
+    </Note>
+
+    </Tab>
+    <Tab title="Next.js">
+
+    1. Create the file `src/instrumentation.node.ts` with the following content:
+
+        ```ts /src/instrumentation.node.ts
+        import { trace } from '@opentelemetry/api';
+        import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+        import { NodeSDK } from '@opentelemetry/sdk-node';
+        import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
+
+        const { AXIOM_URL, AXIOM_TOKEN, AXIOM_DATASET } = process.env;
+
+        if (!AXIOM_URL || !AXIOM_TOKEN || !AXIOM_DATASET) {
+          throw new Error('Set the AXIOM_URL, AXIOM_TOKEN, and AXIOM_DATASET environment variables');
+        }
+
+        const sdk = new NodeSDK({
+          serviceName: 'my-ai-app', // Replace with your service name
+          // Export traces to your Axiom dataset
+          traceExporter: new OTLPTraceExporter({
+            url: `${AXIOM_URL}/v1/traces`,
+            headers: {
+              Authorization: `Bearer ${AXIOM_TOKEN}`,
+              'X-Axiom-Dataset': AXIOM_DATASET,
+            },
+          }),
+        });
+
+        // Register the tracer provider globally so that Axiom AI SDK spans use it
+        sdk.start();
+
+        // Initialize Axiom AI SDK with a tracer from the registered provider
+        const tracer = trace.getTracer('my-ai-app');
+        initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
+        ```
+
+    1. Create the file `src/instrumentation.ts` with the following content. Next.js calls the `register` function once when the server starts. If your app doesn’t use a `src` folder, create both files in the root folder of your project.
+
+        ```ts /src/instrumentation.ts
+        export async function register() {
+          // Load the Node.js-only setup only in the Node.js runtime
+          if (process.env.NEXT_RUNTIME === 'nodejs') {
+            await import('./instrumentation.node');
+          }
+        }
+        ```
+
+    Next.js loads the variables in your `.env` file automatically.
+
+    </Tab>
+    </Tabs>
+
+`RedactionPolicy.AxiomDefault` captures prompts, completions, and tool data. To control what data Axiom AI SDK captures, see [Redaction policies](/use-cases/llm-observability/redaction-policies).
 
 ## Instrument AI SDK calls
 
