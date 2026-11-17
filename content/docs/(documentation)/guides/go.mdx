@@ -132,8 +132,38 @@ export AXIOM_EDGE_URL="https://eu-central-1.aws.edge.axiom.co"
 To point at a custom edge endpoint such as a proxy or load balancer, use `axiom.SetEdgeURL("https://your-edge-host")`. `SetEdgeURL` takes precedence over `SetEdge` if both are set.
 
 <Note>
-Edge endpoints require an API token (`xaat-`), not a personal token (`xapt-`). Ingest and query calls with a personal token against an edge endpoint return `personal tokens are not supported for edge operations, use an API token (xaat-)`.
+Ingesting data to an edge endpoint requires an API token (`xaat-`), not a personal token (`xapt-`). Ingest calls with a personal token against an edge endpoint return `personal tokens are not supported for edge ingestion, use an API token (xaat-)`. Queries against an edge endpoint accept API tokens and personal tokens. In version 0.39.0 and earlier of the SDK, queries with a personal token against an edge endpoint also return an error.
 </Note>
+
+## Query metrics
+
+To query metrics using [MPL](/mpl/introduction), use the `QueryMPL` method and specify a time range. This requires version 0.40.0 or later of the SDK. MPL queries only run on edge endpoints, so [configure the region](#configure-region) of your dataset first. Without an edge endpoint, the method returns an error.
+
+The following example queries the `go.memory.used` metric over the last hour:
+
+```go
+res, err := client.QueryMPL(ctx,
+    "`DATASET_NAME`:`go.memory.used` | align to 5m using avg",
+    time.Now().Add(-time.Hour), time.Now(),
+)
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, series := range res.Series {
+    fmt.Println(series.Metric, series.Tags, len(series.Data))
+}
+```
+
+<Info>
+Replace `DATASET_NAME` with the name of the Axiom metrics dataset you want to query.
+</Info>
+
+The methods of `client.Metrics` list the metrics, tags, and tag values of a dataset. For example, `client.Metrics.List` returns the metrics of a dataset with their type, temporality, and unit:
+
+```go
+metrics, err := client.Metrics.List(ctx, "DATASET_NAME", time.Now().Add(-time.Hour), time.Now())
+```
 
 ## Adapters
 
