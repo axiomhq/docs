@@ -1,17 +1,73 @@
 ---
 title: 'Heatmap'
 description: 'This section explains how to create heatmap dashboard elements and add them to your dashboard.'
-keywords: ['axiom documentation', 'documentation', 'axiom', 'dashboards', 'collaboration', 'queries', 'visualizations', 'filters', 'charts', 'simple query builder', 'advanced query builder']
+keywords: ['axiom documentation', 'documentation', 'axiom', 'dashboards', 'collaboration', 'queries', 'visualizations', 'filters', 'charts', 'simple query builder', 'advanced query builder', 'heatmap', 'histogram', 'color theme']
 ---
 
 import Prerequisites from "@/content/snippets/dashboard-prerequisites.mdx"
 import CreateElement from "@/content/snippets/create-dashboard-element.mdx"
 
-Heatmaps represent the distribution of numerical data by grouping values into ranges or buckets. Each bucket reflects a frequency count of data points that fall within its range. Instead of showing individual events or measurements, heatmaps give a clear view of the overall distribution patterns. This allows you to identify performance bottlenecks, outliers, or shifts in behavior. For instance, you can use heatmaps to track response times, latency, or error rates.
+Heatmaps show how values change over time as a grid of colored cells. Each column is a time interval, each row is a value range or a group, and the color of each cell shows the value. Heatmaps help you identify performance bottlenecks, outliers, and shifts in behavior. For example, use heatmaps to track response times, latency, or error rates.
 
 <Prerequisites />
 
 <CreateElement elementName="heatmap" elementButtonLabel="Heatmap"/>
+
+## Heatmap types
+
+The query determines what the rows of the heatmap show:
+
+- **Value buckets**: Use the `histogram` aggregation to show the distribution of values over time. Each row is a value range, and the color of each cell shows how many data points fall in that range during the time interval. For example, `histogram(req_duration_ms, 15)` groups request durations into 15 ranges.
+- **One row per group**: Use any other single aggregation, such as `count`, `avg`, or one percentile, and group by `_time` and at least one other field. Each group gets its own row, and the color of each cell shows the value of the aggregation for that group during the time interval. For example, `avg(req_duration_ms)` grouped by `method` shows the average request duration of each HTTP method.
+- **Metrics**: Heatmaps of metrics datasets display one row per series. The query needs an `align` or `bucket` transformation to produce time-bucketed data.
+
+### Query requirements
+
+Queries of events datasets meet the following requirements:
+
+- Use one aggregation.
+- If the aggregation isn't `histogram`, group by at least one field besides `_time`.
+- Don't use multiple percentiles in one aggregation.
+- In APL, group the aggregation by `_time` with `bin` or `bin_auto`.
+- In APL, use only the `take`, `limit`, or `top` operators after the `summarize` operator. Move other operators, such as `where`, `extend`, or `project`, before `summarize`.
+
+The **Query requirements** section of the chart editor displays which requirements the query meets and explains how to fix the query.
+
+## Color
+
+In the settings panel on the right, expand **Color** to change how the heatmap displays values.
+
+### Theme
+
+In **Theme**, select one of the following:
+
+- **Gradient**: Gradients use more than one hue.
+    - **Aurora** and **Ember** change in lightness. Low values are close to the background color of the chart and high values stand out from it.
+    - **Prism** and **Spectrum** use hue to show the value. Use them when you need to tell many levels apart.
+- **Single color**: Blue, Orange, Red, Purple, Teal, Yellow, Green, Pink, Grey, or Brown. Low values are a light shade of the color that stays visible against the background of the chart, and high values are a strong shade of the color.
+
+The default theme is **Blue**. Each theme has separate colors for light and dark mode.
+
+### Highlight
+
+In **Highlight**, select which end of the scale gets the strongest color:
+
+- **High values**: High values stand out. This is the default.
+- **Low values**: Low values stand out. Use this option when low values indicate a problem, such as a low cache hit ratio or low available disk space.
+
+## Row labels
+
+Heatmaps with one row per group or one row per series display the name of each row on the y-axis. To change when the labels appear, expand **Y-axis** in the settings panel on the right, and then select one of the following in **Labels**:
+
+- **Default**: Display the labels only when all of them fit. Otherwise, hide the labels and use the space for the chart.
+- **Show**: Always display the labels.
+- **Hide**: Never display the labels.
+
+Heatmaps with value buckets always display the value ranges on the y-axis.
+
+## Cell separators
+
+Axiom draws a thin line between neighboring cells to help you tell time intervals and rows apart. When the cells are only a few pixels wide, Axiom doesn't draw the lines.
 
 ## Example with Builder
 
@@ -29,3 +85,12 @@ Heatmaps represent the distribution of numerical data by grouping values into ra
 <Frame>
   <img src="/docs/doc-assets/shots/heatmap-apl.png" alt="Heatmap example with APL" />
 </Frame>
+
+## Example with one row per group
+
+The following query displays one row for each HTTP method. The color of each cell shows the average request duration of the method during the time interval.
+
+```kusto
+['sample-http-logs']
+| summarize avg(req_duration_ms) by bin_auto(_time), method
+```
