@@ -44,7 +44,7 @@ Use `eventdb.scheduling` to keep EventDB pods off the storage nodes. See [Step 1
 
 ## Sizing
 
-The chart's multi-mode defaults are taken from a 24-hour load experiment on four validation deployments. They hold 16,000 events per second with 24 concurrent queries and request about 15 cores and 21 GiB for EventDB itself.
+The chart's multi-mode defaults request about 20 cores and 38 GiB for EventDB itself.
 
 | Component | Pods | Requests → limits per pod |
 | :--- | :--- | :--- |
@@ -52,6 +52,13 @@ The chart's multi-mode defaults are taken from a 24-hour load experiment on four
 | Delta cache | 3 | 2 CPU / 4 GiB → 6 CPU / 8 GiB |
 | Query runner | 4 | 250m / 512 MiB → 2 CPU / 2 GiB |
 | Query worker | 6 | 1 CPU / 512 MiB → 3 CPU / 3 GiB |
+| Compactor worker | 2 | 2 CPU / 8 GiB → 4 CPU / 8 GiB |
+| Compactor scheduler | 1 | 250m / 512 MiB → 1 CPU / 2 GiB |
+| Dataset manager, queue worker, admin | 2 each | 100m / 128 MiB → 1 CPU / 512 MiB (1 GiB for the queue worker) |
+
+The four hot-path components, ingest through query worker, are taken from a 24-hour load experiment on four validation deployments. They hold 16,000 events per second with 24 concurrent queries and request about 15 cores and 21 GiB of the total.
+
+The compactor merges the small blocks that ingest writes into larger ones, so that queries over wide time ranges open fewer objects. It is on by default, was not part of that experiment, and adds about 4 cores and 17 GiB. Its worker pods carry the largest memory requests in the chart. Memory is what bounds a compaction, so if a worker needs more room, raise its memory before its CPU.
 
 Add the dependencies on top: three PostgreSQL instances at 500m / 1 GiB each, three Valkey pods, and Atom at two replicas. A Ceph on the same cluster is sized separately, on its own nodes; see [Deploy Ceph](/self-hosted/ceph#step-1-plan-the-topology).
 
