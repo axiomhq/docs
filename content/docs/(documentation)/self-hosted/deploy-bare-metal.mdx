@@ -98,8 +98,8 @@ skopeo login $AXIOM_REGISTRY
 # log into your private registry (the method may differ for your registry)
 skopeo login $REGISTRY_HOST
 
-# EventDB: all three images share the release tag
-for image in eventdb-db eventdb-query-worker eventdb-admin; do
+# EventDB: all four images share the release tag
+for image in eventdb-db eventdb-query-worker eventdb-admin eventdb-compactor-worker; do
   skopeo copy --all \
     docker://$AXIOM_REGISTRY/$image:$EVENTDB_TAG \
     docker://$REGISTRY_HOST/$image:$EVENTDB_TAG
@@ -110,6 +110,8 @@ skopeo copy --all \
   docker://$AXIOM_REGISTRY/atom:$ATOM_TAG \
   docker://$REGISTRY_HOST/atom:$ATOM_TAG
 ```
+
+`eventdb-compactor-worker` runs the compaction worker fleet. The chart deploys it by default, together with a compactor scheduler that runs on the `eventdb-db` image, to merge the small blocks ingest writes into larger ones so that queries over wide time ranges read fewer objects. If the release registry doesn't carry `eventdb-compactor-worker` at your EventDB tag, set both `eventdb.compactor.enabled` and `eventdb.compactorWorker.enabled` to `false` in Step 6 rather than leaving the fleet in `ImagePullBackOff`.
 
 The dependency subcharts pull their own upstream images: CloudNativePG, PostgreSQL, Valkey, and the `busybox` and `amazon/aws-cli` images the bootstrap Jobs run. In a disconnected environment, render the chart with your values file once you have written it in Step 6 and mirror every image it references:
 
@@ -297,6 +299,9 @@ eventdb:
     admin:
       repository: <registry-host>/eventdb-admin
       tag: <eventdb-release-tag>
+    compactorWorker:
+      repository: <registry-host>/eventdb-compactor-worker
+      tag: <eventdb-release-tag>
   config:
     # Production must run with the licence configuration from onboarding.
     useDebugLicence: "0"
@@ -442,8 +447,10 @@ wait_job eventdb-migrate
 wait_job axiom-atom-migrate
 
 kubectl -n $NAMESPACE rollout status statefulset/eventdb-ingest-prod --timeout=600s
+# Drop the two compactor Deployments if you turned the compactor off
 for w in eventdb-delta-cache eventdb-query-runner eventdb-query-worker \
-         eventdb-dataset-manager eventdb-queue-worker eventdb-admin axiom-atom; do
+         eventdb-dataset-manager eventdb-queue-worker eventdb-admin \
+         eventdb-compactor eventdb-compactor-worker axiom-atom; do
   kubectl -n $NAMESPACE rollout status deployment/$w --timeout=600s
 done
 ```

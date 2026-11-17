@@ -118,7 +118,7 @@ New EventDB, Atom, or portal tags must be in your registry before the upgrade, o
 
 ### Step 1: Update the values file
 
-Edit `values.yaml` in version control. For an image upgrade that is the three `eventdb.image.*` tags, or `atom.image.tag`; pin digests where you can. For a values change, the keys in question. Do not add flags on the command line that are not in the file: `helm upgrade` applies exactly the values it is given, and a flag forgotten on the next upgrade reverts the change.
+Edit `values.yaml` in version control. For an image upgrade that is the four `eventdb.image.*` tags, or `atom.image.tag`; pin digests where you can. A chart upgrade from a version before `0.1.33` also adds the compactor, which is on by default: set `eventdb.image.compactorWorker` and mirror `eventdb-compactor-worker` at your EventDB tag before you upgrade, or set `eventdb.compactor.enabled` and `eventdb.compactorWorker.enabled` to `false`. For a values change, the keys in question. Do not add flags on the command line that are not in the file: `helm upgrade` applies exactly the values it is given, and a flag forgotten on the next upgrade reverts the change.
 
 ### Step 2: Apply CRDs if the operators moved
 
@@ -162,8 +162,10 @@ wait_job eventdb-migrate
 wait_job axiom-atom-migrate      # with Atom enabled
 
 kubectl -n $NAMESPACE rollout status statefulset/eventdb-ingest-prod --timeout=900s
+# Drop the two compactor Deployments if you turned the compactor off
 for w in eventdb-delta-cache eventdb-query-runner eventdb-query-worker \
-         eventdb-dataset-manager eventdb-queue-worker eventdb-admin axiom-atom; do
+         eventdb-dataset-manager eventdb-queue-worker eventdb-admin \
+         eventdb-compactor eventdb-compactor-worker axiom-atom; do
   kubectl -n $NAMESPACE rollout status deployment/$w --timeout=600s
 done
 ```
