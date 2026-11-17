@@ -1,17 +1,41 @@
 ---
 title: 'Heatmap'
 description: 'This section explains how to create heatmap dashboard elements and add them to your dashboard.'
-keywords: ['axiom documentation', 'documentation', 'axiom', 'dashboards', 'collaboration', 'queries', 'visualizations', 'filters', 'charts', 'simple query builder', 'advanced query builder']
+keywords: ['axiom documentation', 'documentation', 'axiom', 'dashboards', 'collaboration', 'queries', 'visualizations', 'filters', 'charts', 'simple query builder', 'advanced query builder', 'heatmap', 'histogram', 'color theme']
 ---
 
 import Prerequisites from "@/content/snippets/dashboard-prerequisites.mdx"
 import CreateElement from "@/content/snippets/create-dashboard-element.mdx"
 
-Heatmaps represent the distribution of numerical data by grouping values into ranges or buckets. Each bucket reflects a frequency count of data points that fall within its range. Instead of showing individual events or measurements, heatmaps give a clear view of the overall distribution patterns. This allows you to identify performance bottlenecks, outliers, or shifts in behavior. For instance, you can use heatmaps to track response times, latency, or error rates.
+Heatmaps show values over time as a grid of colored cells. Each column is a time interval, and the color of each cell shows the value. Use heatmaps to find outliers and shifts in behavior, such as latency spikes or error bursts.
 
 <Prerequisites />
 
 <CreateElement elementName="heatmap" elementButtonLabel="Heatmap"/>
+
+## Heatmap types
+
+### Events datasets
+
+The query determines what the rows show:
+
+- **Value buckets**: Use the `histogram` aggregation. Each row is a value range, and the color of each cell shows how many events fall in that range.
+- **One row per group**: Use any other single aggregation, such as `count`, `avg`, or one percentile, and group by `_time` and at least one other field. Each row is a group, and the color of each cell shows the value of the aggregation.
+
+### Metrics datasets
+
+Heatmaps of metrics datasets display one row per series. The query needs an `align` or `bucket` transformation.
+
+## Color
+
+In the settings panel on the right, expand **Color**:
+
+- **Theme**: Select a gradient or one of 10 single colors. The default is **Blue**. **Aurora** and **Ember** change in lightness, so high values stand out from the background. **Prism** and **Spectrum** change in hue, which helps you tell many levels apart.
+- **Highlight**: Select which values get the strongest color. The default is **High values**. Select **Low values** when low values indicate a problem, such as a low cache hit ratio.
+
+## Row labels
+
+For heatmaps with one row per group or series, expand **Y-axis** and select an option in **Labels**. **Default** displays the row labels only when all of them fit. **Show** always displays them, and **Hide** never displays them.
 
 ## Example with Builder
 
@@ -29,3 +53,12 @@ Heatmaps represent the distribution of numerical data by grouping values into ra
 <Frame>
   <img src="/docs/doc-assets/shots/heatmap-apl.png" alt="Heatmap example with APL" />
 </Frame>
+
+## Example with one row per group
+
+The following query displays one row for each HTTP method. The color of each cell shows the average request duration of the method.
+
+```kusto
+['sample-http-logs']
+| summarize avg(req_duration_ms) by bin_auto(_time), method
+```
