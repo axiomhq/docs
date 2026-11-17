@@ -5,6 +5,8 @@ sidebarTitle: Grafana
 keywords: ['axiom documentation', 'documentation', 'axiom', 'grafana', 'datasource plugin', 'grafana cloud', 'query editor', 'visualization', 'alerting', 'collaboration']
 ---
 
+import BaseDomains from "@/content/snippets/base-domains.mdx"
+
 <Frame caption="Data visualisation">
   <img src="/docs/doc-assets/shots/grafana-axiom-image-3.jpg" alt="Data visualisation" />
 </Frame>
@@ -73,9 +75,44 @@ Example:
   <img src="/docs/doc-assets/shots/1-grafana.png" alt="Add new layer" />
 </Frame>
 
-- Enter the previously generated API token.
+- In **API Token**, enter the advanced API token you created earlier. The plugin doesn’t accept personal access tokens.
+
+- In **API URL**, keep the default value `https://api.axiom.co`.
+
+- In **Edge URL**, enter the URL of the edge deployment where your data is stored. The plugin sends all queries to this URL. The Edge URL is `https://` followed by the base domain of your edge deployment. For example, if your data is stored in the `EU Central 1 (AWS)` edge deployment, enter `https://eu-central-1.aws.edge.axiom.co`.
+
+  <BaseDomains />
+
+  For more information, see [Edge deployments](/reference/edge-deployments).
 
 - Save and test the data source.
+
+### Configure the data source with provisioning
+
+If you provision the Axiom data source with a configuration file, set the Edge URL in `jsonData.edgeURL`. For example:
+
+```yaml
+apiVersion: 1
+
+datasources:
+  - name: Axiom
+    type: axiomhq-axiom-datasource
+    access: proxy
+    jsonData:
+      apiHost: https://api.axiom.co
+      edgeURL: https://eu-central-1.aws.edge.axiom.co
+    secureJsonData:
+      accessToken: API_TOKEN
+```
+
+Replace `API_TOKEN` with the advanced API token you created earlier.
+
+### Upgrade from plugin versions earlier than 0.7.0
+
+Version 0.7.0 of the Axiom data source plugin introduces the following breaking changes:
+
+- The plugin doesn’t accept personal access tokens. If an existing data source uses a personal access token and an org ID, replace them with an advanced API token before you upgrade. Otherwise, dashboards that use the data source fail to authenticate.
+- The plugin sends all queries to the Edge URL. If an existing data source doesn’t have an Edge URL, the plugin uses `https://us-east-1.aws.edge.axiom.co`. If your data is stored in an edge deployment other than `US East 1 (AWS)`, set the Edge URL of the data source to your edge deployment. Otherwise, your queries don’t return data.
 
 ## Build Queries with Query Editor 
 
