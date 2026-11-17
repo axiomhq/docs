@@ -41,7 +41,22 @@ For more information on how to save on data loading, data retention, and queryin
 
 Axiom restricts the number of datasets and the number of fields in your datasets. The number of datasets and fields you can use is based on your pricing plan and explained in the table above.
 
-If you ingest a new event that would exceed the allowed number of fields in a dataset, Axiom returns an error and rejects the event. To prevent this error, ensure that the number of fields in your events are within the allowed limits.
+If you ingest an event with new fields that would exceed the allowed number of fields in a dataset, Axiom still ingests the event but drops the new fields that don’t fit within the limit. The event keeps its values for fields that already exist in the dataset. The ingest request succeeds, and the response contains a warning message that states how many new fields Axiom dropped and names one of them. For example:
+
+```json
+"messages": [
+  {
+    "priority": "warn",
+    "code": "column_limit_drop",
+    "count": 1,
+    "msg": "3 new fields dropped: dataset column limit of 1024 reached, including \"user.preferences\""
+  }
+]
+```
+
+For OpenTelemetry requests, the response reports a partial success with a similar message.
+
+Axiom doesn’t store the dropped fields, and you can’t restore them later. To keep all your data, ensure that the number of fields in your events stays within the allowed limits.
 
 To reduce the number of fields in a dataset, use one of the following approaches:
 - [Delete the fields](/reference/datasets#delete-fields) you don’t need.
