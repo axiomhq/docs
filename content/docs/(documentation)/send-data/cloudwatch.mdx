@@ -12,6 +12,7 @@ popularityOrder: 4
 import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
 import AwsDisclaimer from "@/content/snippets/aws-disclaimer.mdx"
 import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
 
 Axiom CloudWatch Forwarder is a set of easy-to-use AWS CloudFormation stacks designed to forward logs from Amazon CloudWatch to Axiom. It includes a Lambda function to handle the forwarding and stacks to create Amazon CloudWatch log group subscription filters for both existing and future log groups.
 
@@ -40,9 +41,13 @@ To install the Axiom CloudWatch Forwarder, choose one of the following:
 
 ### Install with Cloudformation stacks
 
-1. [Launch the Forwarder stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-forwarder&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-forwarder-v1.1.1-cloudformation-stack.yaml). Copy the Forwarder Lambda ARN because it’s referenced in the Subscriber stack.
-1. [Launch the Subscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-subscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-subscriber-v1.1.1-cloudformation-stack.yaml).
-1. [Launch the Listener stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-listener&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-listener-v1.1.1-cloudformation-stack.yaml).
+<Note>
+The CloudFormation stacks load their Lambda code from an Amazon S3 bucket in the `us-east-1` AWS Region. AWS Lambda requires the code to be in the same Region as the function, so launch the stacks in `us-east-1`. The following links open the CloudFormation console in that Region.
+</Note>
+
+1. [Launch the Forwarder stack template on AWS](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=axiom-cloudwatch-forwarder&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-forwarder-v1.3.0-cloudformation-stack.yaml). In the stack parameters, set `AxiomEdge` to the base domain of the edge deployment where your dataset lives. For more information, see [Configure the edge deployment](#configure-the-edge-deployment). Copy the Forwarder Lambda ARN because it’s referenced in the Subscriber stack.
+1. [Launch the Subscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=axiom-cloudwatch-subscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-subscriber-v1.3.0-cloudformation-stack.yaml).
+1. [Launch the Listener stack template on AWS](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=axiom-cloudwatch-listener&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-listener-v1.3.0-cloudformation-stack.yaml).
 
 ### Install with Terraform module
 
@@ -56,11 +61,13 @@ module "forwarder" {
   source           = "axiomhq/axiom-cloudwatch-forwarder/aws//modules/forwarder"
   axiom_dataset    = "DATASET_NAME"
   axiom_token      = "API_TOKEN"
+  axiom_edge       = "AXIOM_DOMAIN"
   prefix           = "axiom-cloudwatch-forwarder"
 }
 ```
 
 <Info>
+<ReplaceDomain />
 <ReplaceDatasetToken />
 </Info>
 
@@ -103,6 +110,20 @@ Run `terraform plan` to check the changes, and then run `terraform apply`.
 </Step>
 </Steps>
 
+## Configure the edge deployment
+
+Configure the Forwarder to send logs to the edge deployment where your dataset lives. If the Forwarder sends logs to a different edge deployment, Axiom rejects them.
+
+The Forwarder stack accepts the following parameters for the ingest endpoint:
+
+| CloudFormation parameter | Terraform variable | Description |
+| --- | --- | --- |
+| `AxiomEdge` | `axiom_edge` | Base domain of the edge deployment, without the scheme. For example, `eu-central-1.aws.edge.axiom.co`. The Forwarder sends logs to the `/v1/ingest/DATASET_NAME` path on this domain. |
+| `AxiomEdgeURL` | `axiom_edge_url` | Full URL of a custom ingest endpoint, such as a proxy. If the URL has no path, the Forwarder appends `/v1/ingest/DATASET_NAME`. If the URL has a path, the Forwarder uses it as is. Takes precedence over `AxiomEdge`. |
+| `AxiomURL` | `axiom_url` | Legacy endpoint that the Forwarder uses when you don’t set `AxiomEdge` or `AxiomEdgeURL`. Defaults to `https://api.axiom.co`. |
+
+For the list of base domains, see [Edge deployments](/reference/edge-deployments).
+
 ## Filter Amazon CloudWatch log groups
 
 The Subscriber and Unsubscriber stacks allow you to filter the log groups by a combination of names, prefix, and regular expression filters. If no filters are specified, the stacks subscribe to or unsubscribe from all log groups. You can also whitelist a specific set of log groups using filters in the CloudFormation stack parameters. The log group names, prefix, and regular expression filters included are additive, meaning the union of all provided inputs is matched.
@@ -136,7 +157,7 @@ The optional Listener stack does the following:
 
 ## Remove subscription filters
 
-To remove subscription filters for one or more log groups, [launch the Unsubscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?#/stacks/new?stackName=axiom-cloudwatch-subscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-unsubscriber-v1.1.1-cloudformation-stack.yaml).
+To remove subscription filters for one or more log groups, [launch the Unsubscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=axiom-cloudwatch-unsubscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-unsubscriber-v1.3.0-cloudformation-stack.yaml).
 
 The log group filtering works the same way as the Subscriber stack. You can filter the log groups by a combination of names, prefix, and regular expression filters.
 
