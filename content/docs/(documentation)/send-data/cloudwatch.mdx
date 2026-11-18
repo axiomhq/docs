@@ -13,7 +13,6 @@ import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
 import AwsDisclaimer from "@/content/snippets/aws-disclaimer.mdx"
 import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
-import BaseDomains from "@/content/snippets/base-domains.mdx"
 
 Axiom CloudWatch Forwarder is a set of easy-to-use AWS CloudFormation stacks designed to forward logs from Amazon CloudWatch to Axiom. It includes a Lambda function to handle the forwarding and stacks to create Amazon CloudWatch log group subscription filters for both existing and future log groups.
 
@@ -46,7 +45,7 @@ To install the Axiom CloudWatch Forwarder, choose one of the following:
 The CloudFormation stacks load their Lambda code from an Amazon S3 bucket in the `us-east-1` AWS Region. AWS Lambda requires the code to be in the same Region as the function, so launch the stacks in `us-east-1`. The following links open the CloudFormation console in that Region.
 </Note>
 
-1. [Launch the Forwarder stack template on AWS](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=axiom-cloudwatch-forwarder&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-forwarder-v1.3.0-cloudformation-stack.yaml). In the stack parameters, set `AxiomEdge` to the base domain of the edge deployment where your dataset lives. For example, `eu-central-1.aws.edge.axiom.co`. For more information, see [Configure the edge deployment](#configure-the-edge-deployment). Copy the Forwarder Lambda ARN because it’s referenced in the Subscriber stack.
+1. [Launch the Forwarder stack template on AWS](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=axiom-cloudwatch-forwarder&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-forwarder-v1.3.0-cloudformation-stack.yaml). In the stack parameters, set `AxiomEdge` to the base domain of the edge deployment where your dataset lives. For more information, see [Configure the edge deployment](#configure-the-edge-deployment). Copy the Forwarder Lambda ARN because it’s referenced in the Subscriber stack.
 1. [Launch the Subscriber stack template on AWS](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=axiom-cloudwatch-subscriber&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-subscriber-v1.3.0-cloudformation-stack.yaml).
 1. [Launch the Listener stack template on AWS](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=axiom-cloudwatch-listener&templateURL=https://axiom-cloudformation.s3.amazonaws.com/stacks/axiom-cloudwatch-listener-v1.3.0-cloudformation-stack.yaml).
 
@@ -119,15 +118,11 @@ The Forwarder stack accepts the following parameters for the ingest endpoint:
 
 | CloudFormation parameter | Terraform variable | Description |
 | --- | --- | --- |
-| `AxiomEdge` | `axiom_edge` | Base domain of the edge deployment, without the scheme. For example, `eu-central-1.aws.edge.axiom.co`. The Forwarder sends logs to `https://AXIOM_EDGE/v1/ingest/DATASET_NAME`. |
+| `AxiomEdge` | `axiom_edge` | Base domain of the edge deployment, without the scheme. For example, `eu-central-1.aws.edge.axiom.co`. The Forwarder sends logs to the `/v1/ingest/DATASET_NAME` path on this domain. |
 | `AxiomEdgeURL` | `axiom_edge_url` | Full URL of a custom ingest endpoint, such as a proxy. If the URL has no path, the Forwarder appends `/v1/ingest/DATASET_NAME`. If the URL has a path, the Forwarder uses it as is. Takes precedence over `AxiomEdge`. |
 | `AxiomURL` | `axiom_url` | Legacy endpoint that the Forwarder uses when you don’t set `AxiomEdge` or `AxiomEdgeURL`. Defaults to `https://api.axiom.co`. |
 
-The following edge deployments are available:
-
-<BaseDomains />
-
-For more information, see [Edge deployments](/reference/edge-deployments).
+For the list of base domains, see [Edge deployments](/reference/edge-deployments).
 
 ## Filter Amazon CloudWatch log groups
 
