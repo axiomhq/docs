@@ -190,6 +190,8 @@ After editing your values, apply the changes to your cluster using `kubectl appl
 
 Collect logs from your Kubernetes cluster and send them directly to Axiom using the Vector daemonset.
 
+Create a Secret named `axiom-credentials` in the `kube-system` namespace with the Axiom API token in the `token` key.
+
 ### Configuration
 
 ```yaml
@@ -234,6 +236,10 @@ metadata:
   namespace: kube-system
 data:
   vector.yml: |-
+    secret:
+      axiom_credentials:
+        type: directory
+        path: /var/run/axiom
     sources:
       kubernetes_logs:
         type: kubernetes_logs
@@ -244,9 +250,9 @@ data:
         inputs:
           - kubernetes_logs
         compression: zstd
-        dataset: ${AXIOM_DATASET}
-        region: ${AXIOM_HOST}
-        token: ${AXIOM_TOKEN}
+        dataset: DATASET_NAME
+        region: AXIOM_DOMAIN
+        token: "SECRET[axiom_credentials.token]"
         healthcheck:
           enabled: true
 ---
@@ -272,17 +278,14 @@ spec:
             - --config-dir
             - /etc/vector/
           env:
-            - name: AXIOM_HOST
-              value: AXIOM_DOMAIN
-            - name: AXIOM_DATASET
-              value: DATASET_NAME
-            - name: AXIOM_TOKEN
-              value: API_TOKEN
             - name: VECTOR_SELF_NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
           volumeMounts:
+            - name: credentials
+              mountPath: /var/run/axiom
+              readOnly: true
             - name: config
               mountPath: /etc/vector/vector.yml
               subPath: vector-config.yml
@@ -305,6 +308,9 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
       volumes:
+        - name: credentials
+          secret:
+            secretName: axiom-credentials
         - name: config
           configMap:
             name: vector-config
@@ -389,7 +395,7 @@ data:
   fluent-bit.conf: |-
     [SERVICE]
         Flush          1
-        Log_Level      debug
+        Log_Level      info
         Daemon         off
         Parsers_File   parsers.conf
         HTTP_Server    On
@@ -400,7 +406,7 @@ data:
         Name               tail
         Tag                kube.*
         Path               /var/log/containers/*.log
-        Parser             docker
+        multiline.parser   docker, cri
         DB                 /var/log/flb_kube.db
         Mem_Buf_Limit      7MB
         Skip_Long_Lines    On
@@ -433,13 +439,6 @@ data:
         tls             On
         tls.verify      On
 
-  parsers.conf: |-
-    [PARSER]
-        Name        docker
-        Format      json
-        Time_Key    time
-        Time_Format %Y-%m-%dT%H:%M:%S.%L
-        Time_Keep   On
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -470,9 +469,6 @@ spec:
             - name: config
               mountPath: /fluent-bit/etc/fluent-bit.conf
               subPath: fluent-bit.conf
-            - name: config
-              mountPath: /fluent-bit/etc/parsers.conf
-              subPath: parsers.conf
             - name: varlog
               mountPath: /var/log
             - name: varlibdockercontainers
