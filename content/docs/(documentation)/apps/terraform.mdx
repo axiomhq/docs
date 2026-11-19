@@ -45,10 +45,20 @@ To create a dataset in Axiom using the provider, add the following code to your 
 
 ```hcl
 resource "axiom_dataset" "test_dataset" {
-  name = "test_dataset"
-  description = "This is a test dataset created by Terraform."
+  name                 = "test_dataset"
+  description          = "This is a test dataset created by Terraform."
+  kind                 = "axiom:events:v1"
+  edge_deployment      = "cloud.eu-central-1.aws"
+  use_retention_period = true
+  retention_days       = 30
 }
 ```
+
+Optional fields on `axiom_dataset`:
+
+- `kind`: One of `axiom:events:v1` (default), `otel:metrics:v1`, `otel:traces:v1`, or `otel:logs:v1`. Changing `kind` forces Terraform to replace the dataset.
+- `edge_deployment`: Edge deployment for the dataset, for example `cloud.eu-central-1.aws`.
+- `use_retention_period` and `retention_days`: Enable a retention period and set its length in days.
 
 ### Create notifier
 
@@ -142,7 +152,7 @@ resource "axiom_monitor" "test_monitor" {
 This example creates a monitor using the dataset `test_dataset` and the notifier `test_slack_notifier`. These are resources you have created and accessed in the sections above.
 
 - Customize the `name` and the `description` fields.
-- In the `apl_query` field, specify the APL query for the monitor.
+- Specify either `apl_query` (for an APL monitor) or `mpl_query` (for an [MPL](/mpl/introduction) metrics monitor). The two fields are mutually exclusive; provide exactly one.
 
 For more information on these fields, see the [documentation in the Terraform Registry](https://registry.terraform.io/providers/axiomhq/axiom/latest/docs/resources/monitor).
 
@@ -207,3 +217,14 @@ To access an existing user, follow these steps:
      id = "USER_ID"
    }
    ```
+
+### Additional data sources
+
+The Axiom Terraform Provider also supports the following data sources. For schemas and examples, see the data source documentation in the Terraform Registry:
+
+| Data source | Description |
+| :--- | :--- |
+| [`axiom_dashboard`](https://registry.terraform.io/providers/axiomhq/axiom/latest/docs/data-sources/dashboard) | Reads an existing dashboard by ID or UID. |
+| [`axiom_token`](https://registry.terraform.io/providers/axiomhq/axiom/latest/docs/data-sources/token) | Reads metadata for an existing API token. |
+| [`axiom_users`](https://registry.terraform.io/providers/axiomhq/axiom/latest/docs/data-sources/users) | Lists users in the organization. |
+| [`axiom_virtual_field`](https://registry.terraform.io/providers/axiomhq/axiom/latest/docs/data-sources/virtual_field) | Reads an existing virtual field on a dataset. |
