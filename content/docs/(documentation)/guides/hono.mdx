@@ -1,0 +1,535 @@
+---
+title: 'Send data from Hono app to Axiom'
+description: 'This page explains how to send traces, metrics, and logs from a Hono app running on Node.js, Bun, or Cloudflare Workers to Axiom.'
+overview: 'Lightweight web framework built on Web Standards'
+sidebarTitle: Hono
+keywords: ['guides', 'hono', 'cloudflare workers', 'bun', 'node', 'nodejs', 'node.js', 'typescript', 'otel', 'opentelemetry', 'traces', 'logs', 'metrics']
+---
+
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import BaseDomains from "@/content/snippets/base-domains.mdx"
+
+[Hono](https://hono.dev/) is a lightweight web framework built on Web Standards that runs on many JavaScript runtimes, including Node.js, Bun, and Cloudflare Workers.
+
+This page explains how to send the following data from a Hono app to Axiom:
+
+- **Traces:** The [`@hono/otel`](https://github.com/honojs/middleware/tree/main/packages/otel) middleware creates an OpenTelemetry span for every request. An OpenTelemetry SDK exports the spans to Axiom over OTLP/HTTP.
+- **Metrics:** On Node.js and Bun, `@hono/otel` also records the `http.server.request.duration` and `http.server.active_requests` metrics, and the OpenTelemetry SDK exports them to Axiom.
+- **Logs:** The [`@axiomhq/logging`](/guides/javascript#use-%40axiomhq%2Flogging) library sends structured logs to Axiom. Each log contains the trace ID and span ID of the request that produced it.
+
+The OpenTelemetry SDK depends on the runtime:
+
+| Runtime | Traces | Metrics | Logs |
+| :--- | :--- | :--- | :--- |
+| [Node.js and Bun](#send-data-from-nodejs-or-bun) | `@hono/otel` with the OpenTelemetry Node.js SDK | `@hono/otel` with the OpenTelemetry Node.js SDK | `@axiomhq/logging` |
+| [Cloudflare Workers](#send-data-from-cloudflare-workers) | `@hono/otel` with [`@microlabs/otel-cf-workers`](https://github.com/evanderkoogh/otel-cf-workers) | Not supported | `@axiomhq/logging` |
+
+The OpenTelemetry Node.js SDK doesn’t run on Cloudflare Workers, and `@microlabs/otel-cf-workers` only exports traces. For more information, see [Usage on Cloudflare Workers](https://github.com/honojs/middleware/tree/main/packages/otel#usage-on-cloudflare-workers) in the `@hono/otel` documentation.
+
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- Create datasets for traces, logs, and metrics. Recommended: Create the datasets in a [correlation group](/query-data/correlations). To create all three at once, go to **Datasets > Correlations > New correlation group**, select **From new datasets**, and enter a prefix such as `hono`. Axiom creates `hono-traces`, `hono-logs`, and `hono-metrics`. If you only use Cloudflare Workers, you don’t need the metrics dataset.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to these datasets.
+- A Hono app. To create one, see [Getting started](https://hono.dev/docs/getting-started/basic) in the Hono documentation.
+
+## How Axiom receives the data
+
+The OpenTelemetry exporters send data to the OTLP/HTTP endpoints of your Axiom [edge deployment](/reference/edge-deployments). Axiom doesn’t support OTLP over gRPC.
+
+| Signal | Endpoint | Dataset header |
+| :--- | :--- | :--- |
+| Traces | `https://AXIOM_DOMAIN/v1/traces` | `X-Axiom-Dataset` |
+| Metrics | `https://AXIOM_DOMAIN/v1/metrics` | `X-Axiom-Metrics-Dataset` |
+
+Each request also contains the `Authorization: Bearer API_TOKEN` header.
+
+The `@axiomhq/logging` library sends logs through the `@axiomhq/js` client to the ingest endpoint of the same edge deployment. To select the edge deployment, set the `edge` option of the client to the base domain of the edge deployment.
+
+<ReplaceDomain />
+
+<BaseDomains />
+
+## Send data from Node.js or Bun
+
+### Install dependencies
+
+In the root folder of your Hono app, install the dependencies:
+
+<Tabs param="runtime">
+<Tab title="Node.js">
+```bash
+npm install @hono/otel @opentelemetry/api @opentelemetry/sdk-node @opentelemetry/sdk-metrics @opentelemetry/exporter-trace-otlp-proto @opentelemetry/exporter-metrics-otlp-proto @opentelemetry/resources @opentelemetry/semantic-conventions @axiomhq/js @axiomhq/logging
+```
+</Tab>
+<Tab title="Bun">
+```bash
+bun add @hono/otel @opentelemetry/api @opentelemetry/sdk-node @opentelemetry/sdk-metrics @opentelemetry/exporter-trace-otlp-proto @opentelemetry/exporter-metrics-otlp-proto @opentelemetry/resources @opentelemetry/semantic-conventions @axiomhq/js @axiomhq/logging
+```
+</Tab>
+</Tabs>
+
+The `-proto` exporters send data encoded as Protobuf (`http/protobuf`). To send JSON instead, use `@opentelemetry/exporter-trace-otlp-http` and `@opentelemetry/exporter-metrics-otlp-http`.
+
+### Configure environment variables
+
+Set the following environment variables:
+
+```bash
+export AXIOM_DOMAIN="AXIOM_DOMAIN"
+export AXIOM_TOKEN="API_TOKEN"
+export AXIOM_TRACES_DATASET="TRACES_DATASET_NAME"
+export AXIOM_LOGS_DATASET="LOGS_DATASET_NAME"
+export AXIOM_METRICS_DATASET="METRICS_DATASET_NAME"
+```
+
+<Info>
+<ReplaceDomain />
+
+Replace `API_TOKEN` with the Axiom API token you have generated.
+
+Replace `TRACES_DATASET_NAME`, `LOGS_DATASET_NAME`, and `METRICS_DATASET_NAME` with the names of the Axiom datasets where you send traces, logs, and metrics.
+</Info>
+
+### Configure OpenTelemetry
+
+Create the file `src/instrumentation.ts`. It starts the OpenTelemetry Node.js SDK, which exports spans to the traces dataset and metrics to the metrics dataset.
+
+```ts src/instrumentation.ts
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+
+const endpoint = `https://${process.env.AXIOM_DOMAIN}`;
+const authorization = `Bearer ${process.env.AXIOM_TOKEN}`;
+
+export const sdk = new NodeSDK({
+  resource: resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: 'hono-app',
+  }),
+  // Send spans to the traces dataset
+  traceExporter: new OTLPTraceExporter({
+    url: `${endpoint}/v1/traces`,
+    headers: {
+      Authorization: authorization,
+      'X-Axiom-Dataset': process.env.AXIOM_TRACES_DATASET!,
+    },
+  }),
+  // Send request metrics to the metrics dataset
+  metricReaders: [
+    new PeriodicExportingMetricReader({
+      exporter: new OTLPMetricExporter({
+        url: `${endpoint}/v1/metrics`,
+        headers: {
+          Authorization: authorization,
+          'X-Axiom-Metrics-Dataset': process.env.AXIOM_METRICS_DATASET!,
+        },
+      }),
+    }),
+  ],
+});
+
+sdk.start();
+```
+
+Replace `hono-app` with the name of your service.
+
+<Warning>
+Configure `metricReaders` even if you don’t plan to use metrics. Without it, the SDK reads the `OTEL_METRICS_EXPORTER` environment variable, which [defaults to `otlp`](https://github.com/open-telemetry/opentelemetry-js/tree/main/experimental/packages/opentelemetry-sdk-node#configure-exporters-from-environment), and sends the metrics that `@hono/otel` records to `http://localhost:4318`. The failing exports slow down the shutdown of your app. To turn off metrics, set `OTEL_METRICS_EXPORTER=none`.
+</Warning>
+
+### Configure the logger
+
+Create the file `src/logger.ts`. It creates an `@axiomhq/logging` logger that sends logs to the logs dataset and prints them to the console.
+
+```ts src/logger.ts
+import { Axiom } from '@axiomhq/js';
+import { AxiomJSTransport, ConsoleTransport, Logger } from '@axiomhq/logging';
+
+const axiom = new Axiom({
+  token: process.env.AXIOM_TOKEN!,
+  edge: process.env.AXIOM_DOMAIN,
+});
+
+export const logger = new Logger({
+  transports: [
+    new AxiomJSTransport({ axiom, dataset: process.env.AXIOM_LOGS_DATASET! }),
+    new ConsoleTransport(),
+  ],
+});
+```
+
+### Instrument the Hono app
+
+Update the entry point of your app. The example below does the following:
+
+1. Imports `src/instrumentation.ts` before anything else, so the SDK is ready when the first request arrives.
+1. Adds the `httpInstrumentationMiddleware` middleware of `@hono/otel`, which creates a span for every request. The span name contains the method and the route pattern, for example `GET /users/:id`. If the response status is 500 or higher, the span status is `ERROR`, and unhandled errors are recorded as exceptions on the span.
+1. Adds a middleware that creates a child logger with the `trace_id` and `span_id` of the current span, and stores it in the context. Every log that a route handler sends with this logger contains these fields.
+1. Sends the buffered logs and spans to Axiom when the process receives the `SIGTERM` signal.
+
+<Tabs param="runtime">
+<Tab title="Node.js">
+```ts src/index.ts
+import { sdk } from './instrumentation.js';
+import { serve } from '@hono/node-server';
+import { httpInstrumentationMiddleware } from '@hono/otel';
+import { trace } from '@opentelemetry/api';
+import { Hono } from 'hono';
+import type { Logger } from '@axiomhq/logging';
+import { logger } from './logger.js';
+
+const app = new Hono<{ Variables: { logger: Logger } }>();
+
+// Create a span for every request
+app.use(httpInstrumentationMiddleware());
+
+// Add the trace context to the logs of every request
+app.use(async (c, next) => {
+  const spanContext = trace.getActiveSpan()?.spanContext();
+  c.set('logger', logger.with({
+    trace_id: spanContext?.traceId,
+    span_id: spanContext?.spanId,
+  }));
+  await next();
+});
+
+app.get('/', (c) => {
+  c.get('logger').info('Handled request', { path: c.req.path });
+  return c.text('Hello Hono!');
+});
+
+app.get('/users/:id', (c) => {
+  c.get('logger').info('Fetched user', { userId: c.req.param('id') });
+  return c.json({ id: c.req.param('id') });
+});
+
+app.get('/error', () => {
+  throw new Error('Something went wrong');
+});
+
+app.onError((err, c) => {
+  c.get('logger').error('Unhandled error', err);
+  return c.text('Internal Server Error', 500);
+});
+
+serve({ fetch: app.fetch, port: 3000 });
+
+// Send buffered logs and spans before the process exits
+process.on('SIGTERM', async () => {
+  await Promise.all([logger.flush(), sdk.shutdown()]);
+  process.exit(0);
+});
+```
+</Tab>
+<Tab title="Bun">
+```ts src/index.ts
+import { sdk } from './instrumentation';
+import { httpInstrumentationMiddleware } from '@hono/otel';
+import { trace } from '@opentelemetry/api';
+import { Hono } from 'hono';
+import type { Logger } from '@axiomhq/logging';
+import { logger } from './logger';
+
+const app = new Hono<{ Variables: { logger: Logger } }>();
+
+// Create a span for every request
+app.use(httpInstrumentationMiddleware());
+
+// Add the trace context to the logs of every request
+app.use(async (c, next) => {
+  const spanContext = trace.getActiveSpan()?.spanContext();
+  c.set('logger', logger.with({
+    trace_id: spanContext?.traceId,
+    span_id: spanContext?.spanId,
+  }));
+  await next();
+});
+
+app.get('/', (c) => {
+  c.get('logger').info('Handled request', { path: c.req.path });
+  return c.text('Hello Hono!');
+});
+
+app.get('/users/:id', (c) => {
+  c.get('logger').info('Fetched user', { userId: c.req.param('id') });
+  return c.json({ id: c.req.param('id') });
+});
+
+app.get('/error', () => {
+  throw new Error('Something went wrong');
+});
+
+app.onError((err, c) => {
+  c.get('logger').error('Unhandled error', err);
+  return c.text('Internal Server Error', 500);
+});
+
+// Send buffered logs and spans before the process exits
+process.on('SIGTERM', async () => {
+  await Promise.all([logger.flush(), sdk.shutdown()]);
+  process.exit(0);
+});
+
+export default app;
+```
+</Tab>
+</Tabs>
+
+`@hono/otel` instruments the request-response lifecycle as a whole and doesn’t create spans for individual middleware. To trace outgoing HTTP requests and database calls on Node.js, add OpenTelemetry instrumentations to the SDK. For more information, see [OpenTelemetry using Node.js](/guides/opentelemetry-nodejs).
+
+### Run the app
+
+Start the app:
+
+<Tabs param="runtime">
+<Tab title="Node.js">
+```bash
+npm run dev
+```
+</Tab>
+<Tab title="Bun">
+```bash
+bun run dev
+```
+</Tab>
+</Tabs>
+
+Send a few requests to generate data:
+
+```bash
+curl http://localhost:3000/
+curl http://localhost:3000/users/42
+curl http://localhost:3000/error
+```
+
+The SDK exports spans every few seconds and metrics every minute. The logger sends logs in batches in the background.
+
+## Send data from Cloudflare Workers
+
+On Cloudflare Workers, the `instrument` function of `@microlabs/otel-cf-workers` sets up OpenTelemetry for the Worker and exports spans to Axiom. It creates a span for every invocation and automatically traces outgoing `fetch` calls. The `@hono/otel` middleware adds a child span that contains the Hono route.
+
+### Install dependencies
+
+In the root folder of your Hono app, install the dependencies:
+
+```bash
+npm install @hono/otel @microlabs/otel-cf-workers @opentelemetry/api @axiomhq/js @axiomhq/logging
+npm install --save-exact @opentelemetry/semantic-conventions@1.44.0
+```
+
+<Warning>
+`@microlabs/otel-cf-workers` version 1.0.0-rc.52 imports the `ATTR_FAAS_TIME` attribute, which `@opentelemetry/semantic-conventions` version 1.45.0 no longer exports. With version 1.45.0 or later, the Worker fails to build with the error `No matching export ... for import "ATTR_FAAS_TIME"`. Pinning `@opentelemetry/semantic-conventions` to version 1.44.0 avoids this error.
+</Warning>
+
+### Configure the Worker
+
+In your Wrangler configuration file, turn on the `nodejs_compat` compatibility flag, which `@microlabs/otel-cf-workers` requires, and add the Axiom settings as environment variables:
+
+```jsonc wrangler.jsonc
+{
+  "name": "my-hono-app",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "AXIOM_DOMAIN": "AXIOM_DOMAIN",
+    "AXIOM_TRACES_DATASET": "TRACES_DATASET_NAME",
+    "AXIOM_LOGS_DATASET": "LOGS_DATASET_NAME"
+  }
+}
+```
+
+<Info>
+<ReplaceDomain />
+
+Replace `TRACES_DATASET_NAME` and `LOGS_DATASET_NAME` with the names of the Axiom datasets where you send traces and logs.
+</Info>
+
+Store the API token as a secret, not as an environment variable in the Wrangler configuration file. For local development, create a `.dev.vars` file in the root folder of your app:
+
+```bash .dev.vars
+AXIOM_TOKEN=API_TOKEN
+```
+
+For the deployed Worker, run the following command, and then enter the API token:
+
+```bash
+npx wrangler secret put AXIOM_TOKEN
+```
+
+For more information, see [Secrets](https://developers.cloudflare.com/workers/configuration/secrets/) in the Cloudflare documentation.
+
+### Instrument the Hono app
+
+Update `src/index.ts`. The example below does the following:
+
+1. Adds the `httpInstrumentationMiddleware` middleware of `@hono/otel`, which creates a span for every request.
+1. Adds a middleware that creates a logger for every request. The environment variables of a Worker are only available while it handles a request, so the logger can’t be created when the module loads. The logger adds the `trace_id` and `span_id` of the current span to every log.
+1. Sends the logs of the request to Axiom with `c.executionCtx.waitUntil`, which keeps the Worker running after it sends the response until the logs are delivered. For more information, see [`executionCtx`](https://hono.dev/docs/api/context#executionctx) in the Hono documentation.
+1. Wraps the app with the `instrument` function, which exports the spans to the traces dataset.
+
+```ts src/index.ts
+import { Axiom } from '@axiomhq/js';
+import { AxiomJSTransport, ConsoleTransport, Logger } from '@axiomhq/logging';
+import { httpInstrumentationMiddleware } from '@hono/otel';
+import { instrument, type ResolveConfigFn } from '@microlabs/otel-cf-workers';
+import { trace } from '@opentelemetry/api';
+import { Hono } from 'hono';
+
+type Bindings = {
+  AXIOM_DOMAIN: string;
+  AXIOM_TOKEN: string;
+  AXIOM_TRACES_DATASET: string;
+  AXIOM_LOGS_DATASET: string;
+};
+
+const app = new Hono<{ Bindings: Bindings; Variables: { logger: Logger } }>();
+
+// Create a span for every request
+app.use(httpInstrumentationMiddleware());
+
+// Create a logger for every request and send its logs after the response
+app.use(async (c, next) => {
+  const axiom = new Axiom({ token: c.env.AXIOM_TOKEN, edge: c.env.AXIOM_DOMAIN });
+  const spanContext = trace.getActiveSpan()?.spanContext();
+  const logger = new Logger({
+    transports: [
+      new AxiomJSTransport({ axiom, dataset: c.env.AXIOM_LOGS_DATASET }),
+      new ConsoleTransport(),
+    ],
+    args: {
+      trace_id: spanContext?.traceId,
+      span_id: spanContext?.spanId,
+    },
+  });
+  c.set('logger', logger);
+  try {
+    await next();
+  } finally {
+    c.executionCtx.waitUntil(logger.flush());
+  }
+});
+
+app.get('/', (c) => {
+  c.get('logger').info('Handled request', { path: c.req.path });
+  return c.text('Hello Hono!');
+});
+
+app.get('/users/:id', (c) => {
+  c.get('logger').info('Fetched user', { userId: c.req.param('id') });
+  return c.json({ id: c.req.param('id') });
+});
+
+app.get('/error', () => {
+  throw new Error('Something went wrong');
+});
+
+app.onError((err, c) => {
+  c.get('logger').error('Unhandled error', err);
+  return c.text('Internal Server Error', 500);
+});
+
+// Send spans to the traces dataset
+const config: ResolveConfigFn<Bindings> = (env) => ({
+  exporter: {
+    url: `https://${env.AXIOM_DOMAIN}/v1/traces`,
+    headers: {
+      Authorization: `Bearer ${env.AXIOM_TOKEN}`,
+      'X-Axiom-Dataset': env.AXIOM_TRACES_DATASET,
+    },
+  },
+  service: { name: 'hono-worker' },
+});
+
+export default instrument(app, config);
+```
+
+Replace `hono-worker` with the name of your service.
+
+Each request produces the following spans in the same trace:
+
+- `fetchHandler GET`: The span that `@microlabs/otel-cf-workers` creates for the invocation.
+- A span with the method and the route pattern, for example `GET /users/:id`: The span that `@hono/otel` creates.
+- `fetch POST AXIOM_DOMAIN`: The outgoing request that sends the logs of the request to Axiom.
+
+The Workers runtime only advances the clock during I/O, so the duration of CPU-bound work appears as zero. For more information, see [Limitations](https://github.com/evanderkoogh/otel-cf-workers#limitations) in the `@microlabs/otel-cf-workers` documentation.
+
+### Run the Worker
+
+Start the Worker locally:
+
+```bash
+npm run dev
+```
+
+Send a few requests to generate data:
+
+```bash
+curl http://localhost:8787/
+curl http://localhost:8787/users/42
+curl http://localhost:8787/error
+```
+
+To deploy the Worker to Cloudflare, run the following command:
+
+```bash
+npm run deploy
+```
+
+## View data in Axiom
+
+### Traces
+
+To list the slowest routes, run the following query:
+
+```kusto
+['TRACES_DATASET_NAME']
+| where ['service.name'] == 'hono-app'
+| summarize count(), percentile(duration, 95) by name
+```
+
+Replace `hono-app` with the service name you have configured.
+
+To view a trace, click a span in the query results. For more information, see [Explore traces](/query-data/traces).
+
+### Logs
+
+To list the errors of your app, run the following query:
+
+```kusto
+['LOGS_DATASET_NAME']
+| where level == 'error'
+```
+
+To find the logs that belong to a trace, filter the logs by trace ID:
+
+```kusto
+['LOGS_DATASET_NAME']
+| where ['fields.trace_id'] == 'TRACE_ID'
+```
+
+Replace `TRACE_ID` with the ID of the trace.
+
+### Metrics
+
+To compute the 90th and 99th percentiles of the request duration for each route, run the following MPL query:
+
+```mpl
+`METRICS_DATASET_NAME`:`http.server.request.duration`
+| where `http.response.status_code` < 400
+| bucket by `http.request.method`, `http.route` to 5m using interpolate_cumulative_histogram(rate, 0.90, 0.99)
+```
+
+For more information, see [Query metrics](/query-data/metrics).
+
+## Related pages
+
+- [Send data from JavaScript app to Axiom](/guides/javascript)
+- [OpenTelemetry using Node.js](/guides/opentelemetry-nodejs)
+- [OpenTelemetry using Cloudflare Workers](/guides/opentelemetry-cloudflare-workers)
+- [Send OpenTelemetry data to Axiom](/send-data/opentelemetry)
+- [Correlations](/query-data/correlations)
