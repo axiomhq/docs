@@ -3,7 +3,7 @@ title: take_any
 description: 'This page explains how to use the take_any aggregation function in APL.'
 ---
 
-`take_any` returns the values of one arbitrary row for each group. Use it when you need a value or a row from each group, and it does not matter which row.
+`take_any` returns values from an arbitrary row in each group.
 
 ## Usage
 
@@ -17,20 +17,14 @@ summarize take_any(*) [by GroupingColumn]
 ### Parameters
 
 - **`expr`**: An expression to return a value for.
-- **`*`**: Returns all columns of one row. It leaves out the `by` columns and the columns that the `by` expressions read.
+- **`*`**: Returns all columns from one row, except the grouping columns.
 - **`GroupingColumn`** (optional): A column to group the results by. If you omit it, all records form one group.
 
 ### Returns
 
-Returns values from one row of each group. The query does not define which row. Different runs can return different rows.
+Returns values from an arbitrary row in each group. The selected row can differ between query runs.
 
-- With one expression, `take_any` skips `null` and empty string values. If every row in the group has a `null` or empty value, the result is `null`. `0` and `false` count as values.
-- With more than one expression, or with `*`, all values come from the same row. That row can contain `null` and empty values.
-- Separate calls, such as `take_any(a), take_any(b)`, can return values from different rows.
-
-Each output column has the name of its expression, for example `status` for `take_any(status)`. To rename a column, write `name = take_any(expr)`.
-
-`any` is a deprecated alias of `take_any`. It prefixes each output column name with `any_`, for example `any_status`.
+`any` is a deprecated alias of `take_any`.
 
 <Note>
 The wildcard `*` is useful to return all fields from one row, but it increases query complexity and decreases performance.
@@ -40,7 +34,7 @@ The wildcard `*` is useful to return all fields from one row, but it increases q
 
 ### One value for each group
 
-This example returns one status value for each service. For `checkout`, `take_any` skips the empty status and returns `500`.
+This example returns one status for each service. `take_any(status)` skips nulls and empty strings.
 
 **Query**
 
@@ -62,7 +56,7 @@ datatable(service: string, region: string, status: string)[
 
 ### One complete row for each group
 
-This example returns all columns of one row for each service. With `*`, all values come from the same row, and `take_any` keeps empty values.
+This example returns all columns from one row for each service, including empty values.
 
 **Query**
 
@@ -84,32 +78,18 @@ datatable(service: string, region: string, status: string)[
 
 Another run can return the `checkout` row with the status `500` instead.
 
+`take_any(region, status)` returns both values from the same row. Separate calls, such as `take_any(region), take_any(status)`, can select different rows.
+
 ## List of related aggregations
 
 - [**take_anyif**](/apl/aggregation-function/take-anyif): Returns a value from one arbitrary row for which a predicate is true.
-- [**arg_max**](/apl/aggregation-function/arg-max): Returns the row with the maximum value of an expression. Use it with `_time` to get the latest row.
+- [**arg_max**](/apl/aggregation-function/arg-max): Returns the row with the maximum value of an expression.
 - [**arg_min**](/apl/aggregation-function/arg-min): Returns the row with the minimum value of an expression.
 - [**make_set**](/apl/aggregation-function/make-set): Returns all distinct values of an expression in the group.
 
 ## Other query languages
 
 <LanguageComparisons>
-<Accordion title="Splunk SPL users">
-
-In Splunk SPL, the `first` function of `stats` returns the first value in search order. `take_any` returns an arbitrary value.
-
-<CodeGroup>
-```sql Splunk example
-| stats first(status) by method
-```
-
-```kusto APL equivalent
-['sample-http-logs']
-| summarize take_any(status) by method
-```
-</CodeGroup>
-
-</Accordion>
 <Accordion title="ANSI SQL users">
 
 In ANSI SQL, `ANY_VALUE` returns an arbitrary value for each group, as `take_any` does.
