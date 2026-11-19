@@ -1,0 +1,171 @@
+---
+title: 'Send data from Fastly to Axiom'
+description: 'This page explains how to stream Fastly real-time logs to Axiom through the Splunk HEC-compatible API.'
+overview: 'Edge cloud platform and content delivery network'
+sidebarTitle: Fastly
+keywords: ['fastly', 'cdn', 'real-time log streaming', 'logging endpoint', 'splunk hec', 'vcl', 'compute', 'opentelemetry', 'axiom documentation', 'documentation', 'axiom', 'logs']
+logoId: 'fastly'
+---
+
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDataset from "@/content/snippets/replace-dataset.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+
+Fastly is an edge cloud platform that delivers and caches content for your websites and APIs. Fastly [real-time log streaming](https://www.fastly.com/documentation/guides/integrations/streaming-logs/setting-up-remote-log-streaming/) sends a log line for every request that a Fastly service handles. Stream these logs to Axiom to analyze cache performance, errors, latency, and traffic across Fastly points of presence (POPs).
+
+To send Fastly logs to Axiom, configure a Fastly [Splunk logging endpoint](https://www.fastly.com/documentation/guides/integrations/logging-endpoints/log-management-and-observability/log-streaming-splunk/) that posts to the Axiom [Splunk HEC-compatible API](/send-data/splunk-hec). This works for both CDN (VCL) services and Compute services.
+
+<Prerequisites />
+- [Create a Fastly account](https://www.fastly.com/signup/) with a CDN or Compute service.
+
+## Configure the Splunk logging endpoint
+
+In Fastly, create a Splunk logging endpoint for your service. For more information, see the [Fastly documentation](https://www.fastly.com/documentation/guides/integrations/logging-endpoints/log-management-and-observability/log-streaming-splunk/). Use the following settings:
+
+| Setting | Value |
+| :--- | :--- |
+| **Name** | A name for the endpoint, for example `axiom`. For Compute services, use the endpoint name that your code logs to. |
+| **Placement** | **Format Version Default** |
+| **Log format** | The JSON log format in [Recommended log format](#recommended-log-format). CDN services only. |
+| **URL** | `https://hec.AXIOM_DOMAIN/services/collector/event` |
+| **Token** | The Axiom API token. |
+| **Use TLS?** | **Yes**. Leave the TLS hostname and certificate fields empty. |
+| **Maximum logs** | `0` (no limit) |
+| **Maximum bytes** | `4194304`. This is the [maximum request size](/reference/limits) that Axiom accepts. |
+
+<Info>
+<ReplaceDomain />
+The Axiom Splunk HEC API is hosted at `hec.AXIOM_DOMAIN`. For example, if your edge deployment’s base domain is `us-east-1.aws.edge.axiom.co`, the URL is `https://hec.us-east-1.aws.edge.axiom.co/services/collector/event`.
+</Info>
+
+After you create the endpoint, activate the new version of your service. Fastly starts to batch log lines and post them to Axiom, and the events appear in your dataset.
+
+The `index` field of each log line selects the Axiom dataset. If you leave out `index`, Axiom sends the events to the dataset that the API token is scoped to, provided that the token grants ingest access to exactly one dataset. For more information, see [Choose the target dataset](/send-data/splunk-hec#choose-the-target-dataset).
+
+## Recommended log format
+
+Each log line that Fastly sends must be a Splunk HEC event envelope. Axiom turns the keys of the `event` object into top-level fields, uses `time` as the event timestamp, and keeps `host`, `source`, and `sourcetype` as fields. For more information, see [Event envelope fields](/send-data/splunk-hec#event-envelope-fields).
+
+The following log format for CDN services records the request, the response, the cache state, timing, and the location of the client and the POP. It uses [VCL variables](https://www.fastly.com/documentation/reference/vcl/variables/) and runs in `vcl_log`, which is the default placement for the current format version. Strings that come from the client pass through `json.escape` so that each line stays valid JSON.
+
+```json
+{
+  "time": %{time.start.msec}V,
+  "host": "%{if(req.http.Fastly-Orig-Host, req.http.Fastly-Orig-Host, req.http.Host)}V",
+  "source": "fastly",
+  "sourcetype": "fastly:cdn",
+  "index": "DATASET_NAME",
+  "event": {
+    "service_id": "%{req.service_id}V",
+    "service_version": %{req.vcl.version}V,
+    "request_id": "%{req.xid}V",
+    "client_ip": "%{req.http.Fastly-Client-IP}V",
+    "client_asn": %{client.as.number}V,
+    "geo_country_code": "%{client.geo.country_code}V",
+    "geo_city": "%{json.escape(client.geo.city.utf8)}V",
+    "geo_continent_code": "%{client.geo.continent_code}V",
+    "request_method": "%{json.escape(req.method)}V",
+    "request_url": "%{json.escape(req.url)}V",
+    "request_protocol": "%{json.escape(req.proto)}V",
+    "request_referer": "%{json.escape(req.http.Referer)}V",
+    "request_user_agent": "%{json.escape(req.http.User-Agent)}V",
+    "request_body_bytes": %{req.body_bytes_read}V,
+    "tls_protocol": "%{json.escape(tls.client.protocol)}V",
+    "is_h2": %{if(fastly_info.is_h2, "true", "false")}V,
+    "response_status": %{resp.status}V,
+    "response_body_bytes": %{resp.body_bytes_written}V,
+    "response_bytes": %{resp.bytes_written}V,
+    "response_content_type": "%{json.escape(resp.http.Content-Type)}V",
+    "cache_state": "%{json.escape(fastly_info.state)}V",
+    "duration_us": %{time.elapsed.usec}V,
+    "pop": "%{server.datacenter}V",
+    "pop_region": "%{server.region}V",
+    "fastly_is_edge": %{if(fastly.ff.visits_this_service == 0, "true", "false")}V
+  }
+}
+```
+
+<Info>
+<ReplaceDataset />
+</Info>
+
+The format uses the following conventions:
+
+- `time` is the start of the request in milliseconds since the Unix epoch.
+- Numeric and Boolean values aren’t quoted, so you can aggregate them in Axiom without converting their type.
+- `cache_state` contains the Fastly cache state, for example `HIT`, `MISS`, or `PASS`.
+- `fastly_is_edge` is `true` on the POP that received the request from the client. If you use [shielding](https://www.fastly.com/documentation/guides/concepts/shielding/), a request can be logged once on the edge POP and once on the shield POP. Filter on `fastly_is_edge == true` to count each client request once.
+
+Optional: Remove fields that you don’t need, or add [other VCL variables](https://www.fastly.com/documentation/reference/vcl/variables/). If client IP addresses are personal data under your privacy policy, remove `client_ip` or truncate it before it leaves Fastly.
+
+### Log from Compute services
+
+Compute services don’t use the **Log format** setting. Instead, your code writes each log line to the named logging endpoint. Write each line as a JSON object with the same envelope: `time`, `index`, and the fields of the request in `event`. For more information, see the Compute example in the [Fastly documentation](https://www.fastly.com/documentation/guides/integrations/logging-endpoints/log-management-and-observability/log-streaming-splunk/).
+
+## Query Fastly logs
+
+The following query shows the cache hit ratio and the 95th percentile request duration for each POP:
+
+```kusto
+['DATASET_NAME']
+| where fastly_is_edge == true
+| summarize requests = count(), hit_ratio = round(100.0 * countif(cache_state startswith "HIT") / count(), 2), p95_duration_ms = percentile(duration_us, 95) / 1000 by pop
+| sort by requests desc
+```
+
+The following query shows the number of server errors over time for each URL:
+
+```kusto
+['DATASET_NAME']
+| where response_status >= 500
+| summarize count() by bin_auto(_time), request_url
+```
+
+## Alternative: Generic HTTPS endpoint
+
+Fastly’s [HTTPS logging endpoint](https://www.fastly.com/documentation/guides/integrations/logging-endpoints/protocol-based-and-self-hosted/log-streaming-https/) posts batches of JSON to any HTTPS URL. Before Fastly sends logs to an HTTPS endpoint, it verifies that you control the domain: it requests `/.well-known/fastly/logging/challenge` on the host in the endpoint URL and expects a list of permitted service IDs in the response. Axiom’s ingest hosts don’t answer this challenge, so you can’t point the HTTPS endpoint directly at the Axiom ingest API. Use the Splunk endpoint instead.
+
+If you already route logs through your own HTTPS gateway that answers the challenge, the gateway can forward the batches to the Axiom [ingest API](/restapi/ingest):
+
+- URL: `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`
+- Headers: `Authorization: Bearer API_TOKEN` and `Content-Type: application/x-ndjson`
+- Body: newline-delimited JSON. In Fastly, set **JSON log entry format** to **Newline delimited**. Leave out the Splunk envelope. Put the fields of the `event` object at the top level, and rename `time` to `_time` so that Axiom uses it as the event timestamp.
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+## Send traces from Compute with OpenTelemetry
+
+Optional: To send traces from a JavaScript Compute service, use the [`@fastly/compute-js-opentelemetry`](https://github.com/fastly/compute-js-opentelemetry) library. Its `OTLPTraceExporter` sends OTLP/HTTP JSON through a Fastly backend.
+
+1. In your Fastly service, add a backend for the host `AXIOM_DOMAIN` on port 443 with TLS enabled, and name it, for example, `axiom`. For more information, see the [Fastly documentation](https://www.fastly.com/documentation/guides/getting-started/hosts/working-with-hosts/).
+1. Configure the exporter to send traces to the Axiom OTLP endpoint:
+
+    ```js
+    import { OTLPTraceExporter } from "@fastly/compute-js-opentelemetry/exporter-trace-otlp-fastly-backend";
+    import { FastlySDK } from "@fastly/compute-js-opentelemetry/sdk-fastly";
+
+    const traceExporter = new OTLPTraceExporter({
+      // Name of the Fastly backend for AXIOM_DOMAIN
+      backend: "axiom",
+      url: "https://AXIOM_DOMAIN/v1/traces",
+      headers: {
+        Authorization: "Bearer API_TOKEN",
+        "X-Axiom-Dataset": "DATASET_NAME",
+      },
+    });
+
+    const sdk = new FastlySDK({ traceExporter });
+    await sdk.start();
+    ```
+
+    <Info>
+    <ReplaceDomain />
+    <ReplaceDatasetToken />
+    Recommended: Read the API token from a Fastly [secret store](https://www.fastly.com/documentation/reference/api/services/resources/secret-store/) instead of writing it in your code.
+    </Info>
+
+For more information about the Axiom OTLP endpoints, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
