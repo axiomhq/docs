@@ -6,12 +6,15 @@
 - [arg_min](https://axiom.co/docs/apl/aggregation-function/arg-min.md): This page explains how to use the arg_min aggregation in APL.
 - [avg](https://axiom.co/docs/apl/aggregation-function/avg.md): This page explains how to use the avg aggregation function in APL.
 - [avgif](https://axiom.co/docs/apl/aggregation-function/avgif.md): This page explains how to use the avgif aggregation function in APL.
+- [avgw](https://axiom.co/docs/apl/aggregation-function/avgw.md): This page explains how to use the avgw aggregation function in APL.
 - [count](https://axiom.co/docs/apl/aggregation-function/count.md): This page explains how to use the count aggregation function in APL.
 - [countif](https://axiom.co/docs/apl/aggregation-function/countif.md): This page explains how to use the countif aggregation function in APL.
+- [countw](https://axiom.co/docs/apl/aggregation-function/countw.md): This page explains how to use the countw aggregation function in APL.
 - [dcount](https://axiom.co/docs/apl/aggregation-function/dcount.md): This page explains how to use the dcount aggregation function in APL.
 - [dcountif](https://axiom.co/docs/apl/aggregation-function/dcountif.md): This page explains how to use the dcountif aggregation function in APL.
 - [histogram](https://axiom.co/docs/apl/aggregation-function/histogram.md): This page explains how to use the histogram aggregation function in APL.
 - [histogramif](https://axiom.co/docs/apl/aggregation-function/histogramif.md): This page explains how to use the histogramif aggregation function in APL.
+- [histogramw](https://axiom.co/docs/apl/aggregation-function/histogramw.md): This page explains how to use the histogramw aggregation function in APL.
 - [make_list](https://axiom.co/docs/apl/aggregation-function/make-list.md): This page explains how to use the make_list aggregation function in APL.
 - [make_list_if](https://axiom.co/docs/apl/aggregation-function/make-list-if.md): This page explains how to use the make_list_if aggregation function in APL.
 - [make_set](https://axiom.co/docs/apl/aggregation-function/make-set.md): This page explains how to use the make_set aggregation function in APL.
@@ -24,18 +27,27 @@
 - [percentileif](https://axiom.co/docs/apl/aggregation-function/percentileif.md): This page explains how to use the percentileif aggregation function in APL.
 - [percentiles_array](https://axiom.co/docs/apl/aggregation-function/percentiles-array.md): This page explains how to use the percentiles_array function in APL.
 - [percentiles_arrayif](https://axiom.co/docs/apl/aggregation-function/percentiles-arrayif.md): This page explains how to use the percentiles_array function in APL.
+- [percentilesw_array](https://axiom.co/docs/apl/aggregation-function/percentilesw-array.md): This page explains how to use the percentilesw_array aggregation function in APL.
+- [percentilew](https://axiom.co/docs/apl/aggregation-function/percentilew.md): This page explains how to use the percentilew aggregation function in APL.
 - [phrases](https://axiom.co/docs/apl/aggregation-function/phrases.md): This page explains how to use the phrases aggregation function in APL.
+- [presence](https://axiom.co/docs/apl/aggregation-function/presence.md): This page explains how to use the presence aggregation function in APL.
 - [rate](https://axiom.co/docs/apl/aggregation-function/rate.md): This page explains how to use the rate aggregation function in APL.
 - [spotlight](https://axiom.co/docs/apl/aggregation-function/spotlight.md): This page explains how to use the spotlight function in APL to compare a selected set of events against a baseline and surface the most significant differences.
 - [Aggregation functions](https://axiom.co/docs/apl/aggregation-function/statistical-functions.md): This section explains how to use and combine different aggregation functions in APL.
 - [stdev](https://axiom.co/docs/apl/aggregation-function/stdev.md): This page explains how to use the stdev aggregation function in APL.
 - [stdevif](https://axiom.co/docs/apl/aggregation-function/stdevif.md): This page explains how to use the stdevif aggregation function in APL.
+- [stdevw](https://axiom.co/docs/apl/aggregation-function/stdevw.md): This page explains how to use the stdevw aggregation function in APL.
 - [sum](https://axiom.co/docs/apl/aggregation-function/sum.md): This page explains how to use the sum aggregation function in APL.
 - [sumif](https://axiom.co/docs/apl/aggregation-function/sumif.md): This page explains how to use the sumif aggregation function in APL.
+- [sumw](https://axiom.co/docs/apl/aggregation-function/sumw.md): This page explains how to use the sumw aggregation function in APL.
+- [take_any](https://axiom.co/docs/apl/aggregation-function/take-any.md): This page explains how to use the take_any aggregation function in APL.
+- [take_anyif](https://axiom.co/docs/apl/aggregation-function/take-anyif.md): This page explains how to use the take_anyif aggregation function in APL.
 - [topk](https://axiom.co/docs/apl/aggregation-function/topk.md): This page explains how to use the topk aggregation function in APL.
 - [topkif](https://axiom.co/docs/apl/aggregation-function/topkif.md): This page explains how to use the topkif aggregation in APL.
+- [topkw](https://axiom.co/docs/apl/aggregation-function/topkw.md): This page explains how to use the topkw aggregation function in APL.
 - [variance](https://axiom.co/docs/apl/aggregation-function/variance.md): This page explains how to use the variance aggregation function in APL.
 - [varianceif](https://axiom.co/docs/apl/aggregation-function/varianceif.md): This page explains how to use the varianceif aggregation function in APL.
+- [variancew](https://axiom.co/docs/apl/aggregation-function/variancew.md): This page explains how to use the variancew aggregation function in APL.
 - [All features of Axiom Processing Language (APL)](https://axiom.co/docs/apl/apl-features.md): This page gives an overview about all the features of Axiom Processing Language (APL).
 - [Map fields](https://axiom.co/docs/apl/data-types/map-fields.md): This page explains what map fields are and how to query them.
 - [Null values](https://axiom.co/docs/apl/data-types/null-values.md): This page explains how APL represents missing values.
@@ -44,13 +56,16 @@
 - [Migrate from SQL to APL](https://axiom.co/docs/apl/guides/migrating-from-sql-to-apl.md): This guide helps you migrate SQL to APL, helping you understand key differences and providing you with query examples.
 - [Migrate from Sumo Logic Query Language to APL](https://axiom.co/docs/apl/guides/migrating-from-sumologic-to-apl.md): This guide dives into why APL could be a superior choice for your data needs, and the differences between Sumo Logic and APL.
 - [Migrate from Splunk SPL to APL](https://axiom.co/docs/apl/guides/splunk-cheat-sheet.md): This step-by-step guide provides a high-level mapping from Splunk SPL to APL.
-- [Axiom Processing Language (APL)](https://axiom.co/docs/apl/introduction.md): This section explains how to use the Axiom Processing Language to get deeper insights from your data.
+- [Axiom Processing Language (APL)](https://axiom.co/docs/apl/introduction.md): Use APL to query logs, traces, and events with a text-based query language.
+- [Query reference overview](https://axiom.co/docs/apl/overview.md): This section explains how to write text-based queries in Axiom.
+- [Declare query_parameters](https://axiom.co/docs/apl/query-statement/declare-query-parameters.md): This page explains how to declare query parameters in APL.
+- [Let statement](https://axiom.co/docs/apl/query-statement/let-statement.md): This page explains how to bind variables, tabular expressions, and user-defined functions with the let statement in APL.
 - [Set statement](https://axiom.co/docs/apl/query-statement/set-statement.md): The set statement is used to set a query option in your APL query.
 - [Special field attributes](https://axiom.co/docs/apl/reference/special-field-attributes.md): This page explains how to implement special fields within APL queries to enhance the functionality and interactivity of datasets. Use these fields in APL queries to add unique behaviors to the Axiom user interface.
 - [Array functions](https://axiom.co/docs/apl/scalar-functions/array-functions.md): This section explains how to use array functions in APL.
 - [array_concat](https://axiom.co/docs/apl/scalar-functions/array-functions/array-concat.md): This page explains how to use the array_concat function in APL.
 - [array_extract](https://axiom.co/docs/apl/scalar-functions/array-functions/array-extract.md): This page explains how to use the array_extract function in APL.
-- [array_iff](https://axiom.co/docs/apl/scalar-functions/array-functions/array-iff.md): This page explains how to use the array_iff function in APL.
+- [array_iff](https://axiom.co/docs/apl/scalar-functions/array-functions/array-iff.md): Use the array_iff function in APL to filter arrays by a condition and select the corresponding values.
 - [array_index_of](https://axiom.co/docs/apl/scalar-functions/array-functions/array-index-of.md): This page explains how to use the array_index_of function in APL.
 - [array_length](https://axiom.co/docs/apl/scalar-functions/array-functions/array-length.md): This page explains how to use the array_length function in APL.
 - [array_reverse](https://axiom.co/docs/apl/scalar-functions/array-functions/array-reverse.md): This page explains how to use the array_reverse function in APL.
@@ -101,6 +116,7 @@
 - [endofmonth](https://axiom.co/docs/apl/scalar-functions/datetime-functions/endofmonth.md): This page explains how to use the endofmonth function in APL.
 - [endofweek](https://axiom.co/docs/apl/scalar-functions/datetime-functions/endofweek.md): This page explains how to use the endofweek function in APL.
 - [endofyear](https://axiom.co/docs/apl/scalar-functions/datetime-functions/endofyear.md): This page explains how to use the endofyear function in APL.
+- [format_datetime](https://axiom.co/docs/apl/scalar-functions/datetime-functions/format-datetime.md): This page explains how to use the format_datetime function in APL.
 - [getmonth](https://axiom.co/docs/apl/scalar-functions/datetime-functions/getmonth.md): This page explains how to use the getmonth function in APL.
 - [getyear](https://axiom.co/docs/apl/scalar-functions/datetime-functions/getyear.md): This page explains how to use the getyear function in APL.
 - [hourofday](https://axiom.co/docs/apl/scalar-functions/datetime-functions/hourofday.md): This page explains how to use the hourofday function in APL.
@@ -198,6 +214,7 @@
 - [sin](https://axiom.co/docs/apl/scalar-functions/mathematical-functions/sin.md): This page explains how to use the sin function in APL.
 - [sqrt](https://axiom.co/docs/apl/scalar-functions/mathematical-functions/sqrt.md): This page explains how to use the sqrt function in APL.
 - [tan](https://axiom.co/docs/apl/scalar-functions/mathematical-functions/tan.md): This page explains how to use the tan function in APL.
+- [Metadata functions](https://axiom.co/docs/apl/scalar-functions/metadata-functions.md): This section explains how to use metadata functions in APL.
 - [column_ifexists](https://axiom.co/docs/apl/scalar-functions/metadata-functions/column-ifexists.md): This page explains how to use the column_ifexists function in APL.
 - [cursor_current](https://axiom.co/docs/apl/scalar-functions/metadata-functions/cursor-current.md): This page explains how to use the cursor_current function in APL.
 - [ingestion_time](https://axiom.co/docs/apl/scalar-functions/metadata-functions/ingestion-time.md): This page explains how to use the ingestion_time function in APL.
@@ -326,6 +343,7 @@
 - [Numerical operators](https://axiom.co/docs/apl/scalar-operators/numerical-operators.md): Learn how to use and combine numerical operators in APL.
 - [String operators](https://axiom.co/docs/apl/scalar-operators/string-operators.md): Learn how to use and combine different query operators for searching string data types.
 - [count](https://axiom.co/docs/apl/tabular-operators/count-operator.md): This page explains how to use the count operator function in APL.
+- [datatable](https://axiom.co/docs/apl/tabular-operators/datatable.md): This page explains how to use the datatable data source in APL.
 - [distinct](https://axiom.co/docs/apl/tabular-operators/distinct-operator.md): This page explains how to use the distinct operator function in APL.
 - [extend](https://axiom.co/docs/apl/tabular-operators/extend-operator.md): This page explains how to use the extend operator in APL.
 - [extend-valid](https://axiom.co/docs/apl/tabular-operators/extend-valid-operator.md): This page explains how to use the extend-valid operator in APL.
@@ -341,6 +359,7 @@
 - [parse-kv](https://axiom.co/docs/apl/tabular-operators/parse-kv.md): This page explains how to use the parse-kv operator in APL.
 - [parse](https://axiom.co/docs/apl/tabular-operators/parse-operator.md): This page explains how to use the parse operator function in APL.
 - [parse-where](https://axiom.co/docs/apl/tabular-operators/parse-where.md): This page explains how to use the parse-where operator in APL.
+- [print](https://axiom.co/docs/apl/tabular-operators/print.md): This page explains how to use the print data source in APL.
 - [project-away](https://axiom.co/docs/apl/tabular-operators/project-away-operator.md): This page explains how to use the project-away operator function in APL.
 - [project-keep](https://axiom.co/docs/apl/tabular-operators/project-keep-operator.md): This page explains how to use the project-keep operator function in APL.
 - [project](https://axiom.co/docs/apl/tabular-operators/project-operator.md): This page explains how to use the project operator in APL.
@@ -355,4 +374,4 @@
 - [top](https://axiom.co/docs/apl/tabular-operators/top-operator.md): This page explains how to use the top operator function in APL.
 - [union](https://axiom.co/docs/apl/tabular-operators/union-operator.md): This page explains how to use the union operator in APL.
 - [where](https://axiom.co/docs/apl/tabular-operators/where-operator.md): This page explains how to use the where operator in APL.
-- [Example queries](https://axiom.co/docs/apl/tutorial.md): Explore how to use APL in Axiom’s Query interface to run queries using Tabular Operators, Scalar Functions, and Aggregation Functions.
+- [Example queries](https://axiom.co/docs/apl/tutorial.md): Explore how to use APL in Axiom to run queries using tabular operators, scalar functions, and aggregation functions.

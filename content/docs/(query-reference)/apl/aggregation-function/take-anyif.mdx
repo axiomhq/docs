@@ -1,0 +1,83 @@
+---
+title: take_anyif
+description: 'This page explains how to use the take_anyif aggregation function in APL.'
+---
+
+`take_anyif` returns a value from one arbitrary row for which a predicate is true. Use it when you need a value from each group, but only from rows that match a condition.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize take_anyif(expr, predicate) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`expr`**: The expression to return a value for. `take_anyif` takes exactly one expression.
+- **`predicate`**: A Boolean expression. `take_anyif` considers only rows for which `predicate` is true.
+- **`GroupingColumn`** (optional): A column to group the results by. If you omit it, all records form one group.
+
+### Returns
+
+Returns the value of `expr` from one row of each group. The row is one of the rows for which `predicate` is true. The query does not define which row. Different runs can return different rows.
+
+`take_anyif` skips `null` and empty string values. If no matching row has a value, the result is `null`.
+
+The output column has the name of the expression, for example `uri` for `take_anyif(uri, status == '500')`. To rename the column, write `name = take_anyif(expr, predicate)`.
+
+`anyif` is a deprecated alias of `take_anyif`. It prefixes the output column name with `anyif_`, for example `anyif_uri`.
+
+## Use case examples
+
+### One failing URI for each service
+
+This example returns one URI of a failed request for each service. `frontend` has no failed request, so its result is `null`, which the output shows as an empty cell.
+
+**Query**
+
+```kusto
+datatable(service: string, status: string, uri: string)[
+  'checkout', '500', '/cart',
+  'checkout', '200', '/pay',
+  'frontend', '200', '/home',
+]
+| summarize failed_uri = take_anyif(uri, status == '500'), requests = count() by service
+```
+
+**Output**
+
+| service  | failed_uri | requests |
+|----------|------------|----------|
+| checkout | /cart      | 2        |
+| frontend |            | 1        |
+
+## List of related aggregations
+
+- [**take_any**](/apl/aggregation-function/take-any): Returns the values of one arbitrary row for each group, without a predicate.
+- [**countif**](/apl/aggregation-function/countif): Counts the records for which a predicate is true.
+- [**make_set_if**](/apl/aggregation-function/make-set-if): Returns all distinct values of an expression for which a predicate is true.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, you combine `ANY_VALUE` with a `CASE` expression to return an arbitrary value from matching rows.
+
+<CodeGroup>
+```sql SQL example
+SELECT method, ANY_VALUE(CASE WHEN status = '500' THEN uri END)
+FROM sample_http_logs
+GROUP BY method
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize take_anyif(uri, status == '500') by method
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>
