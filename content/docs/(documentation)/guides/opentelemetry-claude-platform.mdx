@@ -1,0 +1,132 @@
+---
+title: 'Send Claude Platform traces to Axiom'
+description: 'Add Axiom as an OpenTelemetry destination in the Claude Console to send traces of your Claude API requests and Managed Agents sessions to Axiom.'
+overview: 'OpenTelemetry traces from the Claude API and Claude Managed Agents'
+sidebarTitle: Claude Platform
+keywords: ['guides', 'claude platform', 'claude api', 'claude console', 'managed agents', 'claude', 'anthropic', 'otel', 'opentelemetry', 'otlp', 'traces', 'genai', 'llm observability']
+logoId: 'openTelemetry'
+---
+
+import ReplaceToken from "@/content/snippets/replace-token.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDataset from "@/content/snippets/replace-dataset.mdx"
+
+The Claude API can export [OpenTelemetry traces](https://platform.claude.com/docs/en/manage-claude/opentelemetry) of your Messages API requests, server tool uses, and Claude Managed Agents sessions. You configure the export once for your organization in the Claude Console by adding a telemetry destination. No code changes or OpenTelemetry Collector are needed. Axiom natively ingests OTLP/HTTP, so you can add Axiom as a destination with the **Custom** provider.
+
+The spans use the [OpenTelemetry semantic conventions for generative AI](https://github.com/open-telemetry/semantic-conventions-genai) (`gen_ai.*` attributes), so they work with Axiom’s [LLM observability](/use-cases/llm-observability) features, such as the AI traces waterfall view and the GenAI dashboard.
+
+<Info>
+This page is about the organization-level destination in the Claude Console for the Claude API. To monitor Claude Code sessions on developer machines, see [Monitor Claude Code with Axiom](/guides/opentelemetry-claude-code).
+</Info>
+
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) for the traces, for example `claude-platform-traces`.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
+- Have the admin role in your Claude Console organization. The developer role can only view destinations. For more information, see the [Claude documentation](https://platform.claude.com/docs/en/manage-claude/opentelemetry/api#what-you-need).
+
+Claude Platform exports traces only. It doesn’t export logs or metrics, so you don’t need a metrics dataset or the `x-axiom-metrics-dataset` header for this integration.
+
+## Add Axiom as a destination
+
+1. In the Claude Console, go to your organization’s [OpenTelemetry settings page](https://platform.claude.com/settings/telemetry-destinations), and then click **Add destination**.
+1. Configure the destination with the following values:
+
+    | Field | Value |
+    | :--- | :--- |
+    | **Provider** | **Custom** |
+    | **Name** | Optional. For example, `Axiom`. |
+    | **OTLP endpoint URL** | `https://AXIOM_DOMAIN` |
+    | **Request headers** | `Authorization`: `Bearer API_TOKEN`<br />`X-Axiom-Dataset`: `DATASET_NAME` |
+    | **Content mode** | **Metadata only** or **Full content**. For more information, see [Choose a content mode](#choose-a-content-mode). |
+    | **Workspaces** | The Claude workspaces whose traces you want to send to Axiom. |
+
+    <Info>
+    <ReplaceDomain />
+    <ReplaceToken />
+    <ReplaceDataset />
+    </Info>
+
+    Enter the OTLP endpoint URL without a path. Claude appends `/v1/traces`, so it sends the traces to `https://AXIOM_DOMAIN/v1/traces`. Leave **OTLP traces endpoint URL** under **Advanced settings** empty.
+
+1. Click **Add destination**.
+1. In the destination’s **More actions** menu, click **Test**. Claude sends a test span named `anthropic.test` to Axiom and reports whether the delivery succeeded.
+
+For more information about each field, see the [Claude documentation](https://platform.claude.com/docs/en/manage-claude/opentelemetry/api#add-a-destination). To add the destination with the Claude Admin API instead of the Console, pass the same endpoint URL and headers. For more information, see the [telemetry destinations API](https://platform.claude.com/docs/en/api/beta/organization/telemetry_destinations).
+
+### Choose a content mode
+
+The content mode determines whether spans include prompts and responses:
+
+- **Metadata only** is the default. Spans include identifiers, timing, status, and token counts, but no prompts or responses.
+- **Full content** adds the system prompt, the input and output messages, and tool arguments and results. Use it to read full conversations in Axiom’s [Conversation view](/query-data/traces#choose-a-trace-view). Axiom stores this content under the retention and access settings of your dataset.
+
+If you select **Full content**, keep **Maximum content size in MB** under **Advanced settings** at 0.75 MB or lower. This keeps the content of each span below the [maximum field size](/reference/limits) of 1 MB in Axiom. Don’t leave the field empty because Claude then sends as much content as the API allows. For more information, see [Content limits](https://platform.claude.com/docs/en/manage-claude/opentelemetry#content-limits).
+
+## Verify the integration
+
+1. In the Claude Console, select a workspace that the destination covers, and then send a Messages API request in the [playground](https://platform.claude.com/playground). You can also send a request from your app or start a Managed Agents session in that workspace.
+1. On the [OpenTelemetry settings page](https://platform.claude.com/settings/telemetry-destinations), check that the **Delivery** column shows **Healthy** for the destination. This can take about a minute.
+1. In Axiom, click the **Query** tab, and then run the following query:
+
+    ```kusto
+    ['DATASET_NAME']
+    | where ['service.name'] == 'claude-platform'
+    | project _time, name, kind, trace_id, ['attributes.gen_ai.operation.name'], ['attributes.gen_ai.request.model']
+    ```
+
+    <Info>
+    <ReplaceDataset />
+    </Info>
+
+    The results show spans such as `anthropic.messages.create` for Messages API requests, `anthropic.model_request` for each model run, `anthropic.tool_use` for server tool uses, and `anthropic.session.turn` for Managed Agents turns. For the full list of spans and attributes, see the [Claude span reference](https://platform.claude.com/docs/en/api/opentelemetry/spans).
+
+1. Click a trace ID to open the trace in the waterfall view.
+
+## Analyze Claude Platform traces
+
+Claude Platform spans set the `gen_ai.operation.name` attribute. When the field `attributes.gen_ai.operation.name` is present in a dataset, Axiom creates the **Generative AI Overview (DATASET_NAME)** dashboard with token usage, cost, latency, and error rates. For more information, see [LLM observability](/use-cases/llm-observability#access-genai-dashboard).
+
+To build your own token usage queries, count each token once. Claude adds token usage attributes to several levels of spans, so summing every span counts the same tokens more than once. For Messages API requests, sum the `anthropic.messages.create` spans of kind `server`:
+
+```kusto
+['DATASET_NAME']
+| where ['service.name'] == 'claude-platform'
+| where name == 'anthropic.messages.create' and kind == 'server'
+| summarize
+    input_tokens = sum(toint(['attributes.gen_ai.usage.input_tokens'])),
+    output_tokens = sum(toint(['attributes.gen_ai.usage.output_tokens']))
+    by bin_auto(_time), model = tostring(['attributes.gen_ai.response.model'])
+```
+
+For Managed Agents sessions and compactions, different spans hold the token usage. For more information, see [Counting tokens](https://platform.claude.com/docs/en/manage-claude/opentelemetry#count-tokens).
+
+Claude delivers spans at least once, so a span can arrive more than once. To remove duplicates, use the trace ID and the span ID.
+
+## Connect Claude spans to your own traces
+
+By default, the spans of each Claude API request are in their own trace. To nest them under the spans of your app, send the W3C `traceparent` header with your Claude API requests. The Anthropic SDK does this automatically when you set up SDK tracing. Send the traces of your app to the same Axiom dataset so that Axiom shows your spans and the Claude spans in one trace.
+
+To send the traces of your app to Axiom, configure its OTLP exporter with the endpoint `https://AXIOM_DOMAIN/v1/traces` and the same `Authorization` and `X-Axiom-Dataset` headers. For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry), [Set up SDK tracing](https://platform.claude.com/docs/en/manage-claude/opentelemetry/sdk), and [Connect API spans to your own traces](https://platform.claude.com/docs/en/manage-claude/opentelemetry/api#connect-api-spans-to-your-own-traces).
+
+## Troubleshooting
+
+If the **Delivery** column shows **Failing**, hover over it to see the last error.
+
+| Error | Likely cause in Axiom |
+| :--- | :--- |
+| HTTP error (status 401) or HTTP error (status 403) | The API token is wrong, or it doesn’t have permission to ingest data to the dataset. Check that the `Authorization` header value starts with `Bearer `. |
+| HTTP error (status 404) | The OTLP endpoint URL has a path. Enter `https://AXIOM_DOMAIN` without `/v1/traces`. |
+| HTTP error (status 413) | The request exceeds the [maximum request size](/reference/limits) in Axiom. Lower **Maximum content size in MB**. |
+| Invalid address | The edge deployment domain is wrong. For the list of domains, see [Edge deployments](/reference/edge-deployments). |
+
+If the delivery succeeds but you can’t find spans in Axiom, check that the `X-Axiom-Dataset` header names an existing dataset and that the destination covers the workspace where you send requests.
+
+If all deliveries fail for 24 hours, Claude turns off the destination and the **Delivery** column shows **Disabled**. Claude doesn’t send the spans it drops while the destination is off. After you fix the cause, test the destination, and then enable it again. For the full list of errors and delivery rules, see [Troubleshooting](https://platform.claude.com/docs/en/manage-claude/opentelemetry/api#troubleshooting) and [Delivery and health](https://platform.claude.com/docs/en/manage-claude/opentelemetry/api#delivery-and-health) in the Claude documentation.
+
+## What’s next
+
+- [Monitor Claude Code with Axiom](/guides/opentelemetry-claude-code)
+- [LLM observability](/use-cases/llm-observability)
+- [Explore traces](/query-data/traces)
