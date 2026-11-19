@@ -29,6 +29,8 @@ The table below summarizes the limits applied to each pricing plan. For more det
 
 \* Soft limit that can be increased upon request.
 
+On the Personal plan, the 10 GB-hours / month query compute allowance is a hard cap, like the 500 GB / month data loading limit.
+
 If you’re on the Axiom Cloud plan and you exceed the Always Free allowances outlined above, additional charges apply based on your usage above the allowance. For more information, see the [Axiom pricing page](https://axiom.co/pricing).
 
 All plans include unlimited bandwidth, API access, and data sources subject to the [Fair Use Policy](https://axiom.co/terms).
@@ -73,11 +75,12 @@ The following limits are applied to all accounts, irrespective of the pricing pl
 
 The table below summarizes the limits Axiom applies to each data ingest. These limits are independent of your pricing plan. For metrics, see [Limits on ingested metrics](#limits-on-ingested-metrics).
 
-|                              | Limit     |
-| ---------------------------- | --------- |
-| Maximum field size           | 1 MB      |
-| Maximum events in a batch    | 10,000    |
-| Maximum field name length    | 200 bytes |
+|                              | Limit                                                      |
+| ---------------------------- | ---------------------------------------------------------- |
+| Maximum event size           | 1 MiB (estimated in memory); larger events are rejected    |
+| Maximum field size           | 1 MB                                                       |
+| Maximum events in a batch    | 10,000                                                     |
+| Maximum field name length    | 200 bytes                                                  |
 
 If you try to ingest data that exceeds these limits, Axiom does the following:
 - Replaces strings that are too long with `<invalid string: too long>`.
@@ -110,6 +113,19 @@ To keep requests within the limit, use the `batch` processor in your OpenTelemet
 The maximum number of buckets applies to each histogram data point and counts the entries in its `explicit_bounds` list. The implicit overflow bucket that catches values above the last boundary doesn’t count towards the limit. For summary data points, the limit counts the entries in the `quantile_values` list.
 
 If a metric name, an attribute, or the number of buckets or quantiles exceeds the limits above, Axiom doesn’t reject the whole request. It rejects the affected data points, responds with the HTTP status code `200`, and returns an OpenTelemetry `partial_success` message that reports the number of rejected data points and the reason. For example, a histogram data point with too many buckets is reported as `[http.server.duration] metric limit violation: Bucket count 300 (explicit_bounds/quantile_values) exceeds limit 256`.
+
+### Query limits
+
+Axiom applies the following limits to query results:
+
+| Limit | Value |
+| --- | --- |
+| Default result rows | 1,000 |
+| Maximum result rows | 50,000 (higher for queries that project fewer columns) |
+| Join left-hand side | 10,000 rows |
+| Histogram buckets | 100 |
+
+If a query doesn’t include a `limit` or `take` operator, Axiom returns up to 1,000 rows. With `limit` or `take`, the base maximum is 50,000 rows. For queries that project fewer columns, Axiom raises the maximum in proportion to the column count: roughly 20,000,000 divided by the number of projected columns, never below 50,000.
 
 ### Special fields
 
