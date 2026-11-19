@@ -1,0 +1,135 @@
+---
+title: 'Send data from Heroku to Axiom'
+description: 'This page explains how to send traces, logs, and metrics from Heroku Fir apps with telemetry drains, and logs from Heroku Cedar apps with log drains.'
+overview: 'Cloud platform for building, running, and scaling applications'
+sidebarTitle: Heroku
+keywords: ['heroku', 'axiom documentation', 'documentation', 'axiom', 'guide', 'logs', 'traces', 'metrics', 'heroku telemetry drains', 'heroku log drains', 'heroku fir', 'heroku cedar', 'opentelemetry', 'otlp', 'heroku cli']
+logoId: 'heroku'
+---
+
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+
+Heroku runs apps on two platform generations, and each generation has its own way to export data. For more information, see [Heroku generations](https://devcenter.heroku.com/articles/generations).
+
+| Heroku generation | Method | Signals | Axiom edge deployments |
+| ----------------- | ------ | ------- | ---------------------- |
+| Fir | [Telemetry drains](#send-telemetry-from-fir-apps) over OpenTelemetry (OTLP) | Traces, logs, and metrics | All |
+| Cedar | [Log drains](#send-logs-from-cedar-apps) | Logs | US East 1 (AWS) only |
+
+Use the method that matches the generation of your app or space. Heroku supports telemetry drains only on Fir, and HTTPS log drains only on Cedar. For more information, see [Log drains](https://devcenter.heroku.com/articles/log-drains) in the Heroku documentation.
+
+## Send telemetry from Fir apps
+
+Use [Heroku Telemetry Drains](https://devcenter.heroku.com/articles/heroku-telemetry) to send OpenTelemetry traces, logs, and metrics from Fir apps and spaces to Axiom. Heroku collects telemetry from the platform, such as router logs and dyno metrics, and OpenTelemetry signals that your app emits, and exports them in batches to each drain. For more information, see [OpenTelemetry concepts and Heroku](https://devcenter.heroku.com/articles/opentelemetry-concepts-and-heroku).
+
+### How telemetry drains map to Axiom datasets
+
+Each telemetry drain has one endpoint, one set of headers, and a list of signals:
+
+- With the default `http` transport, the drain exports OTLP over HTTP to the endpoint you specify as a base URL. Heroku appends the path for each signal, so traces go to `/v1/traces`, logs to `/v1/logs`, and metrics to `/v1/metrics`. Don’t add a path to the endpoint.
+- The headers apply to every signal that the drain sends.
+
+Axiom stores each OpenTelemetry signal in its own dataset, and metrics need a metrics dataset and the `X-Axiom-Metrics-Dataset` header instead of `X-Axiom-Dataset`. Because one drain can’t send different headers per signal, create one drain for each signal. Drains are additive, so all three drains receive telemetry from the same app or space.
+
+<Note>
+Axiom accepts OTLP over HTTP only. Use `--transport http`, which is the Heroku default. Don’t use `--transport grpc`.
+</Note>
+
+### Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create datasets in Axiom](/reference/datasets#create-dataset): one for traces and one for logs with the **Events** type, and one for metrics with the **Metrics** type. If you don’t send a signal, skip its dataset.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to these datasets.
+- [Download and install the Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli).
+- Create a Fir-generation app or space on Heroku. For more information, see [Heroku generations](https://devcenter.heroku.com/articles/generations).
+
+### Add telemetry drains
+
+<Steps>
+<Step title="Add a drain for traces">
+```bash
+heroku telemetry:add https://AXIOM_DOMAIN \
+  --app HEROKU_APPLICATION_NAME \
+  --signals traces \
+  --transport http \
+  --headers '{"Authorization":"Bearer API_TOKEN","X-Axiom-Dataset":"TRACES_DATASET_NAME"}'
+```
+</Step>
+<Step title="Add a drain for logs">
+```bash
+heroku telemetry:add https://AXIOM_DOMAIN \
+  --app HEROKU_APPLICATION_NAME \
+  --signals logs \
+  --transport http \
+  --headers '{"Authorization":"Bearer API_TOKEN","X-Axiom-Dataset":"LOGS_DATASET_NAME"}'
+```
+</Step>
+<Step title="Add a drain for metrics">
+```bash
+heroku telemetry:add https://AXIOM_DOMAIN \
+  --app HEROKU_APPLICATION_NAME \
+  --signals metrics \
+  --transport http \
+  --headers '{"Authorization":"Bearer API_TOKEN","X-Axiom-Metrics-Dataset":"METRICS_DATASET_NAME"}'
+```
+</Step>
+</Steps>
+
+<Info>
+<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated.
+
+Replace `TRACES_DATASET_NAME`, `LOGS_DATASET_NAME`, and `METRICS_DATASET_NAME` with the names of the Axiom datasets for traces, logs, and metrics.
+
+Replace `HEROKU_APPLICATION_NAME` with the name of the Heroku app.
+</Info>
+
+To send telemetry from every app in a Fir space, replace `--app HEROKU_APPLICATION_NAME` with `--space HEROKU_SPACE_NAME` in each command. Space drains also apply to apps that you create in the space later.
+
+To check the drains, run `heroku telemetry --app HEROKU_APPLICATION_NAME`. The output lists the ID of each drain. To see the configuration of one drain, run `heroku telemetry:info DRAIN_ID`.
+
+After Heroku exports the first batch, you see traces, logs, and metrics in the Axiom datasets. To explore them, see [Explore traces](/query-data/traces) and [Metrics](/query-data/metrics).
+
+### Update or remove telemetry drains
+
+To rotate the API token, update the headers of each drain:
+
+```bash
+heroku telemetry:update DRAIN_ID \
+  --headers '{"Authorization":"Bearer NEW_API_TOKEN","X-Axiom-Dataset":"TRACES_DATASET_NAME"}'
+```
+
+The `--headers` value replaces all existing headers of the drain, so include the dataset header in every update. Heroku leaves the attributes that you don’t specify unchanged.
+
+To remove a drain, run `heroku telemetry:remove DRAIN_ID`.
+
+For more information about these commands, see [Working with Heroku Telemetry Drains](https://devcenter.heroku.com/articles/working-with-heroku-telemetry-drains).
+
+## Send logs from Cedar apps
+
+Use [Heroku Log Drains](https://devcenter.heroku.com/articles/log-drains) to send logs from your Cedar apps to Axiom.
+
+<Warning>
+With Heroku Log Drains, you can only send data to the US East 1 (AWS) edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+</Warning>
+
+### Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) where you send your data.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the dataset you have created.
+- [Create an account on Heroku](https://heroku.com/).
+- [Download and install the Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli).
+- [Create a Heroku app](https://devcenter.heroku.com/articles/creating-apps).
+
+### Add a log drain
+
+```bash
+heroku drains:add "https://axiom:API_TOKEN@api.axiom.co/v1/datasets/DATASET_NAME/ingest" -a HEROKU_APPLICATION_NAME
+```
+
+<Info>
+<ReplaceDatasetToken />
+Replace `HEROKU_APPLICATION_NAME` with the name of the Heroku app.
+</Info>
