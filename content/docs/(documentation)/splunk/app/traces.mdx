@@ -1,0 +1,62 @@
+---
+title: 'Inspect traces in the Axiom for Splunk app'
+description: 'Use the Traces view in the Axiom for Splunk app to browse root spans, inspect span waterfalls and GenAI conversations, and deep-link to traces.'
+sidebarTitle: Traces
+keywords: ['splunk', 'splunk app', 'traces', 'waterfall', 'opentelemetry', 'genai', 'workflow actions']
+---
+
+The **Traces** view (available in Axiom for Splunk app 1.3.2 and later) lets you list and inspect OpenTelemetry traces inside Splunk without writing SPL.
+
+## Trace sources
+
+Select a source from the picker or pass it in a deep link:
+
+- **Axiom dataset:** An Axiom dataset containing OpenTelemetry spans, queried through `axquery`.
+- **Splunk or Portal index:** A native, standard-federated, or transparent Portal index that already contains Axiom-shaped OpenTelemetry spans as JSON events (`trace_id`, `span_id`, `parent_span_id`, `name`, `duration`, `service.name`, `status.code`), queried with SPL.
+
+## Browse and filter traces
+
+The list shows root spans (`parent_span_id` missing or empty), newest first, with RFC3339 time, trace ID, root service, and root duration:
+
+- Filter by time range, root service, root span name, or full or partial trace ID.
+- Enable **Errors only** to show roots with `status.code=ERROR` (failed child spans don’t mark a successful root as errored in the list).
+- Click **Set as default** to save the current dataset as the default traces dataset in `axiom.conf` (`[traces] dataset`).
+
+## Inspect a trace waterfall
+
+Click a trace to open the detail view:
+
+- **Waterfall:** Displays spans nested by `parent_span_id`, scaled to total trace duration, with error spans highlighted and call-type icons derived from OpenTelemetry semantic conventions (`gen_ai.operation.name`, `db.*`, `rpc.*`, `messaging.*`, `http.*`, falling back to span `kind`).
+- **Span panel:** Shows status, timing, attributes, resource, scope, and OpenTelemetry events (including exception details and JSON copy).
+- **Header actions:** Use **View conversation**, **Copy link**, **Open in Search**, and **All traces**.
+- **Loading status:** A status line tracks lookup progress, displays the received span count while loading, and reports **Waterfall ready** once complete (or labels truncated/incomplete wider-range checks).
+
+## Inspect GenAI turns and conversations
+
+- **View turn:** Available on `gen_ai.operation.name=chat` spans with recorded messages. Shows the full **Input context** and **New output** for that model call, with **Copy as text** and **Copy JSON**.
+- **View conversation:** Available in the detail header. Reconstructs the whole trace in time order—including system instructions, user inputs, agent responses, tool requests/results joined by call ID, and thinking blocks when explicitly recorded—while hiding re-sent prompt history.
+- **Conversation navigation:** When a trace includes a conversation or session ID, the conversation bar provides **Previous trace**, **Next trace**, **Go to latest**, and **View all traces** (searching the same source within seven days either side, up to 200 traces).
+
+## Deep-link URL forms
+
+Every state of the Traces view is addressable by URL:
+
+```text
+/app/axiom/trace?dataset=<dataset>&trace_id=<hex>[&span_id=<hex>][&t=<rfc3339|epoch seconds>]
+/app/axiom/trace?index=<index>[&provider=<splunk_federated_provider>]&trace_id=<hex>[&span_id=<hex>][&t=<rfc3339|epoch seconds>]
+/app/axiom/trace?dataset=<dataset>&trace_id=<hex>&start=<rfc3339>&end=<rfc3339>
+/app/axiom/trace?dataset=<dataset>[&range=1h|24h|7d|30d][&service=<name>][&name=<substring>][&errors=1]
+/app/axiom/trace?index=<index>[&range=...][&service=...][&name=...][&errors=1]
+```
+
+- When `start` and `end` are omitted, the view runs a lightweight outline query over escalating windows (`1h`, `3h`, `1d`, `7d`) anchored at `t` (or now), writes the discovered bounds back into the URL, and checks ±24 hours in the background for straggling spans.
+- When `dataset` is omitted on a `trace_id`-only link, the view falls back to `axiom.conf [traces] dataset`, then the last dataset used in the browser, then the first dataset whose name contains `trace`.
+- Pass `span_id` to preselect a specific span.
+
+## Federated provider resolution
+
+When a link or workflow action includes `provider=<splunk_federated_provider>`, the view resolves it through your authenticated Splunk Web session against `services/data/federated/provider` and `services/data/federated/index`:
+
+- **Standard provider:** Matches the remote index to a single local mapping for that provider, rewrites the URL to `index=federated:<local-name>`, and removes the `provider` hint. If multiple local aliases match, the view prompts you to pick one.
+- **Transparent provider:** Keeps the original `index` and removes the `provider` hint.
+- **Configuration errors:** An unknown provider, unreadable configuration, or missing mapping stops with an actionable error rather than falling back to a direct Axiom dataset query.

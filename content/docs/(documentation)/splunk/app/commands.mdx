@@ -88,7 +88,9 @@ Every command returns Axiom fields as real Splunk fields. You don’t need to ap
 - Nested Axiom objects are flattened to dotted field names, so `attributes.http.method` is addressable directly.
 - Arrays arrive as Splunk multivalue fields.
 - Commands other than `axtimechart` keep the original row in `_raw` as JSON, so the Events tab shows the underlying Axiom record.
-- `axsample`, `axsearch`, `axstats`, and `axtimechart` add `axiom_dataset` to each returned event. `axlookup` adds `axiom_lookup_dataset` to enriched events.
+- `axsample`, `axsearch`, `axstats`, and `axtimechart` add `axiom_dataset` to each returned event.
+- `axlookup` adds `axiom_lookup_dataset` to enriched events and sets `axiom_dataset` if the event doesn’t already have one.
+- `axquery` doesn’t set `axiom_dataset`. Append `| eval axiom_dataset="<dataset>"` when you want workflow actions on raw APL results.
 
 `axlookup` output fields are prefixed and normalized to Splunk-friendly names. The default prefix is `axiom_`, and punctuation in Axiom field names becomes `_`:
 
@@ -98,7 +100,11 @@ Every command returns Axiom fields as real Splunk fields. You don’t need to ap
 | `resource.k8s.deployment.name` | `axiom_resource_k8s_deployment_name` |
 | `trace-id` | `axiom_trace_id` |
 
-The app also ships Splunk workflow actions. When an event has `axiom_dataset` plus a supported field such as `trace_id`, `span_id`, `service`, or `service.name`, the event menu can launch a focused Axiom search for traces, spans, services, or Kubernetes deployments. The action preserves the current Splunk time range and opens the search in Axiom.
+The app also ships Splunk workflow actions:
+
+- **Axiom: View trace** requires `trace_id` and `index` and opens the trace in the app’s [Traces view](/splunk/app/traces). It works for native, standard-federated, and transparent Portal indexes.
+- For events with `axiom_dataset`, **Axiom: View trace … in Axiom dataset …** passes the dataset explicitly.
+- The search actions require `axiom_dataset` plus `trace_id`, `span_id`, `service`, `service.name`, `deployment`, or `resource.k8s.deployment.name`. They run `| axsearch` in Splunk and preserve the current time range.
 
 ## Command reference
 
@@ -115,6 +121,7 @@ List datasets visible to the configured Axiom token.
 | Option | Required | Description |
 | --- | --- | --- |
 | `tokenName` | No | Stored Axiom token name. Defaults to `axiom_token`. |
+| `mgmtPort` | No | Splunk management port override. Normally leave unset. |
 
 ### axfields
 
@@ -130,6 +137,7 @@ List fields for one Axiom dataset.
 | --- | --- | --- |
 | `dataset` | Yes | Axiom dataset ID. |
 | `tokenName` | No | Stored Axiom token name. Defaults to `axiom_token`. |
+| `mgmtPort` | No | Splunk management port override. Normally leave unset. |
 
 ### axsample
 
@@ -146,6 +154,7 @@ Fetch recent events from one dataset without writing a query.
 | `fields` | No | Comma-separated fields to keep. `_time` is preserved automatically. |
 | `startTime`, `endTime`, `earliest`, `latest` | No | Time controls. See [Time ranges](#time-ranges). |
 | `tokenName` | No | Stored Axiom token name. |
+| `mgmtPort` | No | Splunk management port override. Normally leave unset. |
 
 ### axsearch
 
@@ -167,6 +176,7 @@ Search one Axiom dataset and return event-shaped rows.
 | `explain` | No | Return compiled APL without querying Axiom. |
 | `startTime`, `endTime`, `earliest`, `latest` | No | Time controls. See [Time ranges](#time-ranges). |
 | `tokenName` | No | Stored Axiom token name. |
+| `mgmtPort` | No | Splunk management port override. Normally leave unset. |
 
 ### axstats
 
@@ -199,6 +209,7 @@ Use `axquery` for APL aggregations outside this subset, such as conditional aggr
 | `explain` | No | Return compiled APL without querying Axiom. |
 | `startTime`, `endTime`, `earliest`, `latest` | No | Time controls. See [Time ranges](#time-ranges). |
 | `tokenName` | No | Stored Axiom token name. |
+| `mgmtPort` | No | Splunk management port override. Normally leave unset. |
 
 ### axtimechart
 
@@ -221,6 +232,7 @@ This is a reporting command. The result is a stats table with `_time` plus the a
 | `explain` | No | Return compiled APL without querying Axiom. |
 | `startTime`, `endTime`, `earliest`, `latest` | No | Time controls. See [Time ranges](#time-ranges). |
 | `tokenName` | No | Stored Axiom token name. |
+| `mgmtPort` | No | Splunk management port override. Normally leave unset. |
 
 ### axlookup
 
@@ -244,6 +256,7 @@ index=main service=api
 | `strict` | No | Whether Axiom failures fail the Splunk search. Defaults to `true`. |
 | `startTime`, `endTime`, `earliest`, `latest` | No | Time controls for the Axiom lookup. See [Time ranges](#time-ranges). |
 | `tokenName` | No | Stored Axiom token name. |
+| `mgmtPort` | No | Splunk management port override. Normally leave unset. |
 
 The time range controls the Axiom lookup dataset, not the already-returned Splunk events. By default, the same Splunk dispatch window applies to both. Override the lookup window when your context data lives outside the base search window.
 
@@ -264,6 +277,7 @@ Run raw APL when you need full control of the Axiom query language.
 | `maxTime` | No | Maximum runtime in seconds. Defaults to `600`. |
 | `startTime`, `endTime`, `earliest`, `latest` | No | Time controls. See [Time ranges](#time-ranges). |
 | `tokenName` | No | Stored Axiom token name. |
+| `mgmtPort` | No | Splunk management port override. Normally leave unset. |
 
 Pagination notes:
 
@@ -282,7 +296,7 @@ For `axsearch`, `axstats`, and `axtimechart`, start with `explain=true`. It show
 | table compiled_apl, startTime, endTime
 ```
 
-Use `debug=true` with `axquery` when you need detailed runtime logs, then inspect the latest run with the `axquery_latest` search macro:
+Use `debug=true` with `axquery` when you need detailed runtime logs, then open the **Debug** view in the app navigation bar to inspect recent `axquery` runs, or run the `axquery_latest` search macro:
 
 ```spl
 `axquery_latest`
