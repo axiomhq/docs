@@ -143,7 +143,6 @@
 - [IP functions](https://axiom.co/docs/apl/scalar-functions/ip-functions.md): This section explains how to use IP functions in APL.
 - [format_ipv4](https://axiom.co/docs/apl/scalar-functions/ip-functions/format-ipv4.md): This page explains how to use the format_ipv4 function in APL.
 - [format_ipv4_mask](https://axiom.co/docs/apl/scalar-functions/ip-functions/format-ipv4-mask.md): This page explains how to use the format_ipv4_mask function in APL.
-- [geo_info_from_ip_address](https://axiom.co/docs/apl/scalar-functions/ip-functions/geo-info-from-ip-address.md): This page explains how to use the geo_info_from_ip_address function in APL.
 - [has_any_ipv4](https://axiom.co/docs/apl/scalar-functions/ip-functions/has-any-ipv4.md): This page explains how to use the has_any_ipv4 function in APL.
 - [has_any_ipv4_prefix](https://axiom.co/docs/apl/scalar-functions/ip-functions/has-any-ipv4-prefix.md): This page explains how to use the has_any_ipv4_prefix function in APL.
 - [has_ipv4](https://axiom.co/docs/apl/scalar-functions/ip-functions/has-ipv4.md): This page explains how to use the has_ipv4 function in APL.
