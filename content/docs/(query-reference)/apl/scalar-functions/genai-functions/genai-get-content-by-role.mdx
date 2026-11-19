@@ -64,12 +64,13 @@ This query shows the distribution of system prompts being used, helping ensure c
 <LanguageComparisons>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, you would use `mvfilter` to filter by role and then extract the content.
+In Splunk SPL, you would use `mvfilter` to filter by role and then extract the content of the last matching message.
 
 <CodeGroup>
-```sql Splunk example
-| eval filtered_msgs=mvfilter(match(role, "system"))
-| eval content=mvindex(filtered_msgs, 0)
+```splunk Splunk example
+| eval message = json_array_to_mv(messages)
+| eval filtered_msgs = mvfilter(json_extract(message, "role") == "system")
+| eval content = json_extract(mvindex(filtered_msgs, -1), "content")
 ```
 
 ```kusto APL equivalent
@@ -81,17 +82,20 @@ In Splunk SPL, you would use `mvfilter` to filter by role and then extract the c
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In ANSI SQL, you would unnest the array, filter by role, and limit to the first result.
+In ANSI SQL, you would unnest the array, filter by role, and select the last matching message for each conversation.
 
 <CodeGroup>
 ```sql SQL example
 SELECT
   conversation_id,
-  content
+  (
+    SELECT m.content
+    FROM UNNEST(messages) WITH ORDINALITY AS m(role, content, position)
+    WHERE m.role = 'system'
+    ORDER BY m.position DESC
+    FETCH FIRST 1 ROW ONLY
+  ) AS content
 FROM conversations
-CROSS JOIN UNNEST(messages)
-WHERE role = 'system'
-LIMIT 1
 ```
 
 ```kusto APL equivalent
