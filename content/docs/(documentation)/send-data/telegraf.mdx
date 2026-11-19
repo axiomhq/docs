@@ -1,0 +1,102 @@
+---
+title: 'Send data from Telegraf to Axiom'
+description: 'This page explains how to send data from Telegraf to Axiom.'
+overview: 'Plugin-driven agent for collecting and reporting metrics'
+sidebarTitle: Telegraf
+keywords: ['telegraf', 'axiom documentation', 'documentation', 'axiom', 'guide', 'metrics', 'influxdata', 'http output']
+---
+
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+
+Telegraf is an open-source, plugin-driven agent that collects metrics and events from your systems, services, and apps. To send the data that Telegraf collects to Axiom, use the HTTP output plugin of Telegraf.
+
+<Prerequisites />
+- [Install Telegraf](https://docs.influxdata.com/telegraf/v1/install/) version 1.24.0 or later.
+
+## Configure Telegraf
+
+1. Set up the Telegraf configuration file based on the [Telegraf documentation](https://docs.influxdata.com/telegraf/v1/configuration/).
+1. In the Telegraf configuration file, use the HTTP output plugin with the following configuration. For more information on the plugin, see the [Telegraf documentation](https://docs.influxdata.com/telegraf/v1/output-plugins/http/).
+
+    ```toml
+    [[outputs.http]]
+      url = "https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME"
+      method = "POST"
+      content_encoding = "gzip"
+      data_format = "json"
+      json_transformation = '[metrics.{"_time": timestamp, "name": name, "tags": tags, "fields": fields}]'
+      [outputs.http.headers]
+        Content-Type = "application/json"
+        Authorization = "Bearer API_TOKEN"
+    ```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+<Note>
+Keep the `json_transformation` setting. It sends each metric as a separate event and sets the `_time` field to the time when Telegraf collects the metric. Without this setting, Telegraf sends all metrics of a flush in one JSON object, and Axiom stores them as a single event.
+</Note>
+
+## Example configuration
+
+The following example collects CPU and memory metrics, changes the `host` tag with a processor plugin, and sends the data to Axiom:
+
+```toml
+# Input Plugins
+[[inputs.cpu]]
+  percpu = true
+  totalcpu = true
+  collect_cpu_time = false
+  report_active = false
+
+[[inputs.mem]]
+  # No specific configuration required
+
+# Processor Plugins
+[[processors.regex]]
+  namepass = ["cpu", "mem"]
+  [[processors.regex.tags]]
+    key = "host"
+    pattern = "(.*)"
+    replacement = "${1}-processed"
+
+# Output Plugins
+[[outputs.http]]
+  url = "https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME"
+  method = "POST"
+  content_encoding = "gzip"
+  data_format = "json"
+  json_transformation = '[metrics.{"_time": timestamp, "name": name, "tags": tags, "fields": fields}]'
+  [outputs.http.headers]
+    Content-Type = "application/json"
+    Authorization = "Bearer API_TOKEN"
+```
+
+To start Telegraf with the configuration file, run the following command:
+
+```shell
+telegraf --config telegraf.conf
+```
+
+## Query your data
+
+Each metric arrives in Axiom as a separate event with the following fields:
+
+| Field | Description |
+|:------|:------------|
+| `_time` | Time when Telegraf collects the metric |
+| `name` | Name of the metric. For example, `cpu` or `mem` |
+| `tags` | Tags of the metric. For example, `tags.host` and `tags.cpu` |
+| `fields` | Values of the metric. For example, `fields.usage_user` and `fields.used_percent` |
+
+For example, the following query charts the average user CPU usage over time:
+
+```kusto
+['DATASET_NAME']
+| where name == 'cpu' and ['tags.cpu'] == 'cpu-total'
+| summarize avg(['fields.usage_user']) by bin_auto(_time)
+```
