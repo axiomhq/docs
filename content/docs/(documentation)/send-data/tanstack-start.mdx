@@ -1,0 +1,212 @@
+---
+title: "Send data from TanStack Start to Axiom"
+description: "This page explains how to send logs and client errors from a TanStack Start app to Axiom using @axiomhq/tanstack-start."
+overview: "Full-stack React and Solid framework logging with TanStack Start"
+sidebarTitle: TanStack Start
+keywords: ["tanstack", "tanstack-start", "react", "solid", "axiom documentation", "documentation", "axiom", "guide", "logs", "@axiomhq/tanstack-start", "javascript"]
+---
+
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import BaseDomains from "@/content/snippets/base-domains.mdx"
+
+The `@axiomhq/tanstack-start` library provides request middleware, server-function middleware, TanStack Router observation, proxy ingestion, and client error boundary helpers for React and Solid apps built with TanStack Start.
+
+<Info>
+The `@axiomhq/tanstack-start` library is part of the Axiom JavaScript SDK. For source code and examples, see the [GitHub repository](https://github.com/axiomhq/axiom-js).
+</Info>
+
+<Prerequisites />
+- A new or existing TanStack Start app (React or Solid).
+
+## Install `@axiomhq/tanstack-start`
+
+In your terminal, go to the root folder of your TanStack Start app and run:
+
+```sh
+npm install @axiomhq/js @axiomhq/logging@0.3.0 @axiomhq/tanstack-start
+```
+
+<Note>
+`@axiomhq/tanstack-start` `0.2.0` has an exact peer dependency on `@axiomhq/logging@0.3.0`. Pin `@axiomhq/logging@0.3.0` to avoid peer-dependency resolution errors.
+</Note>
+
+## Configure the server logger
+
+Create a server-side logger that sends events to Axiom using your API token and edge deployment domain. Keep `AXIOM_TOKEN` on the server and don’t expose it in browser bundles.
+
+```ts src/lib/axiom/server.ts
+import { Axiom } from '@axiomhq/js';
+import { AxiomJSTransport, ConsoleTransport, Logger } from '@axiomhq/logging';
+import { tanStackStartServerFormatters } from '@axiomhq/tanstack-start';
+
+const axiom = new Axiom({
+  token: process.env.AXIOM_TOKEN!,
+  edge: process.env.AXIOM_EDGE,
+});
+
+export const startLogger = new Logger({
+  transports: [
+    new AxiomJSTransport({
+      axiom,
+      dataset: process.env.AXIOM_DATASET!,
+    }),
+    new ConsoleTransport({ prettyPrint: true }),
+  ],
+  formatters: tanStackStartServerFormatters,
+});
+```
+
+Set `AXIOM_EDGE` to the base domain of your edge deployment:
+
+<BaseDomains />
+
+For more information, see [Edge deployments](/reference/edge-deployments).
+
+## Configure client-side proxy ingestion
+
+To send browser logs without exposing your Axiom API token in client code, use `ProxyTransport` on the client and forward events through a server route backed by `createAxiomProxyHandler`.
+
+1. Create `src/lib/axiom/client.ts`:
+
+    ```ts src/lib/axiom/client.ts
+    import { ConsoleTransport, Logger, ProxyTransport } from '@axiomhq/logging';
+    import type { Transport } from '@axiomhq/logging';
+    import { tanStackStartClientFormatters } from '@axiomhq/tanstack-start';
+    import { tanStackRouterFormatters } from '@axiomhq/tanstack-start/router';
+
+    function createBrowserTransports(): [Transport, ...Transport[]] {
+      return [
+        new ProxyTransport({ url: '/api/axiom' }),
+        new ConsoleTransport({ prettyPrint: true }),
+      ];
+    }
+
+    export const routerLogger = new Logger({
+      transports: createBrowserTransports(),
+      formatters: tanStackRouterFormatters,
+    });
+
+    export const clientLogger = new Logger({
+      transports: createBrowserTransports(),
+      formatters: tanStackStartClientFormatters,
+    });
+    ```
+
+1. Create the server proxy route `src/routes/api/axiom.ts`:
+
+    ```ts src/routes/api/axiom.ts
+    import { createFileRoute } from '@tanstack/react-router';
+    import { createAxiomProxyHandler } from '@axiomhq/tanstack-start';
+    import { startLogger } from '../../lib/axiom/server';
+
+    const proxyHandler = createAxiomProxyHandler(startLogger);
+
+    export const Route = createFileRoute('/api/axiom')({
+      server: {
+        handlers: {
+          POST: ({ request }) => proxyHandler(request),
+        },
+      },
+    });
+    ```
+
+    For Solid apps, import `createFileRoute` from `@tanstack/solid-router`.
+
+## Add Start middleware
+
+Use `createAxiomRequestMiddleware` and `createAxiomFnMiddleware` to log HTTP requests and server function calls:
+
+```ts
+import {
+  createAxiomFnMiddleware,
+  createAxiomRequestMiddleware,
+} from '@axiomhq/tanstack-start';
+import { startLogger } from './lib/axiom/server';
+
+export const requestMiddleware = [
+  createAxiomRequestMiddleware(startLogger, {
+    include: ['/api/*', '/_server/*'],
+    exclude: ['/api/health'],
+  }),
+];
+
+export const functionMiddleware = [
+  createAxiomFnMiddleware(startLogger, {
+    correlation: true,
+  }),
+];
+```
+
+Use one function instrumentation path per server function. If you mount `createAxiomFnMiddleware` globally through `createStart({ functionMiddleware })`, don’t also attach it to individual server functions unless you want duplicate log events.
+
+## Observe TanStack Router
+
+Use `observeTanStackRouter` from `@axiomhq/tanstack-start/router` to record client-side route navigation and timing logs:
+
+```ts
+import { observeTanStackRouter } from '@axiomhq/tanstack-start/router';
+import { routerLogger } from './lib/axiom/client';
+
+const observe = observeTanStackRouter(routerLogger, {
+  source: 'tanstack-router-react',
+  performance: true,
+});
+
+const unsubscribe = observe(router);
+```
+
+`observeTanStackRouter` only subscribes in the browser, so it’s safe to call during router setup that also runs during SSR.
+
+## Capture client errors
+
+Use the framework adapter with `clientLogger` so client error reports go through `/api/axiom` without importing server credentials into browser bundles.
+
+<Tabs>
+<Tab title="React">
+
+```tsx
+import { ErrorComponent, createRouter, type ErrorComponentProps } from '@tanstack/react-router';
+import { useEffect } from 'react';
+import { createAxiomReactErrorHandler } from '@axiomhq/tanstack-start/react';
+import { clientLogger } from './lib/axiom/client';
+
+const handleClientError = createAxiomReactErrorHandler(clientLogger);
+
+function RouterErrorBoundary({ error }: ErrorComponentProps) {
+  useEffect(() => {
+    handleClientError(error);
+  }, [error]);
+
+  return <ErrorComponent error={error} />;
+}
+
+const router = createRouter({
+  routeTree,
+  defaultErrorComponent: RouterErrorBoundary,
+});
+```
+
+</Tab>
+<Tab title="Solid">
+
+```tsx
+import { ErrorComponent, createRouter, type ErrorComponentProps } from '@tanstack/solid-router';
+import { onMount } from 'solid-js';
+import { createAxiomSolidErrorHandler } from '@axiomhq/tanstack-start/solid';
+import { clientLogger } from './lib/axiom/client';
+
+const handleClientError = createAxiomSolidErrorHandler(clientLogger);
+
+function RouterErrorBoundary(props: ErrorComponentProps) {
+  onMount(() => handleClientError(props.error, props.reset));
+  return <ErrorComponent error={props.error} />;
+}
+
+const router = createRouter({
+  routeTree,
+  defaultErrorComponent: RouterErrorBoundary,
+});
+```
+
+</Tab>
+</Tabs>

@@ -21,18 +21,19 @@ Use the block deletion endpoint for deleting less than one million rows in one r
 
 To delete all blocks containing events that match an APL query, send a `POST` request to `/v2/datasets/_apl/delete`.
 
-To authenticate your request, use an API token with update permissions for datasets. For more information, see [API tokens](/reference/tokens).
+To authenticate your request, use an API token with dataset-level trim update permission (`trim|update`). Org-level dataset update permission isn't sufficient. For more information, see [API tokens](/reference/tokens).
 
 In the request body, include a JSON object with the following fields:
 
 - `apl`: An APL query that specifies the events to be deleted. You can only use the operators [`where`](/apl/tabular-operators/where-operator) and [`search`](/apl/tabular-operators/search-operator).
-- `startTime`: The start of the time period over which you wantto run the query.
+- `startTime`: The start of the time period over which you want to run the query.
 - `endTime`: The end of the time period over which you want to run the query.
 - `commit`: A Boolean that specifies whether to actually perform the deletion. Set `commit` to `false` to preview the impact of the deletion request without actually deleting any events.
 
 A valid request receives a 200 response with the following fields present in the response body:
 
 - `dryRun`: Returns `true` if the value of `commit` specified in the request was `false`.
+- `blocksMatched`: The number of blocks containing events matching the query.
 - `rowsMatched`: The number of matching events.
 - `rowsDeleted`: The number of deleted events. This is the number of all events in all the blocks that contain events matching your query. The number of deleted events can be higher than the number of matching events.
 - `firstMatchedEvent`: The timestamp of the first event matching the query.
@@ -66,8 +67,9 @@ curl -X 'POST' 'https://api.axiom.co/v2/datasets/_apl/delete' \
 
 ## Example response
 
-```bash
+```json
 {
+    "blocksMatched": 1,
     "dryRun": true,
     "firstMatchedEvent": "2024-08-25 00:18:19 +0000 UTC",
     "lastMatchedEvent": "2024-08-25 00:18:19 +0000 UTC",

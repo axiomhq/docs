@@ -1,0 +1,51 @@
+---
+title: topkw
+description: 'This page explains how to use the topkw aggregation function in APL.'
+---
+
+`topkw` returns an estimated top `k` list of string values weighted by an integer frequency when each row represents multiple observations.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize topkw(expr, k, weight) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`expr`**: The string field or expression to rank.
+- **`k`**: The number of top values to return (maximum `100,000`).
+- **`weight`**: An integer expression representing the frequency weight for each record. Records with a weight less than or equal to `0` are skipped. Records with a `null` weight are counted once (weight `1`).
+- **`GroupingColumn`** (optional): A column to group the results by.
+
+### Returns
+
+Returns one array column per group (named `topkw_<expr>` by default) containing up to `k` objects with the shape `{"key": string, "count": int, "error": int}`.
+
+## Use case examples
+
+### Top weighted HTTP methods
+
+This example finds the most frequent HTTP method when each row carries a pre-aggregated count.
+
+**Query**
+
+```kusto
+datatable(method: string, weight: int)["GET", 3, "POST", 1, "GET", 1, "PUT", 1]
+| summarize tk = topkw(method, 5, weight)
+| project top_method = tk[0].key, weighted_count = tk[0].count
+```
+
+**Output**
+
+| top_method | weighted_count |
+|------------|----------------|
+| GET        | 4              |
+
+## List of related aggregations
+
+- [**topk**](/apl/aggregation-function/topk): Calculates the unweighted estimated top `k` values across a group.
+- [**countw**](/apl/aggregation-function/countw): Calculates the weighted count of records using an integer frequency weight.
+- [**sumw**](/apl/aggregation-function/sumw): Calculates the weighted sum of an expression using an integer frequency weight.

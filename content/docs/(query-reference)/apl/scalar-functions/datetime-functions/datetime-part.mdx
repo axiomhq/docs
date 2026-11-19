@@ -25,8 +25,13 @@ datetime_part(part, datetime)
 
 | Name     | Type       | Description                                                                                                                                                          |
 | -------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| part     | `string`   | The date part to extract: `'year'`, `'quarter'`, `'month'`, `'week_of_year'`, `'day'`, `'dayOfYear'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, `'nanosecond'`. |
+| part     | `string`   | Case-sensitive date part to extract: `'year'`, `'quarter'`, `'month'`, `'day'`, `'dayOfYear'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, `'nanosecond'`. To get the week of the year, use [`week_of_year`](/apl/scalar-functions/datetime-functions/week-of-year). |
 | datetime | `datetime` | The datetime value to extract the part from.                                                                                                                         |
+
+<Note>
+- Part names are case-sensitive at runtime. For example, `'dayOfYear'` returns the day of the year, whereas `'dayofyear'` or `'YEAR'` returns `0`. `'week_of_year'` also returns `0`; use [`week_of_year(date)`](/apl/scalar-functions/datetime-functions/week-of-year) instead.
+- Known limitation: `'quarter'` currently computes `month / 3 + 1` instead of calendar quarters (returning `1` for Jan–Feb, `2` for Mar–May, `3` for Jun–Aug, `4` for Sep–Nov, and `5` for Dec).
+</Note>
 
 ### Returns
 
@@ -69,19 +74,19 @@ Break down trace counts by day of month and service name to identify daily patte
 
 ```kusto
 ['otel-demo-traces']
-| extend day_of_week = datetime_part('day', _time)
-| summarize trace_count = count() by day_of_week, ['service.name']
+| extend day_of_month = datetime_part('day', _time)
+| summarize trace_count = count() by day_of_month, ['service.name']
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20day_of_week%20%3D%20datetime_part('day'%2C%20_time)%20%7C%20summarize%20trace_count%20%3D%20count()%20by%20day_of_week%2C%20%5B'service.name'%5D%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20extend%20day_of_month%20%3D%20datetime_part('day'%2C%20_time)%20%7C%20summarize%20trace_count%20%3D%20count()%20by%20day_of_month%2C%20%5B'service.name'%5D%22%7D)
 
 **Output**
 
-| day_of_week | ['service.name'] | trace_count |
-| ----------- | ----------------- | ----------- |
-| 1           | frontend          | 1540        |
-| 1           | cart              | 870         |
-| 2           | frontend          | 1620        |
+| day_of_month | ['service.name'] | trace_count |
+| ------------ | ---------------- | ----------- |
+| 1            | frontend         | 1540        |
+| 1            | cart             | 870         |
+| 2            | frontend         | 1620        |
 
 This query groups traces by the day of the month and service name, helping you spot services with uneven daily load.
 
