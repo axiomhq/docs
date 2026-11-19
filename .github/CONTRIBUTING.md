@@ -23,6 +23,8 @@ If you want to contribute but don’t know where to start, browse the open issue
 - Associate each PR with a specific Issue. If an issue doesn’t exist, create it first.
 - Only create a PR if you intend to merge it soon. If your work isn’t ready for review, keep it as a branch.
 - When you create a PR, add a descriptive title that starts with an action verb (add, update, fix, etc.). Reference all supporting material in the description to make the reviewer’s task easier.
+- Add a **Changed pages** table to the PR description. For each affected page, link to the current page on `https://axiom.co/docs` and the same page on the PR’s Vercel preview. Use the branch preview URL from Vercel’s PR comment so the link follows later pushes.
+- Include the pages that render a changed snippet, screenshot, or API definition. For a new page, mark it as new and link to a related live page for context. For a removed page, link to the current page and mark it as removed. Verify the links before requesting review and refresh the table if the affected pages change.
 - Before asking for review, build the website locally to make sure everything works as expected. Check the spelling with Grammarly or something similar.
 - After asking for review, don’t commit to the branch until the reviewer has finished. If you need to fix something, ask the reviewer for permission to commit.
 - Before merging, check the spelling with Grammarly or something similar, and check style using Vale.
