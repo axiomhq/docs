@@ -321,7 +321,7 @@ When the in-app browser is available, use it for the final visual pass on the ex
 
 ## Working with content
 
-- Follow the Google developer documentation style guide and `.github/CONTRIBUTING.md`.
+- Read the [Axiom style guide](.cursor/rules/style-guide.mdc) and a related docs page before drafting. Follow the Google developer documentation style guide and `.github/CONTRIBUTING.md`.
 - Preserve the author’s intended technical meaning. Do not invent product behavior or rewrite architecture claims without a source or explicit request.
 - Prefer sentence case in UI and documentation headings.
 - Keep code, commands, function names, operators, paths, field names, and tokens in monospace.
