@@ -4,5 +4,7 @@ openapi: "v2 post /datasets/{dataset_id}/delete-fields"
 ---
 
 <Note>
-When the endpoint returns the status code 202, it means that the deletion request is queued. The deletion itself might take several hours to complete. For more information, see [Delete fields](/reference/datasets#delete-fields).
+When the endpoint returns `202`, the field deletion job is queued and runs asynchronously. The deletion itself can take several hours to complete. For more information, see [Delete fields](/reference/datasets#delete-fields).
+
+Only one dataset job can run at a time on a dataset. There is no 5-minute cooldown and this endpoint doesn't return `429` for rate limits. If another job (such as a trim, vacuum, field deletion, or dataset deletion) is already active on the dataset, Axiom returns `409 Conflict` with a JSON body containing `message` and `blockingJobs` (a map of active job IDs to job types). Wait for the blocking job to finish before retrying.
 </Note>
