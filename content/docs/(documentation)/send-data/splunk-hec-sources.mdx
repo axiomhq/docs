@@ -1,0 +1,244 @@
+---
+title: 'Send data to Axiom from products with a Splunk HEC destination'
+description: 'This page explains how to send data to Axiom from SaaS products, security tools, and agents that offer a Splunk HTTP Event Collector (HEC) destination.'
+overview: 'Route data from any product with a Splunk HEC destination to Axiom'
+sidebarTitle: Splunk HEC destinations
+keywords: ['splunk', 'hec', 'http event collector', 'siem', 'audit log', 'log drain', 'github', 'vercel', 'fleet', 'osquery', 'livekit', 'home assistant', 'ansible', 'kong', 'bitwarden', 'fastly', 'akamai', 'docker']
+---
+
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+
+Many SaaS products, security tools, and agents can stream data to Splunk but to no other observability platform. Axiom offers a [Splunk HTTP Event Collector (HEC) compatible API](/send-data/splunk-hec), so you can point these Splunk destinations at Axiom instead.
+
+This page explains the values to enter in a Splunk HEC destination, and then lists the settings for specific products.
+
+<Prerequisites />
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+## Values for a Splunk HEC destination
+
+Most Splunk HEC destinations ask for some of the following values. Enter the Axiom values instead of your Splunk values:
+
+| Splunk field | Axiom value |
+| :--- | :--- |
+| Host, domain, or HEC host | `hec.AXIOM_DOMAIN` |
+| Port | `443` |
+| Protocol or SSL | HTTPS. Keep certificate verification turned on. |
+| Full URL | `https://hec.AXIOM_DOMAIN/services/collector/event` |
+| Full URL for raw (non-envelope) payloads | `https://hec.AXIOM_DOMAIN/services/collector/raw` |
+| HEC token | `API_TOKEN` |
+| Index | `DATASET_NAME` |
+| Indexer acknowledgment | Turned off |
+
+When the product only asks for a host, it adds the path itself. Axiom accepts the `/services/collector`, `/services/collector/event`, and `/services/collector/raw` paths. For more information about these paths, the event envelope, and response codes, see [Send data to Axiom using the Splunk HEC API](/send-data/splunk-hec).
+
+### Choose the target dataset
+
+Axiom routes each request to a single dataset. It uses the first of the following that's available:
+
+1. The `index` query parameter of the URL, for example `https://hec.AXIOM_DOMAIN/services/collector/event?index=DATASET_NAME`.
+1. The `index` field of the first event in the request.
+1. The dataset of the API token, if the token can ingest into exactly one dataset.
+
+Many products don’t have an index field and don’t let you add a query parameter to the URL. For these products, [create a basic API token](/reference/tokens#create-basic-api-token) and give it access to only the target dataset. A token with access to more than one dataset, or to all datasets, doesn’t select a dataset, and Axiom rejects the request with HEC code `7` (incorrect index).
+
+Recommended: Create a separate dataset and a separate single-dataset token for each product. This keeps unrelated data apart and lets you revoke one product’s access without affecting the others.
+
+### Limitations
+
+Axiom’s HEC API differs from a Splunk HEC endpoint in the following ways. If a product depends on one of these features, it can’t send data to Axiom through its Splunk destination.
+
+- Axiom only accepts HTTPS on port `443`. Splunk’s default port `8088` isn’t available. Axiom redirects plain HTTP requests on port `80` to HTTPS, and many HTTP clients don’t resend the request body after the redirect.
+- Axiom doesn’t serve the versioned `/services/collector/event/1.0` and `/services/collector/raw/1.0` paths. Requests to these paths return `404`. The versioned health path `/services/collector/health/1.0` is available.
+- Axiom doesn’t support indexer acknowledgment. Axiom accepts the `X-Splunk-Request-Channel` header and the `channel` query parameter, but doesn’t serve `/services/collector/ack`.
+
+## Product settings
+
+The sections below list the settings for products that offer a Splunk HEC destination. The settings are based on the documentation of each product at the time of writing.
+
+<Note>
+Axiom hasn’t tested these integrations end to end. Third-party products change without notice, so check the linked product documentation for the latest steps. If a product doesn’t work with Axiom as described, [contact Axiom](https://axiom.co/contact).
+</Note>
+
+| Product | Path the product sends to | How to choose the dataset |
+| :--- | :--- | :--- |
+| [GitHub Enterprise audit log streaming](#github-enterprise-audit-log-streaming) | Added by GitHub | Single-dataset token |
+| [Vercel Audit Log Drains](#vercel-audit-log-drains) | Added by Vercel | Single-dataset token |
+| [Fleet](#fleet) | `/services/collector/event` | `splunk.index` setting |
+| [LiveKit Cloud log drains](#livekit-cloud-log-drains) | Added by LiveKit | `SPLUNK_INDEX` secret |
+| [Home Assistant](#home-assistant) | `/services/collector/event` | Single-dataset token |
+| [Ansible](#ansible) | You enter the full URL | `index` query parameter |
+| [Kong Gateway](#kong-gateway) | You enter the full URL | Single-dataset token |
+| [Bitwarden](#bitwarden) | You enter the full URL | `index` query parameter |
+| [Fastly](#fastly) | You enter the full URL | `index` field in the log format |
+| [Akamai DataStream 2](#akamai-datastream-2) | `/services/collector/raw` | Single-dataset token |
+| [Docker `splunk` logging driver](#docker-splunk-logging-driver) | `/services/collector/event/1.0` | Not supported |
+
+### GitHub Enterprise audit log streaming
+
+GitHub Enterprise Cloud and GitHub Enterprise Server can stream the enterprise audit log to a Splunk HEC endpoint. GitHub has no index field, so use a single-dataset token.
+
+1. In your enterprise settings, go to **Audit log > Log streaming**, click **Configure stream**, and then click **Splunk**.
+1. In **Domain**, enter `hec.AXIOM_DOMAIN`.
+1. In **Port**, enter `443`.
+1. In **Token**, enter an Axiom API token that can only ingest into the target dataset.
+1. Keep **Enable SSL verification** selected.
+1. Click **Check endpoint**. GitHub checks the endpoint at `hec.AXIOM_DOMAIN:443/services/collector`.
+1. Click **Save**.
+
+For more information, see the GitHub documentation on [streaming the audit log for your enterprise](https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/streaming-the-audit-log-for-your-enterprise#setting-up-streaming-to-splunk) (Enterprise Cloud) and the [Enterprise Server equivalent](https://docs.github.com/en/enterprise-server@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/streaming-the-audit-log-for-your-enterprise).
+
+### Vercel Audit Log Drains
+
+Vercel Audit Log Drains can forward team audit events to Splunk. Audit Log Drains are available on the Vercel Enterprise plan. Vercel has no index field, so use a single-dataset token.
+
+1. In Vercel, create a drain, select **Audit Log** as the data type, and then select **Splunk** as the destination.
+1. In **HEC host**, enter `hec.AXIOM_DOMAIN`. Don’t add a port.
+1. In **HEC token**, enter an Axiom API token that can only ingest into the target dataset.
+1. Click **Test** to send an example event. A successful test returns a `2xx` response.
+
+Vercel sends each audit event in a HEC envelope with `source` set to `vercel` and `sourcetype` set to `vercel:audit_log`.
+
+For more information, see the Vercel documentation on [draining audit logs to Splunk](https://vercel.com/docs/drains/audit-logs-to-splunk) and the [audit log format](https://vercel.com/docs/drains/reference/audit-logs).
+
+Vercel doesn’t offer a Splunk destination for runtime logs, traces, or analytics. To send these to Axiom, use the [Axiom Vercel app](/apps/vercel).
+
+### Fleet
+
+Fleet can send osquery result logs, osquery status logs, and Fleet activity audit logs to Splunk with its `splunk` log destination plugin. osquery itself has no Splunk logger plugin.
+
+Only self-hosted Fleet users can change log destinations. If you use Fleet’s managed cloud, contact Fleet to change the configuration.
+
+In the Fleet server configuration, set the following:
+
+```yaml
+osquery:
+  result_log_plugin: splunk
+  status_log_plugin: splunk
+splunk:
+  # Base URL only. Fleet adds /services/collector/event.
+  url: https://hec.AXIOM_DOMAIN
+  token: API_TOKEN
+  index: DATASET_NAME
+  source: fleet
+  source_type: fleet:json
+```
+
+Enter the base URL without a trailing slash or query parameters. Fleet appends `/services/collector/event` to the value of `url`, so a query parameter in `url` produces an invalid request path. Use the `index` setting to choose the dataset.
+
+For more information, see the Fleet documentation on [log destinations](https://fleetdm.com/docs/using-fleet/log-destinations) and the [Splunk server configuration](https://github.com/fleetdm/fleet/blob/main/docs/Configuration/fleet-server-configuration.md#splunk).
+
+### LiveKit Cloud log drains
+
+LiveKit Cloud can forward agent logs to Splunk. Configure the destination with agent secrets:
+
+```shell
+lk agent update-secrets \
+  --secrets "LOGS_ENABLE_SPLUNK=1" \
+  --secrets "SPLUNK_HEC_TOKEN=API_TOKEN" \
+  --secrets "SPLUNK_HEC_URL=https://hec.AXIOM_DOMAIN:443" \
+  --secrets "SPLUNK_INDEX=DATASET_NAME"
+```
+
+LiveKit’s documentation describes `SPLUNK_HEC_URL` as the endpoint URL including the port, and doesn’t say which path LiveKit adds to it. If LiveKit sends data to a path that Axiom doesn’t serve, logs don’t arrive in Axiom.
+
+For more information, see the LiveKit documentation on [log drains](https://docs.livekit.io/deploy/agents/log-drains/).
+
+### Home Assistant
+
+The Home Assistant Splunk integration sends state changes to `/services/collector/event`. It has no index field, so use a single-dataset token.
+
+1. In Home Assistant, go to **Settings > Devices & services**, click **Add integration**, and then select **Splunk**.
+1. In **Host**, enter `hec.AXIOM_DOMAIN`.
+1. In **Port**, enter `443`. The default value `8088` doesn’t work with Axiom.
+1. In **Token**, enter an Axiom API token that can only ingest into the target dataset.
+1. Keep **SSL** and **Verify SSL** turned on.
+
+When you save the integration, Home Assistant sends an empty request to check the connection. Axiom answers with HEC code `5` (no data), which Home Assistant accepts.
+
+For more information, see the Home Assistant documentation on the [Splunk integration](https://www.home-assistant.io/integrations/splunk/).
+
+### Ansible
+
+The Ansible `community.general.splunk` callback plugin sends the results of tasks to the URL you specify. You enter the full URL, so you can choose the dataset with the `index` query parameter.
+
+In `ansible.cfg`, set the following:
+
+```ini
+[defaults]
+callbacks_enabled = community.general.splunk
+
+[callback_splunk]
+url = https://hec.AXIOM_DOMAIN/services/collector/event?index=DATASET_NAME
+authtoken = API_TOKEN
+validate_certs = true
+```
+
+Alternatively, set the `SPLUNK_URL` and `SPLUNK_AUTHTOKEN` environment variables.
+
+The callback doesn’t set the HEC `time` field, so Axiom uses the ingest time as the event timestamp. The task time is available in the `timestamp` field of the event.
+
+For more information, see the Ansible documentation on the [`community.general.splunk` callback](https://docs.ansible.com/ansible/latest/collections/community/general/splunk_callback.html).
+
+### Kong Gateway
+
+Kong recommends its HTTP Log plugin for sending request logs to Splunk. Kong’s log entries aren’t HEC envelopes, so send them to the raw endpoint.
+
+```yaml
+plugins:
+  - name: http-log
+    config:
+      http_endpoint: https://hec.AXIOM_DOMAIN/services/collector/raw
+      method: POST
+      headers:
+        Authorization: Splunk API_TOKEN
+```
+
+The HTTP Log plugin drops the query string from `http_endpoint`, so use a single-dataset token. Keep `queue.max_batch_size` at its default value `1`. If you send batches, Kong sends a JSON array, and Axiom stores the array as a single raw text event instead of one event per log entry.
+
+For more information, see the Kong documentation on the [HTTP Log plugin](https://developer.konghq.com/plugins/http-log/) and its [Splunk example](https://developer.konghq.com/plugins/http-log/examples/http-log-with-splunk/).
+
+The community `kong-splunk-log` plugin also sends HEC envelopes to a full URL that you specify, so `https://hec.AXIOM_DOMAIN/services/collector/event?index=DATASET_NAME` works as its `splunk_endpoint`. However, the [kong-splunk-log repository](https://github.com/Optum/kong-splunk-log) is archived, and the plugin doesn’t verify TLS certificates. Axiom recommends the HTTP Log plugin instead.
+
+### Bitwarden
+
+Bitwarden Teams and Enterprise organizations can send event logs to any HEC endpoint with the **Generic HEC** integration. You enter the full URL, so you can choose the dataset with the `index` query parameter.
+
+1. In the Bitwarden Admin Console, go to **Integrations**, find **Generic HEC** under **Event management**, and then click **Connect**.
+1. In **HTTP Event Collector URL**, enter `https://hec.AXIOM_DOMAIN/services/collector/event?index=DATASET_NAME`.
+1. In **HTTP Event Collector Token**, enter your Axiom API token.
+
+Bitwarden sends each event log entry as a HEC envelope, so use the `/services/collector/event` path. If you use the **Splunk** card instead of **Generic HEC**, its example URL ends in `/services/collector/raw`. Change it to `/services/collector/event`.
+
+For more information, see the Bitwarden documentation on the [HTTP Event Collector integration](https://bitwarden.com/help/http-event-collector/).
+
+### Fastly
+
+Fastly real-time log streaming can send CDN and Compute logs to Splunk. In the Fastly Splunk logging endpoint, enter the following:
+
+- **URL:** `https://hec.AXIOM_DOMAIN/services/collector/event`. Fastly’s example URL ends in `/services/collector/event/1.0`, which Axiom doesn’t serve.
+- **Token:** Your Axiom API token.
+- **Log format:** A JSON object with an `event` field. To choose the dataset, add `"index": "DATASET_NAME"` to the object, or use a single-dataset token.
+- Turn off indexer acknowledgment.
+
+For more information, see the Fastly documentation on [log streaming to Splunk](https://www.fastly.com/documentation/guides/integrations/logging-endpoints/log-streaming-splunk/).
+
+### Akamai DataStream 2
+
+Akamai DataStream 2 can send CDN logs to Splunk. DataStream 2 only accepts raw HEC endpoint URLs, so enter `https://hec.AXIOM_DOMAIN/services/collector/raw` as the endpoint URL. DataStream 2 has no index field, so use a single-dataset token.
+
+When you save the stream, DataStream 2 sends a sample request to check write access. The sample appears as an event in your dataset.
+
+For more information, see the Akamai documentation on [streaming logs to Splunk](https://techdocs.akamai.com/datastream2/docs/stream-splunk).
+
+### Docker `splunk` logging driver
+
+The Docker Engine built-in `splunk` logging driver can’t send data to Axiom. The driver always sends logs to `/services/collector/event/1.0`, which Axiom doesn’t serve. It also rejects a `splunk-url` value that contains a path or query parameters. For the driver options, see the Docker documentation on the [Splunk logging driver](https://docs.docker.com/engine/logging/drivers/splunk/).
+
+To send container logs to Axiom, use one of the methods described in [Send data from Docker to Axiom](/send-data/docker).
