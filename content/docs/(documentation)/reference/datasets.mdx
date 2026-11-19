@@ -71,18 +71,15 @@ For more information on limits and requirements imposed by Axiom, see [Limits](/
 To create a dataset using Console, follow these steps:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. Click **New dataset**.
-1. Name the dataset and add an optional description.
-1. In **Kind**, select one of the following:
-    - Select **Events** if you plan to use the dataset for logs or traces data.
-    - Select **Metrics** if you plan to send OTel metrics data to the dataset.
-1. In **Data retention**, select for how long to store your data in this dataset. For more information, see [Specify data retention period](#specify-data-retention-period).
-1. In **Edge deployment**, select the edge deployment you want to use for this dataset. You can select from the list of edge deployments you have added to the organization. For more information, see [Edge deployments](/reference/edge-deployments) and [Add edge deployments](/reference/usage-billing#manage-add-ons).
-1. Click **Save dataset**.
+1. Click **New dataset** to open the dataset creation page.
+1. Choose one of the following modes:
+    - **OpenTelemetry:** Creates one dataset per selected signal (Traces, Logs, and Metrics) linked in a correlation group. Enter a **Name** and **Environment**, select **Data to collect**, configure the **Correlation group**, and optionally create an **Ingest token**. Click **Create correlation group**.
+    - **Custom events:** Creates a single dataset. Enter a **Name** and optional **Description**, and select **Kind** (**Events** for logs or traces, or **Metrics** for OpenTelemetry metrics), **Retention**, **Edge deployment**, **Labels**, and an optional **Ingest token**. For more information, see [Specify data retention period](#specify-data-retention-period), [Edge deployments](/reference/edge-deployments), and [Manage add-ons](/reference/usage-billing#manage-add-ons). Click **Create dataset**.
+1. If you chose to create an ingest token, copy it from the confirmation panel. Axiom doesn’t display the token again.
 
 To create a dataset using the Axiom API, send a POST request to the [datasets endpoint](/restapi/endpoints/createDataset).
 
-Dataset names are 1 to 128 characters in length. They only contain ASCII alphanumeric characters and the hyphen (`-`) character.
+Dataset names are 1 to 80 characters in length. They can contain ASCII letters, digits, hyphens (`-`), underscores (`_`), and periods (`.`). Hyphens, underscores, and periods can’t be the first or last character. Axiom rejects reserved dataset names.
 
 ## Import data
 
@@ -131,6 +128,8 @@ In this case, vacuuming fields in a dataset can help you reduce the number of fi
 Vacuuming fields doesn’t delete any events from your dataset. To delete events, [trim the dataset](#trim-dataset). Vacuuming only removes fields that no longer occur in any event within your retention period. If you accidentally ingested events with fields you didn’t want to send to Axiom, and these events are within your retention period, vacuuming alone doesn’t solve your problem. In this case, [delete the unintended fields](#delete-fields) instead. Deleting fields also vacuums the dataset.
 
 You can vacuum the fields of a dataset whose schema is locked. In this case, Axiom vacuums the fields and then regenerates the locked schema so that it matches the vacuumed fields. For more information, see [Lock dataset schema](#lock-dataset-schema).
+
+When a dataset has unused fields that you can reclaim by vacuuming, Console displays a **Vacuum recommended** badge next to the dataset in the dataset list with the number of reclaimable fields, and marks stale fields in the field list.
 
 <Note>
 You can only vacuum fields once per day for each dataset.
