@@ -1,0 +1,78 @@
+---
+title: sumw
+description: 'This page explains how to use the sumw aggregation function in APL.'
+---
+
+`sumw` calculates the sum when each row represents multiple observations. The weight gives the number of observations the row represents.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize sumw(expr, weight) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`expr`**: The summable expression to total. Accepts numeric (`int`, `long`, `real`) or `timespan` values.
+- **`weight`**: An integer expression representing the frequency weight for each record. Records with a weight less than or equal to `0` are skipped. Records with a `null` weight are counted once (weight `1`).
+- **`GroupingColumn`** (optional): A column to group the results by. If omitted, `sumw` calculates the weighted sum across all records.
+
+### Returns
+
+Returns the weighted sum of `expr` across the group (`expr * weight` summed over all included records). By default, the output column is named `sumw_<expr>`.
+
+## Use case examples
+
+### Weighted sum of latency
+
+This example computes the total latency across pre-aggregated request buckets where each row records a latency value and the integer number of requests at that latency.
+
+**Query**
+
+```kusto
+datatable(latency: int, requests: int)[10, 8, 20, 6, 30, 3, 40, 1]
+| summarize sumw(latency, requests)
+```
+
+**Output**
+
+| sumw_latency |
+|--------------|
+| 330          |
+
+This query computes `10*8 + 20*6 + 30*3 + 40*1 = 330`.
+
+### Weighted sum with non-positive weights excluded
+
+Records with a weight of `0` or a negative integer are skipped.
+
+**Query**
+
+```kusto
+datatable(service: string, latency_ms: int, samples: int)[
+    "api", 10, 8,
+    "api", 20, 2,
+    "api", 500, 0,
+    "api", 999, -1,
+    "web", 30, 3,
+    "web", 40, 1
+]
+| summarize total_latency = sumw(latency_ms, samples) by service
+```
+
+**Output**
+
+| service | total_latency |
+|---------|---------------|
+| api     | 120           |
+| web     | 130           |
+
+## List of related aggregations
+
+- [**sum**](/apl/aggregation-function/sum): Calculates the unweighted sum of a numeric field across a group.
+- [**sumif**](/apl/aggregation-function/sumif): Calculates the sum of an expression for records that satisfy a predicate.
+- [**avgw**](/apl/aggregation-function/avgw): Calculates the weighted average of an expression using an integer frequency weight.
+- [**countw**](/apl/aggregation-function/countw): Calculates the weighted count of records using an integer frequency weight.
+- [**percentilew**](/apl/aggregation-function/percentilew): Calculates an estimated weighted percentile using an integer frequency weight.
