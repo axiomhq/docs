@@ -30,14 +30,14 @@ Authenticate every request with an Axiom [API token](/reference/tokens) that has
 | Bearer | `Authorization: Bearer API_TOKEN` |
 | Basic | `Authorization: Basic <base64 of x:API_TOKEN>` (for example, `curl -u x:API_TOKEN`) |
 
-Requests without a valid token are rejected with `401 Unauthorized` (missing token) or `403 Forbidden` (token not permitted for the dataset).
+Requests without a valid token are rejected with `401 Unauthorized` (HEC code `2` when the token is missing, or `3` when the token is invalid) or `403 Forbidden` (HEC code `4` when the token can’t ingest into the dataset, the dataset is shared, or the organization is suspended).
 
 ## Choose the target dataset
 
 In Splunk, events are routed by `index`. Axiom maps the HEC `index` to an Axiom [dataset](/reference/datasets) and resolves it in the following order:
 
 1. The `index` query parameter, for example `?index=DATASET_NAME`.
-2. The `index` field inside the event envelope.
+2. The `index` field inside the first event envelope. Axiom sends the entire request to that dataset. To split events across datasets, send separate requests.
 3. The dataset the API token is scoped to, when the token grants ingest access to exactly one dataset.
 
 If none of these resolve to a dataset, the request is rejected with HEC code `7` (Incorrect index).
@@ -116,7 +116,9 @@ Responses follow the Splunk HEC convention: an HTTP status code plus a JSON body
 | `200` | `0` | Success. |
 | `200` | `17` | The collector is healthy (health endpoints only). |
 | `400` | `5` | No data. The request body was empty. |
-| `400` | `6` | Invalid data format. The body could not be parsed. |
+| `400` | `6` | Invalid data format. The body couldn’t be parsed, the dataset is in another edge deployment, or the dataset isn’t an events or logs dataset. |
 | `400` | `7` | Incorrect index. The target dataset could not be resolved. |
-| `401` | — | Missing or unsupported authentication. |
-| `403` | — | The token is not permitted to ingest into the dataset. |
+| `401` | `2` | Token missing. |
+| `401` | `3` | Token invalid. |
+| `403` | `4` | Token can’t ingest into the dataset, the dataset is shared, or the organization is suspended. |
+| `404` | `7` | Dataset not found. |
