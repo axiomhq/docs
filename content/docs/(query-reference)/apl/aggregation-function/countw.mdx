@@ -1,0 +1,78 @@
+---
+title: countw
+description: 'This page explains how to use the countw aggregation function in APL.'
+---
+
+`countw` counts the observations represented by each row. The weight gives the number of observations the row represents.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize countw(weight) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`weight`**: An integer expression representing the frequency weight for each record. Records with a weight less than or equal to `0` are skipped. Records with a `null` weight are also skipped.
+- **`GroupingColumn`** (optional): A column to group the results by. If omitted, `countw` calculates the weighted count across all records.
+
+### Returns
+
+Returns a `long` integer equal to the sum of positive integer weights across the group. By default, the output column is named `countw_<weight>`.
+
+## Use case examples
+
+### Weighted request count
+
+This example counts total requests across pre-aggregated latency buckets where each row carries an integer request count.
+
+**Query**
+
+```kusto
+datatable(latency: int, requests: int)[10, 8, 20, 6, 30, 3, 40, 1]
+| summarize countw(requests)
+```
+
+**Output**
+
+| countw_requests |
+|-----------------|
+| 18              |
+
+This query sums the positive integer weights: `8 + 6 + 3 + 1 = 18`.
+
+### Weighted count with grouping and skipped weights
+
+Records with a weight of `0`, a negative integer, or `null` are skipped.
+
+**Query**
+
+```kusto
+datatable(service: string, samples: int)[
+    "api", 8,
+    "api", 2,
+    "api", 0,
+    "api", -1,
+    "api", int(null),
+    "web", 3,
+    "web", 1
+]
+| summarize total_samples = countw(samples) by service
+```
+
+**Output**
+
+| service | total_samples |
+|---------|---------------|
+| api     | 10            |
+| web     | 4             |
+
+## List of related aggregations
+
+- [**count**](/apl/aggregation-function/count): Counts the total number of records in a group.
+- [**countif**](/apl/aggregation-function/countif): Counts records that satisfy a predicate.
+- [**avgw**](/apl/aggregation-function/avgw): Calculates the weighted average of an expression using an integer frequency weight.
+- [**sumw**](/apl/aggregation-function/sumw): Calculates the weighted sum of an expression using an integer frequency weight.
+- [**percentilew**](/apl/aggregation-function/percentilew): Calculates an estimated weighted percentile using an integer frequency weight.

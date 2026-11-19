@@ -1,0 +1,77 @@
+---
+title: avgw
+description: 'This page explains how to use the avgw aggregation function in APL.'
+---
+
+`avgw` calculates the mean when each row represents multiple observations. The weight gives the number of observations the row represents.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize avgw(expr, weight) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`expr`**: The expression to average. Accepts numeric (`int`, `long`, `real`), `timespan`, or `datetime` values.
+- **`weight`**: An integer expression representing the frequency weight for each record. Records with a weight less than or equal to `0` are skipped. Records with a `null` weight are counted once (weight `1`).
+- **`GroupingColumn`** (optional): A column to group the results by. If omitted, `avgw` calculates the weighted average across all records.
+
+### Returns
+
+Returns the weighted average of `expr` across the group. Numeric inputs return a `real` value; `timespan` and `datetime` inputs return a value of the same type. By default, the output column is named `avgw_<expr>`.
+
+## Use case examples
+
+### Weighted mean latency
+
+This example computes the weighted average latency across pre-aggregated request buckets where each row records a latency value and the integer number of requests at that latency.
+
+**Query**
+
+```kusto
+datatable(latency: int, requests: int)[10, 8, 20, 6, 30, 3, 40, 1]
+| summarize avgw(latency, requests)
+```
+
+**Output**
+
+| avgw_latency       |
+|--------------------|
+| 18.333333333333332 |
+
+The weighted sum is `10*8 + 20*6 + 30*3 + 40*1 = 330` across `8 + 6 + 3 + 1 = 18` total requests, giving a weighted mean of `330 / 18 = 18.333333333333332`.
+
+### Weighted average with grouping and zero weights
+
+Records with a weight less than or equal to `0` are excluded from the calculation.
+
+**Query**
+
+```kusto
+datatable(service: string, latency_ms: int, samples: int)[
+    "api", 10, 8,
+    "api", 20, 2,
+    "api", 500, 0,
+    "web", 30, 3,
+    "web", 40, 1
+]
+| summarize avg_latency = avgw(latency_ms, samples) by service
+```
+
+**Output**
+
+| service | avg_latency |
+|---------|-------------|
+| api     | 12          |
+| web     | 32.5        |
+
+## List of related aggregations
+
+- [**avg**](/apl/aggregation-function/avg): Calculates the unweighted average of an expression across a group.
+- [**avgif**](/apl/aggregation-function/avgif): Calculates the average of an expression for records that satisfy a predicate.
+- [**sumw**](/apl/aggregation-function/sumw): Calculates the weighted sum of an expression using an integer frequency weight.
+- [**countw**](/apl/aggregation-function/countw): Calculates the weighted count of records using an integer frequency weight.
+- [**percentilew**](/apl/aggregation-function/percentilew): Calculates an estimated weighted percentile using an integer frequency weight.
