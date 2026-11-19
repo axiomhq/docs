@@ -15,15 +15,51 @@ Axiom AI SDK is an open-source project and welcomes your contributions. For more
 
 Alternatively, [instrument your app manually](/use-cases/llm-observability/manual-instrumentation). For more information on instrumentation approaches, see [LLM observability](/use-cases/llm-observability).
 
-## Prerequisite
+## Prerequisites
 
-Install the Axiom AI SDK by running the following:
+1. Install the Axiom AI SDK and OpenTelemetry packages:
 
-```sh
-npm i axiom
+    ```sh
+    npm i axiom @opentelemetry/api @opentelemetry/sdk-trace-node @opentelemetry/exporter-trace-otlp-http @opentelemetry/resources @opentelemetry/semantic-conventions
+    ```
+
+1. Set the `AXIOM_TOKEN` and `AXIOM_DATASET` environment variables using an [API token](/reference/tokens) with ingest permission and the name of the dataset where you send telemetry.
+
+## Configure the OpenTelemetry tracer and exporter
+
+Axiom AI SDK writes spans to the global OpenTelemetry API and doesn’t read `AXIOM_TOKEN` or `AXIOM_DATASET` directly. Replace `AXIOM_DOMAIN` with the [domain for your dataset](/send-data/opentelemetry). Register a `NodeTracerProvider` with an `OTLPTraceExporter` pointing to Axiom, and then call `initAxiomAI({ tracer })` once at application startup (for example, in `src/instrumentation.ts`):
+
+```ts src/instrumentation.ts
+import { trace } from '@opentelemetry/api';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { BatchSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
+
+const exporter = new OTLPTraceExporter({
+  url: 'https://AXIOM_DOMAIN/v1/traces',
+  headers: {
+    Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+    'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
+  },
+});
+
+const provider = new NodeTracerProvider({
+  resource: resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: 'my-ai-app',
+  }),
+  spanProcessors: [new BatchSpanProcessor(exporter)],
+});
+
+provider.register();
+
+const tracer = trace.getTracer('my-ai-app');
+
+initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
 ```
 
-Set the `AXIOM_TOKEN` and `AXIOM_DATASET` environment variables using an [API token](/reference/tokens) and the name of a dataset you want to send telemetry to.
+Import this file before your application makes any LLM calls so spans are exported to Axiom. For redaction options, see [Redaction policies](/use-cases/llm-observability/redaction-policies).
 
 ## Instrument AI SDK calls
 
@@ -75,8 +111,8 @@ Choose one of the following common Vercel AI SDK providers. For the full list of
     });
 
     // Wrap the model to enable automatic tracing
-    export const claude35Sonnet = wrapAISDKModel(anthropicProvider('claude-3-5-sonnet-20241022'));
-    export const claude35Haiku = wrapAISDKModel(anthropicProvider('claude-3-5-haiku-20241022'));
+    export const claudeSonnet = wrapAISDKModel(anthropicProvider('claude-sonnet-4-5'));
+    export const claudeHaiku = wrapAISDKModel(anthropicProvider('claude-haiku-4-5'));
     ```
 
 </Tab>
@@ -99,8 +135,8 @@ Choose one of the following common Vercel AI SDK providers. For the full list of
     });
 
     // Wrap the model to enable automatic tracing
-    export const gemini20Flash = wrapAISDKModel(geminiProvider('gemini-2.0-flash-exp'));
-    export const gemini15Pro = wrapAISDKModel(geminiProvider('gemini-1.5-pro'));
+    export const geminiFlash = wrapAISDKModel(geminiProvider('gemini-2.5-flash'));
+    export const geminiPro = wrapAISDKModel(geminiProvider('gemini-2.5-pro'));
     ```
 
 </Tab>
@@ -123,8 +159,8 @@ Choose one of the following common Vercel AI SDK providers. For the full list of
     });
 
     // Wrap the model to enable automatic tracing
-    export const grokBeta = wrapAISDKModel(grokProvider('grok-beta'));
-    export const grok2Mini = wrapAISDKModel(grokProvider('grok-2-mini'));
+    export const grok4 = wrapAISDKModel(grokProvider('grok-4'));
+    export const grok3Mini = wrapAISDKModel(grokProvider('grok-3-mini'));
     ```
 
 </Tab>
@@ -146,10 +182,10 @@ To instrument calls without a Vercel AI SDK provider, use the generic Vercel AI 
 
     ```ts /src/shared/openai.ts
     import { createGateway } from 'ai';
-    import { wrapAISDKModel } from 'axiom';
+    import { wrapAISDKModel } from 'axiom/ai';
 
     const gateway = createGateway({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.AI_GATEWAY_API_KEY,
     });
 
     // Wrap the model to enable automatic tracing
@@ -157,6 +193,27 @@ To instrument calls without a Vercel AI SDK provider, use the generic Vercel AI 
     ```
 
 </Accordion>
+
+### Use `axiomAIMiddleware` with `wrapLanguageModel`
+
+If you already compose middleware with the Vercel AI SDK’s `wrapLanguageModel`, pass `axiomAIMiddleware({ model })` instead of calling `wrapAISDKModel`. It supports V1, V2, and V3 language models:
+
+```ts src/shared/openai.ts
+import { wrapLanguageModel } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { axiomAIMiddleware } from 'axiom/ai';
+
+const openaiProvider = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const baseModel = openaiProvider('gpt-4o');
+
+export const gpt4o = wrapLanguageModel({
+  model: baseModel,
+  middleware: [axiomAIMiddleware({ model: baseModel })],
+});
+```
 
 The rest of the page explains how to work with OpenAI. The process is similar for other LLMs.
 
@@ -229,6 +286,31 @@ const { text, toolResults } = await generateText({
       })
     )
   }
+});
+```
+
+To wrap several tools at once, pass a tool map to `wrapTools`:
+
+```ts src/app/generate-text/page.tsx
+import { generateText, tool } from 'ai';
+import { wrapTools } from 'axiom/ai';
+import { z } from 'zod';
+import { gpt4o } from '@/shared/openai';
+
+const tools = wrapTools({
+  findDirections: tool({
+    description: 'Find directions to a location',
+    inputSchema: z.object({ from: z.string(), to: z.string() }),
+    execute: async ({ from, to }) => ({
+      directions: `To get from ${from} to ${to}, use a teleporter.`,
+    }),
+  }),
+});
+
+const { text } = await generateText({
+  model: gpt4o,
+  messages: [{ role: 'user', content: 'How do I get from Paris to Berlin?' }],
+  tools,
 });
 ```
 
