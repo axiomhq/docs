@@ -1,0 +1,49 @@
+---
+title: stdevw
+description: 'This page explains how to use the stdevw aggregation function in APL.'
+---
+
+`stdevw` calculates the weighted sample standard deviation when each row represents multiple observations. The weight gives the number of observations the row represents.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize stdevw(expr, weight) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`expr`**: The numeric expression to evaluate.
+- **`weight`**: An integer expression representing the frequency weight for each record. Records with a weight less than or equal to `0` are skipped. Records with a `null` weight are counted once (weight `1`).
+- **`GroupingColumn`** (optional): A column to group the results by.
+
+### Returns
+
+Returns a `real` value representing the weighted standard deviation of `expr` across the group. By default, the output column is named `stdevw_<expr>`.
+
+## Use case examples
+
+### Weighted standard deviation of latency
+
+This example computes the weighted standard deviation across pre-aggregated request latency buckets.
+
+**Query**
+
+```kusto
+datatable(latency: int, requests: int)[10, 8, 20, 6, 30, 3, 40, 1]
+| summarize stdevw(latency, requests)
+```
+
+**Output**
+
+| stdevw_latency    |
+|-------------------|
+| 9.235481467932196 |
+
+## List of related aggregations
+
+- [**stdev**](/apl/aggregation-function/stdev): Calculates the unweighted standard deviation across a group.
+- [**variancew**](/apl/aggregation-function/variancew): Calculates the weighted variance using an integer frequency weight.
+- [**avgw**](/apl/aggregation-function/avgw): Calculates the weighted average using an integer frequency weight.

@@ -23,12 +23,12 @@ topk(Field, k)
 
 ### Parameters
 
-- `Field`: The field or expression to rank the results by.
-- `k`: The number of top results to return.
+- `Field`: A string field or expression to rank values by. Non-string inputs return an error.
+- `k`: The number of top values to return (maximum `100,000`; larger values return an error).
 
 ### Returns
 
-A subset of the original dataset with the top `k` values based on the specified field.
+Returns one array column per group (named `topk_<Field>` by default) containing up to `k` objects with the shape `{"key": string, "count": int, "error": int}` from an approximate sketch. You can access individual elements by index, for example `tk[0].key` and `tk[0].count`.
 
 ## Use case examples
 
@@ -48,15 +48,17 @@ When analyzing HTTP logs, you can use the `topk` function to find the top 5 most
 
 **Output**
 
-| status | count_ |
-|--------|--------|
-| 200    | 1500   |
-| 404    | 400    |
-| 500    | 200    |
-| 301    | 150    |
-| 302    | 100    |
+| topk_status |
+|-------------|
+| `[{"key":"200","count":1500,"error":0},{"key":"404","count":400,"error":0},{"key":"500","count":200,"error":0},{"key":"301","count":150,"error":0},{"key":"302","count":100,"error":0}]` |
 
-This query groups the logs by HTTP status and returns the 5 most frequent statuses.
+This query returns one array containing the 5 most frequent HTTP status codes along with their estimated counts and error bounds. To extract the top item into scalar columns, assign an alias and index into the array:
+
+```kusto
+['sample-http-logs']
+| summarize tk = topk(status, 5)
+| project top_status = tk[0].key, top_count = tk[0].count
+```
 
 </Tab>
 <Tab title="OpenTelemetry traces">
@@ -74,15 +76,11 @@ In OpenTelemetry traces, you can use `topk` to find the top five status codes by
 
 **Output**
 
-| service.name  | attributes.http.status_code | _count     |
-|---------------|-----------------------------|------------|
-| frontendproxy | 200                         | 34,862,088 |
-|               | 203                         | 3,095,223  |
-|               | 404                         | 154,417    |
-|               | 500                         | 153,823    |
-|               | 504                         | 3,497      |
+| service.name  | topk_attributes.http.status_code |
+|---------------|----------------------------------|
+| frontendproxy | `[{"key":"200","count":34862088,"error":0},{"key":"203","count":3095223,"error":0},{"key":"404","count":154417,"error":0},{"key":"500","count":153823,"error":0},{"key":"504","count":3497,"error":0}]` |
 
-This query shows the top five status codes by service.
+This query returns one array per service containing the top five status codes.
 
 </Tab>
 <Tab title="Security logs">
@@ -100,15 +98,11 @@ You can use `topk` in security log analysis to find the top 5 cities generating 
 
 **Output**
 
-| geo.city | count_ |
-|----------|--------|
-| New York | 500    |
-| London   | 400    |
-| Paris    | 350    |
-| Tokyo    | 300    |
-| Berlin   | 250    |
+| topk_geo.city |
+|---------------|
+| `[{"key":"New York","count":500,"error":0},{"key":"London","count":400,"error":0},{"key":"Paris","count":350,"error":0},{"key":"Tokyo","count":300,"error":0},{"key":"Berlin","count":250,"error":0}]` |
 
-This query returns the top 5 cities based on the number of HTTP requests.
+This query returns an array of the top 5 cities based on the number of HTTP requests.
 
 </Tab>
 </Tabs>

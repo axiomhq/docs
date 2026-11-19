@@ -22,11 +22,11 @@ histogram(numeric_field, number_of_bins)
 ### Parameters
 
 - `numeric_field`: The numeric field to create a histogram for. For example, request duration or span duration.
-- `number_of_bins`: The number of bins (intervals) to use for grouping the numeric values.
+- `number_of_bins`: The number of buckets (intervals) to divide the range into. Defaults to `50` when omitted.
 
 ### Returns
 
-The `histogram` aggregation returns a table where each row represents a bin, along with the number of occurrences (counts) that fall within each bin.
+Returns one array column per group (named `histogram_<numeric_field>` by default) containing bucket objects with the shape `{"from": number, "to": number, "count": int}`.
 
 ## Use case examples
 
@@ -46,13 +46,11 @@ You can use the `histogram` aggregation to analyze the distribution of request d
 
 **Output**
 
-| req_duration_ms_bin | count |
-|---------------------|-------|
-| 0                   | 50    |
-| 100                 | 200   |
-| 200                 | 120   |
+| _time                | histogram_req_duration_ms |
+|----------------------|---------------------------|
+| 2024-10-17T12:00:00Z | `[{"from":0,"to":10,"count":50},{"from":10,"to":20,"count":200},{"from":20,"to":30,"count":120}, ...]` |
 
-This query creates a histogram that groups request durations into bins of 100 milliseconds and shows the count of requests in each bin. It helps you visualize how frequently requests fall within certain duration ranges.
+This query divides request durations into 100 buckets for each time bin and returns an array of `{from, to, count}` bucket objects per group.
 
 </Tab>
 <Tab title="OpenTelemetry traces">
@@ -70,13 +68,11 @@ In OpenTelemetry traces, you can use the `histogram` aggregation to analyze the 
 
 **Output**
 
-| duration_bin | count |
-|--------------|-------|
-| 0.1s         | 30    |
-| 0.2s         | 120   |
-| 0.3s         | 50    |
+| _time                | histogram_duration |
+|----------------------|--------------------|
+| 2024-10-17T12:00:00Z | `[{"from":0,"to":100000,"count":30},{"from":100000,"to":200000,"count":120},{"from":200000,"to":300000,"count":50}, ...]` |
 
-This query groups the span durations into 100ms intervals, making it easier to spot latency issues in your traces.
+This query divides span durations into 100 buckets per time bin, making it easier to spot latency issues in your traces.
 
 </Tab>
 <Tab title="Security logs">
@@ -95,13 +91,11 @@ In security logs, the `histogram` aggregation helps you understand the frequency
 
 **Output**
 
-| req_duration_ms_bin | count |
-|---------------------|-------|
-| 0                   | 150    |
-| 50                  | 400    |
-| 100                 | 100    |
+| _time                | histogram_req_duration_ms |
+|----------------------|---------------------------|
+| 2024-10-17T12:00:00Z | `[{"from":0,"to":20,"count":150},{"from":20,"to":40,"count":400},{"from":40,"to":60,"count":100}, ...]` |
 
-This query analyzes the request durations for HTTP 200 (Success) responses, helping you identify patterns in security-related events.
+This query divides request durations for HTTP 200 (Success) responses into 50 buckets per time bin.
 
 </Tab>
 </Tabs>
