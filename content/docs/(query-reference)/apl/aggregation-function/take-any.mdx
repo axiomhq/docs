@@ -1,0 +1,111 @@
+---
+title: take_any
+description: 'This page explains how to use the take_any aggregation function in APL.'
+---
+
+`take_any` returns values from an arbitrary row in each group.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize take_any(expr [, expr2, ...]) [by GroupingColumn]
+summarize take_any(*) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`expr`**: An expression to return a value for.
+- **`*`**: Returns all columns from one row, except the grouping columns.
+- **`GroupingColumn`** (optional): A column to group the results by. If you omit it, all records form one group.
+
+### Returns
+
+Returns values from an arbitrary row in each group. The selected row can differ between query runs.
+
+`any` is a deprecated alias of `take_any`.
+
+<Note>
+The wildcard `*` is useful to return all fields from one row, but it increases query complexity and decreases performance.
+</Note>
+
+## Use case examples
+
+### One value for each group
+
+This example returns one status for each service. `take_any(status)` skips nulls and empty strings.
+
+**Query**
+
+```kusto
+datatable(service: string, region: string, status: string)[
+  'checkout', 'eu', '',
+  'checkout', 'eu', '500',
+  'frontend', 'us', '200',
+]
+| summarize take_any(status) by service
+```
+
+**Output**
+
+| service  | status |
+|----------|--------|
+| checkout | 500    |
+| frontend | 200    |
+
+### One complete row for each group
+
+This example returns all columns from one row for each service, including empty values.
+
+**Query**
+
+```kusto
+datatable(service: string, region: string, status: string)[
+  'checkout', 'eu', '',
+  'checkout', 'eu', '500',
+  'frontend', 'us', '200',
+]
+| summarize take_any(*) by service
+```
+
+**Output**
+
+| service  | region | status |
+|----------|--------|--------|
+| checkout | eu     |        |
+| frontend | us     | 200    |
+
+Another run can return the `checkout` row with the status `500` instead.
+
+`take_any(region, status)` returns both values from the same row. Separate calls, such as `take_any(region), take_any(status)`, can select different rows.
+
+## List of related aggregations
+
+- [**take_anyif**](/apl/aggregation-function/take-anyif): Returns a value from one arbitrary row for which a predicate is true.
+- [**arg_max**](/apl/aggregation-function/arg-max): Returns the row with the maximum value of an expression.
+- [**arg_min**](/apl/aggregation-function/arg-min): Returns the row with the minimum value of an expression.
+- [**make_set**](/apl/aggregation-function/make-set): Returns all distinct values of an expression in the group.
+
+## Other query languages
+
+<LanguageComparisons>
+<Accordion title="ANSI SQL users">
+
+In ANSI SQL, `ANY_VALUE` returns an arbitrary value for each group, as `take_any` does.
+
+<CodeGroup>
+```sql SQL example
+SELECT method, ANY_VALUE(status)
+FROM sample_http_logs
+GROUP BY method
+```
+
+```kusto APL equivalent
+['sample-http-logs']
+| summarize take_any(status) by method
+```
+</CodeGroup>
+
+</Accordion>
+</LanguageComparisons>
