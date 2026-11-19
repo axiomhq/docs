@@ -355,4 +355,4 @@
 - [top](https://axiom.co/docs/apl/tabular-operators/top-operator.md): This page explains how to use the top operator function in APL.
 - [union](https://axiom.co/docs/apl/tabular-operators/union-operator.md): This page explains how to use the union operator in APL.
 - [where](https://axiom.co/docs/apl/tabular-operators/where-operator.md): This page explains how to use the where operator in APL.
-- [Example queries](https://axiom.co/docs/apl/tutorial.md): Explore how to use APL in Axiom’s Query tab to run queries using Tabular Operators, Scalar Functions, and Aggregation Functions.
+- [Example queries](https://axiom.co/docs/apl/tutorial.md): Explore how to use APL in Axiom’s Query interface to run queries using Tabular Operators, Scalar Functions, and Aggregation Functions.
