@@ -52,7 +52,7 @@ Axiom recommends the custom HTTPS destination for the following reasons:
 1. Click **Validate & Save**. DataStream 2 sends the test event `{"access_validation":true}` to Axiom. If the request succeeds, the test event appears in your dataset.
 1. Activate the stream. For streams that use the DataStream behavior, enable the behavior on your property in Property Manager. For more information, see [DataStream behavior](https://techdocs.akamai.com/property-mgr/docs/datastream-beh) in the Akamai documentation.
 
-The `timestamp-field=reqTimeSec` query parameter tells Axiom to use the time when the Akamai edge server accepted the request as the event’s `_time`. If you omit it, Axiom uses the time it received the batch, which is up to one push interval later than the request. For more information, see [Requirements for timestamp field](/reference/limits#requirements-for-timestamp-field).
+The `timestamp-field=reqTimeSec` query parameter tells Axiom to use the time when the Akamai edge server accepted the request as the event’s `_time`. Axiom moves the value into `_time` and doesn’t keep a separate `reqTimeSec` field. If you omit the parameter, Axiom uses the time it received the batch, which is up to one push interval later than the request. For more information, see [Requirements for timestamp field](/reference/limits#requirements-for-timestamp-field).
 
 <Note>
 If you use an IP allowlist on your side, see the Akamaized hostname option in [Stream logs to a custom HTTPS endpoint](https://techdocs.akamai.com/datastream2/docs/stream-custom-https). Axiom’s ingest endpoints don’t require it.
@@ -81,11 +81,11 @@ With this method, Axiom assigns `_time` from the time it receives each batch bec
 
 ## Field mapping
 
-DataStream 2 sends each log line as a flat JSON object. Axiom stores each key as a top-level field with the same name. The following table lists commonly used fields. For the full list, see [Data set parameters](https://techdocs.akamai.com/datastream2/docs/data-set-parameters) in the Akamai documentation.
+DataStream 2 sends each log line as a flat JSON object. With both methods, Axiom stores each line as one event and each key as a top-level field with the same name. The exception is `reqTimeSec` when you use it as the timestamp field. The following table lists commonly used fields. For the full list, see [Data set parameters](https://techdocs.akamai.com/datastream2/docs/data-set-parameters) in the Akamai documentation.
 
 | DataStream 2 field | Axiom field | Description |
 | :--- | :--- | :--- |
-| `reqTimeSec` | `reqTimeSec` and, with `timestamp-field=reqTimeSec`, `_time` | Time when the edge server accepted the request, in Unix epoch seconds. |
+| `reqTimeSec` | `_time` with `timestamp-field=reqTimeSec`, otherwise `reqTimeSec` | Time when the edge server accepted the request, in Unix epoch seconds. |
 | `reqId` | `reqId` | Request ID assigned by the edge server. |
 | `cp` | `cp` | CP code of the property. |
 | `streamId` | `streamId` | ID of the stream that sent the log line. |
