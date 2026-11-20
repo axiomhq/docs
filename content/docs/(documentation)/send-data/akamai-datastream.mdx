@@ -1,0 +1,149 @@
+---
+title: 'Send data from Akamai DataStream 2 to Axiom'
+description: 'This page explains how to stream Akamai CDN logs to Axiom with DataStream 2.'
+overview: 'Real-time log streaming for the Akamai CDN and edge platform'
+sidebarTitle: Akamai DataStream 2
+keywords: ['akamai', 'datastream', 'datastream 2', 'cdn', 'edge', 'logs', 'custom https', 'splunk hec', 'axiom documentation', 'documentation', 'axiom']
+---
+
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+
+[Akamai DataStream 2](https://techdocs.akamai.com/datastream2/docs/welcome-datastream2) collects raw request logs from Akamai edge servers, bundles them, and pushes them to a destination every 30 or 60 seconds. Use it to send CDN traffic logs to Axiom so you can query request volume, status codes, cache efficiency, and edge latency for your Akamai properties.
+
+DataStream 2 can reach Axiom in two ways:
+
+- **Custom HTTPS destination (recommended).** DataStream 2 posts JSON logs directly to the Axiom [ingest API](/restapi/ingest). Each DataStream field becomes a field in Axiom, and you control the event timestamp. See [Send logs with the custom HTTPS destination](#send-logs-with-the-custom-https-destination).
+- **Splunk destination.** DataStream 2 posts logs to the [Axiom Splunk HEC compatible API](/send-data/splunk-hec). Use this method if your organization standardizes on the Splunk destination type. See [Send logs with the Splunk destination](#send-logs-with-the-splunk-destination).
+
+Axiom recommends the custom HTTPS destination for the following reasons:
+
+- The custom HTTPS destination doesn’t let you set an `Authorization` custom header, but it supports Basic authentication. The Axiom ingest API accepts an API token as the Basic authentication password, so no proxy is needed.
+- The dataset name is part of the endpoint URL, and you can tell Axiom which field holds the event timestamp.
+- The Splunk destination only sends to the HEC raw endpoint (`/services/collector/raw`), not to the HEC event endpoint. The raw endpoint doesn’t carry an envelope with event metadata such as `time`.
+
+<Prerequisites />
+- Have an Akamai account with access to DataStream 2 and at least one property that’s active on the Akamai network. For more information, see [Create a stream](https://techdocs.akamai.com/datastream2/docs/create-stream) in the Akamai documentation.
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
+## Send logs with the custom HTTPS destination
+
+1. In Akamai Control Center, create a stream or edit an existing one. For more information, see [Create a stream](https://techdocs.akamai.com/datastream2/docs/create-stream) in the Akamai documentation.
+1. In the **Data sets** step, select the fields you want to send. Recommended: Include at least `reqTimeSec`, `reqHost`, `reqMethod`, `reqPath`, `statusCode`, `cliIP`, `cacheStatus`, and `turnAroundTimeMSec`. For the full list, see [Data set parameters](https://techdocs.akamai.com/datastream2/docs/data-set-parameters) in the Akamai documentation.
+1. In **Log format**, select **JSON**.
+1. In the **Delivery** step, select **Custom HTTPS** as the destination, and then configure it with the following values. For more information about each field, see [Stream logs to a custom HTTPS endpoint](https://techdocs.akamai.com/datastream2/docs/stream-custom-https) in the Akamai documentation.
+
+    | Field | Value |
+    | :--- | :--- |
+    | **Name** | A name for the destination, for example `Axiom`. |
+    | **Endpoint URL** | `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME?timestamp-field=reqTimeSec` |
+    | **Authentication** | **Basic** |
+    | **Username** | `axiom`. Axiom ignores the username. |
+    | **Password** | `API_TOKEN` |
+    | **Send compressed data** | Optional: Select to send gzip-compressed requests. |
+    | **Content type** (in **Custom header**) | `application/json` |
+
+1. Set **Push frequency** to 30 or 60 seconds.
+1. Click **Validate & Save**. DataStream 2 sends the test event `{"access_validation":true}` to Axiom. If the request succeeds, the test event appears in your dataset.
+1. Activate the stream. For streams that use the DataStream behavior, enable the behavior on your property in Property Manager. For more information, see [DataStream behavior](https://techdocs.akamai.com/property-mgr/docs/datastream-beh) in the Akamai documentation.
+
+The `timestamp-field=reqTimeSec` query parameter tells Axiom to use the time when the Akamai edge server accepted the request as the event’s `_time`. If you omit it, Axiom uses the time it received the batch, which is up to one push interval later than the request. For more information, see [Requirements for timestamp field](/reference/limits#requirements-for-timestamp-field).
+
+<Note>
+If you use an IP allowlist on your side, see the Akamaized hostname option in [Stream logs to a custom HTTPS endpoint](https://techdocs.akamai.com/datastream2/docs/stream-custom-https). Axiom’s ingest endpoints don’t require it.
+</Note>
+
+## Send logs with the Splunk destination
+
+The Axiom Splunk HEC compatible API is served from `hec.AXIOM_DOMAIN`. The DataStream 2 Splunk destination only accepts URLs that end in the HEC raw path, so use `/services/collector/raw`.
+
+1. Create an Axiom API token that can ingest into only one dataset: the dataset where you want to send Akamai logs. Axiom then routes events to that dataset without an `index` parameter. For more information, see [Choose the target dataset](/send-data/splunk-hec#choose-the-target-dataset).
+1. In Akamai Control Center, create a stream or edit an existing one, and select the data set fields you want to send.
+1. In **Log format**, select **JSON**.
+1. In the **Delivery** step, select **Splunk** as the destination, and then configure it with the following values. For more information about each field, see [Stream logs to Splunk](https://techdocs.akamai.com/datastream2/docs/stream-splunk) in the Akamai documentation.
+
+    | Field | Value |
+    | :--- | :--- |
+    | **Display name** | A name for the destination, for example `Axiom`. |
+    | **Endpoint URL** | `https://hec.AXIOM_DOMAIN/services/collector/raw` |
+    | **Event collector token** | `API_TOKEN` |
+    | **Send compressed data** | Optional: Select to send gzip-compressed requests. |
+
+1. Set **Push frequency** to 30 or 60 seconds.
+1. Click **Validate & Save**, and then activate the stream.
+
+With this method, Axiom assigns `_time` from the time it receives each batch because the HEC raw endpoint has no `time` envelope field. To use the request time instead, use the [custom HTTPS destination](#send-logs-with-the-custom-https-destination).
+
+## Field mapping
+
+DataStream 2 sends each log line as a flat JSON object. Axiom stores each key as a top-level field with the same name. The following table lists commonly used fields. For the full list, see [Data set parameters](https://techdocs.akamai.com/datastream2/docs/data-set-parameters) in the Akamai documentation.
+
+| DataStream 2 field | Axiom field | Description |
+| :--- | :--- | :--- |
+| `reqTimeSec` | `reqTimeSec` and, with `timestamp-field=reqTimeSec`, `_time` | Time when the edge server accepted the request, in Unix epoch seconds. |
+| `reqId` | `reqId` | Request ID assigned by the edge server. |
+| `cp` | `cp` | CP code of the property. |
+| `streamId` | `streamId` | ID of the stream that sent the log line. |
+| `reqHost` | `reqHost` | Value of the `Host` request header. |
+| `reqMethod` | `reqMethod` | HTTP request method. |
+| `reqPath` | `reqPath` | Request path without the query string. |
+| `queryStr` | `queryStr` | Query string of the request. |
+| `statusCode` | `statusCode` | HTTP response status code. `0` means the client closed the connection before the response. |
+| `bytes` | `bytes` | Size of the response body in bytes. |
+| `totalBytes` | `totalBytes` | Billed inbound and outbound bytes. |
+| `cliIP` | `cliIP` | Client IP address. |
+| `UA` | `UA` | URI-encoded `User-Agent` request header. |
+| `proto` | `proto` | Protocol, for example `HTTP/2`. |
+| `tlsVersion` | `tlsVersion` | TLS version, or `-` for requests without TLS. |
+| `cacheStatus` | `cacheStatus` | `1` if the object was in the edge cache, `0` otherwise. |
+| `turnAroundTimeMSec` | `turnAroundTimeMSec` | Milliseconds from the last request header to the first response byte. |
+| `transferTimeMSec` | `transferTimeMSec` | Milliseconds to send the response. |
+| `errorCode` | `errorCode` | Description of the error that occurred when serving the request, if any. |
+| `country`, `state`, `city` | `country`, `state`, `city` | Location where the request originated. |
+| `edgeIP` | `edgeIP` | IP address of the edge server that served the request. |
+
+Keep the following in mind when you query DataStream 2 data:
+
+- DataStream 2 encodes most values as JSON strings, including numeric values such as `statusCode`, `bytes`, and `turnAroundTimeMSec`. Convert them with [`toint`](/apl/scalar-functions/conversion-functions/toint) or [`todouble`](/apl/scalar-functions/conversion-functions/todouble) before numeric comparisons and aggregations.
+- In JSON logs, DataStream 2 omits fields that have no value. Use [`isnotempty`](/apl/scalar-functions/string-functions/isnotempty) to filter on fields that aren’t always present.
+- The Akamai documentation spells the request ID field `reqId` in the log format sample and `reqID` in the data set parameter list. Check the field name in your dataset before you query it.
+- The **Validate & Save** test event creates a field named `access_validation`. To exclude the test event from queries, filter with `where isnull(access_validation)`.
+
+## Query DataStream 2 logs
+
+The following query counts requests by status code for each host:
+
+```kusto
+['DATASET_NAME']
+| summarize count() by reqHost, statusCode
+```
+
+The following query calculates the cache hit ratio and the 95th percentile of edge turnaround time per host:
+
+```kusto
+['DATASET_NAME']
+| extend hit = toint(cacheStatus), tat = todouble(turnAroundTimeMSec)
+| summarize hit_ratio = avg(hit), p95_tat_ms = percentile(tat, 95) by reqHost
+```
+
+The following query lists the paths with the most server errors:
+
+```kusto
+['DATASET_NAME']
+| where toint(statusCode) >= 500
+| summarize errors = count() by reqHost, reqPath
+| top 10 by errors
+```
+
+## Troubleshooting
+
+- If **Validate & Save** fails with a `401` or `403` error, check that the password (custom HTTPS) or event collector token (Splunk) is a valid Axiom API token that can ingest into the target dataset.
+- If events arrive but `_time` matches the ingest time, check that the endpoint URL includes `?timestamp-field=reqTimeSec`.
+- If events don’t arrive after you activate the stream, check that the DataStream behavior is enabled on the active version of your property. For more information, see [DataStream behavior](https://techdocs.akamai.com/property-mgr/docs/datastream-beh) in the Akamai documentation.
+
+For more information about ingest limits, see [Limits](/reference/limits).

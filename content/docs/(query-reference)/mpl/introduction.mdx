@@ -28,15 +28,19 @@ The current implementation of MPL comes with the following limitations:
 
 ## Query structure
 
-A typical MPL query contains the following:
+A typical MPL query runs operations in the following order:
 
-1. **Source**: Defines dataset and metric
-1. **Filter**: Applies conditions to series via tags
-1. **Transformation** can be the following:
+1. **Source**: Defines dataset and metric.
+1. **Offset and sample** (optional): Shifts the read window with `offset` or samples series with `sample`.
+1. **Filter** (optional): Applies conditions to series via tags with `where` or `ifdef`.
+1. **Transformations**:
     - **Map:** Maps the data to a new value.
     - **Align:** Aggregates the data over time to align to a given time interval.
     - **Group:** Aggregates the data over tag values.
     - **Bucket:** A two-dimensional transformation that aggregates along both the time and tag dimensions.
+1. **Output** (optional): Adds tags with `extend` or renames the metric with pipe `as`.
+
+Filters (`where` and `ifdef`) must appear before any transformation (`map`, `align`, `group`, or `bucket`). `extend` and pipe `as` must appear at the end of a pipeline.
 
 **Example:**
 
@@ -118,6 +122,16 @@ The source doesn’t include a time range. You set the time range outside the qu
 `otel-demo-metrics`:`go.memory.used` as mem_usage
 ```
 
+You can also rename the resulting metric at the end of a pipeline with pipe `| as <name>`, including after transformations or `compute`:
+
+```mpl
+`otel-demo-metrics`:`go.memory.used`
+| align to 5m using avg
+| as mem_usage
+```
+
+Pipe `as` must appear at the end of a pipeline (before or after `extend`). It can't be followed by `where`, `map`, `align`, `group`, or `bucket`.
+
 ### Filter
 
 Use `where` to filter series based on tag values.
@@ -131,6 +145,7 @@ Use `where` to filter series based on tag values.
 A filter expression can be one of the following:
 
 - `<tag> <operator> <value>` — a single tag filter
+- `<tag> is <type>` — checks the tag's native type (`string`, `int`, `float`, `bool`, or `array`)
 - `<filter-expression> and <filter-expression>` — logical AND of two expressions
 - `<filter-expression> or <filter-expression>` — logical OR of two expressions
 - `not <filter-expression>` — negation of an expression
@@ -140,8 +155,13 @@ Available operators for single tag filters:
 
 - Equality: `==`, `!=`
 - Comparisons: `<`, `<=`, `>`, `>=`
+- Membership: `in` (checks whether a tag value is in an array literal or array parameter)
+- Array element match: `contains` (checks whether an array-valued tag contains a value)
+- Type check: `is` (`string`, `int`, `float`, `bool`, or `array`)
 
-The value must be one of the [supported data types](#data-types).
+The value must be one of the [supported data types](#data-types). To test for `null`, use `== null` or `!= null` instead of `is`.
+
+Filters (`where` and `ifdef`) must appear before any transformation (`map`, `align`, `group`, or `bucket`).
 
 **Examples:**
 
@@ -149,6 +169,14 @@ The value must be one of the [supported data types](#data-types).
 | where environment == "production" and status_code >= 200 and status_code < 300
 
 | where (environment == "production" or environment == "staging") and not status_code == 500
+
+| where status_code in [200, 201, 204]
+
+| where tags contains "critical"
+
+| where host is string and port is int and labels is array
+
+| where optional_tag != null
 ```
 
 ### Map
@@ -167,7 +195,12 @@ Available functions:
 | `fill::prev`          | Fills missing values using the previous non-null value.              |
 | `fill::const(arg)`    | Fills missing values with a constant.                                |
 | `interpolate::linear` | Linear interpolation of missing values.                              |
+| `timestamp`           | Replaces each data point's value with its recording timestamp.       |
 | `+`, `-`, `*`, `/`   | Performs the respective mathematical calculation on each value.      |
+
+<Note>
+Use `map timestamp` in API queries. The Console editor currently reports an unknown function.
+</Note>
 
 **Examples:**
 
@@ -316,8 +349,10 @@ Available functions:
 | Function                                        | Description                                                                                                                                                                |
 |-------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `histogram(specs)`                              | Aggregates non-histogram series into buckets. `specs` is one or more quantile values between 0 and 1, or aggregation functions (`count`, `avg`, `sum`, `min`, `max`).      |
-| `interpolate_cumulative_histogram(mode, specs)` | Aggregates cumulative-temporality histogram series. `mode` is `rate` or `increase`. `specs` is one or more quantile values or aggregation functions.                       |
-| `interpolate_delta_histogram(specs)`            | Aggregates delta-temporality histogram series. `specs` is one or more quantile values or aggregation functions.                                                            |
+| `interpolate_cumulative_histogram(mode, specs)` | Aggregates cumulative-temporality histogram series. `mode` is `rate` or `increase`. `specs` is one or more quantile values between 0 and 1, or `count`, `sum`, or `avg`. `min` and `max` aren't supported for cumulative histograms. |
+| `interpolate_delta_histogram(specs)`            | Aggregates delta-temporality histogram series. `specs` is one or more quantile values between 0 and 1, or `count`, `sum`, `avg`, `min`, or `max`. `min` requires recorded minimum values, and `max` requires recorded maximum values. Quantiles require both. |
+
+Each output series from `bucket` carries an `axiom.bucket` tag whose value identifies the requested spec (for example `0.99`, `avg`, or `count`).
 
 <Info>
 `interpolate_cumulative_histogram` works on histogram metrics using cumulative temporality. `interpolate_delta_histogram` works on histogram metrics using delta temporality.
@@ -342,7 +377,7 @@ MPL has no equivalent function for summary metrics. For more information, see [Q
 
 Use `extend` to add new tags to every series in the query result. `extend` supports `${}` interpolation to reference existing tag values or parameters.
 
-`extend` can only be applied after aggregations (after `align`, `group`, `bucket`, and `map`).
+`extend` must appear at the end of a pipeline (after `map`, `align`, `group`, or `bucket`). It can appear before or after pipe `as`, and can't be followed by `where`, `map`, `align`, `group`, or `bucket`.
 
 **Syntax:**
 
@@ -432,6 +467,22 @@ Available operators:
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22(%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20%60http.response.status_code%60%20%3E%3D%20500%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%2C%20%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20map%20rate%20%7C%20align%20to%205m%20using%20avg%20%7C%20group%20using%20sum%20)%20%7C%20compute%20error_rate%20using%20%2F%22%2C%22metricsDataset%22%3A%22otel-demo-metrics%22%7D)
 
+You can pipe the result of `compute` into `map`, `align`, `group`, `bucket`, `extend`, or `as`, and you can nest `compute` expressions. You can't pipe a `compute` result into `where`, `offset`, or `sample`.
+
+```mpl
+(
+  `otel-demo-metrics`:`http.server.request.duration`
+  | where `http.response.status_code` >= 500
+  | align to 5m using prom::rate
+  | group using sum,
+  `otel-demo-metrics`:`http.server.request.duration`
+  | align to 5m using prom::rate
+  | group using sum
+)
+| compute error_rate using /
+| map * 100
+```
+
 ### Offset
 
 Use `offset` to read a source from an earlier or later time window. This lets you compare a metric with its own values at another time, for example this hour against the same hour yesterday.
@@ -481,18 +532,52 @@ In PromQL, `offset 1h` reads data from one hour earlier. In MPL, the sign matche
 
 To compare the results of a [compute](#compute) operation over time, add `offset` to each source inside it. You can’t apply `offset` to the result of `compute`.
 
+### Sample
+
+Use `sample` to query a fraction of matching series from a source.
+
+**Syntax:**
+
+```mpl
+| sample <fraction>
+```
+
+- **fraction**: A float between `0` and `1` (for example, `0.1` samples 10% of series).
+
+`sample` must appear directly after the source or `offset`, before any `where`, `ifdef`, or transformation.
+
+**Examples:**
+
+```mpl
+`otel-demo-metrics`:`http.server.request.duration`
+| sample 0.1
+| align to 5m using avg
+```
+
+```mpl
+`otel-demo-metrics`:`http.server.request.duration`
+| offset -1h
+| sample 0.5
+| where `service.name` == "checkout"
+| align to 5m using avg
+```
+
 ## Language features
 
 ### Data types
 
-- Strings: `"string"`
+OpenTelemetry attributes keep their native tag value types (`string`, `int`, `float`, `bool`, or `array`). MPL supports the following literal types:
+
+- **Strings**: `"string"`, with escape sequences such as `\"` and `\n`, and `${}` interpolation in `extend`.
     <Tip>
-        Use double quotes (`"`) to enclose the string. Don't use single quotes (`'`).
+        Use double quotes (`"`) to enclose strings. Don't use single quotes (`'`).
     </Tip>
-- Integers: `42`
-- Floats: `3.14`
-- Booleans: `true`, `false`
-- Regex: `#/.*metrics.*/`
+- **Integers**: `42`
+- **Floats**: `3.14`, scientific notation (`1e3`, `2.5e-2`), and infinity (`inf`, `+inf`, `-inf`)
+- **Booleans**: `true`, `false`
+- **Arrays**: `[1, "a", true]` (arrays can be nested, for example `[1, [2, 3]]`). Array-valued OTel attributes are ingested as array tags and can be queried with `contains` or `is array`.
+- **Null**: `null` (compare with `== null` or `!= null` in `where`; `is null` isn't supported)
+- **Regex**: `#/.*metrics.*/`
 
 ### Identifier naming rules
 
@@ -500,8 +585,8 @@ Identifiers represent fields, metrics, datasets, function names, and other named
 
 Valid identifier names are case-sensitive and follow these rules:
 
-- Start with an ASCII letter.
-- Followed by zero or more ASCII letters, digits, or underscores (`_`).
+- Start with a Unicode letter or underscore (`_`).
+- Followed by zero or more Unicode letters, Unicode digits, or underscores (`_`).
 
 ### Quote identifiers
 
@@ -513,6 +598,47 @@ Quote an identifier in your MPL query if any of the following is true:
 If any of the above is true, you must quote the identifier by enclosing it in backticks (`` ` ``). For example, `` `my-field` ``.
 
 If none of the above is true, you don't need to quote the identifier in your MPL query. For example, `myfield`. In this case, quoting the identifier name is optional.
+
+### Parameters
+
+Declare query parameters at the start of a query (before the query body) with `param`:
+
+```mpl
+param $<name>: <type>;
+```
+
+Supported parameter types:
+
+- Tag value types: `string`, `int`, `float`, `bool`, `array`
+- Query types: `Dataset`, `Duration`, `Regex`
+- Optional parameters: `Option<T>` supports `Regex`, `string`, `int`, `float`, `bool`, and `array`. Reference an optional parameter inside its `ifdef` branch.
+
+Use a `Dataset` parameter as the query source (`$ds:metric`), or use `Option<T>` parameters with `ifdef` (and an optional `else` branch) for conditional filtering:
+
+```mpl
+param $ds: Dataset;
+param $svc: Option<string>;
+$ds:`http.server.request.duration`
+| ifdef($svc) { where `service.name` == $svc } else { where `service.name` == "checkout" }
+| align to 5m using avg
+```
+
+```mpl
+param $codes: array;
+`otel-demo-metrics`:`http.server.request.duration`
+| where `http.response.status_code` in $codes
+| align to 5m using avg
+```
+
+When running a parameterized query through the API, pass parameter values as `param__<name>` query parameters formatted as MPL literals. For example:
+
+- `param__ds=otel-demo-metrics` (dataset identifier)
+- `param__svc="checkout"` (quoted string literal)
+- `param__code=200` (integer literal)
+- `param__window=5m` (duration literal)
+- `param__pattern=#/api-.*/` (regex literal)
+
+For using dashboard filter bars as MPL parameters, see [Use filters with metrics queries](/query-data/filters#use-filters-with-metrics-queries).
 
 ### Built-in variables
 
@@ -533,7 +659,7 @@ MPL provides the following built-in variables that can be used in queries:
 
 An MPL query doesn’t define its own time range. Axiom runs the query over a time range that you set outside the query:
 
-- In the Query tab, select the time range in the time range picker. For more information, see [Select time range](/query-data/explore#select-time-range).
+- In **Query**, select the time range in the time range picker. For more information, see [Select time range](/query-data/explore#select-time-range).
 - In dashboards, the dashboard’s time range applies to all charts. For more information, see [Select time range](/dashboards/configure#select-time-range).
 - In the API, specify the `startTime` and `endTime` fields of the request. For more information, see [Run MPL query](/restapi/endpoints/queryMetrics).
 
@@ -545,7 +671,7 @@ Earlier versions of MPL accepted a time range in square brackets after the metri
 
 Operations such as `align`, `offset`, and `bucket` take a duration. Specify a duration as an integer followed by one of the following time units:
 
-- `ms` for milliseconds. Axiom rounds milliseconds to seconds, so the value must be at least `1000ms`.
+- `ms` for milliseconds. Axiom truncates milliseconds to whole seconds. Values below `1000ms` produce an error, and values that aren't whole multiples of `1000ms` (for example, `1500ms`) produce a warning and truncate down to whole seconds.
 - `s` for seconds
 - `m` for minutes
 - `h` for hours

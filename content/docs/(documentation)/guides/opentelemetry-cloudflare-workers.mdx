@@ -14,7 +14,7 @@ import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 This guide demonstrates how to configure OpenTelemetry in Cloudflare Workers to send telemetry data to Axiom using the [OTel CF Worker package](https://github.com/evanderkoogh/otel-cf-workers).
 
 <Note>
-This guide also applies to web frameworks that run on Cloudflare Workers. For example, you can use the same OpenTelemetry configuration described below for [Hono](https://hono.dev/) apps deployed to Cloudflare Workers.
+This guide also applies to web frameworks that run on Cloudflare Workers. For a Hono app, see [Send data from Hono app to Axiom](/guides/hono), which also adds a span for every Hono route and sends logs.
 </Note>
 
 <Prerequisites />
@@ -23,16 +23,11 @@ This guide also applies to web frameworks that run on Cloudflare Workers. For ex
 
 ## Setting up your Cloudflare Workers environment
 
-Create a new directory for your project and navigate into it:
+Create a new Cloudflare Workers project with `create-cloudflare`:
 
 ```bash
-mkdir my-axiom-worker && cd my-axiom-worker
-```
-
-Initialize a new Wrangler project using this command:
-
-```bash
-wrangler init --type="javascript"
+npm create cloudflare@latest my-axiom-worker
+cd my-axiom-worker
 ```
 
 ## Cloudflare Workers Script Configuration (index.ts)
@@ -85,10 +80,9 @@ Configure **`wrangler.toml`** with your Cloudflare account details and set envir
 
 ```toml
 name = "my-axiom-worker"
-type = "javascript"
 account_id = "$YOUR_CLOUDFLARE_ACCOUNT_ID" # Replace with your actual Cloudflare account ID
 workers_dev = true
-compatibility_date = "2023-03-27"
+compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
 main = "index.ts"
 
@@ -114,30 +108,16 @@ Navigate to the root directory of your project and add `@microlabs/otel-cf-worke
     "main": "index.ts",
     "scripts": {
       "start": "wrangler dev",
-      "deploy": "wrangler publish"
+      "deploy": "wrangler deploy"
     },
     "dependencies": {
-      "@microlabs/otel-cf-workers": "^1.0.0-rc.20",
-      "@opentelemetry/api": "^1.6.0",
-      "@opentelemetry/core": "^1.17.1",
-      "@opentelemetry/exporter-trace-otlp-http": "^0.43.0",
-      "@opentelemetry/otlp-exporter-base": "^0.43.0",
-      "@opentelemetry/otlp-transformer": "^0.43.0",
-      "@opentelemetry/resources": "^1.17.1",
-      "@opentelemetry/sdk-trace-base": "^1.17.1",
-      "@opentelemetry/semantic-conventions": "^1.17.1",
-      "deepmerge": "^4.3.1",
-      "husky": "^8.0.3",
-      "lint-staged": "^15.0.2",
-      "ts-checked-fsm": "^1.1.0"
+      "@microlabs/otel-cf-workers": "^1.0.0-rc.52",
+      "@opentelemetry/api": "^1.10.0"
     },
     "devDependencies": {
-      "@changesets/cli": "^2.26.2",
-      "@cloudflare/workers-types": "^4.20231016.0",
-      "prettier": "^3.0.3",
-      "rimraf": "^4.4.1",
-      "typescript": "^5.2.2",
-      "wrangler": "2.13.0"
+      "@cloudflare/workers-types": "^4.20260101.0",
+      "typescript": "^5.8.0",
+      "wrangler": "^4.165.0"
     },
     "private": true
   }
@@ -167,7 +147,7 @@ Deploy your app to the Cloudflare Workers environment by running:
 npm run deploy
 ```
 
-This command runs **`wrangler publish`**, deploying your project to Cloudflare Workers.
+This command runs **`wrangler deploy`**, deploying your project to Cloudflare Workers.
 
 ### Alternative: Use Wrangler directly
 
@@ -384,4 +364,8 @@ These packages provide the foundational elements for OTLP exporters, including t
 
 **`@opentelemetry/resources`**
 
-Defines the Resource, which represents the entity producing telemetry. In Cloudflare Workers, Resources can be used to describe the worker (for example,, service name, version) and are attached to all exported telemetry, aiding in identifying data in backend systems.
+Defines the Resource, which represents the entity producing telemetry. In Cloudflare Workers, Resources can be used to describe the worker (for example, service name, version) and are attached to all exported telemetry, aiding in identifying data in backend systems.
+
+## Send logs and metrics
+
+To also export OpenTelemetry logs (`/v1/logs`) and metrics (`/v1/metrics`), or to configure per-signal dataset headers and dataset-in-path endpoints, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).

@@ -1,0 +1,49 @@
+---
+title: variancew
+description: 'This page explains how to use the variancew aggregation function in APL.'
+---
+
+`variancew` calculates the weighted sample variance when each row represents multiple observations. The weight gives the number of observations the row represents.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize variancew(expr, weight) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`expr`**: The numeric expression to evaluate.
+- **`weight`**: An integer expression representing the frequency weight for each record. Records with a weight less than or equal to `0` are skipped. Records with a `null` weight are counted once (weight `1`).
+- **`GroupingColumn`** (optional): A column to group the results by.
+
+### Returns
+
+Returns a `real` value representing the weighted variance of `expr` across the group. By default, the output column is named `variancew_<expr>`.
+
+## Use case examples
+
+### Weighted variance of latency
+
+This example computes the weighted variance across pre-aggregated request latency buckets.
+
+**Query**
+
+```kusto
+datatable(latency: int, requests: int)[10, 8, 20, 6, 30, 3, 40, 1]
+| summarize variancew(latency, requests)
+```
+
+**Output**
+
+| variancew_latency |
+|-------------------|
+| 85.29411764705883 |
+
+## List of related aggregations
+
+- [**variance**](/apl/aggregation-function/variance): Calculates the unweighted variance across a group.
+- [**stdevw**](/apl/aggregation-function/stdevw): Calculates the weighted standard deviation using an integer frequency weight.
+- [**avgw**](/apl/aggregation-function/avgw): Calculates the weighted average using an integer frequency weight.

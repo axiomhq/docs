@@ -13,8 +13,8 @@ OpenTelemetry provides a standardized way to collect and export telemetry data f
 
 - [Create an Axiom account](https://app.axiom.co/).
 - [Create a dataset in Axiom](/reference/datasets) where you send your data.
-- [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete datasets.
-- [Install Node.js version 14](https://nodejs.org/en/download/package-manager) or newer.
+- [Create an API token in Axiom](/reference/tokens) with permission to ingest data to the dataset.
+- [Install Node.js 22.15 or later](https://nodejs.org/en/download/package-manager).
 - An existing Next.js app. Alternatively, create a new app with the default settings using the [Next.js documentation](https://nextjs.org/learn/pages-router/create-nextjs-app-setup).
 
 ## Send data from new project
@@ -25,19 +25,22 @@ OpenTelemetry provides a standardized way to collect and export telemetry data f
 1. Run the following command to install the dependencies:
 
     ```bash
-    npm install @opentelemetry/exporter-trace-otlp-http @opentelemetry/sdk-trace-node @opentelemetry/resources
+    npm install @opentelemetry/exporter-trace-otlp-http @opentelemetry/sdk-trace-node @opentelemetry/resources @opentelemetry/semantic-conventions
     ```
 
-1. Create an `instrumentation.ts` file in the `src` folder of your project with the following content:
+1. Create an `instrumentation.ts` file in the `src` folder of your project with the following content. Next.js calls `register()` from `instrumentation.ts` automatically on server startup, so don’t import or call `register()` from your layouts or pages.
 
     ```ts /src/instrumentation.ts
     import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
     import { resourceFromAttributes } from "@opentelemetry/resources";
-    import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
-    import { SimpleSpanProcessor } from "@opentelemetry/sdk-trace-node";
+    import { NodeTracerProvider, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-node";
     import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 
     export function register() {
+      if (process.env.NEXT_RUNTIME !== "nodejs") {
+        return;
+      }
+
       const provider = new NodeTracerProvider({
         resource: resourceFromAttributes({
           [ATTR_SERVICE_NAME]: "nextjs-otel-example",
@@ -68,26 +71,6 @@ OpenTelemetry provides a standardized way to collect and export telemetry data f
     AXIOM_TOKEN="API_TOKEN"
     AXIOM_DATASET="DATASET_NAME"
     ```
-
-### Update root layout
-
-In the `/src/app/layout.tsx` file, import and call the `register` function from the `instrumentation` module:
-
-```tsx /src/app/layout.tsx
-import { register } from '../instrumentation';
-
-register();
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
-}
-```
-
-This file sets up the root layout for your Next.js app and initializes the OpenTelemetry instrumentation by calling the `register` function.
 
 ### Update compiler options
 
@@ -135,9 +118,9 @@ npm run dev
 
 This command starts the Next.js development server, and the OpenTelemetry instrumentation automatically collects traces. As you interact with your app, traces are sent to Axiom where you can monitor and analyze your app’s performance and behavior.
 
-In Axiom, go to the **Stream** tab and click your dataset. This page displays the traces sent to Axiom and lets you monitor and analyze your app’s performance and behavior.
+In Axiom, click **Stream** in the sidebar and click your dataset. This page displays the traces sent to Axiom and lets you monitor and analyze your app’s performance and behavior.
 
-Go to the **Dashboards** tab and click **OpenTelemetry Traces**. This pre-built traces dashboard provides further insights into the performance and behavior of your app.
+Click **Dashboards** in the sidebar and click **OpenTelemetry Traces**. This pre-built traces dashboard provides further insights into the performance and behavior of your app.
 
 ## Send data from existing project
 
@@ -172,41 +155,54 @@ span.setAttribute('operation_status', 'success');
 
 ### Automatic instrumentation
 
-Automatic instrumentation uses the capabilities of OpenTelemetry to automatically capture telemetry data for standard operations such as HTTP requests and responses.
+Automatic instrumentation uses OpenTelemetry to capture telemetry data for standard operations such as HTTP requests and responses.
 
-1. Use the OpenTelemetry Node SDK to configure your app to automatically instrument supported libraries and frameworks. Set up `NodeSDK` in an `instrumentation.ts` file in your project.
+1. Install the OpenTelemetry Node SDK packages:
 
-```ts /src/instrumentation.ts
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+    ```bash
+    npm install @opentelemetry/sdk-node @opentelemetry/exporter-trace-otlp-http @opentelemetry/sdk-trace-base @opentelemetry/resources @opentelemetry/semantic-conventions
+    ```
 
-export function register() {
-  const sdk = new NodeSDK({
-    resource: new Resource({ [SEM_RESOURCE_ATTRIBUTES.SERVICE_NAME]: 'nextjs-app' }),
-    spanProcessor: new BatchSpanProcessor(
-      new OTLPTraceExporter({
-        url: `https://${process.env.AXIOM_HOST}/v1/traces`,
-        headers: {
-          Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-          'X-Axiom-Dataset': `${process.env.AXIOM_DATASET}`,
-        },
-      })
-    ),
-  });
+1. Configure `NodeSDK` in `src/instrumentation.ts`:
 
-  sdk.start();
-}
-```
+    ```ts /src/instrumentation.ts
+    import { NodeSDK } from '@opentelemetry/sdk-node';
+    import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+    import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+    import { resourceFromAttributes } from '@opentelemetry/resources';
+    import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 
-2. Include necessary OpenTelemetry instrumentation packages to automatically capture telemetry from Node.js libraries like HTTP and any other middlewares used by Next.js.
+    export function register() {
+      if (process.env.NEXT_RUNTIME !== 'nodejs') {
+        return;
+      }
 
-3. Call the `register` function from the `instrumentation.ts` within your app startup file or before your app starts handling traffic to initialize the OpenTelemetry instrumentation.
+      const sdk = new NodeSDK({
+        resource: resourceFromAttributes({
+          [ATTR_SERVICE_NAME]: 'nextjs-app',
+        }),
+        spanProcessors: [
+          new BatchSpanProcessor(
+            new OTLPTraceExporter({
+              url: `https://${process.env.AXIOM_HOST}/v1/traces`,
+              headers: {
+                Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+                'X-Axiom-Dataset': `${process.env.AXIOM_DATASET}`,
+              },
+            })
+          ),
+        ],
+      });
 
-```js
-// In pages/_app.js or an equivalent entry point
-import { register } from '../instrumentation';
-register();
-```
+      sdk.start();
+    }
+    ```
+
+Next.js invokes `register()` from `instrumentation.ts` automatically on startup; don’t call it manually from `app/layout.tsx` or `pages/_app.js`.
+
+## Send logs and metrics
+
+To also export OpenTelemetry logs (`/v1/logs`) and metrics (`/v1/metrics`), or to configure per-signal dataset headers and dataset-in-path endpoints, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
 
 ## Reference
 

@@ -10,6 +10,7 @@ logoId: "nextJs"
 ---
 
 import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import BaseDomains from "@/content/snippets/base-domains.mdx"
 
 Next.js is a popular open-source JavaScript framework built on top of React, developed by Vercel. It’s used by a wide range of companies and organizations, from startups to large enterprises, due to its performance benefits and developer-friendly features.
 
@@ -28,7 +29,9 @@ The choice between these options depends on your individual requirements:
     | Web Vitals       | No               | Yes                     | Yes                |
     | HTTP logs        | Yes              | Yes                     | No                |
     | Build logs       | Yes              | No                      | No                 |
-    | Tracing          | Yes              | Yes                     | No                 |
+    | Tracing          | Yes              | No                      | No                 |
+
+    To collect OpenTelemetry traces from a Next.js app, see [Send OpenTelemetry data from a Next.js app to Axiom](/guides/opentelemetry-nextjs).
 
 - If you already use Vercel for deployments, the Axiom Vercel app can be easier to integrate into your existing experience.
 - The cost of these options can differ widely depending on the volume of data you transfer. The Axiom Vercel app depends on Vercel Drains, a feature that’s only available on paid plans. For more information, see [the blog post on the changes to Vercel Drains](https://axiom.co/blog/changes-to-vercel-log-drains).
@@ -62,10 +65,17 @@ The @axiomhq/nextjs library is part of the Axiom JavaScript SDK, an open-source 
 
     const axiomClient = new Axiom({
       token: process.env.NEXT_PUBLIC_AXIOM_TOKEN!,
+      edge: process.env.NEXT_PUBLIC_AXIOM_EDGE,
     });
 
     export default axiomClient;
     ```
+
+    Set `NEXT_PUBLIC_AXIOM_EDGE` to the base domain of your edge deployment:
+
+    <BaseDomains />
+
+    For more information, see [Edge deployments](/reference/edge-deployments).
 
 1. In the `lib/axiom` folder, create a `server.ts` file with the following content:
 
@@ -881,3 +891,7 @@ To extend the logger, use `log.with` to create an intermediate logger. For examp
 const logger = useLogger().with({ userId: 42 });
 logger.info("Hi"); // will ingest { ..., "message": "Hi", "fields" { "userId": 42 }}
 ```
+
+## View Next.js dashboard
+
+When events in your dataset include the `@app.next-axiom-version` field, Axiom automatically creates a read-only **Next.js** dashboard under **Dashboards > Integration** showing requests, errors, functions, edge activity, and web vitals. For more information, see [Integration dashboards](/dashboards/create#integration-dashboards).
