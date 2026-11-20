@@ -1,0 +1,52 @@
+---
+title: percentilesw_array
+description: 'This page explains how to use the percentilesw_array aggregation function in APL.'
+---
+
+`percentilesw_array` calculates multiple estimated weighted percentiles in a single aggregation when each row represents multiple observations. The weight gives the number of observations the row represents.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize percentilesw_array(expr, weight, p1 [, p2, ...]) [by GroupingColumn]
+summarize percentilesw_array(expr, weight, dynamic([p1, p2, ...])) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`expr`**: The numeric, `datetime`, or `timespan` expression to evaluate.
+- **`weight`**: An integer expression representing the frequency weight for each record. Records with a weight less than or equal to `0` are skipped. Records with a `null` weight are counted once (weight `1`).
+- **`p1, p2, ...`**: One or more percentile values between `0` and `100` (passed as separate arguments or as a dynamic array such as `pack_array(50, 75, 99.9)`).
+- **`GroupingColumn`** (optional): A column to group the results by.
+
+### Returns
+
+Returns an array of estimated percentile values corresponding to the requested percentiles. By default, the output column is named `percentilesw_<expr>`.
+
+## Use case examples
+
+### Multiple weighted latency percentiles
+
+This example computes the p50, p75, and p99.9 weighted latencies across pre-aggregated request buckets.
+
+**Query**
+
+```kusto
+datatable(latency: int, requests: int)[10, 8, 20, 6, 30, 3, 40, 1]
+| summarize pw = percentilesw_array(latency, requests, 50, 75, 99.9)
+```
+
+**Output**
+
+| pw           |
+|--------------|
+| `[20, 20, 40]` |
+
+## List of related aggregations
+
+- [**percentilew**](/apl/aggregation-function/percentilew): Calculates a single estimated weighted percentile.
+- [**percentiles_array**](/apl/aggregation-function/percentiles-array): Calculates multiple unweighted percentiles as an array.
+- [**avgw**](/apl/aggregation-function/avgw): Calculates the weighted average of an expression.
+- [**histogramw**](/apl/aggregation-function/histogramw): Builds an estimated weighted histogram.

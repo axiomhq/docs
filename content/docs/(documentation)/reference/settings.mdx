@@ -35,7 +35,7 @@ A user’s complete set of capabilities is derived from the additive union of th
 
 ## Roles
 
-Roles are sets of capabilities that define which actions a user can perform at both the organization and dataset levels.
+Roles are sets of capabilities that define which actions a user can perform at the organization, dataset, and view levels.
 
 ### Default roles
 
@@ -57,7 +57,7 @@ The default roles are the following:
 
 ### Assign capabilities to roles
 
-You can assign organization-level and dataset-level capabilities to roles. You can assign create, read, update, or delete (CRUD) permissions to most capabilities.
+You can assign organization-level, dataset-level, and view-level capabilities to roles. You can assign create, read, update, or delete (CRUD) permissions to most capabilities.
 
 Organization-level capabilities define access for various parts of your Axiom organization:
 
@@ -69,6 +69,7 @@ Organization-level capabilities define access for various parts of your Axiom or
 - **Billing:** Read and update only.
 - **Dashboards:** Full CRUD.
 - **Datasets:** Full CRUD.
+- **Endpoints:** Full CRUD.
 - **Labels:** Full CRUD.
 - **Monitors:** Full CRUD.
 - **Notifiers:** Full CRUD.
@@ -88,6 +89,7 @@ The table below describes these organization-level capabilities:
 | Billing           | —                                                               | User can access billing settings.                                                                        | User can change the organization plan.                                                                      | —                                                        |
 | Dashboards        | User can create new dashboards.                                 | User can access their own dashboards and those created by other users in their organization.             | User can modify dashboard titles and descriptions. User can add, resize, and delete charts from dashboards. | User can delete a dashboard from their organization.     |
 | Datasets          | User can create a new dataset.                                  | Users can access the list of datasets in an organization, and their associated fields.                    | User can trim a dataset, and modify dataset fields.                                                         | User can delete a dataset from their organization.       |
+| Endpoints         | User can create endpoints.                                      | User can view the list of endpoints in an organization.                                                  | User can modify existing endpoints in an organization.                                                      | User can delete endpoints from their organization.       |
 | Labels            | User can create organization-wide resource labels.             | User can view the labels in an organization.                                                              | User can change a label's name, description, and color.                                                     | User can delete a label and remove it from all assigned resources. |
 | Monitors          | User can create a monitor.                                      | User can access the list of monitors in their organization. User can also review the monitor status.      | Users can modify a monitor configuration in their organization.                                            | Users can delete monitors that have been created in their organization. |
 | Notifiers         | User can create a new notifier in their organization.          | User can access the list of notifiers in their organization.                                              | User can update existing notifiers in their organization. User can snooze a notifier.                      | User can delete notifiers that have been created in their organization. |
@@ -97,33 +99,44 @@ The table below describes these organization-level capabilities:
 
 Dataset-level capabilities provide fine-grained control over access to datasets. You can assign the following capabilities for all datasets or individual datasets:
 
-- **Data:** Delete only.
 - **Ingest:** Create only.
 - **Query:** Read only.
-- **Share:** Create, read, and update only.
-- **Saved queries:** Full CRUD.
-- **Trim:** Update only.
-- **Vacuum:** Update only.
+- **Starred queries:** Full CRUD.
 - **Virtual fields:** Full CRUD.
+- **Vacuum fields:** Update only.
+- **Trim data:** Update only.
+- **Share:** Create, read, and delete only.
 
 The table below describes these dataset-level capabilities:
 
 | Datasets       | Create                                                    | Read                                                              | Update                                                                 | Delete                                       |
 | -------------- | --------------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------- |
-| Data         | —       | —                                                                 | —                                                                     | —                                            |
-| Ingest         | User can ingest events to datasets.       | —                                                                 | —                                                                     | User can delete data from datasets.                                            |
-| Query          | —                                                         | User can query events from datasets.              | —                                                                     | —                                            |
-| Share | User can share datasets. | User can access the list of shared datasets in their organization. | User can modify an existing shared dataset in their organization.      | — |
-| Saved queries | User can create a saved query for datasets. | User can access the list of saved queries in their organization. | User can modify an existing saved query in their organization.      | User can delete a saved query from a dataset. |
-| Trim          | —                                                         | —              | User can trim datasets.                                                                     | —                                            |
-| Vacuum          | —                                                         | —              | User can vacuum datasets and delete fields from datasets.                                     | —                                            |
-| Virtual fields | User can create a new virtual field. | User can see the list of virtual fields. | User can modify the definition of a virtual field. | User can delete a virtual field. |
+| Ingest         | User can ingest events to datasets.                       | —                                                                 | —                                                                     | —                                            |
+| Query          | —                                                         | User can query events from datasets.                              | —                                                                     | —                                            |
+| Starred queries | User can create a starred query for datasets.            | User can access the list of starred queries in their organization. | User can modify an existing starred query in their organization.      | User can delete a starred query from a dataset. |
+| Virtual fields | User can create a new virtual field.                      | User can see the list of virtual fields.                          | User can modify the definition of a virtual field.                    | User can delete a virtual field.             |
+| Vacuum fields  | —                                                         | —                                                                 | User can vacuum datasets and delete fields from datasets.             | —                                            |
+| Trim data      | —                                                         | —                                                                 | User can trim datasets and delete data from datasets.                 | —                                            |
+| Share          | User can share datasets.                                  | User can access the list of shared datasets in their organization. | —                                                                     | User can delete dataset sharing links and remove shared dataset access. |
+
+#### View capabilities
+
+View-level capabilities provide fine-grained control over access to individual views. You can assign the following capabilities per view:
+
+- **Query:** Read only. User can query the view.
+- **Share:** Create, read, and delete only. User can share the view, view sharing settings, and revoke shared access.
 
 <AccessToDatasets />
 
 ## Users
 
 Users in Axiom are the individual accounts that have access to an Axiom organization. You assign a base role to users when you invite them to join your organization. For organizations with the role-based access control (RBAC) add-on, additional roles can be added through group membership.
+
+In <Icon icon="gear" iconType="solid"/> **Settings > Users**, you can:
+
+- Invite users to your organization by clicking **New user**.
+- Export the user list by clicking **Export CSV**.
+- Review each user’s query cost in the user list.
 
 ### Assign roles to users
 
@@ -143,32 +156,34 @@ This is a destructive action. After you delete a user, you can’t recover their
 
 ## Directory Sync
 
-Directory Sync automatically mirrors user account data between a central directory, such as Active Directory, and connected applications. When the status of an employee changes, all systems are automatically updated.
+Directory Sync (SCIM) automatically provisions, updates, and deprovisions users and groups from your identity provider.
 
-For this feature, Axiom relies on WorkOS. For more information, see [Directory Sync](https://workos.com/directory-sync) and [Supported vendors](https://workos.com/docs/integrations) in the WorkOS documentation.
+To configure Directory Sync, go to <Icon icon="gear" iconType="solid"/> **Settings > Access and identity**. In **Enable Directory Sync (SCIM)**, click **Configure** to open the WorkOS portal and connect your directory. Once connected, **Settings > Access and identity** displays the connection status and synced counts, and provides **Manage** to update your configuration in WorkOS.
+
+For more information, see [Directory Sync](https://workos.com/directory-sync) and [Supported vendors](https://workos.com/docs/integrations) in the WorkOS documentation.
 
 ## Single Sign-On (SAML SSO)
 
-To simplify access management and enhance security, Security Assertion Markup Language-based Single Sign-On (SAML SSO) allows you to keep access grants up-to-date with support for the industry standard SCIM protocol.
-
-Axiom supports secure, centralized user authentication through both types of flow for SAML-based SSO:
-
-- IdP-initiated flow (identity-provider-initiated flow)
-- SP-initiated flow (service-provider-initiated flow)
+Security Assertion Markup Language-based Single Sign-On (SAML SSO) centralizes user authentication through your identity provider (for example, Okta, Azure AD, Google Workspace, OneLogin, or JumpCloud). Axiom supports both IdP-initiated and SP-initiated flows.
 
 <Info>
-Two-factor authentication (2FA) is a security feature that requires users to provide two forms of identification before accessing their accounts. You can turn on 2FA for users logging in through SAML SSO and enforce it through your identity provider. Axiom doesn’t offer 2FA natively.
+Two-factor authentication (2FA) requires users to provide two forms of identification before accessing their accounts. Turn on and enforce 2FA for SSO users through your identity provider. Axiom doesn’t offer 2FA natively.
 </Info>
 
-For this feature, Axiom relies on WorkOS:
+### Configure SAML SSO
 
-1. Axiom provisions an organization for you in WorkOS, connects it to your Axiom organization, and turns on SSO.
-1. Axiom provides you with a setup link to your WorkOS organization.
-1. You follow the instructions using the setup link. The setup requires the following attributes for your users:
+Configure SSO directly in <Icon icon="gear" iconType="solid"/> **Settings > Access and identity** using the WorkOS portal. Before opening the portal for any step, Axiom lets you optionally add IT contact emails to receive WorkOS notifications, including SAML certificate expiry alerts.
 
-    - `idp_id`
-    - `first_name`
-    - `last_name`
-    - `email`
+1. Click <Icon icon="gear" iconType="solid"/> **Settings > Access and identity**.
+1. In **Verify your domain**, click **Verify domain** and complete domain ownership verification in WorkOS.
+1. In **Connect SAML Single Sign-On**, click **Configure** and follow the WorkOS setup steps for your identity provider.
+1. Optional: In **Enable Directory Sync (SCIM)**, click **Configure** to sync users and groups from your directory.
+1. Optional: In **Provisioning**, select a **Default role for new users**. Axiom assigns this role to people who join through SSO or Directory Sync when your identity provider doesn’t assign a role. Existing members keep their role, and **Owner** isn’t available as a default role.
+
+Once connected, **Settings > Access and identity** displays your verified domain, **SSO slug**, and **SSO login URL**, and provides **Manage** to update settings in WorkOS.
+
+### SAML certificates
+
+Axiom manages its own SAML signing certificates automatically. For your identity provider’s SAML certificate, **Settings > Access and identity** tracks expiry status and displays **Rotate certificate** when renewal is recommended or the certificate has expired.
 
 For more information, see [Enterprise Single Sign-On](https://workos.com/single-sign-on) and [Supported vendors](https://workos.com/docs/integrations) in the WorkOS documentation.

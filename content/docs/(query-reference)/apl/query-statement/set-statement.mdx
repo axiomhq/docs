@@ -1,27 +1,35 @@
 ---
 title: 'Set statement'
 description: 'The set statement is used to set a query option in your APL query.'
-keywords: ['axiom documentation', 'documentation', 'axiom', 'set statement', 'strict types']
+keywords: ['axiom documentation', 'documentation', 'axiom', 'set statement', 'strict types', 'big_external_data', 'typed_aggregations', 'join_lhs_limit']
 ---
 
-The `set` statement is used to set a query option. Options enabled with the `set` statement only have effect for the duration of the query.
+The `set` statement sets a query option for the duration of the current query. Boolean options default to `true` when you omit `=OptionValue` (for example, `set stricttypes;`). Unknown option names return a syntax error.
 
-The `set` statement affects how your query is processed and the returned results.
-
-## Syntax 
+## Syntax
 
 ```kusto
-set OptionName=OptionValue
+set OptionName [= OptionValue];
 ```
 
-## Strict types
+## Supported options
 
-The `stricttypes` query option lets you specify only the exact type of the data type declaration needed in your query. Otherwise, it throws a **QueryFailed** error.
+| Option | Type | Description |
+| --- | --- | --- |
+| `stricttypes` | `bool` | Enforces strict data type matching in expressions and declarations; mismatched types return an error. |
+| `big_external_data` | `bool` | Raises [`externaldata`](/apl/tabular-operators/externaldata-operator) limits from 5 MiB and 50,000 rows to 128 MiB and 10,000,000 rows. |
+| `typed_aggregations` | `bool` | Returns typed aggregation results. Under query version `2026-09-25`, this behavior is fixed by the query version and setting `typed_aggregations` returns an error. |
+| `join_lhs_limit` | `int` (unsigned 32-bit) | Sets the row limit for the left-hand side of a [`join`](/apl/tabular-operators/join-operator). |
 
-## Example 
+## Examples
 
 ```kusto
-set stricttypes; 
-['Dataset'] 
-| where number == 5
+set stricttypes;
+['sample-http-logs']
+| where req_duration_ms == 5
+```
+
+```kusto
+set big_external_data;
+externaldata (id: string, label: string) ["https://example.com/large-lookup.csv"] with (format="csv", ignoreFirstRecord=true)
 ```

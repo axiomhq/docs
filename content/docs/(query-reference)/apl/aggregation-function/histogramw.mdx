@@ -1,0 +1,51 @@
+---
+title: histogramw
+description: 'This page explains how to use the histogramw aggregation function in APL.'
+---
+
+`histogramw` builds an estimated weighted histogram when each row represents multiple observations. The weight gives the number of observations the row represents.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize histogramw(expr, buckets, weight) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`expr`**: The numeric, `datetime`, or `timespan` field to bucket.
+- **`buckets`**: The number of histogram buckets to create.
+- **`weight`**: An integer expression representing the frequency weight for each record. Records with a weight less than or equal to `0` are skipped. Records with a `null` weight are counted once (weight `1`).
+- **`GroupingColumn`** (optional): A column to group the results by.
+
+### Returns
+
+Returns one array column per group (named `histogramw_<expr>` by default) containing bucket objects with the shape `{"from": number, "to": number, "count": int}`.
+
+## Use case examples
+
+### Weighted latency distribution
+
+This example builds a 4-bucket weighted histogram across pre-aggregated request latency buckets.
+
+**Query**
+
+```kusto
+datatable(latency: int, requests: int)[10, 8, 20, 6, 30, 3, 40, 1]
+| summarize histogramw(latency, 4, requests)
+```
+
+**Output**
+
+| histogramw_latency |
+|--------------------|
+| `[{"from":10,"to":17.5,"count":8},{"from":17.5,"to":25,"count":6},{"from":25,"to":32.5,"count":3},{"from":32.5,"to":40,"count":1}]` |
+
+## List of related aggregations
+
+- [**histogram**](/apl/aggregation-function/histogram): Calculates an unweighted histogram across a group.
+- [**avgw**](/apl/aggregation-function/avgw): Calculates the weighted average of an expression using an integer frequency weight.
+- [**percentilew**](/apl/aggregation-function/percentilew): Calculates an estimated weighted percentile using an integer frequency weight.
+- [**percentilesw_array**](/apl/aggregation-function/percentilesw-array): Calculates multiple estimated weighted percentiles as an array.

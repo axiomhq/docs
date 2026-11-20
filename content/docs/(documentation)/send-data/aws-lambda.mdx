@@ -53,6 +53,12 @@ To install the Axiom Lambda Extension, choose one of the following methods:
 The layer `VERSION` in the ARN isn’t the same as the extension release version on the [GitHub Releases](https://github.com/axiomhq/axiom-lambda-extension/releases) page. AWS assigns layer version numbers automatically, one per publish, so the two numbering schemes differ. For example, extension release v16 is published as layer version `17` in all supported regions. After you install or upgrade, [verify the extension version](#verify-the-extension-version) that your functions run.
 </Warning>
 
+<Note>
+Specify your edge deployment with the `AXIOM_EDGE` environment variable. Set it to the base domain only, without `https://`. For example, `eu-central-1.aws.edge.axiom.co`. Don’t use `AXIOM_URL` for this purpose. The extension appends the `api.axiom.co` ingest path to `AXIOM_URL`, and edge deployments don’t accept that path. If `AXIOM_URL` is a domain without `https://`, the extension logs an error and sends no data.
+
+If your dataset is in the `US East 1 (AWS)` edge deployment, you can omit `AXIOM_EDGE`. In this case, the extension sends data to `api.axiom.co`.
+</Note>
+
 ### Install with AWS CLI
 
 <Steps>
@@ -72,12 +78,12 @@ aws lambda update-function-configuration --function-name my-function \
 </Step>
 <Step>
 
-Add the Axiom dataset name and API token to the list of environment variables. For more information on setting environment variables, see the [AWS documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html).
+Add the Axiom dataset name, API token, and edge deployment domain to the list of environment variables. For more information on setting environment variables, see the [AWS documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html).
 
 ```bash
 AXIOM_TOKEN: API_TOKEN
 AXIOM_DATASET: DATASET_NAME
-AXIOM_URL: AXIOM_DOMAIN
+AXIOM_EDGE: AXIOM_DOMAIN
 ```
 
 <Info>
@@ -114,7 +120,7 @@ resource "aws_lambda_function" "test_lambda" {
     variables = {
       AXIOM_TOKEN   = "API_TOKEN"
       AXIOM_DATASET = "DATASET_NAME"
-      AXIOM_URL     = "AXIOM_DOMAIN"
+      AXIOM_EDGE    = "AXIOM_DOMAIN"
     }
   }
 
@@ -156,7 +162,7 @@ module "lambda_function" {
   environment_variables = {
     AXIOM_TOKEN   = "API_TOKEN"
     AXIOM_DATASET = "DATASET_NAME"
-    AXIOM_URL     = "AXIOM_DOMAIN"
+    AXIOM_EDGE    = "AXIOM_DOMAIN"
   }
 }
 ```
@@ -192,15 +198,17 @@ Replace `VERSION` with the latest Lambda layer version. For example, `17`, which
 </Step>
 <Step>
 
-Add the Axiom dataset name and API token to the list of environment variables. For more information on setting environment variables, see the [AWS documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html).
+Add the Axiom dataset name, API token, and edge deployment domain to the list of environment variables. For more information on setting environment variables, see the [AWS documentation](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html).
 
 ```bash
 AXIOM_TOKEN: API_TOKEN
 AXIOM_DATASET: DATASET_NAME
+AXIOM_EDGE: AXIOM_DOMAIN
 ```
 
 <Info>
 <ReplaceDatasetToken />
+<ReplaceDomain />
 </Info>
 
 </Step>
@@ -240,13 +248,20 @@ The Axiom Lambda Extension runs inside your Lambda execution environment and sha
 
 For high-volume, high-concurrency, or delivery-critical workloads, don’t send directly to Axiom from your functions. Decouple your functions from Axiom with a durable collector that you run on separate infrastructure. Your functions hand logs to a nearby collector and return immediately, and the collector owns buffering, batching, backpressure, and retries before forwarding to Axiom. This keeps your function durations predictable and prevents log loss when Axiom is briefly unreachable.
 
+### Tune buffering and flush timeout
+
+With Axiom Lambda Extension v16 or later, you can tune in-memory buffering and flush behavior with the following optional environment variables:
+
+- `AXIOM_MAX_BUFFERED_EVENTS`: Maximum number of events buffered in memory before the oldest buffered events are dropped. Default: `10000`.
+- `AXIOM_FLUSH_TIMEOUT`: Maximum duration to wait for a flush to complete, formatted as a Go duration string (for example, `5s` or `10s`). Default: `5s`.
+
 ### Forward to a collector you manage (recommended)
 
 Run a durable log pipeline such as Vector or the OpenTelemetry Collector on always-on infrastructure you manage, such as Amazon ECS or EC2. The collector forwards to Axiom: Vector through its native [Axiom sink](/send-data/vector), and the OpenTelemetry Collector over OTLP, which Axiom ingests [natively](/send-data/opentelemetry). The sizing and operation of the collector are up to you.
 
 Get logs from your functions to this collector in one of the following ways:
 
-- **Axiom Lambda Extension.** Set the `AXIOM_URL` environment variable to your collector’s endpoint. The extension sends gzip-compressed NDJSON to the `/v1/datasets/DATASET_NAME/ingest` path of that URL, so any intermediary that accepts the [Axiom ingest API](/restapi/ingest) and forwards to Axiom works.
+- **Axiom Lambda Extension.** Set the `AXIOM_URL` environment variable to your collector’s endpoint. The extension sends gzip-compressed NDJSON to the `/v1/datasets/DATASET_NAME/ingest` path of that URL, so any intermediary that accepts the [Axiom ingest API](/restapi/ingest) and forwards to Axiom works. Don’t set `AXIOM_EDGE` or `AXIOM_EDGE_URL` in this case because they take precedence over `AXIOM_URL` and send data directly to the edge deployment.
 - **OpenTelemetry Lambda layer.** Use the [OpenTelemetry Lambda layer](https://github.com/open-telemetry/opentelemetry-lambda/blob/main/collector/README.md) as a replacement for the Axiom Lambda Extension, and configure its exporter to forward to your collector. For more information, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).
 
 ### Use Amazon CloudWatch as the buffer

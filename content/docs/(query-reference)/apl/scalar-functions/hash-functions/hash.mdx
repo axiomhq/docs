@@ -21,19 +21,19 @@ Don’t use `hash` to generate values for long term usage. `hash` is generic and
 ### Syntax
 
 ```kusto
-hash(source [, salt])
+hash(source [, mod])
 ```
 
 ### Parameters
 
-| Name      | Type     | Description                                                                                 |
-| --------- | -------- | ------------------------------------------------------------------------------------------- |
-| valsourceue | scalar | Any scalar expression except `real`.                                                        |
-| salt  | `int`    | (Optional) Salt that lets you derive a different 64-bit domain while keeping determinism. |
+| Name     | Type     | Description |
+| -------- | -------- | ----------- |
+| `source` | scalar   | The value to hash. Accepts any scalar type, including `real`. Doesn’t accept dynamic arrays or property bags. |
+| `mod`    | `int`    | (Optional) A modulo to apply to the hash. If `mod` is greater than 0, `hash` returns the absolute value of the hash modulo `mod`. If you omit `mod` or set it to 0 or less, `hash` returns the full hash. |
 
 ### Returns
 
-The signed integer hash of `source` (and `salt` if supplied).
+If you omit `mod`, a signed 64-bit integer hash of `source`. If `mod` is greater than 0, an integer between 0 and `mod` - 1. For example, `hash(id, 2)` returns either 0 or 1.
 
 ## Use case examples
 
@@ -146,7 +146,7 @@ Splunk’s `hash` (or `md5`, `sha1`, etc.) returns a hexadecimal string and lets
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-Standard SQL often exposes vendor-specific functions such as `HASH` (BigQuery), `HASH_BYTES` (SQL Server), or `MD5`. These return either bytes or hex strings. In APL `hash` always yields an `int64`. To emulate SQL’s modulo bucketing, pipe the result into the arithmetic operator that you need.
+Standard SQL often exposes vendor-specific functions such as `HASH` (BigQuery), `HASH_BYTES` (SQL Server), or `MD5`. These return either bytes or hex strings. In APL `hash` always yields an `int64`. To emulate SQL’s modulo bucketing, pass the number of buckets as the second argument of `hash`.
 
 <CodeGroup>
 
@@ -158,7 +158,7 @@ GROUP BY bucket
 
 ```kusto APL equivalent
 ['sample-http-logs']
-| extend bucket = abs(hash(id) % 10)
+| extend bucket = hash(id, 10)
 | summarize requests = count() by bucket
 ```
 

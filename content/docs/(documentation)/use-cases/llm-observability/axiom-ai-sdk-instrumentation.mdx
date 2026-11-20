@@ -1,43 +1,175 @@
 ---
-title: "Instrumentation with Axiom AI SDK"
-description: "Learn how to instrument your TypeScript app with Axiom AI SDK for AI telemetry capture."
-sidebarTitle: Use Axiom AI SDK
-keywords: ["ai engineering", "typescript", "axiom ai sdk", "telemetry", "withspan", "opentelemetry"]
+title: "Instrument Vercel AI SDK apps"
+description: "Learn how to send AI telemetry from your TypeScript app to Axiom with the built-in telemetry of Vercel AI SDK 7 or with Axiom AI SDK for earlier versions."
+sidebarTitle: Use Vercel AI SDK
+keywords: ["ai engineering", "typescript", "vercel ai sdk", "axiom ai sdk", "telemetry", "withspan", "opentelemetry"]
 ---
 
-import { Badge } from "@/content/snippets/badge.jsx"
+This page explains how to send telemetry from a TypeScript generative AI app built with [Vercel AI SDK](https://ai-sdk.dev/docs) to Axiom.
 
-This page explains how to set up instrumentation in your TypeScript generative AI app using Axiom AI SDK.
+How you instrument your app depends on your version of Vercel AI SDK:
+
+| Vercel AI SDK version | Instrumentation | Axiom package required |
+|:----------------------|:----------------|:-----------------------|
+| 7 | [Built-in AI SDK telemetry](#instrument-ai-sdk-7) | No |
+| 4, 5, and 6 | [Axiom AI SDK wrappers](#instrument-ai-sdk-4-5-and-6) | Yes, `axiom` |
+
+Vercel AI SDK 7 emits OpenTelemetry spans with the GenAI semantic conventions natively, so you only need to export them to Axiom. Earlier versions need Axiom AI SDK to create these spans.
+
+Alternatively, [instrument your app manually](/use-cases/llm-observability/manual-instrumentation). For more information on instrumentation approaches, see [LLM observability](/use-cases/llm-observability).
+
+## Prerequisites
+
+1. Install the OpenTelemetry packages:
+
+    ```sh
+    npm i @opentelemetry/api @opentelemetry/sdk-trace-node @opentelemetry/exporter-trace-otlp-http @opentelemetry/resources @opentelemetry/semantic-conventions
+    ```
+
+1. Set the `AXIOM_TOKEN` and `AXIOM_DATASET` environment variables using an [API token](/reference/tokens) with ingest permission and the name of the dataset where you send telemetry.
+
+## Export traces to Axiom
+
+Both instrumentation methods write spans to the global OpenTelemetry API. Register a `NodeTracerProvider` with an `OTLPTraceExporter` that sends spans to Axiom. Replace `AXIOM_DOMAIN` with the [domain for your dataset](/send-data/opentelemetry).
+
+```ts src/instrumentation.node.ts
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { BatchSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+
+const exporter = new OTLPTraceExporter({
+  url: 'https://AXIOM_DOMAIN/v1/traces',
+  headers: {
+    Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+    'X-Axiom-Dataset': process.env.AXIOM_DATASET!,
+  },
+});
+
+const provider = new NodeTracerProvider({
+  resource: resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: 'my-ai-app',
+  }),
+  spanProcessors: [new BatchSpanProcessor(exporter)],
+});
+
+provider.register();
+```
+
+Load this file once at application startup, before your app makes any LLM calls:
+
+- In a Node.js app, import it at the top of your entry file: `import './instrumentation.node';`
+- In a Next.js app, import it from the `register` function in `src/instrumentation.ts`. Next.js also loads this file in the Edge runtime, so import the Node.js setup only in the Node.js runtime:
+
+    ```ts src/instrumentation.ts
+    export async function register() {
+      if (process.env.NEXT_RUNTIME === 'nodejs') {
+        await import('./instrumentation.node');
+      }
+    }
+    ```
+
+## Instrument AI SDK 7
+
+Vercel AI SDK 7 creates spans for model calls, tool executions, and agent steps through its OpenTelemetry integration. You don’t need Axiom AI SDK.
+
+1. Install Vercel AI SDK, a provider, and the AI SDK OpenTelemetry integration:
+
+    ```sh
+    npm i ai @ai-sdk/openai @ai-sdk/otel
+    ```
+
+1. Register the integration at the end of `src/instrumentation.node.ts`, after `provider.register()`:
+
+    ```ts src/instrumentation.node.ts
+    import { OpenTelemetry } from '@ai-sdk/otel';
+    import { registerTelemetry } from 'ai';
+
+    // ...exporter and provider setup from the previous section
+
+    registerTelemetry(new OpenTelemetry());
+    ```
+
+After you register the integration, AI SDK calls emit telemetry by default. You don’t need to wrap models or tools. To group spans by feature, set `telemetry.functionId`. AI SDK records it as `gen_ai.agent.name`.
+
+```ts src/app/page.tsx
+import { openai } from '@ai-sdk/openai';
+import { generateText, stepCountIs, tool } from 'ai';
+import { z } from 'zod';
+
+export default async function Page() {
+  const { text } = await generateText({
+    model: openai('gpt-4o'),
+    telemetry: { functionId: 'get_directions' },
+    stopWhen: stepCountIs(5),
+    messages: [{ role: 'user', content: 'How do I get from Paris to Berlin?' }],
+    tools: {
+      findDirections: tool({
+        description: 'Find directions to a location',
+        inputSchema: z.object({ from: z.string(), to: z.string() }),
+        execute: async ({ from, to }) => ({
+          directions: `To get from ${from} to ${to}, use a teleporter.`,
+        }),
+      }),
+    },
+  });
+
+  return <p>{text}</p>;
+}
+```
+
+AI SDK records prompts, responses, tool arguments, and tool results by default. To exclude them from a call, set `telemetry: { recordInputs: false, recordOutputs: false }`. To turn off telemetry for a call, set `telemetry: { isEnabled: false }`. For more information, see the [AI SDK telemetry documentation](https://ai-sdk.dev/docs/ai-sdk-core/telemetry).
+
+## Instrument AI SDK 4, 5, and 6
+
+For Vercel AI SDK 4, 5, and 6, use Axiom AI SDK to wrap your models and tools.
 
 <Info>
 Axiom AI SDK is an open-source project and welcomes your contributions. For more information, see the [GitHub repository](https://github.com/axiomhq/ai).
 </Info>
 
-Alternatively, [instrument your app manually](/use-cases/llm-observability/manual-instrumentation). For more information on instrumentation approaches, see [LLM observability](/use-cases/llm-observability).
+<Warning>
+Axiom AI SDK doesn’t instrument Vercel AI SDK 7 models. If you pass one to `wrapAISDKModel` or `axiomAIMiddleware`, Axiom AI SDK logs a warning and sends no spans. Use the [built-in AI SDK 7 telemetry](#instrument-ai-sdk-7) instead.
+</Warning>
 
-## Prerequisite
+The examples in this section use Vercel AI SDK 6. Version 5 uses the same code. For Vercel AI SDK 4, replace `inputSchema` with `parameters` in tool definitions, and replace `stopWhen: stepCountIs(5)` with `maxSteps: 5`.
 
-Install the Axiom AI SDK by running the following:
+### Initialize Axiom AI SDK
 
-```sh
-npm i @axiomhq/ai
-```
+1. Install Axiom AI SDK and Zod:
 
-Set the `AXIOM_TOKEN` and `AXIOM_DATASET` environment variables using an [API token](/reference/tokens) and the name of a dataset you want to send telemetry to.
+    ```sh
+    npm i axiom zod
+    ```
 
-## Instrument AI SDK calls
+1. At the end of `src/instrumentation.node.ts`, after `provider.register()`, create a tracer and pass it to `initAxiomAI`:
 
-Axiom AI SDK provides helper functions for [Vercel AI SDK](https://ai-sdk.dev/docs) to wrap your existing AI model client. The `wrapAISDKModel` function takes an existing AI model object and returns an instrumented version that automatically generates trace data for every call.
+    ```ts src/instrumentation.node.ts
+    import { trace } from '@opentelemetry/api';
+    import { initAxiomAI, RedactionPolicy } from 'axiom/ai';
+
+    // ...exporter and provider setup from the previous section
+
+    const tracer = trace.getTracer('my-ai-app');
+
+    initAxiomAI({ tracer, redactionPolicy: RedactionPolicy.AxiomDefault });
+    ```
+
+Axiom AI SDK doesn’t read `AXIOM_TOKEN` or `AXIOM_DATASET` directly. The exporter you registered sends its spans to Axiom. For redaction options, see [Redaction policies](/use-cases/llm-observability/redaction-policies).
+
+### Wrap models
+
+The `wrapAISDKModel` function takes an existing AI model object and returns an instrumented version that automatically generates trace data for every call.
 
 Choose one of the following common Vercel AI SDK providers. For the full list of providers, see the [Vercel documentation](https://ai-sdk.dev/providers/ai-sdk-providers).
 
 <Tabs>
 <Tab title="OpenAI">
 
-1. Run the following in your terminal to install the Vercel AI SDK and the OpenAI provider.
+1. Run the following in your terminal to install Vercel AI SDK 6 and the OpenAI provider:
 
     ```sh
-    npm i ai @ai-sdk/openai
+    npm i ai@ai-v6 @ai-sdk/openai@ai-v6
     ```
 
 1. Create the file `src/shared/openai.ts` with the following content:
@@ -58,10 +190,10 @@ Choose one of the following common Vercel AI SDK providers. For the full list of
 </Tab>
 <Tab title="Anthropic">
 
-1. Run the following in your terminal to install the Vercel AI SDK and the Anthropic provider.
+1. Run the following in your terminal to install Vercel AI SDK 6 and the Anthropic provider:
 
     ```sh
-    npm i ai @ai-sdk/anthropic
+    npm i ai@ai-v6 @ai-sdk/anthropic@ai-v6
     ```
 
 1. Create the file `src/shared/anthropic.ts` with the following content:
@@ -75,17 +207,17 @@ Choose one of the following common Vercel AI SDK providers. For the full list of
     });
 
     // Wrap the model to enable automatic tracing
-    export const claude35Sonnet = wrapAISDKModel(anthropicProvider('claude-3-5-sonnet-20241022'));
-    export const claude35Haiku = wrapAISDKModel(anthropicProvider('claude-3-5-haiku-20241022'));
+    export const claudeSonnet = wrapAISDKModel(anthropicProvider('claude-sonnet-4-5'));
+    export const claudeHaiku = wrapAISDKModel(anthropicProvider('claude-haiku-4-5'));
     ```
 
 </Tab>
 <Tab title="Gemini">
 
-1. Run the following in your terminal to install the Vercel AI SDK and the Gemini provider.
+1. Run the following in your terminal to install Vercel AI SDK 6 and the Gemini provider:
 
     ```sh
-    npm i ai @ai-sdk/google
+    npm i ai@ai-v6 @ai-sdk/google@ai-v6
     ```
 
 1. Create the file `src/shared/gemini.ts` with the following content:
@@ -99,17 +231,17 @@ Choose one of the following common Vercel AI SDK providers. For the full list of
     });
 
     // Wrap the model to enable automatic tracing
-    export const gemini20Flash = wrapAISDKModel(geminiProvider('gemini-2.0-flash-exp'));
-    export const gemini15Pro = wrapAISDKModel(geminiProvider('gemini-1.5-pro'));
+    export const geminiFlash = wrapAISDKModel(geminiProvider('gemini-2.5-flash'));
+    export const geminiPro = wrapAISDKModel(geminiProvider('gemini-2.5-pro'));
     ```
 
 </Tab>
 <Tab title="Grok">
 
-1. Run the following in your terminal to install the Vercel AI SDK and the Grok provider.
+1. Run the following in your terminal to install Vercel AI SDK 6 and the Grok provider:
 
     ```sh
-    npm i ai @ai-sdk/xai
+    npm i ai@ai-v6 @ai-sdk/xai@ai-v6
     ```
 
 1. Create the file `src/shared/grok.ts` with the following content:
@@ -123,8 +255,8 @@ Choose one of the following common Vercel AI SDK providers. For the full list of
     });
 
     // Wrap the model to enable automatic tracing
-    export const grokBeta = wrapAISDKModel(grokProvider('grok-beta'));
-    export const grok2Mini = wrapAISDKModel(grokProvider('grok-2-mini'));
+    export const grok4 = wrapAISDKModel(grokProvider('grok-4'));
+    export const grok3Mini = wrapAISDKModel(grokProvider('grok-3-mini'));
     ```
 
 </Tab>
@@ -134,22 +266,22 @@ To instrument calls without a Vercel AI SDK provider, use the generic Vercel AI 
 
 <Accordion title="Gateway provider">
 
-To instrument calls without a Vercel AI SDK provider, use the generic Vercel AI Gateway provider. For more information, see the [Vercel documentation](https://ai-sdk.dev/providers/ai-sdk-providers/ai-gateway).
+To instrument calls without a Vercel AI SDK provider, use the generic Vercel AI Gateway provider. Vercel AI SDK 4 doesn’t include the gateway provider. For more information, see the [Vercel documentation](https://ai-sdk.dev/providers/ai-sdk-providers/ai-gateway).
 
-1. Run the following in your terminal to install the Vercel AI SDK:
+1. Run the following in your terminal to install Vercel AI SDK 6:
 
     ```sh
-    npm i ai
+    npm i ai@ai-v6
     ```
 
 1. Create the file `src/shared/openai.ts` with the following content:
 
     ```ts /src/shared/openai.ts
     import { createGateway } from 'ai';
-    import { wrapAISDKModel } from 'axiom';
+    import { wrapAISDKModel } from 'axiom/ai';
 
     const gateway = createGateway({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.AI_GATEWAY_API_KEY,
     });
 
     // Wrap the model to enable automatic tracing
@@ -158,9 +290,30 @@ To instrument calls without a Vercel AI SDK provider, use the generic Vercel AI 
 
 </Accordion>
 
-The rest of the page explains how to work with OpenAI. The process is similar for other LLMs.
+#### Use `axiomAIMiddleware` with `wrapLanguageModel`
 
-## Add context
+If you already compose middleware with the Vercel AI SDK’s `wrapLanguageModel`, pass `axiomAIMiddleware({ model })` instead of calling `wrapAISDKModel`:
+
+```ts src/shared/openai.ts
+import { wrapLanguageModel } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { axiomAIMiddleware } from 'axiom/ai';
+
+const openaiProvider = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const baseModel = openaiProvider('gpt-4o');
+
+export const gpt4o = wrapLanguageModel({
+  model: baseModel,
+  middleware: [axiomAIMiddleware({ model: baseModel })],
+});
+```
+
+The rest of this section explains how to work with OpenAI. The process is similar for other LLMs.
+
+### Add context
 
 The `withSpan` function allows you to add crucial business context to your traces. It creates a parent span around your LLM call and attaches metadata about the `capability` and `step` that you execute.
 
@@ -192,22 +345,24 @@ export default async function Page() {
 }
 ```
 
-## Instrument tool calls
+### Instrument tool calls
 
 For many AI capabilities, the LLM call is only part of the story. If your capability uses tools to interact with external data or services, observing the performance and outcome of those tools is critical. Axiom AI SDK provides the `wrapTool` and `wrapTools` functions to automatically instrument your Vercel AI SDK tool definitions.
 
 The `wrapTool` helper takes your tool’s name and its definition and returns an instrumented version. This wrapper creates a dedicated child span for every tool execution, capturing its arguments, output, and any errors.
 
+By default, `generateText` stops after the first step. To let the model answer after it calls a tool, set `stopWhen`.
+
 ```ts /src/app/generate-text/page.tsx
-import { tool } from 'ai';
+import { generateText, stepCountIs, tool } from 'ai';
 import { z } from 'zod';
 import { wrapTool } from 'axiom/ai';
-import { generateText } from 'ai';
 import { gpt4o } from '@/shared/openai';
 
 // In your generateText call, provide wrapped tools
 const { text, toolResults } = await generateText({
   model: gpt4o,
+  stopWhen: stepCountIs(5),
   messages: [
     { role: 'system', content: 'You are a helpful assistant.' },
     { role: 'user', content: 'How do I get from Paris to Berlin?' },
@@ -232,13 +387,39 @@ const { text, toolResults } = await generateText({
 });
 ```
 
-## Complete example
+To wrap several tools at once, pass a tool map to `wrapTools`:
+
+```ts src/app/generate-text/page.tsx
+import { generateText, stepCountIs, tool } from 'ai';
+import { wrapTools } from 'axiom/ai';
+import { z } from 'zod';
+import { gpt4o } from '@/shared/openai';
+
+const tools = wrapTools({
+  findDirections: tool({
+    description: 'Find directions to a location',
+    inputSchema: z.object({ from: z.string(), to: z.string() }),
+    execute: async ({ from, to }) => ({
+      directions: `To get from ${from} to ${to}, use a teleporter.`,
+    }),
+  }),
+});
+
+const { text } = await generateText({
+  model: gpt4o,
+  stopWhen: stepCountIs(5),
+  messages: [{ role: 'user', content: 'How do I get from Paris to Berlin?' }],
+  tools,
+});
+```
+
+### Complete example
 
 Example of how all three instrumentation functions work together in a single, real-world example:
 
 ```ts /src/app/page.tsx expandable
 import { withSpan, wrapAISDKModel, wrapTool } from 'axiom/ai';
-import { generateText, tool } from 'ai';
+import { generateText, stepCountIs, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 
@@ -271,6 +452,7 @@ export default async function Page() {
 
     return generateText({
       model: gpt4o, // Use the wrapped model
+      stopWhen: stepCountIs(5),
       messages: [
         { role: 'system', content: 'You are a helpful assistant.' },
         { role: 'user', content: 'How do I get from Paris to Berlin?' },

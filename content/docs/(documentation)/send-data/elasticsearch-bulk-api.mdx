@@ -24,6 +24,10 @@ The Elasticsearch Bulk API expects the timestamp to be formatted as `@timestamp`
 
 <Prerequisites />
 
+<Note>
+The Elasticsearch Bulk API endpoint only accepts events and logs datasets.
+</Note>
+
 ## Send logs to Axiom using the Elasticsearch Bulk API and Go
 
 To send logs to Axiom using the Elasticsearch Bulk API and Go, use the `net/http` package to create and send the HTTP request.
@@ -263,21 +267,13 @@ $logs = [
     ["@timestamp" => "2023-06-06T12:00:01Z", "message" => "axiom logging elasticsearch", "severity" => "ERROR"]
 ];
 
-$events = array_map(function ($log) {
-    return [
-        '@timestamp' => $log['@timestamp'],
-        'attributes' => $log
-    ];
-}, $logs);
-
-// Create the payload for Axiom
-$payload = [
-    'tags' => [
-        'source' => 'myapplication',
-        'host' => 'myhost'
-    ],
-    'events' => $events
-];
+// Build NDJSON action and document pairs for the Elasticsearch Bulk API
+$lines = [];
+foreach ($logs as $log) {
+    $lines[] = json_encode(['index' => new \stdClass()]);
+    $lines[] = json_encode($log);
+}
+$body = implode("\n", $lines) . "\n";
 
 try {
     $response = $client->post('', [
@@ -285,7 +281,7 @@ try {
             'Authorization' => 'Bearer ' . $AxiomToken,
             'Content-Type' => 'application/x-ndjson',
         ],
-        'json' => $payload,
+        'body' => $body,
     ]);
     // handle response here
     $statusCode = $response->getStatusCode();

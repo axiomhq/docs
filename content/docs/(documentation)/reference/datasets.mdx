@@ -71,18 +71,15 @@ For more information on limits and requirements imposed by Axiom, see [Limits](/
 To create a dataset using Console, follow these steps:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. Click **New dataset**.
-1. Name the dataset and add an optional description.
-1. In **Kind**, select one of the following:
-    - Select **Events** if you plan to use the dataset for logs or traces data.
-    - Select **Metrics** if you plan to send OTel metrics data to the dataset.
-1. In **Data retention**, select for how long to store your data in this dataset. For more information, see [Specify data retention period](#specify-data-retention-period).
-1. In **Edge deployment**, select the edge deployment you want to use for this dataset. You can select from the list of edge deployments you have added to the organization. For more information, see [Edge deployments](/reference/edge-deployments) and [Add edge deployments](/reference/usage-billing#manage-add-ons).
-1. Click **Save dataset**.
+1. Click **New dataset** to open the dataset creation page.
+1. Choose one of the following modes:
+    - **OpenTelemetry:** Creates one dataset per selected signal (Traces, Logs, and Metrics) linked in a correlation group. Enter a **Name** and **Environment**, select **Data to collect**, configure the **Correlation group**, and optionally create an **Ingest token**. Click **Create correlation group**.
+    - **Custom events:** Creates a single dataset. Enter a **Name** and optional **Description**, and select **Kind** (**Events** for logs or traces, or **Metrics** for OpenTelemetry metrics), **Retention**, **Edge deployment**, **Labels**, and an optional **Ingest token**. For more information, see [Specify data retention period](#specify-data-retention-period), [Edge deployments](/reference/edge-deployments), and [Manage add-ons](/reference/usage-billing#manage-add-ons). Click **Create dataset**.
+1. If you chose to create an ingest token, copy it from the confirmation panel. Axiom doesn’t display the token again.
 
 To create a dataset using the Axiom API, send a POST request to the [datasets endpoint](/restapi/endpoints/createDataset).
 
-Dataset names are 1 to 128 characters in length. They only contain ASCII alphanumeric characters and the hyphen (`-`) character.
+Dataset names are 1 to 80 characters in length. They can contain ASCII letters, digits, hyphens (`-`), underscores (`_`), and periods (`.`). Hyphens, underscores, and periods can’t be the first or last character. Axiom rejects reserved dataset names.
 
 ## Import data
 
@@ -95,7 +92,7 @@ You can import data to your dataset in one of the following formats:
 To import data to a dataset, follow these steps:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. In the list, find the dataset where you want to import data, and then click <Icon icon="upload" iconType="regular"/> **Import** on the right.
+1. Open the <Icon icon="ellipsis-vertical" iconType="solid"/> actions menu next to the dataset and select **Import data**.
 1. Optional: Specify the timestamp field. This is only necessary if your data contains a timestamp field and it’s different from `_time`.
 1. Upload the file, and then click **Import**.
 
@@ -118,7 +115,7 @@ Trimming is an asynchronous operation. When you submit a trim request, Axiom que
 To trim a dataset, follow these steps:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. In the list, find the dataset that you want to trim, and then click <Icon icon="scissors" iconType="regular"/> **Trim dataset** on the right.
+1. Open the <Icon icon="ellipsis-vertical" iconType="solid"/> actions menu next to the dataset and select **Trim dataset**.
 1. Specify the date before which you want to delete blocks of data.
 1. Enter the name of the dataset, and then click **Trim**.
 
@@ -132,6 +129,8 @@ Vacuuming fields doesn’t delete any events from your dataset. To delete events
 
 You can vacuum the fields of a dataset whose schema is locked. In this case, Axiom vacuums the fields and then regenerates the locked schema so that it matches the vacuumed fields. For more information, see [Lock dataset schema](#lock-dataset-schema).
 
+When a dataset has unused fields that you can reclaim by vacuuming, Console displays a **Vacuum recommended** badge next to the dataset in the dataset list with the number of reclaimable fields, and marks stale fields in the field list.
+
 <Note>
 You can only vacuum fields once per day for each dataset.
 </Note>
@@ -139,8 +138,9 @@ You can only vacuum fields once per day for each dataset.
 To vacuum fields, follow these steps:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. In the list, find the dataset where you want to vacuum fields, and then click <img src="/docs/doc-assets/icons/vacuum.svg" className="my-0 mx-0.5 inline-block size-4 align-text-bottom object-contain dark:invert" alt="Vacuum fields icon" /> **Vacuum fields** on the right.
-1. Select the checkbox, and then click **Vacuum**.
+1. Open the <Icon icon="ellipsis-vertical" iconType="solid"/> actions menu next to the dataset and select **Vacuum fields**.
+1. If prompted, confirm that you have trimmed events with unintended fields.
+1. Click **Vacuum**.
 
 ## Delete fields
 
@@ -157,7 +157,7 @@ Deleting fields can’t be undone. After deletion, you can’t query the values 
 
 Deleting fields works in the following way:
 
-- Axiom removes the deleted fields from the schema, the list of fields in the Datasets tab, and query autocomplete. Field descriptions, units, and hidden settings for the deleted fields are removed as well.
+- Axiom removes the deleted fields from the schema, the list of fields in **Datasets**, and query autocomplete. Field descriptions, units, and hidden settings for the deleted fields are removed as well.
 - The values of the deleted fields stay in storage but you can’t access them anymore. Deleting fields doesn’t reduce the storage usage of your dataset.
 - As the last step of the deletion, Axiom vacuums the fields of the dataset. This rebuilds the data schema from the events currently in the dataset, so fields that no longer occur in any event within your retention period disappear together with the fields you selected. For more information, see [Vacuum fields](#vacuum-fields).
 - After the deletion completes, saved queries, dashboards, monitors, and virtual fields that reference a deleted field return an error. Review these before you delete fields.
@@ -178,7 +178,7 @@ Deleting fields works in the following way:
 
 To delete fields, follow these steps:
 
-1. Go to the Datasets tab.
+1. In the sidebar, click **Datasets**.
 1. In the list, select the dataset from which you want to delete fields.
 1. In the **Fields** panel, click <Icon icon="ellipsis-vertical" iconType="solid"/> **More > Delete fields**.
 1. Enter a pattern that matches the names of the fields you want to delete, and then click **Find fields**. Axiom lists all fields whose name contains the pattern. The pattern is case-insensitive. Leave the pattern empty to list all fields.
@@ -235,7 +235,7 @@ Locking and unlocking the schema take effect immediately and don’t change the 
 
 To lock the schema of a dataset, follow these steps:
 
-1. Go to the Datasets tab.
+1. In the sidebar, click **Datasets**.
 1. In the list, select the dataset whose schema you want to lock.
 1. In the **Fields** panel, click <Icon icon="ellipsis-vertical" iconType="solid"/> **More > Lock schema**.
 
@@ -243,7 +243,7 @@ Axiom displays a **Schema locked** message. While the schema is locked, the titl
 
 To unlock the schema of a dataset, follow these steps:
 
-1. Go to the Datasets tab.
+1. In the sidebar, click **Datasets**.
 1. In the list, select the dataset whose schema you want to unlock.
 1. In the **Fields** panel, click <Icon icon="ellipsis-vertical" iconType="solid"/> **More > Unlock schema**.
 
@@ -264,7 +264,7 @@ To share a dataset with another Axiom organization:
 
 1. Ensure you have the necessary privileges to share datasets. By default, only users with the Owner role can share datasets.
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. In the list, find the dataset that you want to share, and then click <img src="/docs/doc-assets/icons/share-dataset.svg" className="my-0 mx-0.5 inline-block size-4 align-text-bottom object-contain dark:invert" alt="Share dataset icon" /> **Share dataset** on the right.
+1. Open the <Icon icon="ellipsis-vertical" iconType="solid"/> actions menu next to the dataset and select **Share dataset**.
 1. In the Sharing links section, click **+** to create a new sharing link.
 1. Copy the URL and share it with the receiving user in the organization with which you want to share the dataset. For example, `https://app.axiom.co/s/dataset/{sharing-token}`.
 1. Ask the receiving user to open the sharing link. When opening the link, the receiving user sees the name of the dataset and the email address of the Axiom user that created the sharing link. They click **Add dataset** to confirm that they want to receive the shared dataset.
@@ -276,7 +276,7 @@ Organizations can gain access to the dataset with an active sharing link. To dea
 To delete a sharing link:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. In the list, find the dataset, and then click <img src="/docs/doc-assets/icons/share-dataset.svg" className="my-0 mx-0.5 inline-block size-4 align-text-bottom object-contain dark:invert" alt="Share dataset icon" /> **Share dataset** on the right.
+1. Open the <Icon icon="ellipsis-vertical" iconType="solid"/> actions menu next to the dataset and select **Share dataset**.
 1. To the right of the sharing link, click <Icon icon="trash" iconType="light"/> **Delete**.
 1. Click **Delete sharing link**.
 
@@ -285,7 +285,7 @@ To delete a sharing link:
 If your organization has previously shared a dataset with a receiving organization, and you want to remove the receiving organization’s access to the dataset, follow these steps:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. In the list, find the dataset, and then click <img src="/docs/doc-assets/icons/share-dataset.svg" className="my-0 mx-0.5 inline-block size-4 align-text-bottom object-contain dark:invert" alt="Share dataset icon" /> **Share dataset** on the right.
+1. Open the <Icon icon="ellipsis-vertical" iconType="solid"/> actions menu next to the dataset and select **Share dataset**.
 1. In the list, find the organization whose access you want to remove, and then click <Icon icon="trash" iconType="light"/> **Remove**.
 1. Click **Remove access**.
 
@@ -295,7 +295,7 @@ If your organization has previously received access to a dataset from a sending 
 
 1. Ensure you have Delete permissions for the shared dataset.
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. In the list, click the shared dataset that you want to remove, and then click <Icon icon="trash" iconType="light"/> **Remove dataset**.
+1. Open the <Icon icon="ellipsis-vertical" iconType="solid"/> actions menu next to the dataset and select **Remove dataset**.
 1. Enter the name of the dataset, and then click **Remove**.
 
 <Note>
@@ -326,9 +326,9 @@ The retention period determines how long Axiom stores your data, but not how far
 To change the data retention period for a dataset, follow these steps:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. In the list, find the dataset for which you want to change the retention period, and then click <Icon icon="calendar-clock" iconType="sharp-light"/> **Edit dataset retention** on the right.
+1. Open the <Icon icon="ellipsis-vertical" iconType="solid"/> actions menu next to the dataset and select **Edit dataset retention**.
 1. Select a retention period, or select **Custom** to enter your own retention period in days. To make the dataset follow your organization’s default dataset retention period, select **Default**.
-1. Click **Submit**.
+1. Enter the name of the dataset, and then click **Submit**.
 
 ## Delete dataset
 
@@ -339,7 +339,7 @@ Deleting a dataset deletes all data contained in the dataset.
 To delete a dataset, follow these steps:
 
 1. Click <Icon icon="gear" iconType="solid"/> **Settings > Datasets and views**.
-1. In the list, click the dataset that you want to delete, and then click <Icon icon="trash" iconType="light"/> **Delete dataset**.
+1. Open the <Icon icon="ellipsis-vertical" iconType="solid"/> actions menu next to the dataset and select **Delete dataset**.
 1. Enter the name of the dataset, and then click **Delete**.
 
 ## Manage apps

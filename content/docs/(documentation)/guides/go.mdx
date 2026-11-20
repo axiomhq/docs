@@ -9,6 +9,8 @@ logoId: 'golang'
 enlargeLogo: true
 ---
 
+import BaseDomains from "@/content/snippets/base-domains.mdx"
+
 To send data from a Go app to Axiom, use the Axiom Go SDK.
 
 <Note>
@@ -90,6 +92,36 @@ func main() {
 
 For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-go/tree/main/examples).
 
+## Query metrics
+
+Query metrics datasets with the Metrics Processing Language (MPL) using `client.QueryMPL`. MPL queries and metrics discovery run on edge endpoints only; without an edge endpoint, `QueryMPL` returns `axiom.ErrMissingEdge`. `Dataset.EdgeDeploymentURL` holds the edge URL for a dataset.
+
+```go
+res, err := client.QueryMPL(
+    ctx,
+    "`DATASET_NAME`:`http.server.duration` | align to 5m using avg",
+    time.Now().Add(-time.Hour),
+    time.Now(),
+)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+Use `client.Metrics` to discover metrics and tags on edge endpoints:
+
+- `client.Metrics.List(ctx, dataset, start, end)`: List metric names in a dataset.
+- `client.Metrics.Tags(ctx, start, end)` and `client.Metrics.DatasetTags(ctx, dataset, start, end)`: List tag keys.
+- `client.Metrics.TagValues(ctx, tag, start, end)` and `client.Metrics.DatasetTagValues(ctx, dataset, tag, start, end)`: List values for a tag key.
+- `client.Metrics.Find(ctx, dataset, value, start, end)`: Find metrics in a dataset that have a tag with the given value.
+
+```go
+metrics, err := client.Metrics.List(ctx, "DATASET_NAME", time.Now().Add(-time.Hour), time.Now())
+if err != nil {
+    log.Fatal(err)
+}
+```
+
 ## Configure region
 
 By default, the client sends data to `api.axiom.co`. To target a specific edge region, pass the `SetEdge` option with the edge domain that matches the region your dataset lives in:
@@ -114,10 +146,7 @@ This relies on `AXIOM_TOKEN` being set in your environment. To set the token in 
 
 The following edge domains are available:
 
-| Edge deployment    | Base domain for ingest and query |
-| ------------------ | -------------------------------- |
-| US East 1 (AWS)    | `us-east-1.aws.edge.axiom.co`    |
-| EU Central 1 (AWS) | `eu-central-1.aws.edge.axiom.co` |
+<BaseDomains />
 
 For more information about edge deployments, see [Edge deployments](/reference/edge-deployments).
 
@@ -132,7 +161,7 @@ export AXIOM_EDGE_URL="https://eu-central-1.aws.edge.axiom.co"
 To point at a custom edge endpoint such as a proxy or load balancer, use `axiom.SetEdgeURL("https://your-edge-host")`. `SetEdgeURL` takes precedence over `SetEdge` if both are set.
 
 <Note>
-Edge endpoints require an API token (`xaat-`), not a personal token (`xapt-`). Ingest and query calls with a personal token against an edge endpoint return `personal tokens are not supported for edge operations, use an API token (xaat-)`.
+Edge ingestion requires an API token (`xaat-`). Edge queries also accept a personal token (`xapt-`) with an organization ID. Personal tokens are deprecated. Calling edge ingestion with a personal token returns `personal tokens are not supported for edge ingestion, use an API token (xaat-)`.
 </Note>
 
 ## Adapters
@@ -140,4 +169,9 @@ Edge endpoints require an API token (`xaat-`), not a personal token (`xapt-`). I
 To use a logging package, see the following adapters:
 - [Apex](/guides/apex)
 - [Logrus](/guides/logrus)
+- [Slog](/guides/slog)
 - [Zap](/guides/zap)
+- [Zerolog](/guides/zerolog)
+## Export OpenTelemetry traces
+
+Use [`otel.InitTracing`](https://pkg.go.dev/github.com/axiomhq/axiom-go/axiom/otel#InitTracing) to set up tracing for your service. Call the returned shutdown function before the process exits. If your application configures its own tracing pipeline, use `otel.TracerProvider` or `otel.TraceExporter` to supply the component you need.

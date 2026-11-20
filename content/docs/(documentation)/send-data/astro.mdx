@@ -1,0 +1,482 @@
+---
+title: "Send data from Astro app to Axiom"
+description: "This page explains how to send logs, traces, and metrics from an Astro app to Axiom."
+overview: "Web framework for content-driven websites"
+sidebarTitle: Astro
+keywords: ["astro", "astro.build", "js", "javascript", "ts", "typescript", "logs", "traces", "opentelemetry", "otel", "@axiomhq/js", "@axiomhq/logging", "middleware", "ssr"]
+---
+
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import BaseDomains from "@/content/snippets/base-domains.mdx"
+
+[Astro](https://astro.build/) is a JavaScript web framework for content-driven websites. Astro renders pages to static HTML by default, and renders pages and endpoints on demand when you add a server adapter.
+
+This page explains how to send data from the server side of an Astro app to Axiom:
+
+- [Send logs with @axiomhq/logging](#send-logs-with-axiomhqlogging) from middleware, endpoints, and pages. This works with the Node.js, Vercel, Netlify, and Cloudflare adapters.
+- [Send traces with OpenTelemetry](#send-traces-with-opentelemetry) when you run the app with the Node.js adapter. This also sends logs and metrics over OpenTelemetry Protocol (OTLP).
+- Optional: [Send logs from the browser](#send-logs-from-the-browser) through an endpoint in your app.
+
+<Prerequisites />
+- An Astro app with an [on-demand rendering adapter](https://docs.astro.build/en/guides/on-demand-rendering/). This page uses Astro 7. Code that only runs at build time, such as prerendered pages, can’t send logs at request time.
+
+## Configure environment variables
+
+Use [`astro:env`](https://docs.astro.build/en/guides/environment-variables/#type-safe-environment-variables) to declare the Axiom settings as server secrets. Astro keeps secrets out of the client bundle and reads them at runtime from the environment of your adapter.
+
+1. In the `astro.config.mjs` file, add the variables to `env.schema`:
+
+    ```js astro.config.mjs
+    // @ts-check
+    import { defineConfig, envField } from 'astro/config';
+    import node from '@astrojs/node';
+
+    export default defineConfig({
+      output: 'server',
+      adapter: node({ mode: 'standalone' }),
+      env: {
+        schema: {
+          AXIOM_TOKEN: envField.string({ context: 'server', access: 'secret' }),
+          AXIOM_DATASET: envField.string({ context: 'server', access: 'secret' }),
+          AXIOM_DOMAIN: envField.string({ context: 'server', access: 'secret' }),
+        },
+      },
+    });
+    ```
+
+    Keep your own `output` and `adapter` settings. The example uses the [Node.js adapter](https://docs.astro.build/en/guides/integrations-guide/node/) in standalone mode.
+
+1. Create a `.env` file in the root of your project:
+
+    ```dotenv .env
+    AXIOM_DOMAIN=AXIOM_DOMAIN
+    AXIOM_TOKEN=API_TOKEN
+    AXIOM_DATASET=DATASET_NAME
+    AXIOM_METRICS_DATASET=METRICS_DATASET_NAME
+    ```
+
+    <Info>
+    <ReplaceDomain />
+
+    Replace `API_TOKEN` with the Axiom API token you have generated.
+
+    Replace `DATASET_NAME` with the name of the Axiom dataset where you send logs and traces.
+
+    Replace `METRICS_DATASET_NAME` with the name of the Axiom metrics dataset where you send OpenTelemetry metrics. You only need it for the [OpenTelemetry setup](#send-traces-with-opentelemetry).
+    </Info>
+
+    Don’t commit the `.env` file. On a hosting platform, set the same variables in the platform’s settings.
+
+<Note>
+If your app prerenders some pages, Astro runs your middleware for them during `astro build`. Astro validates `astro:env` secrets when a module imports them, so make the variables available at build time too.
+</Note>
+
+## Send logs with @axiomhq/logging
+
+The [@axiomhq/logging library](/guides/javascript#use-axiomhqlogging) sends structured logs to Axiom through the [@axiomhq/js client](/guides/javascript#use-axiomhqjs). It runs on Node.js and on Cloudflare Workers.
+
+### Install the libraries
+
+In your terminal, go to the root folder of your Astro app and run the following command:
+
+```sh
+npm install @axiomhq/js @axiomhq/logging
+```
+
+### Create a logger
+
+Create a `src/lib/axiom.ts` file with the following content:
+
+```ts src/lib/axiom.ts
+import { Axiom } from '@axiomhq/js';
+import { AxiomJSTransport, ConsoleTransport, Logger } from '@axiomhq/logging';
+import { AXIOM_DATASET, AXIOM_DOMAIN, AXIOM_TOKEN } from 'astro:env/server';
+
+export const axiom = new Axiom({
+  token: AXIOM_TOKEN,
+  edge: AXIOM_DOMAIN,
+});
+
+export const logger = new Logger({
+  transports: [
+    new AxiomJSTransport({ axiom, dataset: AXIOM_DATASET }),
+    new ConsoleTransport(),
+  ],
+});
+```
+
+The `edge` option sends the logs to the edge deployment where your dataset lives. The following edge domains are available:
+
+<BaseDomains />
+
+`ConsoleTransport` also prints the logs to the console. Remove it if you don’t need local output.
+
+### Log requests in middleware
+
+[Astro middleware](https://docs.astro.build/en/guides/middleware/) runs for every request that Astro renders on demand. Use it to log one event per request.
+
+Create a `src/middleware.ts` file with the following content:
+
+```ts src/middleware.ts
+import { defineMiddleware } from 'astro:middleware';
+import { logger } from './lib/axiom';
+
+export const onRequest = defineMiddleware(async (context, next) => {
+  // Skip pages that Astro prerenders at build time.
+  if (context.isPrerendered) return next();
+
+  const start = performance.now();
+  const { method } = context.request;
+  const path = context.url.pathname;
+
+  try {
+    const response = await next();
+    logger.info(`${method} ${path} ${response.status}`, {
+      request: {
+        method,
+        path,
+        route: context.routePattern,
+        statusCode: response.status,
+        durationMs: Math.round(performance.now() - start),
+      },
+    });
+    return response;
+  } catch (error) {
+    logger.error(`${method} ${path} failed`, error as Error);
+    throw error;
+  } finally {
+    await logger.flush();
+  }
+});
+```
+
+The middleware logs the method, path, route pattern, status code, and duration of each request. If a page or endpoint throws an error, the middleware logs the error message and stack trace, and then rethrows the error so Astro still returns an error response.
+
+`await logger.flush()` sends the batched logs before the response leaves the middleware. This adds the time of one request to Axiom to each response. On serverless platforms, flush the logs after the response instead. For more information, see [Platform notes](#platform-notes).
+
+### Log from endpoints
+
+In [server endpoints](https://docs.astro.build/en/guides/endpoints/#server-endpoints-api-routes), import the logger and add fields to your logs. For example, create a `src/pages/api/hello.ts` file:
+
+```ts src/pages/api/hello.ts
+import type { APIRoute } from 'astro';
+import { logger } from '../../lib/axiom';
+
+export const prerender = false;
+
+export const GET = (({ url }) => {
+  const name = url.searchParams.get('name') ?? 'world';
+  logger.info('Greeting requested', { name });
+  return Response.json({ message: `Hello, ${name}!` });
+}) satisfies APIRoute;
+```
+
+`export const prerender = false` renders the endpoint on demand. You don’t need it when you set `output: 'server'`.
+
+The middleware flushes the logs after the endpoint returns, so you don’t need to call `flush()` in the endpoint.
+
+### Log from pages
+
+To log from an on-demand rendered page, call the logger in the component script of an `.astro` file:
+
+```astro src/pages/pricing.astro
+---
+import { logger } from '../lib/axiom';
+
+export const prerender = false;
+
+const plan = Astro.url.searchParams.get('plan') ?? 'free';
+logger.info('Pricing page viewed', { plan });
+---
+<h1>Pricing</h1>
+```
+
+Each log call takes a message and an optional `fields` object. The logger supports the `debug`, `info`, `warn`, and `error` levels. By default, `AxiomJSTransport` only sends `info` and higher. For more information, see [Logging levels](/guides/javascript#logging-levels).
+
+## Send traces with OpenTelemetry
+
+When you run Astro with the Node.js adapter in standalone mode, use the [OpenTelemetry SDK for Node.js](https://opentelemetry.io/docs/languages/js/) to send traces, logs, and metrics to Axiom over OTLP/HTTP. Automatic instrumentation creates a span for each incoming request and for outgoing calls from libraries such as database clients.
+
+This setup loads OpenTelemetry before the Astro server starts, so it needs control over the `node` command. It doesn’t apply to the Vercel, Netlify, and Cloudflare adapters. For more information, see [Platform notes](#platform-notes).
+
+### Install OpenTelemetry packages
+
+Run the following command:
+
+```sh
+npm install @opentelemetry/api @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node @opentelemetry/instrumentation @opentelemetry/exporter-trace-otlp-proto @opentelemetry/exporter-logs-otlp-proto @opentelemetry/exporter-metrics-otlp-proto @opentelemetry/sdk-logs @opentelemetry/sdk-metrics
+```
+
+The examples on this page use version 3 of the OpenTelemetry JavaScript SDK (`@opentelemetry/sdk-node` 0.301 and later). Version 3 changed the processor constructors to take an options object, for example `new BatchLogRecordProcessor({ exporter })`.
+
+### Create the instrumentation file
+
+Create an `instrumentation.mjs` file in the root folder of your project, outside `src`. Astro doesn’t bundle this file. Node.js loads it before your app.
+
+```js instrumentation.mjs expandable
+import { register } from 'node:module';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
+import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
+import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+
+// Astro's server output is ES modules. This hook lets OpenTelemetry patch them.
+register('@opentelemetry/instrumentation/hook.mjs', import.meta.url);
+
+const { AXIOM_DOMAIN, AXIOM_TOKEN, AXIOM_DATASET, AXIOM_METRICS_DATASET } = process.env;
+
+const sdk = new NodeSDK({
+  serviceName: 'my-astro-app',
+  traceExporter: new OTLPTraceExporter({
+    url: `https://${AXIOM_DOMAIN}/v1/traces`,
+    headers: {
+      Authorization: `Bearer ${AXIOM_TOKEN}`,
+      'X-Axiom-Dataset': AXIOM_DATASET,
+    },
+  }),
+  logRecordProcessors: [
+    new BatchLogRecordProcessor({
+      exporter: new OTLPLogExporter({
+        url: `https://${AXIOM_DOMAIN}/v1/logs`,
+        headers: {
+          Authorization: `Bearer ${AXIOM_TOKEN}`,
+          'X-Axiom-Dataset': AXIOM_DATASET,
+        },
+      }),
+    }),
+  ],
+  metricReaders: [
+    new PeriodicExportingMetricReader({
+      exporter: new OTLPMetricExporter({
+        url: `https://${AXIOM_DOMAIN}/v1/metrics`,
+        headers: {
+          Authorization: `Bearer ${AXIOM_TOKEN}`,
+          'X-Axiom-Metrics-Dataset': AXIOM_METRICS_DATASET,
+        },
+      }),
+    }),
+  ],
+  instrumentations: [
+    getNodeAutoInstrumentations({
+      '@opentelemetry/instrumentation-fs': { enabled: false },
+      '@opentelemetry/instrumentation-undici': {
+        // Don't trace the requests that @axiomhq/js sends to Axiom.
+        ignoreRequestHook: (request) => request.origin === `https://${AXIOM_DOMAIN}`,
+      },
+    }),
+  ],
+});
+
+sdk.start();
+
+process.on('SIGTERM', () => {
+  sdk.shutdown().finally(() => process.exit(0));
+});
+```
+
+The file does the following:
+
+- Registers the OpenTelemetry module hook. Without it, automatic instrumentation can’t patch the ES modules that Astro builds, and incoming requests don’t create spans. For more information, see [ESM support](https://github.com/open-telemetry/opentelemetry-js/blob/main/doc/esm-support.md) in the OpenTelemetry docs.
+- Sends traces and logs to `/v1/traces` and `/v1/logs` with the `X-Axiom-Dataset` header.
+- Sends metrics to `/v1/metrics` with the `X-Axiom-Metrics-Dataset` header. If you don’t want to send metrics, replace the `metricReaders` array with `metricReaders: []`. Don’t remove the option: without it, the SDK sends metrics to its default endpoint on `localhost`.
+- Disables the file system instrumentation, which creates many low-value spans.
+- Ignores the outgoing requests of the [@axiomhq/js client](#send-logs-with-axiomhqlogging), so that sending logs doesn’t create spans.
+- Flushes the remaining telemetry when the process receives `SIGTERM`.
+
+Axiom accepts OTLP over HTTP with Protobuf or JSON encoding. The `-proto` exporters use Protobuf. Axiom doesn’t accept OTLP over gRPC.
+
+### Build and start the app
+
+Build the app, and then start the server with the instrumentation file:
+
+```sh
+npx astro build
+node --env-file=.env --import ./instrumentation.mjs ./dist/server/entry.mjs
+```
+
+- `--import` loads `instrumentation.mjs` before the [standalone server entry point](https://docs.astro.build/en/guides/integrations-guide/node/#standalone) of the Node.js adapter.
+- `--env-file` loads the variables from the `.env` file. Neither Astro nor the Node.js adapter loads environment variables at runtime. In production, set the variables in your environment and remove this flag.
+
+The instrumentation only runs in the built server, not in `astro dev`.
+
+On Node.js 26 and later, Node.js prints a deprecation warning for `module.register()`. The hook still works.
+
+### Add custom spans and logs
+
+Use the OpenTelemetry API to add spans and logs to your code. For example, update `src/pages/api/hello.ts`:
+
+```ts src/pages/api/hello.ts expandable
+import type { APIRoute } from 'astro';
+import { logs, SeverityNumber, trace } from '@opentelemetry/api';
+import { logger } from '../../lib/axiom';
+
+export const prerender = false;
+
+const tracer = trace.getTracer('my-astro-app');
+const otelLogger = logs.getLogger('my-astro-app');
+
+export const GET = (async ({ url }) => {
+  return tracer.startActiveSpan('build-greeting', (span) => {
+    const name = url.searchParams.get('name') ?? 'world';
+    span.setAttribute('greeting.name', name);
+
+    logger.info('Greeting requested', { name });
+    otelLogger.emit({
+      severityNumber: SeverityNumber.INFO,
+      severityText: 'INFO',
+      body: 'Greeting requested',
+      attributes: { 'greeting.name': name },
+    });
+
+    span.end();
+    return Response.json({ message: `Hello, ${name}!` });
+  });
+}) satisfies APIRoute;
+```
+
+The `build-greeting` span is a child of the span that automatic instrumentation creates for the incoming request. The OTLP log record carries the trace ID and span ID of the active span.
+
+### Add trace IDs to @axiomhq/logging logs
+
+To find the trace of a request from its log, add the active trace ID to the log in `src/middleware.ts`:
+
+```ts src/middleware.ts
+import { trace } from '@opentelemetry/api';
+
+// ...
+
+logger.info(`${method} ${path} ${response.status}`, {
+  request: {
+    // ...
+  },
+  trace_id: trace.getActiveSpan()?.spanContext().traceId,
+});
+```
+
+The `trace_id` field matches the `trace_id` of the spans for the same request.
+
+## Platform notes
+
+Serverless platforms can stop a function after it returns the response. To send logs without delaying the response, pass `logger.flush()` to the platform’s `waitUntil` function instead of awaiting it. The following examples replace the `finally` block of the [middleware](#log-requests-in-middleware).
+
+### Vercel
+
+The [@astrojs/vercel adapter](https://docs.astro.build/en/guides/integrations-guide/vercel/) runs on-demand routes in Vercel Functions. Use [`waitUntil` from @vercel/functions](https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package#waituntil):
+
+```ts src/middleware.ts
+import { waitUntil } from '@vercel/functions';
+
+// ...
+
+  } finally {
+    waitUntil(logger.flush());
+  }
+```
+
+- Install the package with `npm install @vercel/functions`.
+- Set the Axiom environment variables in your Vercel project settings.
+- The OpenTelemetry setup on this page doesn’t apply, because Vercel starts the Node.js process.
+- To send request logs, function logs, and other platform logs from Vercel, use the [Axiom Vercel app](/apps/vercel).
+
+### Netlify
+
+The [@astrojs/netlify adapter](https://docs.astro.build/en/guides/integrations-guide/netlify/) runs on-demand routes in Netlify Functions and passes the function context in `context.locals.netlify.context`. Use its [`waitUntil` method](https://docs.netlify.com/build/functions/api/#waituntil):
+
+```ts src/middleware.ts
+  } finally {
+    context.locals.netlify.context.waitUntil(logger.flush());
+  }
+```
+
+- Set the Axiom environment variables in your Netlify site settings.
+- The OpenTelemetry setup on this page doesn’t apply, because Netlify starts the Node.js process.
+- To send platform logs from Netlify, use the [Axiom Netlify app](/apps/netlify).
+
+### Cloudflare
+
+The [@astrojs/cloudflare adapter](https://docs.astro.build/en/guides/integrations-guide/cloudflare/) runs your app on Cloudflare Workers and passes the Workers execution context in `context.locals.cfContext`:
+
+```ts src/middleware.ts
+  } finally {
+    context.locals.cfContext.waitUntil(logger.flush());
+  }
+```
+
+- Cloudflare environment variables and secrets work with `astro:env`. Store the API token as a secret with `npx wrangler secret put AXIOM_TOKEN`. For local development, add the variables to a `.dev.vars` file.
+- The OpenTelemetry Node.js SDK doesn’t run on Cloudflare Workers. For tracing on Workers, see [OpenTelemetry using Cloudflare Workers](/guides/opentelemetry-cloudflare-workers). Integrating that setup with the worker that Astro generates isn’t covered on this page.
+- To monitor Workers requests with a prebuilt dashboard, use the [Axiom Cloudflare Workers app](/apps/cloudflare-workers).
+
+## Send logs from the browser
+
+To send logs from client-side scripts without exposing your API token, send them to an endpoint in your Astro app. The endpoint forwards them to Axiom with the server-side client.
+
+1. Create a `src/pages/api/axiom.ts` file with the following content:
+
+    ```ts src/pages/api/axiom.ts
+    import type { APIRoute } from 'astro';
+    import { AXIOM_DATASET } from 'astro:env/server';
+    import { axiom } from '../../lib/axiom';
+
+    export const prerender = false;
+
+    export const POST = (async ({ request }) => {
+      const events = await request.json().catch(() => null);
+
+      if (!Array.isArray(events) || events.length > 1000) {
+        return new Response('Invalid log batch', { status: 400 });
+      }
+
+      axiom.ingest(AXIOM_DATASET, events);
+      await axiom.flush();
+
+      return new Response(null, { status: 204 });
+    }) satisfies APIRoute;
+    ```
+
+1. Create a `src/lib/axiom-client.ts` file with a logger that uses `ProxyTransport`:
+
+    ```ts src/lib/axiom-client.ts
+    import { Logger, ProxyTransport } from '@axiomhq/logging';
+
+    export const logger = new Logger({
+      transports: [new ProxyTransport({ url: '/api/axiom', autoFlush: true })],
+    });
+    ```
+
+    `ProxyTransport` batches the logs and sends them to the endpoint as a JSON array. With `autoFlush: true`, it sends a batch two seconds after the first log.
+
+1. Import the logger in a client-side script. For example:
+
+    ```astro src/pages/index.astro
+    <button id="buy">Buy</button>
+
+    <script>
+      import { logger } from '../lib/axiom-client';
+
+      document.querySelector('#buy')?.addEventListener('click', () => {
+        logger.info('Buy button clicked', { path: location.pathname });
+      });
+    </script>
+    ```
+
+Logs from the browser have the `source` field set to `browser-log`. Logs from the server have `server-log`.
+
+<Warning>
+Anyone can send requests to the endpoint. Before you use it in production, protect it. For example, check the `Origin` header, limit the request size, or add rate limiting.
+</Warning>
+
+## Limitations
+
+- Prerendered pages and endpoints run at build time, so request logs and traces only cover routes that Astro renders on demand.
+- The OpenTelemetry setup requires the Node.js adapter in standalone mode, or another setup where you control the `node` command.
+
+## What’s next
+
+- [Send data from JavaScript app](/guides/javascript): Options of the @axiomhq/js and @axiomhq/logging libraries.
+- [OpenTelemetry using Node.js](/guides/opentelemetry-nodejs): More OpenTelemetry examples for Node.js.
+- [Send OpenTelemetry data](/send-data/opentelemetry): Axiom’s OTLP endpoints.
+- [Explore traces](/query-data/traces): Analyze the traces you send.

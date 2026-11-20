@@ -1,0 +1,68 @@
+---
+title: datatable
+description: 'This page explains how to use the datatable data source in APL.'
+---
+
+The `datatable` operator defines an inline table with a fixed schema and literal row values. Use `datatable` to build small lookup tables, test APL operators and functions, or supply reference data without ingesting a dataset.
+
+## Usage
+
+### Syntax
+
+```kusto
+datatable (ColumnName1: ColumnType1 [, ColumnName2: ColumnType2, ...]) [
+    Value1, Value2, ...
+]
+```
+
+### Parameters
+
+- **`ColumnName: ColumnType`**: One or more column definitions specifying each column's name and scalar type (for example, `string`, `int`, `long`, `real`, `bool`, `datetime`, `timespan`, `dynamic`).
+- **`Value1, Value2, ...`**: Comma-separated literal values ordered row by row across the declared columns.
+
+### Returns
+
+Returns a table with the specified schema and rows.
+
+## Examples
+
+### Build an inline table and summarize
+
+**Query**
+
+```kusto
+datatable(service: string, latency_ms: int)[
+    'api', 120,
+    'api', 180,
+    'web', 90
+]
+| summarize avg_latency = avg(latency_ms) by service
+```
+
+**Output**
+
+| service | avg_latency |
+| --- | --- |
+| api | 150 |
+| web | 90 |
+
+### Use `datatable` as a lookup table
+
+**Query**
+
+```kusto
+let status_labels = datatable(code: string, label: string)[
+    '200', 'OK',
+    '404', 'Not Found',
+    '500', 'Server Error'
+];
+['sample-http-logs']
+| lookup status_labels on $left.status == $right.code
+| project _time, status, label
+```
+
+## List of related operators
+
+- [**print**](/apl/tabular-operators/print): Outputs a single row of evaluated scalar expressions.
+- [**lookup**](/apl/tabular-operators/lookup-operator): Enriches a dataset with columns from a constant lookup table.
+- [**externaldata**](/apl/tabular-operators/externaldata-operator): Loads a table from an external storage URI.

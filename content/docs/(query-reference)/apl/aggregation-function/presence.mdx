@@ -1,0 +1,75 @@
+---
+title: presence
+description: 'This page explains how to use the presence aggregation function in APL.'
+---
+
+`presence` counts how many rows contain a non-null value for each specified field, returning a single map column of per-field counts.
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize presence(field1 [, field2, ...]) [by GroupingColumn]
+summarize presence(*) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`field1, field2, ...`**: One or more field names to count non-null occurrences for, or `*` to include every field in the current schema.
+- **`GroupingColumn`** (optional): A column to group the results by.
+
+<Note>
+When combining `presence(*)` with other aggregations in the same `summarize` clause, place `presence(*)` first (for example, `summarize presence(*), total = count()`).
+</Note>
+
+### Returns
+
+Returns one map column named `presence` mapping each field name to its non-null row count.
+
+## Use case examples
+
+### Count non-null values across all fields
+
+**Query**
+
+```kusto
+datatable(a: int, b: string, c: int)[
+    1, "x", int(null),
+    2, string(null), int(null),
+    int(null), "y", int(null),
+    4, "z", 5
+]
+| summarize presence(*)
+```
+
+**Output**
+
+| presence                 |
+|--------------------------|
+| `{"a":3,"b":3,"c":1}`    |
+
+### Count non-null values for specific fields
+
+**Query**
+
+```kusto
+datatable(x: int, y: string, z: int)[
+    1, "a", int(null),
+    int(null), "b", 2,
+    3, string(null), 3
+]
+| summarize presence(x, z)
+```
+
+**Output**
+
+| presence          |
+|-------------------|
+| `{"x":2,"z":2}`   |
+
+## List of related aggregations
+
+- [**count**](/apl/aggregation-function/count): Counts the total number of rows in a group.
+- [**countif**](/apl/aggregation-function/countif): Counts rows that satisfy a predicate.
+- [**getschema**](/apl/tabular-operators/getschema-operator): Returns field names and data types in the current schema.

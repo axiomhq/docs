@@ -1,0 +1,77 @@
+---
+title: percentilew
+description: 'This page explains how to use the percentilew aggregation function in APL.'
+---
+
+`percentilew` estimates a percentile when each row represents multiple observations. The weight gives the number of observations the row represents.
+
+
+## Usage
+
+### Syntax
+
+```kusto
+summarize percentilew(expr, weight, percentile) [by GroupingColumn]
+```
+
+### Parameters
+
+- **`expr`**: The expression to calculate the percentile on. Accepts numeric (`int`, `long`, `real`), `timespan`, or `datetime` values.
+- **`weight`**: An integer expression representing the frequency weight for each record. Records with a weight less than or equal to `0` are skipped. Records with a `null` weight are counted once (weight `1`).
+- **`percentile`**: A numeric constant between `0` and `100` specifying the target percentile.
+- **`GroupingColumn`** (optional): A column to group the results by. If omitted, `percentilew` calculates the weighted percentile across all records.
+
+### Returns
+
+Returns the estimated value of `expr` at the requested weighted percentile. By default, the output column is named `percentilew_<expr>_<percentile>`.
+
+## Use case examples
+
+### Weighted median (P50) latency
+
+This example estimates the 50th percentile (median) latency across pre-aggregated request buckets where each row records a latency value and the integer number of requests at that latency.
+
+**Query**
+
+```kusto
+datatable(latency: int, requests: int)[10, 8, 20, 6, 30, 3, 40, 1]
+| summarize percentilew(latency, requests, 50)
+```
+
+**Output**
+
+| percentilew_latency_50 |
+|------------------------|
+| 20                     |
+
+Across the 18 weighted observations (eight `10`s, six `20`s, three `30`s, and one `40`), the 50th percentile is `20`.
+
+### Multiple weighted percentiles by group
+
+Calculate multiple weighted percentiles in the same `summarize` operator and group by another field.
+
+**Query**
+
+```kusto
+datatable(service: string, latency: int, requests: int)[
+    "api", 10, 8,
+    "api", 20, 6,
+    "api", 30, 3,
+    "api", 40, 1
+]
+| summarize p50 = percentilew(latency, requests, 50), p75 = percentilew(latency, requests, 75.0) by service
+```
+
+**Output**
+
+| service | p50 | p75 |
+|---------|-----|-----|
+| api     | 20  | 20  |
+
+## List of related aggregations
+
+- [**percentile**](/apl/aggregation-function/percentile): Calculates an estimated unweighted percentile of a column.
+- [**percentileif**](/apl/aggregation-function/percentileif): Calculates an estimated percentile for records that satisfy a predicate.
+- [**avgw**](/apl/aggregation-function/avgw): Calculates the weighted average of an expression using an integer frequency weight.
+- [**sumw**](/apl/aggregation-function/sumw): Calculates the weighted sum of an expression using an integer frequency weight.
+- [**countw**](/apl/aggregation-function/countw): Calculates the weighted count of records using an integer frequency weight.

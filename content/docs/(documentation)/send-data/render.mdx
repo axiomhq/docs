@@ -1,17 +1,19 @@
 ---
-title: 'Send logs from Render to Axiom'
+title: 'Send logs and metrics from Render to Axiom'
 overview: 'Cloud platform for hosting static sites, web services, and databases'
-description: 'This page explains how to send logs from Render to Axiom.'
+description: 'This page explains how to send logs and metrics from Render to Axiom.'
 sidebarTitle: Render
-keywords: ['render', 'axiom documentation', 'documentation', 'axiom', 'guide', 'render logs', 'syslog', 'render log stream']
+keywords: ['render', 'axiom documentation', 'documentation', 'axiom', 'guide', 'render logs', 'syslog', 'render log stream', 'render metrics stream', 'metrics', 'opentelemetry']
 logoId: 'render'
 ---
 
 import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 
 Render is a unified cloud to build and run all your apps and websites. Axiom provides complete visibility into your Render projects, allowing you to monitor the behavior of your websites and apps.
 
-Render log streams forward logs to a syslog destination over TLS. To send them to Axiom, run a syslog receiver such as Vector on infrastructure you control, and let it forward the logs to Axiom over HTTPS.
+You can send both log streams (over syslog/TLS through Vector) and service metrics streams (directly over OTLP) from Render to Axiom.
 
 <Prerequisites />
 - [Create an account on Render](https://dashboard.render.com/login).
@@ -27,3 +29,20 @@ Set up Vector with a TLS-enabled `syslog` source and an `axiom` sink. For the co
 In Render, create a log stream. For more information, see the [Render documentation](https://render.com/docs/log-streams). As the log endpoint, use the host and port where your receiver listens, for example `syslog.example.com:6514`.
 
 Back in your Axiom dataset, you see logs coming from Render.
+
+## Metrics streams
+
+Render can push service metrics directly to Axiom over OpenTelemetry (OTLP) without running an intermediate collector.
+
+1. In Axiom, create a metrics dataset (dataset kind **Metrics**) and an API token with ingest permission for that dataset.
+1. In Render, create a metrics stream and select **Custom** as the provider. For workspace requirements and supported metrics, see the [Render Metrics Streams documentation](https://render.com/docs/metrics-streams).
+1. Enter the following values:
+   - **Endpoint:** `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`
+   - **API key:** `API_TOKEN`
+
+Render sends the API key as a Bearer token in the `Authorization` header and appends `/v1/metrics` to the endpoint URL.
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>

@@ -16,11 +16,11 @@ OpenTelemetry provides a [unified approach to collecting telemetry data](https:/
 
 To configure OpenTelemetry in a Node.js app for sending telemetry data to Axiom, certain prerequisites are necessary. These include:
 
-- Node:js: Node.js version 14 or newer.
+- Node.js: Node.js 22.15 or later.
 - Node.js app: Use your own app written in Node.js, or you can start with the provided **`app.ts`** sample.
 - [Create an Axiom account](https://app.axiom.co/).
 - [Create a dataset in Axiom](/reference/datasets) where you send your data.
-- [Create an API token in Axiom](/reference/tokens) with permissions to create, read, update, and delete datasets.
+- [Create an API token in Axiom](/reference/tokens) with permission to ingest data to the dataset.
 
 ## Core Application (app.ts)
 
@@ -106,8 +106,8 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
-import { Resource } from '@opentelemetry/resources';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 
 // Initialize OTLP trace exporter with the endpoint URL and headers
 const traceExporter = new OTLPTraceExporter({
@@ -119,14 +119,14 @@ const traceExporter = new OTLPTraceExporter({
 });
 
 // Creating a resource to identify your service in traces
-const resource = new Resource({
-  [SemanticResourceAttributes.SERVICE_NAME]: 'node traces',
+const resource = resourceFromAttributes({
+  [ATTR_SERVICE_NAME]: 'node traces',
 });
 
 // Configuring the OpenTelemetry Node SDK
 const sdk = new NodeSDK({
   // Adding a BatchSpanProcessor to batch and send traces
-  spanProcessor: new BatchSpanProcessor(traceExporter),
+  spanProcessors: [new BatchSpanProcessor(traceExporter)],
 
   // Registering the resource to the SDK
   resource: resource,
@@ -176,15 +176,13 @@ Create a `package.json` file in the root of your project with the following cont
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "@opentelemetry/api": "^1.6.0",
-        "@opentelemetry/api-logs": "^0.46.0",
-        "@opentelemetry/auto-instrumentations-node": "^0.39.4",
-        "@opentelemetry/exporter-metrics-otlp-http": "^0.45.0",
-        "@opentelemetry/exporter-metrics-otlp-proto": "^0.45.1",
-        "@opentelemetry/exporter-trace-otlp-http": "^0.45.0",
-        "@opentelemetry/sdk-logs": "^0.46.0",
-        "@opentelemetry/sdk-metrics": "^1.20.0",
-        "@opentelemetry/sdk-node": "^0.45.1",
+        "@opentelemetry/api": "^1.10.0",
+        "@opentelemetry/auto-instrumentations-node": "^0.83.1",
+        "@opentelemetry/exporter-trace-otlp-proto": "^0.301.2",
+        "@opentelemetry/resources": "^3.1.1",
+        "@opentelemetry/sdk-node": "^0.301.2",
+        "@opentelemetry/sdk-trace-base": "^2.12.0",
+        "@opentelemetry/semantic-conventions": "^1.45.0",
         "express": "^4.18.2"
     },
     "devDependencies": {
@@ -397,3 +395,7 @@ The **`@opentelemetry/exporter-trace-otlp-proto`** package provides an exporter 
 ### **`@opentelemetry/sdk-trace-base`**
 
 Contained within this package is the **`BatchSpanProcessor`**, among other foundational elements for tracing in OpenTelemetry. The **`BatchSpanProcessor`** is a component that collects and processes spans (individual units of trace data). As the name suggests, it batches these spans before sending them to the configured exporter (in this case, the `OTLPTraceExporter`). This batching mechanism is efficient as it reduces the number of outbound requests by aggregating multiple spans into fewer batches. It helps in the performance and scalability of trace data export in an OpenTelemetry-instrumented app.
+
+## Send logs and metrics
+
+To also export OpenTelemetry logs (`/v1/logs`) and metrics (`/v1/metrics`), or to configure per-signal dataset headers and dataset-in-path endpoints, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).

@@ -52,14 +52,14 @@ The following fields are expected to display the OpenTelemetry Traces dashboard:
 ### Navigate the app
 
 - Use the **Filter Bar** at the top of the app to narrow the charts to a specific service or operation.
-- Use the **Search Input** to find a trace ID in the selected time period.
+- Use the **Trace ID** input to find a trace ID in the selected time period.
 - Use the **Slowest Operations** chart to identify performance issues across services and traces.
 - Use the **Top Errors** list to quickly identify the worst-offending causes of errors.
 - Use the **Results** table to get an overview and navigate between services, operations, and traces.
 
 ### View a trace
 
-Click a trace ID in the results table to show the waterfall view. This view allows you to see that span in the context of the entire trace from start to finish.
+Select a service and operation to display trace IDs in the **Results** table. Click a trace ID to show the waterfall view. This view allows you to see that span in the context of the entire trace from start to finish.
 
 <Frame>
   <img src="/docs/doc-assets/shots/otel-traces-app-view-waterfall.png" />
@@ -77,6 +77,17 @@ In Axiom, trace events are just like any other events inside datasets. This mean
 
 - For request, rate, and duration aggregations, it’s best to only include the root span using `isnull(parent_span_id)`.
 
+## Choose a trace view
+
+Open the view menu at the top left of the trace to choose a view:
+
+- **Waterfall** shows when each span started, how long it ran, and which spans ran in parallel.
+- **Conversation** shows inputs and outputs for [AI chat spans](/use-cases/llm-observability). This view is available when the trace contains a chat span.
+- **Service map** shows how services called each other during the request. Inspect call counts, failed calls, and request time across services, or select a connection to view per-edge latency (`p50` and `p99`), slowest calls, and critical path involvement.
+- **Statistics** groups spans by service, span name, span kind, or status, and includes a **Critical path** summary showing each service’s share **By service**, **Over time**, or **By service and over time**. Select a row or service to see the matching spans in the waterfall, or drag across the critical path timeline to narrow the summary to a time window.
+
+In **Statistics**, group spans by a primary and optional secondary dimension to compare **Count**, **Errors**, **Total**, **Avg**, **Max**, **Self time**, and **Critical path** metrics across groups.
+
 ## Waterfall view of traces
 
 To see how spans in a trace are related to each other, explore the trace in a waterfall view. In this view, each span in the trace is correlated with its parent and child spans.
@@ -85,9 +96,9 @@ To see how spans in a trace are related to each other, explore the trace in a wa
 
 To explore spans within a trace using the OpenTelemetry Traces app, follow these steps:
 
-1. Click the `Dashboards` tab.
+1. In the sidebar, click **Dashboards**.
 2. Click `OpenTelemetry Traces`.
-3. In the `Slowest Operations` chart, click the service that contains the trace.
+3. In the **Results** table, select a service, then an operation to display its trace IDs.
 4. In the list of trace IDs, click the trace you want to explore.
 5. Explore how spans within the trace are related to each other in the waterfall view. To reveal additional options such as collapsing and expanding child spans, right-click a span.
 
@@ -99,13 +110,13 @@ To try out this example, go to the Axiom Playground.
 
 [Run in Playground](https://play.axiom.co/axiom-play-qf1k/dashboards/otel.traces.otel-demo-traces)
 
-### Traces in Query tab
+### Traces in Query
 
-To access the waterfall view from the Query tab, follow these steps:
+To access the waterfall view from **Query**, follow these steps:
 
 1. Ensure the dataset you work with has trace data.
-2. Click the Query tab.
-3. Run a query that returns the `_time` and `trace_id` fields. For example, the following query returns the number of spans in each trace:
+2. In the sidebar, click **Query**.
+3. Run a query that returns the `trace_id` field. For example, the following query returns the number of spans in each trace:
 
     ```kusto
     ['otel-demo-traces']
@@ -129,6 +140,23 @@ To toggle the display of the span details on the right, click <Icon icon="sideba
 
 To resize the width of the waterfall view and the span details panel, drag the border.
 
+### Find spans and bottlenecks
+
+- To investigate a slow request, open **Critical path** in the waterfall toolbar and select **Highlight critical path** to highlight the chain of spans the request waited on, or select **Show only spans on the path** to filter the waterfall to those spans.
+- To find a span, select **Search spans**. Search by span name, service name, or field, then use the arrows to move between matches.
+- To investigate failures, select **Next error** to jump to the next visible span with an error.
+- To inspect a busy part of the trace, drag the handles in the overview above the waterfall to narrow the time range, and select **Reset zoom** to see the full trace again. Open **Overview options** next to the overview to switch between **Trace minimap** and **Service volume** and view the service color legend.
+
+### View correlated logs
+
+To see logs for a request, [connect the traces and logs datasets in a correlation group](/query-data/correlations). Log records need a `trace_id` and a `span_id`.
+
+In the waterfall toolbar, open the logs tab beside **Spans** to see logs for the whole trace. To investigate a single span, select it and open **Logs** in the span details panel.
+
+### Search in other dataset
+
+To pivot from a span to events in another dataset, open the span’s menu and select **Search in other dataset**. Filter the target dataset by the span’s **Time** range, **Trace ID**, or **Span ID**.
+
 ### Span duration histogram
 
 In the waterfall view of traces, Axiom warns you about slow and fast spans. These spans are outliers because they’re at least a standard deviation over or under the average duration of spans that have the same span name and service name. Hold the pointer over the **SLOW** or **FAST** label to see additional information about the span type such as average and maximum duration. In addition, Axiom displays a histogram about the durations of spans that have the same span name and service name as the span you selected. By default, the histogram shows a one-hour window around the selected span.
@@ -139,7 +167,7 @@ The span duration histogram can be useful in the following cases, among others:
 - You’ve found an outlier. You want to investigate and look at other outliers. The histogram shows you what the baseline is and what’s not normal in terms of duration. You want to filter for the outliers and see what they have in common.
 - You want to see if there was a recent change in the typical duration for the selected span type.
 
-To narrow the time range of the histogram, click and select an area in the histogram.
+Click a span’s duration to open its duration heatmap in Query. Drag across the heatmap to narrow its time range.
 
 ## Example queries
 

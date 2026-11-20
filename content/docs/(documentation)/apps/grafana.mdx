@@ -5,6 +5,8 @@ sidebarTitle: Grafana
 keywords: ['axiom documentation', 'documentation', 'axiom', 'grafana', 'datasource plugin', 'grafana cloud', 'query editor', 'visualization', 'alerting', 'collaboration']
 ---
 
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+
 <Frame caption="Data visualisation">
   <img src="/docs/doc-assets/shots/grafana-axiom-image-3.jpg" alt="Data visualisation" />
 </Frame>
@@ -73,9 +75,48 @@ Example:
   <img src="/docs/doc-assets/shots/1-grafana.png" alt="Add new layer" />
 </Frame>
 
-- Enter the previously generated API token.
+- In **API Token**, enter the advanced API token you created earlier. The plugin doesn’t accept personal access tokens.
+
+- In **API URL**, keep the default value `https://api.axiom.co`.
+
+- In **Edge URL**, enter `https://AXIOM_DOMAIN`. The plugin sends all queries to this URL.
+
+  <Info>
+  <ReplaceDomain />
+  </Info>
 
 - Save and test the data source.
+
+### Configure the data source with provisioning
+
+If you provision the Axiom data source with a configuration file, set the Edge URL in `jsonData.edgeURL`. For example:
+
+```yaml
+apiVersion: 1
+
+datasources:
+  - name: Axiom
+    type: axiomhq-axiom-datasource
+    access: proxy
+    jsonData:
+      apiHost: https://api.axiom.co
+      edgeURL: https://AXIOM_DOMAIN
+    secureJsonData:
+      accessToken: API_TOKEN
+```
+
+<Info>
+<ReplaceDomain />
+
+Replace `API_TOKEN` with the advanced API token you created earlier.
+</Info>
+
+### Upgrade from plugin versions earlier than 0.7.0
+
+Version 0.7.0 of the Axiom data source plugin introduces the following breaking changes:
+
+- The plugin doesn’t accept personal access tokens. If an existing data source uses a personal access token and an org ID, replace them with an advanced API token before you upgrade. Otherwise, dashboards that use the data source fail to authenticate.
+- The plugin sends all queries to the Edge URL. If an existing data source doesn’t have an Edge URL, the plugin uses `https://us-east-1.aws.edge.axiom.co`. If your data is stored in an edge deployment other than `US East 1 (AWS)`, set the Edge URL of the data source to your edge deployment. Otherwise, your queries don’t return data.
 
 ## Build Queries with Query Editor 
 
@@ -95,9 +136,15 @@ The Axiom data source Plugin provides a custom query editor to build and visuali
 
 - Use the query editor to choose the desired metrics, dimensions, and filters.
 
-<Frame caption="Axiom Query Editor">
-  <img src="/docs/doc-assets/shots/axiom-aws-lambda-dashboard.png" alt="Axiom Query Editor" />
+<Frame caption="Axiom query editor in Grafana">
+  <img src="/docs/doc-assets/shots/grafana-axiom-image-1.jpg" alt="APL query in Grafana with a graph and results table" />
 </Frame>
+
+### MPL queries
+
+Starting with plugin version `0.7.0`, the Axiom Grafana data source supports [MPL](/mpl/introduction) queries in panels and dashboard variables, including metric selectors and tag lookup.
+
+Recommended: Use plugin version `0.7.3` or later for variable and tag-value fixes.
 
 ## Query limits
 
@@ -113,15 +160,11 @@ The Axiom Grafana data source plugin allows users to display and interact with t
 
 1. **Unified visualization:** The Axiom Grafana data source plugin allows users to utilize Grafana’s powerful visualization tools with Axiom’s data. This enables users to create, explore, and share dashboards which visually represent their Axiom logs and metrics.
 
-<Frame caption="Data visualisation">
-  <img src="/docs/doc-assets/shots/grafana-axiom-image-3.jpg" alt="Data visualisation" />
+<Frame caption="AWS Lambda dashboard in Grafana">
+  <img src="/docs/doc-assets/shots/axiom-aws-lambda-dashboard.png" alt="Grafana dashboard showing Lambda invocations, execution time, and errors" />
 </Frame>
 
 2. **Rich Querying Capability:** Grafana has a powerful and flexible interface for building data queries. With the Axiom plugin, and leverage this capability to build complex queries against your Axiom data.
-
-<Frame caption="Rich querying">
-  <img src="/docs/doc-assets/shots/grafana-axiom-image-1.jpg" alt="Rich querying" />
-</Frame>
 
 3. **Customizable Alerting:** Grafana’s alerting feature allows you to set alerts based on your queries' results, and set up custom alerts based on specific conditions in your Axiom log data.
 

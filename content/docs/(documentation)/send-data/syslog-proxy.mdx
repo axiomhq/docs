@@ -32,11 +32,10 @@ For a more reliable and modern logging experience, consider using tools like [Ve
 
 Other requirements:
 
-- **Message size limit:** Axiom currently enforces a 64KB per-message size limit. This is in line with RFC5425 guidelines. Any message exceeding the limit causes the connection to close because Axiom doesn’t support ingesting truncated messages.
-- **TLS requirement:** Axiom only supports syslog over TLS, specifically following RFC5425. Configure your syslog client accordingly.
-- **Port requirements:** UDP log messages are sent on UDP port `514` to the Syslog server. TCP log messages are sent on TCP port `601` to the Syslog server.
-
-Ensure your messages conform to the size limit and TLS requirements. If the connection is frequently re-established and messages are rejected, the issue can be the size of the messages or other formatting issues.
+- **No TLS:** The proxy accepts plaintext TCP and UDP traffic. Run it only on trusted networks. For syslog over TLS, see [Send syslog data over TLS to Axiom](/send-data/secure-syslog).
+- **Port requirements:** UDP log messages are sent on UDP port `514`, and TCP log messages are sent on TCP port `601`.
+- **TCP message size limit:** TCP expects one newline-delimited message per line, with a maximum line size of 64 KiB. A line larger than 64 KiB closes the connection.
+- **UDP datagram size limit:** UDP reads up to 8,960 bytes per datagram and truncates longer packets.
 
 Axiom highlights Syslog events by severity. For supported fields and levels, see [Log level detection](/reference/limits#supported-schemas).
 
@@ -90,7 +89,10 @@ Set the following environment variables to connect to Axiom:
 
 - `AXIOM_TOKEN` is the Axiom API token you have generated.
 - `AXIOM_DATASET` is the name of the Axiom dataset where you want to send data.
-- Optional: `AXIOM_URL` is the URL of the Axiom API. By default, it uses the `US East 1 (AWS)` edge deployment. Change the default value if your organization uses another edge deployment. For more information, see [Edge deployments](/reference/edge-deployments).
+
+<Warning>
+Axiom Syslog Proxy only ingests into `US East 1 (AWS)` datasets and doesn’t support edge deployment domains. For `EU Central 1 (AWS)` or other edge deployments, use Vector instead. For more information, see [Send syslog data over TLS to Axiom](/send-data/secure-syslog) or [Send data from Vector to Axiom](/send-data/vector).
+</Warning>
 
 ## Run Axiom Syslog Proxy
 
@@ -124,6 +126,6 @@ To test that the Axiom Syslog Proxy configuration:
     echo -n "udp message" | nc -u -w1 localhost 514
     ```
 
-1. In Axiom, click the **Stream** tab.
+1. In Axiom, click **Stream** in the sidebar.
 1. Click your dataset.
 1. Check whether Axiom displays the messages you have sent.
