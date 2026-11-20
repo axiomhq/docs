@@ -26,6 +26,12 @@ The Axiom Go SDK is an open-source project and welcomes your contributions. For 
 ## Set up SDK
 
 1. Install the Axiom Go SDK and configure your environment as explained in [Send data from Go app to Axiom](/guides/go).
+1. Add the adapter package and zerolog to your Go module. The adapter has dependencies that the SDK installation doesn’t add, so your app doesn’t build without this step.
+
+    ```shell
+    go get github.com/axiomhq/axiom-go/adapters/zerolog github.com/rs/zerolog
+    ```
+
 1. In your Go app, import the `zerolog` adapter package. It’s imported as `adapter` so that it doesn’t conflict with the `rs/zerolog` package.
 
     ```go
@@ -83,7 +89,7 @@ func main() {
 
 To send logs only to Axiom, pass the writer directly: `zerolog.New(writer)`. To use the adapter with the global logger of the `github.com/rs/zerolog/log` package, assign the logger to `log.Logger`.
 
-Add `Timestamp()` to the logger context as in the example above. The adapter uses the `time` field of each log as the event time. Without it, Axiom uses the time it receives the batch.
+Add `Timestamp()` to the logger context as in the example above. Axiom uses the `time` field of each log as the event time and stores it in `_time`. Without it, Axiom uses the time it receives the batch.
 
 <Note>
 The adapter uses a buffer to batch events before sending them to Axiom. Flush this buffer explicitly by calling [Close](https://pkg.go.dev/github.com/axiomhq/axiom-go/adapters/zerolog#Writer.Close) before the app exits. Deferred calls don’t run when the app exits through `os.Exit` or a `Fatal` log, so call `Close` before those functions. For more information, see the [example in GitHub](https://github.com/axiomhq/axiom-go/blob/main/examples/zerolog/main.go).
@@ -95,7 +101,7 @@ The adapter sends the JSON object of each zerolog log as an Axiom event and adds
 
 | Field | Description |
 | :--- | :--- |
-| `time` | Time of the log. Only present when you use `Timestamp()`. |
+| `_time` | Time of the log from the zerolog `time` field. Axiom stores the `time` value in `_time` and doesn’t keep a separate `time` field. Without `Timestamp()`, this is the time Axiom receives the batch. |
 | `level` | Log level, such as `info` or `error`. |
 | `message` | Log message. |
 | `logger` | Always `zerolog`. |
