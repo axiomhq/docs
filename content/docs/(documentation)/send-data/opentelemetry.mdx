@@ -120,8 +120,21 @@ When using the OTLP/HTTP endpoint, the following endpoint URLs should be used in
 - Logs: `https://AXIOM_DOMAIN/v1/logs`
 - Metrics: `https://AXIOM_DOMAIN/v1/metrics`
 
+### Dataset in the path (no dataset header)
+
+If your exporter can’t send custom dataset headers, pass the dataset name in the URL path instead:
+
+- Traces: `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME/traces`
+- Logs: `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME/logs`
+- Metrics: `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME/metrics`
+- Metrics (OTLP base URL): `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME/v1/metrics`
+
 <Note>
-The `/v1/metrics` endpoint accepts OTLP data encoded as Protobuf (`application/x-protobuf`) or JSON (`application/json`). Protobuf payloads are smaller, so prefer Protobuf when you send large volumes of metrics.
+Only metrics supports the `/v1/metrics` suffix under `/v1/ingest/DATASET_NAME`. If you set `OTEL_EXPORTER_OTLP_ENDPOINT=https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`, logs and traces return `404` because `/v1/ingest/DATASET_NAME/v1/logs` and `/v1/ingest/DATASET_NAME/v1/traces` don’t exist.
+</Note>
+
+<Note>
+All three OTLP endpoints (logs, metrics, and traces) accept OTLP data encoded as Protobuf (`application/x-protobuf`) or JSON (`application/json`). Protobuf payloads are smaller, so prefer Protobuf when you send large volumes of data.
 </Note>
 
 ## OpenTelemetry for Go
@@ -416,8 +429,8 @@ const opentelemetry = require('@opentelemetry/sdk-node');
 const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
 const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-proto');
 const { BatchSpanProcessor } = require('@opentelemetry/sdk-trace-base');
-const { Resource } = require('@opentelemetry/resources');
-const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
+const { resourceFromAttributes } = require('@opentelemetry/resources');
+const { ATTR_SERVICE_NAME } = require('@opentelemetry/semantic-conventions');
 
 // Initialize OTLP trace exporter with the URL and headers for the Axiom API
 const traceExporter = new OTLPTraceExporter({
@@ -429,8 +442,8 @@ const traceExporter = new OTLPTraceExporter({
 });
 
 // Define the resource attributes, in this case, setting the service name for the traces
-const resource = new Resource({
-  [SemanticResourceAttributes.SERVICE_NAME]: 'node traces', // Name for the tracing service
+const resource = resourceFromAttributes({
+  [ATTR_SERVICE_NAME]: 'node traces', // Name for the tracing service
 });
 
 // Create a NodeSDK instance with the configured span processor, resource, and auto-instrumentations
