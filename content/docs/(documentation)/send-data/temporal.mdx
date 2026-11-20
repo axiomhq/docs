@@ -1,0 +1,404 @@
+---
+title: 'Send Temporal telemetry to Axiom'
+description: 'This page explains how to send traces from Temporal SDKs and metrics from Temporal Cloud and self-hosted Temporal to Axiom using OpenTelemetry.'
+overview: 'Durable execution platform for workflows'
+sidebarTitle: Temporal
+keywords: ['temporal', 'temporal cloud', 'axiom documentation', 'documentation', 'axiom', 'workflows', 'durable execution', 'traces', 'tracing', 'metrics', 'openmetrics', 'prometheus', 'opentelemetry', 'otel collector', 'interceptors', 'typescript', 'python']
+---
+
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+
+[Temporal](https://temporal.io/) runs durable workflows and activities. This page explains how to send two kinds of Temporal telemetry to Axiom:
+
+- [Traces from your Temporal app](#send-traces-from-temporal-sdks): The Temporal TypeScript and Python SDKs create OpenTelemetry spans for workflow starts, workflow runs, and activities. An OTLP exporter sends them directly to Axiom.
+- [Temporal Cloud metrics](#send-temporal-cloud-metrics): Temporal Cloud publishes operational metrics on an [OpenMetrics endpoint](https://docs.temporal.io/cloud/metrics/openmetrics). An OpenTelemetry Collector scrapes the endpoint and forwards the metrics to Axiom. Optionally, the same Collector also scrapes the [metrics of a self-hosted Temporal Service](#optional-send-self-hosted-temporal-metrics).
+
+Each part works on its own. Set up the parts you need.
+
+## Prerequisites
+
+- [Create an Axiom account](https://app.axiom.co/register).
+- [Create a dataset in Axiom](/reference/datasets#create-dataset) for each kind of data you send:
+    - For traces, create an events dataset.
+    - For metrics, create a dataset and select **Metrics** as the dataset type. Metrics require their own dedicated dataset.
+- [Create an API token in Axiom](/reference/tokens) with permissions to ingest data to the datasets you have created.
+
+## Send traces from Temporal SDKs
+
+Temporal propagates trace context through workflow and activity headers, so a single trace connects the client call that starts a workflow, the workflow run, and each activity it executes. For more information, see the Temporal documentation for [TypeScript](https://docs.temporal.io/develop/typescript/platform/observability#tracing) and [Python](https://docs.temporal.io/develop/python/platform/observability#tracing).
+
+Axiom accepts OTLP over HTTP, so use an OTLP/HTTP trace exporter that encodes data as Protobuf. Send traces to `https://AXIOM_DOMAIN/v1/traces` with the `Authorization` and `X-Axiom-Dataset` headers.
+
+### TypeScript
+
+The TypeScript SDK traces workflows, activities, and client calls with the `OpenTelemetryPlugin` from the [`@temporalio/interceptors-opentelemetry-v2`](https://www.npmjs.com/package/@temporalio/interceptors-opentelemetry-v2) package. The plugin registers the tracing interceptors and the sinks that export spans from the workflow sandbox.
+
+<Note>
+`@temporalio/interceptors-opentelemetry-v2` is experimental and targets version 2 of the OpenTelemetry JavaScript SDK. Install OpenTelemetry packages from the 2.x line (`0.2xx` for the experimental packages), as shown below. Don’t mix them with OpenTelemetry JavaScript SDK version 3. If your app uses version 1 of the OpenTelemetry JavaScript SDK, use [`@temporalio/interceptors-opentelemetry`](https://www.npmjs.com/package/@temporalio/interceptors-opentelemetry) instead. The two packages produce incompatible workflow histories, so don’t switch packages while workflows that started with the other package are still running.
+</Note>
+
+1. Install the dependencies:
+
+    ```shell
+    npm install @temporalio/interceptors-opentelemetry-v2 \
+      @opentelemetry/sdk-node@^0.223 \
+      @opentelemetry/exporter-trace-otlp-proto@^0.223 \
+      @opentelemetry/sdk-trace-base@^2 \
+      @opentelemetry/resources@^2 \
+      @opentelemetry/semantic-conventions
+    ```
+
+1. Create an `instrumentation.ts` file that configures the OpenTelemetry SDK to export spans to Axiom:
+
+    ```ts instrumentation.ts
+    import { NodeSDK } from '@opentelemetry/sdk-node';
+    import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+    import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
+    import { resourceFromAttributes } from '@opentelemetry/resources';
+    import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+
+    // Identify the service in Axiom
+    export const resource = resourceFromAttributes({
+      [ATTR_SERVICE_NAME]: 'temporal-worker',
+    });
+
+    // Send spans to Axiom over OTLP/HTTP
+    export const spanProcessor = new BatchSpanProcessor(
+      new OTLPTraceExporter({
+        url: 'https://AXIOM_DOMAIN/v1/traces',
+        headers: {
+          Authorization: 'Bearer API_TOKEN',
+          'X-Axiom-Dataset': 'DATASET_NAME',
+        },
+      }),
+    );
+
+    export const otelSdk = new NodeSDK({
+      resource,
+      spanProcessors: [spanProcessor],
+    });
+
+    otelSdk.start();
+    ```
+
+    <Info>
+    <ReplaceDomain />
+    <ReplaceDatasetToken />
+    </Info>
+
+1. Add the plugin to your worker. Import `instrumentation.ts` before any other module, and shut down the OpenTelemetry SDK when the worker stops so it exports the remaining spans:
+
+    ```ts worker.ts
+    import { otelSdk, resource, spanProcessor } from './instrumentation';
+    import { NativeConnection, Worker } from '@temporalio/worker';
+    import { OpenTelemetryPlugin } from '@temporalio/interceptors-opentelemetry-v2';
+    import * as activities from './activities';
+
+    async function run() {
+      const connection = await NativeConnection.connect({ address: 'localhost:7233' });
+      const worker = await Worker.create({
+        connection,
+        taskQueue: 'example',
+        workflowsPath: require.resolve('./workflows'),
+        activities,
+        // Trace workflows and activities
+        plugins: [new OpenTelemetryPlugin({ resource, spanProcessor })],
+      });
+      try {
+        await worker.run();
+      } finally {
+        await otelSdk.shutdown();
+      }
+    }
+
+    run().catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+    ```
+
+    If you prebundle workflow code with `bundleWorkflowCode`, pass the same `plugins` array to `bundleWorkflowCode`. Otherwise, workflow code isn’t traced.
+
+1. Add the plugin to the client that starts workflows. The client span becomes the root of the trace:
+
+    ```ts client.ts
+    import { otelSdk, resource, spanProcessor } from './instrumentation';
+    import { Client, Connection } from '@temporalio/client';
+    import { OpenTelemetryPlugin } from '@temporalio/interceptors-opentelemetry-v2';
+    import { example } from './workflows';
+
+    async function run() {
+      const connection = await Connection.connect({ address: 'localhost:7233' });
+      const client = new Client({
+        connection,
+        // Trace client calls such as starting a workflow
+        plugins: [new OpenTelemetryPlugin({ resource, spanProcessor })],
+      });
+      const result = await client.workflow.execute(example, {
+        taskQueue: 'example',
+        workflowId: `example-${Date.now()}`,
+        args: ['Temporal'],
+      });
+      console.log(result);
+      await otelSdk.shutdown();
+    }
+
+    run().catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+    ```
+
+Replace the connection address with your Temporal Service or Temporal Cloud address, and add the TLS or API key options your deployment requires. For a complete example, see the Temporal [`interceptors-opentelemetry` sample](https://github.com/temporalio/samples-typescript/tree/main/interceptors-opentelemetry).
+
+### Python
+
+The Python SDK traces client calls, workflows, and activities with the [`TracingInterceptor`](https://python.temporal.io/temporalio.contrib.opentelemetry.TracingInterceptor.html) from `temporalio.contrib.opentelemetry`.
+
+1. Install the dependencies:
+
+    ```shell
+    pip install "temporalio[opentelemetry]" opentelemetry-exporter-otlp-proto-http
+    ```
+
+1. Configure a tracer provider that exports spans to Axiom:
+
+    ```py tracing.py
+    from opentelemetry import trace
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+
+    def init_tracing() -> TracerProvider:
+        # Identify the service in Axiom
+        provider = TracerProvider(
+            resource=Resource.create({"service.name": "temporal-worker"})
+        )
+        # Send spans to Axiom over OTLP/HTTP
+        provider.add_span_processor(
+            BatchSpanProcessor(
+                OTLPSpanExporter(
+                    endpoint="https://AXIOM_DOMAIN/v1/traces",
+                    headers={
+                        "Authorization": "Bearer API_TOKEN",
+                        "X-Axiom-Dataset": "DATASET_NAME",
+                    },
+                )
+            )
+        )
+        trace.set_tracer_provider(provider)
+        return provider
+    ```
+
+    <Info>
+    <ReplaceDomain />
+    <ReplaceDatasetToken />
+    </Info>
+
+1. Set the global tracer provider before you connect the client, and pass `TracingInterceptor` to `Client.connect`. Workers created from this client use the interceptor too:
+
+    ```py app.py
+    import asyncio
+    import uuid
+    from datetime import timedelta
+
+    from temporalio import activity, workflow
+    from temporalio.client import Client
+    from temporalio.contrib.opentelemetry import TracingInterceptor
+    from temporalio.worker import Worker
+
+    from tracing import init_tracing
+
+
+    @activity.defn
+    async def greet(name: str) -> str:
+        return f"Hello, {name}!"
+
+
+    @workflow.defn
+    class GreetingWorkflow:
+        @workflow.run
+        async def run(self, name: str) -> str:
+            return await workflow.execute_activity(
+                greet, name, start_to_close_timeout=timedelta(seconds=10)
+            )
+
+
+    async def main():
+        provider = init_tracing()
+        # Trace client calls, workflows, and activities
+        client = await Client.connect(
+            "localhost:7233", interceptors=[TracingInterceptor()]
+        )
+        async with Worker(
+            client,
+            task_queue="example",
+            workflows=[GreetingWorkflow],
+            activities=[greet],
+        ):
+            result = await client.execute_workflow(
+                GreetingWorkflow.run,
+                "Temporal",
+                id=f"example-{uuid.uuid4()}",
+                task_queue="example",
+            )
+            print(result)
+        # Export the remaining spans before the process exits
+        provider.shutdown()
+
+
+    if __name__ == "__main__":
+        asyncio.run(main())
+    ```
+
+`TracingInterceptor` creates workflow spans as completed spans with no duration, because an open span can’t survive workflow replay. For spans with real durations and support for the standard OpenTelemetry API inside workflow code, use the experimental [`OpenTelemetryPlugin`](https://docs.temporal.io/develop/python/platform/observability#trace-with-the-opentelemetry-plugin) instead. The exporter configuration stays the same. Create the provider with `temporalio.contrib.opentelemetry.create_tracer_provider()` instead of `TracerProvider()`, and pass `plugins=[OpenTelemetryPlugin(add_temporal_spans=True)]` to `Client.connect` instead of `interceptors`.
+
+### Explore Temporal traces in Axiom
+
+Each workflow execution produces one trace. Span names combine the operation and the workflow or activity name, for example `StartWorkflow:GreetingWorkflow`, `RunWorkflow:GreetingWorkflow`, `StartActivity:greet`, and `RunActivity:greet`.
+
+<Frame caption="Trace of a TypeScript workflow execution with Temporal attributes on the activity span">
+  <img
+    src="/docs/doc-assets/shots/temporal-trace-waterfall.png"
+    alt="Trace waterfall in Axiom showing StartWorkflow, RunWorkflow, StartActivity, and RunActivity spans from a Temporal worker"
+  />
+</Frame>
+
+To find slow activities, run the following query:
+
+```kusto
+['DATASET_NAME']
+| where name startswith 'RunActivity:'
+| summarize percentile(duration, 95), count() by name, bin_auto(_time)
+```
+
+For more information, see [Explore traces](/query-data/traces).
+
+## Send Temporal Cloud metrics
+
+Temporal Cloud exposes metrics about namespaces, workflows, activities, and task queues at `https://metrics.temporal.io/v1/metrics` in OpenMetrics format. Axiom ingests metrics over OTLP, so run an OpenTelemetry Collector that scrapes the endpoint and forwards the metrics to Axiom.
+
+<Note>
+The Prometheus receiver is part of the [contrib distribution](https://github.com/open-telemetry/opentelemetry-collector-releases) of the OpenTelemetry Collector (`otelcol-contrib`). It isn’t included in the core distribution.
+</Note>
+
+### Create a Temporal Cloud API key
+
+In Temporal Cloud, create a service account with the **Metrics Read-Only** account-level role, and then generate an API key for it. Only an Account Owner or Global Admin can grant this role. For more information, see the [Temporal Cloud OpenMetrics quickstart](https://docs.temporal.io/cloud/metrics/openmetrics#quickstart).
+
+Save the API key to a file that the Collector reads, for example `/etc/otelcol-contrib/temporal-cloud-api-key`. Replace `TEMPORAL_CLOUD_API_KEY` with the API key:
+
+```shell
+printf '%s' 'TEMPORAL_CLOUD_API_KEY' > /etc/otelcol-contrib/temporal-cloud-api-key
+chmod 600 /etc/otelcol-contrib/temporal-cloud-api-key
+```
+
+### Configure the OpenTelemetry Collector
+
+Add a Prometheus receiver that scrapes Temporal Cloud and an OTLP/HTTP exporter that sends data to Axiom:
+
+```yaml
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: temporal-cloud
+          scrape_interval: 60s
+          scrape_timeout: 30s
+          # Keep the timestamps of the aggregation windows that Temporal Cloud reports
+          honor_timestamps: true
+          scheme: https
+          metrics_path: /v1/metrics
+          authorization:
+            type: Bearer
+            credentials_file: /etc/otelcol-contrib/temporal-cloud-api-key
+          static_configs:
+            - targets: ["metrics.temporal.io"]
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  batch:
+    send_batch_max_size: 8192
+
+exporters:
+  otlphttp:
+    compression: zstd
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-metrics-dataset: METRICS_DATASET_NAME
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - prometheus
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlphttp
+```
+
+<Info>
+<ReplaceDomain />
+Replace `API_TOKEN` with the Axiom API token you have generated.
+
+Replace `METRICS_DATASET_NAME` with the name of the Axiom dataset of type **Metrics** where you send the Temporal metrics. For metrics, use the `x-axiom-metrics-dataset` header instead of `x-axiom-dataset`.
+</Info>
+
+Consider the following when you configure the scrape job:
+
+- Temporal Cloud aggregates metrics in one-minute windows, and each scrape returns only the most recently completed window. A 60-second scrape interval collects every window. Longer intervals skip windows.
+- Temporal Cloud returns metrics with a delay of about three minutes and timestamps each data point with its aggregation window. Keep `honor_timestamps: true` so Axiom stores the data points at the time they describe.
+- Temporal Cloud rate-limits the endpoint per Temporal Cloud account. Run one scrape job per account rather than one per Collector replica. For the current limits, see the [Temporal Cloud OpenMetrics API reference](https://docs.temporal.io/cloud/metrics/openmetrics/api-reference#rate-limiting).
+- To reduce the volume of data, filter by namespace or metric with query parameters. For example, add `params: { namespaces: ["production-*"] }` to the scrape job. For all query parameters and opt-in labels, see the [Temporal Cloud OpenMetrics API reference](https://docs.temporal.io/cloud/metrics/openmetrics/api-reference#get-metrics).
+
+### Query Temporal Cloud metrics
+
+Temporal Cloud exposes all metrics as gauges, but they measure different things. Rate metrics, such as `temporal_cloud_v1_workflow_success_count`, are per-second rates averaged over each one-minute window. Value metrics, such as `temporal_cloud_v1_approximate_backlog_count`, are current values. Metrics ending in `_p50`, `_p95`, or `_p99` are precomputed latency percentiles in seconds. Every metric carries the `temporal_namespace`, `temporal_account`, and `region` tags. For the full list, see the [Temporal Cloud metrics reference](https://docs.temporal.io/cloud/metrics/openmetrics/metrics-reference).
+
+To chart successful workflows per second by namespace, run the following query:
+
+```mpl
+`METRICS_DATASET_NAME`:`temporal_cloud_v1_workflow_success_count`
+| align to $__interval using avg
+| group by `temporal_namespace` using sum
+```
+
+To chart the task queue backlog, run the following query:
+
+```mpl
+`METRICS_DATASET_NAME`:`temporal_cloud_v1_approximate_backlog_count`
+| align to $__interval using last
+| group by `temporal_namespace`, `temporal_task_queue` using sum
+```
+
+For more information, see [Metrics](/query-data/metrics).
+
+## Optional: Send self-hosted Temporal metrics
+
+A self-hosted Temporal Service exposes its own metrics in Prometheus format when you set `global.metrics.prometheus.listenAddress` in its configuration. For the development server, start it with the `--metrics-port` flag, for example `temporal server start-dev --metrics-port 8000`. For more information, see [Temporal Service configuration](https://docs.temporal.io/references/service-configuration#prometheus) and [Monitor Temporal Platform metrics](https://docs.temporal.io/self-hosted-guide/monitoring).
+
+To send these metrics to Axiom, add a scrape job to the Prometheus receiver of the Collector configuration above:
+
+```yaml
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: temporal-server
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["temporal:8000"] # host:port of the Temporal Service metrics endpoint
+```
+
+If you only run a self-hosted Temporal Service, remove the `temporal-cloud` job. For the metrics that the Temporal Service emits, see the [Temporal Service metrics reference](https://docs.temporal.io/references/service-metrics).
+
+Temporal SDKs can also expose worker metrics on a Prometheus endpoint. To send them to Axiom, add the endpoint as another scrape target. For more information, see [SDK metrics](https://docs.temporal.io/references/sdk-metrics).
