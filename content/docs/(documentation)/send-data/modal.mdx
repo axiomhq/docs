@@ -160,32 +160,28 @@ Alternatively, create the Secret in the [Modal dashboard](https://modal.com/secr
 </Step>
 <Step title="Configure the Modal integration">
 
-1. In Modal, go to the [metrics settings page](https://modal.com/settings/metrics).
-1. In the OpenTelemetry push URL, enter the base URL of the Collector, for example `https://otel.example.com:4318`. Don’t add a signal path such as `/v1/logs`. Modal adds the path for each signal.
-1. Select the `modal-otel-collector` Secret.
-1. Save your changes, and then use the test button.
+1. In Modal, go to the [metrics integrations settings page](https://modal.com/settings/metrics).
+1. In the **OpenTelemetry (OTEL) integration** section, turn on **Enable OTEL integration**.
+1. In **Push URL**, enter the base URL of the Collector, for example `https://otel.example.com:4318`. Don’t add a signal path such as `/v1/logs`. Modal adds the path for each signal.
+1. In **Credentials secret**, select the `modal-otel-collector` Secret. The list only shows Secrets that contain `OTEL_HEADER_` keys.
+1. Click **Connect**.
+1. In the **Test connection** section, click **Send test**.
 
-In Axiom, the logs dataset receives a `Hello from Modal! 🚀` log from the `modal.test_logs` service. After your Modal Functions run, the logs dataset receives Function logs and audit logs, and the metrics dataset receives container metrics such as `modal.gpu.compute.utilization` and `modal.input_events.coldstart_time_us`. For the full list of metrics and their tags, see the [Modal documentation](https://modal.com/docs/guide/otel-integration#metrics).
+In Axiom, the logs dataset receives a `Hello from Modal! 🚀` log from the `modal.test_logs` service.
+
+After your Modal Functions run, Axiom receives the following:
+
+- The logs dataset receives Function logs from the `modal.function-logs` service, with attributes such as `app_name`, `function_name`, and `container_id`. If your Modal plan includes audit logs, the logs dataset receives them too.
+- The metrics dataset receives container and Function metrics such as `modal.cpu.utilization`, `modal.memory.usage`, and `modal.input_events.coldstart_time_us`, tagged with `app_name`, `function_name`, and other tags. GPU Functions also send GPU metrics such as `modal.gpu.compute.utilization`.
+
+For the full list of metrics and their tags, see the [Modal documentation](https://modal.com/docs/guide/otel-integration#metrics).
 
 </Step>
 </Steps>
 
-### Send only logs
+### Choose which signals to send
 
-The Modal integration has no setting that turns off metrics export. To keep logs and discard metrics, send the metrics pipeline to the `nop` exporter. The Collector then accepts metrics from Modal and doesn’t forward them to Axiom.
-
-```yaml
-exporters:
-  nop:
-  # Keep the otlphttp/axiom-logs and otlphttp/axiom-traces exporters
-
-service:
-  pipelines:
-    metrics:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [nop]
-```
+By default, the Modal integration forwards all signals. To send only some of them, for example only logs, go to the **Telemetry signals** section of the metrics integrations settings page, turn off **Forward all signals**, and then select the signals to send.
 
 ## Send traces from Modal Functions
 
@@ -298,7 +294,7 @@ def main():
 <Info>
 Replace `MODEL_NAME` with the name of the model, and `PROVIDER_NAME` with the provider or serving framework of the model.
 
-Replace `load_model` and `run_model` with your own code. Change `gpu="H100"` to the GPU type your model needs.
+Replace `load_model` and `run_model` with your own code. Change `gpu="H100"` to the GPU type your model needs. Modal only runs GPU Functions in workspaces that have a payment method.
 </Info>
 
 The example uses the following Modal features:
