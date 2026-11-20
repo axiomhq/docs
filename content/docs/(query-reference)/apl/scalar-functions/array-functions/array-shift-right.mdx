@@ -3,30 +3,29 @@ title: array_shift_right
 description: 'This page explains how to use the array_shift_right function in APL.'
 ---
 
-The `array_shift_right` function in Axiom Processing Language (APL) shifts the elements of an array one position to the right. The last element of the array wraps around and becomes the first element. You can use this function to reorder elements, manage time-series data in circular arrays, or preprocess arrays for specific analytical needs.
+The `array_shift_right` function in Axiom Processing Language (APL) shifts the elements of an array to the right by a specified number of positions. Vacated positions on the left are filled with `null` or an optional `default_value` (elements do not wrap around; to rotate elements, use [`array_rotate_right`](/apl/scalar-functions/array-functions/array-rotate-right)).
 
-### When to use the function
-- To manage and rotate data within arrays.
-- To implement cyclic operations or transformations.
-- To manipulate array data structures in log analysis or telemetry contexts.
+For example, `array_shift_right(dynamic([1, 2, 3, 4, 5]), 2, -1)` returns `[-1, -1, 1, 2, 3]`.
 
 ## Usage
 
 ### Syntax
 
 ```kusto
-array_shift_right(array: array) : array
+array_shift_right(array, shift_count [, default_value])
 ```
 
 ### Parameters
 
-| Parameter | Type   | Description                                |
-|-----------|--------|--------------------------------------------|
-| `array`   | array  | The input array whose elements are shifted |
+| Parameter       | Type    | Description                                                                        |
+|-----------------|---------|------------------------------------------------------------------------------------|
+| `array`         | dynamic | The input array whose elements are shifted.                                        |
+| `shift_count`   | int     | The number of positions to shift elements to the right.                            |
+| `default_value` | scalar  | (Optional) The value used to fill vacated positions. Defaults to `null`.           |
 
 ### Returns
 
-An array with its elements shifted one position to the right. The last element of the input array wraps around to the first position.
+An array of the same length with elements shifted to the right by `shift_count` and vacated slots filled with `default_value` (or `null`).
 
 ## Use case example
 
@@ -80,29 +79,29 @@ Reorganize span events in telemetry data for visualization or debugging.
 ]
 ```
 
-The query rotates span events for better trace debugging.
+The query shifts span events one position to the right and fills the first position with `null`.
 
 ## List of related functions
 
 - [array_rotate_right](/apl/scalar-functions/array-functions/array-rotate-right): Rotates array elements to the right by a specified number of positions.
 - [array_rotate_left](/apl/scalar-functions/array-functions/array-rotate-left): Rotates elements of an array to the left.
-- [array_shift_left](/apl/scalar-functions/array-functions/array-shift-left): Shifts array elements one position to the left, moving the first element to the last position.
+- [array_shift_left](/apl/scalar-functions/array-functions/array-shift-left): Shifts array elements to the left, filling vacated positions with `null` or a default value.
 
 ## Other query languages
 
 <LanguageComparisons>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, similar functionality might be achieved using custom code to rotate array elements, as there is no direct equivalent to `array_shift_right`. APL provides this functionality natively, making it easier to work with arrays directly.
+In Splunk SPL, there is no direct equivalent to `array_shift_right`. APL provides `array_shift_right` natively.
 
 <CodeGroup>
 ```sql Splunk example
-| eval shifted_array=mvappend(mvindex(array,-1),mvindex(array,0,len(array)-1))
+| eval shifted_array=mvappend(null(), mvindex(array, 0, len(array)-2))
 ```
 
 ```kusto APL equivalent
 ['dataset.name']
-| extend shifted_array = array_shift_right(array)
+| extend shifted_array = array_shift_right(array, 1)
 ```
 </CodeGroup>
 
@@ -113,19 +112,13 @@ ANSI SQL doesn’t have a built-in function for shifting arrays. In SQL, achievi
 
 <CodeGroup>
 ```sql SQL example
-WITH shifted AS (
-  SELECT
-    array_column[ARRAY_LENGTH(array_column)] AS first_element,
-    array_column[1:ARRAY_LENGTH(array_column)-1] AS rest_of_elements
-  FROM table
-)
-SELECT ARRAY_APPEND(first_element, rest_of_elements) AS shifted_array
-FROM shifted
+-- Pseudo code in SQL
+SELECT ARRAY_SHIFT_RIGHT(array_column, 1)
 ```
 
 ```kusto APL equivalent
 ['dataset.name']
-| extend shifted_array = array_shift_right(array)
+| extend shifted_array = array_shift_right(array, 1)
 ```
 </CodeGroup>
 

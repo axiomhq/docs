@@ -3,31 +3,29 @@ title: array_shift_left
 description: 'This page explains how to use the array_shift_left function in APL.'
 ---
 
-The `array_shift_left` function in APL rotates the elements of an array to the left by a specified number of positions. If the shift exceeds the array length, it wraps around and continues from the beginning. This function is useful when you need to realign or reorder elements for pattern analysis, comparisons, or other array transformations.
+The `array_shift_left` function in APL shifts the elements of an array to the left by a specified number of positions. Vacated positions on the right are filled with `null` or an optional `default_value` (elements do not wrap around; to rotate elements, use [`array_rotate_left`](/apl/scalar-functions/array-functions/array-rotate-left)).
 
-For example, you can use `array_shift_left` to:
-- Align time-series data for comparative analysis.
-- Rotate log entries for cyclic pattern detection.
-- Reorganize multi-dimensional datasets in your queries.
+For example, `array_shift_left(dynamic([1, 2, 3, 4, 5]), 2)` returns `[3, 4, 5, null, null]`.
 
 ## Usage
 
 ### Syntax
 
 ```kusto
-['array_shift_left'](array, shift_amount)
+array_shift_left(array, shift_count [, default_value])
 ```
 
 ### Parameters
 
-| Parameter     | Type   | Description                                                         |
-|---------------|--------|---------------------------------------------------------------------|
-| `array`       | Array  | The array to shift.                                                |
-| `shift_amount`| Integer| The number of positions to shift elements to the left.             |
+| Parameter       | Type    | Description                                                                        |
+|-----------------|---------|------------------------------------------------------------------------------------|
+| `array`         | dynamic | The array to shift.                                                                |
+| `shift_count`   | int     | The number of positions to shift elements to the left.                             |
+| `default_value` | scalar  | (Optional) The value used to fill vacated positions. Defaults to `null`.           |
 
 ### Returns
 
-An array with elements shifted to the left by the specified `shift_amount`. The function wraps the excess elements to the start of the array.
+An array of the same length with elements shifted to the left by `shift_count` and vacated slots filled with `default_value` (or `null`).
 
 ## Use case example
 
@@ -97,12 +95,14 @@ This query shifts span events for `frontend` services to analyze the adjusted se
 In Splunk SPL, there is no direct equivalent to `array_shift_left`, but you can achieve similar results using custom code or by manipulating arrays manually. In APL, `array_shift_left` simplifies this operation by providing a built-in, efficient implementation.
 
 <CodeGroup>
-```sql Splunk example
-| eval rotated_array = mvindex(array, 1) . mvindex(array, 0)
+```splunk Splunk example
+| makeresults
+| eval array = split("a,b,c", ",")
+| eval shifted_array = mvappend(mvindex(array, 1, -1), "unknown")
 ```
 
 ```kusto APL equivalent
-['array_shift_left'](array, 1)
+print shifted_array = array_shift_left(dynamic(["a", "b", "c"]), 1, "unknown")
 ```
 </CodeGroup>
 
@@ -118,7 +118,7 @@ SELECT ARRAY_SHIFT_LEFT(array_column, shift_amount)
 ```
 
 ```kusto APL equivalent
-['array_shift_left'](array_column, shift_amount)
+array_shift_left(array_column, shift_count)
 ```
 </CodeGroup>
 

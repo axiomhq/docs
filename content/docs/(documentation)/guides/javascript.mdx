@@ -51,25 +51,17 @@ In your terminal, go to the root folder of your JavaScript app and run the follo
     npm install @axiomhq/js
     ```
 
-### Configure environment variables
+### Configure authentication
 
-Configure the environment variables in one of the following ways:
-- Export the API token as `AXIOM_TOKEN`.
-- Pass the API token to the constructor of the client:
+Pass `token` to the `Axiom` constructor. `@axiomhq/js` doesn’t read environment variables automatically. To keep the token out of your source code, export `AXIOM_TOKEN` (for example, with `eval $(axiom config export -f)` using the [Axiom CLI](/reference/cli)) and pass `token: process.env.AXIOM_TOKEN`:
 
-    ```ts
-    import { Axiom } from '@axiomhq/js';
+```ts
+import { Axiom } from '@axiomhq/js';
 
-    const axiom = new Axiom({
-      token: process.env.AXIOM_TOKEN,
-    });
-    ```
-
-- Install the [Axiom CLI](/reference/cli), and then run the following command:
-
-    ```sh
-    eval $(axiom config export -f)
-    ```
+const axiom = new Axiom({
+  token: process.env.AXIOM_TOKEN,
+});
+```
 
 ### Configure region
 
@@ -108,19 +100,23 @@ Always use the `edge` option to target a region. Don't put a regional hostname i
 </Warning>
 
 <Note>
-Edge endpoints require an API token (`xaat-`). Personal tokens (`xapt-`) are deprecated and aren't supported for edge routing.
+Edge ingestion requires an API token (`xaat-`). Edge queries also accept a personal token (`xapt-`) with `orgId`. Personal tokens are deprecated.
 </Note>
 
 ### Client options
 
-| Option    | Required | Description                                                                                                            |
-| --------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
-| `token`   | yes      | An [Axiom API token](/reference/tokens) with permissions for the operations you use.                                  |
-| `orgId`   | no       | Organization ID. Required when using a personal token.                                                                |
-| `edge`    | no       | Edge domain for ingest and query, without scheme. Example: `eu-central-1.aws.edge.axiom.co`. Use this to target a region. |
-| `edgeUrl` | no       | Full edge URL with scheme. Takes precedence over `edge` if both are set. Useful for self-hosted or proxy setups.       |
-| `url`     | no       | Base URL for non-ingest API operations. Only needed if you call other Axiom APIs from the same client.                |
-| `onError` | no       | Callback invoked when sending data fails. Defaults to `console.error`.                                                |
+| Option        | Required | Description                                                                                                            |
+| ------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| `token`       | yes      | An [Axiom API token](/reference/tokens) with permissions for the operations you use.                                  |
+| `orgId`       | no       | Organization ID. Required when using a personal token.                                                                |
+| `edge`        | no       | Edge domain for ingest and query, without scheme. Example: `eu-central-1.aws.edge.axiom.co`. Use this to target a region. |
+| `edgeUrl`     | no       | Full edge URL with scheme. Takes precedence over `edge` if both are set. Useful for self-hosted or proxy setups.       |
+| `url`         | no       | Base URL for non-ingest API operations. Only needed if you call other Axiom APIs from the same client.                |
+| `onError`     | no       | Callback invoked when sending data fails. Defaults to `console.error`.                                                |
+| `fetch`       | no       | Custom `fetch` implementation used for all HTTP requests. Useful for routing through a proxy such as `undici.ProxyAgent`. |
+| `axiomClient` | no       | Additional space-separated product/version tokens appended to the `X-Axiom-Client` header.                            |
+
+The client also exposes service namespaces for Axiom resources: `datasets` (including metrics metadata), `dashboards`, `savedQueries`, and `users` for read operations, `monitors` for full CRUD operations, and `annotations`.
 
 ### Send data to Axiom
 
@@ -143,12 +139,16 @@ The following example queries data from Axiom:
 
 ```ts
 const res = await axiom.query(`['DATASET_NAME'] | where foo == 'bar' | limit 100`);
-console.log(res);
+for (const event of res.tables[0]?.events() ?? []) {
+  console.log(event);
+}
 ```
 
 <Info>
 <ReplaceDataset />
 </Info>
+
+Starting in `@axiomhq/js` 2.0.0, APL queries return tabular results by default. Iterate rows with `res.tables[0].events()`, or pass `{ format: 'legacy' }` as the second argument to `axiom.query` for the previous response shape.
 
 For more examples, see the [examples in GitHub](https://github.com/axiomhq/axiom-js/tree/main/examples).
 
@@ -270,7 +270,7 @@ The `@axiomhq/logging` library includes the following transports:
     });
     ```
 
-- `ProxyTransport`: Sends logs the [proxy server function](/send-data/nextjs#proxy-for-client-side-usage) that acts as a proxy between your app and Axiom. It’s particularly useful when your app runs on top of a server-enabled framework like Next.js or Remix.
+- `ProxyTransport`: Sends logs to the [proxy server function](/send-data/nextjs#proxy-for-client-side-usage) that acts as a proxy between your app and Axiom. It’s particularly useful when your app runs on top of a server-enabled framework like Next.js or Remix.
 
     ```ts
     import { ProxyTransport } from "@axiomhq/logging";
@@ -279,6 +279,19 @@ The `@axiomhq/logging` library includes the following transports:
       url: "/proxy",
       logLevel: "warn",
       autoFlush: { durationMs: 1000 },
+    });
+    ```
+
+- `SimpleFetchTransport`: Sends batched JSON log payloads to any HTTP endpoint using `fetch`. It holds up to 1,000 queued events and retries on HTTP `429` and `5xx` responses.
+
+    ```ts
+    import { SimpleFetchTransport } from "@axiomhq/logging";
+
+    const transport = new SimpleFetchTransport({
+      input: "https://example.com/logs",
+      init: { method: "POST", headers: { "Content-Type": "application/json" } },
+      autoFlush: { durationMs: 1000 },
+      logLevel: "info",
     });
     ```
 
@@ -303,16 +316,19 @@ class MyTransport implements Transport {
 The `@axiomhq/logging` library includes the following logging levels:
 
 - `debug`: Debug-level logs.
-- `info`: Informational logs.
+- `info`: Informational logs. Default for `logLevel`.
 - `warn`: Warning logs.
 - `error`: Error logs.
+- `off`: Disables logging.
+
+Set `logLevel` on `new Logger({ transports: [...], logLevel: 'warn' })` to filter logs before they reach transports.
 
 #### Formatters
 
-Formatters are used to change the content of a log before sending it to a transport. For example:
+Formatters change the content of a log before sending it to a transport. Set `overrideDefaultFormatters: true` on the `Logger` config to replace the built-in formatters instead of running after them. For example:
 
 ```ts
-import { Logger, LogEvent } from "@axiomhq/logging";
+import { ConsoleTransport, Logger, LogEvent } from "@axiomhq/logging";
 
 const myCustomFormatter = (event: LogEvent) => {
   const upperCaseKeys = {
@@ -326,10 +342,30 @@ const myCustomFormatter = (event: LogEvent) => {
 };
 
 const logger = new Logger({
+  transports: [new ConsoleTransport()],
   formatters: [myCustomFormatter],
 });
 
 logger.info("Hello, world!");
+```
+
+#### Schema validation
+
+Validate structured log fields with any [Standard Schema](https://standardschema.dev/) library (such as Zod, Valibot, or ArkType) using `schema`, `outputSchema`, and `onValidationError` in `Logger`:
+
+```ts
+import { ConsoleTransport, Logger } from "@axiomhq/logging";
+import { z } from "zod";
+
+const logger = new Logger({
+  transports: [new ConsoleTransport()],
+  schema: z.object({ userId: z.string() }),
+  onValidationError: (context) => {
+    console.error("Invalid log fields:", context.reason, context.issues);
+  },
+});
+
+logger.info("User signed in", { userId: "user_123" });
 ```
 
 ## Related logging options
@@ -339,6 +375,7 @@ logger.info("Hello, world!");
 To send data to Axiom from JavaScript libraries and frameworks, see the following:
 - [Send data from React app](/send-data/react)
 - [Send data from Next.js app](/send-data/nextjs)
+- [TanStack Start integration](https://www.npmjs.com/package/@axiomhq/tanstack-start)
 
 ### Send data from Node.js
 

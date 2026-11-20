@@ -1,0 +1,74 @@
+---
+title: 'Let statement'
+description: 'This page explains how to bind variables, tabular expressions, and user-defined functions with the let statement in APL.'
+---
+
+The `let` statement binds a name to a scalar expression, a tabular expression, or a user-defined function for the remainder of the query. Terminate each `let` statement with a semicolon (`;`).
+
+## Syntax
+
+```kusto
+// Scalar variable
+let Name = ScalarExpression;
+
+// Tabular expression
+let Name = TabularExpression;
+
+// User-defined function
+let Name = (Param1: Type1 [= Default1], Param2: Type2 [= Default2], ...) { Body };
+```
+
+## Scalar variables
+
+Bind constants or computed expressions to reuse across filters and projections.
+
+**Query**
+
+```kusto
+let threshold = 500;
+let service = 'frontend';
+['sample-http-logs']
+| where req_duration_ms > threshold
+| extend target = service
+| project _time, target, req_duration_ms
+```
+
+## Tabular expressions
+
+Bind a query or inline `datatable` to reuse in `join`, `lookup`, or `union` operations.
+
+**Query**
+
+```kusto
+let regions = datatable(code: string, city: string)[
+    'US', 'New York',
+    'DE', 'Berlin'
+];
+['sample-http-logs']
+| lookup regions on $left.['geo.country'] == $right.code
+```
+
+## User-defined functions
+
+Define reusable scalar functions with typed parameters and optional default values. Functions can reference scalar variables declared earlier in the query.
+
+**Query**
+
+```kusto
+let add_offset = (x: long, offset: long = 7) { x + offset };
+datatable(n: long)[1, 2, 3]
+| extend shifted = add_offset(n), custom = add_offset(n, 10)
+```
+
+**Output**
+
+| n | shifted | custom |
+| --- | --- | --- |
+| 1 | 8 | 11 |
+| 2 | 9 | 12 |
+| 3 | 10 | 13 |
+
+## Related statements
+
+- [**Set statement**](/apl/query-statement/set-statement): Sets query options for the duration of a query.
+- [**Declare query_parameters**](/apl/query-statement/declare-query-parameters): Declares typed parameters with defaults for parameterized queries.

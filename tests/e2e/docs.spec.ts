@@ -1107,7 +1107,8 @@ test('pages without a table of contents center in the available main area', asyn
 
 test('table-only query overview uses the full article width without page overflow', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/docs/apl/tabular-operators/overview');
+  // Use an overview without section headings to exercise the layout without a TOC.
+  await page.goto('/docs/apl/aggregation-function/statistical-functions');
 
   const article = page.locator('.doc-article');
   const articleContent = page.locator('.article-content');

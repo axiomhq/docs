@@ -168,24 +168,32 @@ Update the `pom.xml` file in the root of your project directory with the followi
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
-    <opentelemetry.version>1.18.0</opentelemetry.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-bom</artifactId>
+        <version>1.51.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-api</artifactId>
-      <version>${opentelemetry.version}</version>
     </dependency>
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-sdk</artifactId>
-      <version>${opentelemetry.version}</version>
     </dependency>
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-exporter-otlp</artifactId>
-      <version>${opentelemetry.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -273,12 +281,12 @@ The app executes the `rollDice()` and `rollDiceWithLink()` methods, generates te
 
 As the app runs, it sends traces to Axiom. To view the traces:
 
-1. In Axiom, click the **Stream** tab.
+1. In Axiom, click **Stream** in the sidebar.
 1. Click your dataset.
 
 Axiom provides a dynamic dashboard for visualizing and analyzing your OpenTelemetry traces. This dashboard offers insights into the performance and behavior of your app. To view the dashboard:
 
-1. In Axiom, click the **Dashboards** tab.
+1. In Axiom, click **Dashboards** in the sidebar.
 1. Look for the OpenTelemetry traces dashboard or create a new one.
 1. Customize the dashboard to show the event data and visualizations most relevant to the app.
 
@@ -340,6 +348,7 @@ import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import java.util.Random;
 
 public class DiceRollerApp {
     private static final Tracer tracer;
@@ -350,8 +359,11 @@ public class DiceRollerApp {
     }
 
     public static void main(String[] args) {
-        try (Scope scope = tracer.spanBuilder("Main").startScopedSpan()) {
+        Span span = tracer.spanBuilder("Main").startSpan();
+        try (Scope scope = span.makeCurrent()) {
             rollDice();
+        } finally {
+            span.end();
         }
     }
 
@@ -425,42 +437,42 @@ Ensure all necessary OpenTelemetry libraries are included in your Maven `pom.xml
     <dependency>
         <groupId>io.opentelemetry</groupId>
         <artifactId>opentelemetry-api</artifactId>
-        <version>{opentelemetry_version}</version>
     </dependency>
     <dependency>
         <groupId>io.opentelemetry</groupId>
         <artifactId>opentelemetry-sdk</artifactId>
-        <version>{opentelemetry_version}</version>
     </dependency>
     <dependency>
         <groupId>io.opentelemetry.instrumentation</groupId>
-        <artifactId>opentelemetry-instrumentation-httpclient</artifactId>
-        <version>{instrumentation_version}</version>
+        <artifactId>opentelemetry-java-http-client</artifactId>
+        <version>2.16.0-alpha</version>
     </dependency>
 </dependencies>
 ```
 
-Dependencies include the OpenTelemetry SDK and instrumentation libraries that automatically capture data from common Java libraries.
+Dependencies include the OpenTelemetry SDK (managed by `opentelemetry-bom`) and instrumentation libraries that capture telemetry from common Java libraries.
 </Step>
 <Step title="Auto-instrument the app">
-Implement an initialization class to configure the OpenTelemetry SDK along with auto-instrumentation for frameworks used by the app.
+Implement an initialization class to wrap `java.net.http.HttpClient` with OpenTelemetry instrumentation.
 
 ```java
 // AutoInstrumentationSetup.java
 package com.example;
 
-import io.opentelemetry.instrumentation.httpclient.HttpClientInstrumentation;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.instrumentation.javahttpclient.JavaHttpClientTelemetry;
+import java.net.http.HttpClient;
 
 public class AutoInstrumentationSetup {
-    public static void setup() {
+    public static HttpClient createHttpClient() {
         OpenTelemetry openTelemetry = OtelConfiguration.initializeOpenTelemetry();
-        HttpClientInstrumentation.instrument(openTelemetry);
+        return JavaHttpClientTelemetry.create(openTelemetry)
+                .newHttpClient(HttpClient.newHttpClient());
     }
 }
 ```
 
-Auto-instrumentation is initialized early in the app lifecycle to ensure all relevant activities are automatically captured.
+Use the returned `HttpClient` for outbound HTTP calls so requests are automatically traced.
 </Step>
 <Step title="Integrate and run">
 
@@ -468,10 +480,12 @@ Auto-instrumentation is initialized early in the app lifecycle to ensure all rel
     // Main.java
     package com.example;
 
+    import java.net.http.HttpClient;
+
     public class Main {
         public static void main(String[] args) {
-            AutoInstrumentationSetup.setup();  // Initialize OpenTelemetry auto-instrumentation
-            DiceRollerApp.main(args);          // Start the application logic
+            HttpClient client = AutoInstrumentationSetup.createHttpClient();
+            DiceRollerApp.main(args); // Start the application logic
         }
     }
     ```
@@ -532,3 +546,7 @@ This package is part of the OpenTelemetry SDK and focuses specifically on tracin
 `io.opentelemetry:opentelemetry-sdk-common`
 
 This package provides common capability used across different parts of the OpenTelemetry SDK. It includes utilities for working with attributes, resources, and other shared concepts in OpenTelemetry. This package helps ensure consistency across the SDK and simplifies the implementation of cross-cutting concerns in telemetry data collection and processing.
+
+## Send logs and metrics
+
+To also export OpenTelemetry logs (`/v1/logs`) and metrics (`/v1/metrics`), or to configure per-signal dataset headers and dataset-in-path endpoints, see [Send OpenTelemetry data to Axiom](/send-data/opentelemetry).

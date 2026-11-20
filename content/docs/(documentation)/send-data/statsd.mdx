@@ -81,9 +81,32 @@ The StatsD receiver maps StatsD metric types to OpenTelemetry metric types:
 |:---|:---|
 | Counter (`c`) | Sum |
 | Gauge (`g`) | Gauge |
-| Timer (`ms`), histogram (`h`), distribution (`d`) | Configurable with the receiver’s [`timer_histogram_mapping`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/statsdreceiver) option: `histogram`, `summary`, or `gauge` |
+| Timer (`ms`), histogram (`h`), distribution (`d`) | Configurable with the receiver’s [`timer_histogram_mapping`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/statsdreceiver) option: `gauge`, `summary`, or `histogram` |
 
-Axiom supports all of these resulting types. For the full list of supported OTel metric types and current limitations, see [Supported data types](/query-data/metrics#supported-data-types).
+- `observer_type: "gauge"` and `observer_type: "summary"` work directly with Axiom.
+- `observer_type: "histogram"` emits OpenTelemetry **exponential histograms** by default. Axiom doesn’t support exponential histograms and rejects those data points. To emit explicit-bucket histograms that Axiom accepts, configure `histogram.explicit_buckets` with a `matcher_pattern` and `buckets` list that matches your metric names.
+
+The following receiver example maps timers to explicit-bucket histograms, histograms to summaries, and distributions to gauges:
+
+```yaml
+receivers:
+  statsd:
+    endpoint: 0.0.0.0:8125
+    aggregation_interval: 60s
+    timer_histogram_mapping:
+      - statsd_type: "timing"
+        observer_type: "histogram"
+        histogram:
+          explicit_buckets:
+            - matcher_pattern: ".*"
+              buckets: [5, 10, 25, 50, 100, 250, 500, 1000]
+      - statsd_type: "histogram"
+        observer_type: "summary"
+      - statsd_type: "distribution"
+        observer_type: "gauge"
+```
+
+For the full list of supported OTel metric types and current limitations, see [Supported data types](/query-data/metrics#supported-data-types).
 
 ## Query your metrics
 
