@@ -36,7 +36,7 @@ export function GET() {
   const lines = [
     '# Axiom documentation',
     '',
-    '> Axiom is a data platform for ingesting, storing, and querying logs, traces, and other event data. This documentation covers the Axiom Console, sending data, the Axiom Processing Language (APL), and the REST API.',
+    '> Axiom is a data platform for ingesting, storing, and querying logs, traces, metrics, and events. This documentation covers the Axiom Console, sending data, Axiom Processing Language (APL) for logs, traces, and events, Metrics Processing Language (MPL) for metrics, and the REST API.',
     '',
     `Every page below is served as plain Markdown at the linked \`.md\` URL. The entire corpus in one file: [llms-full.txt](${ORIGIN}/docs/llms-full.txt). A standalone APL language reference: [llms-apl.md](${ORIGIN}/docs/llms-apl.md). An agent-ready Axiom MCP Server setup prompt: [setup-prompt.md](${MCP_SETUP_PROMPT_URL}).`,
     '',
