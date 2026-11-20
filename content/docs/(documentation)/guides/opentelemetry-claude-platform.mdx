@@ -62,7 +62,7 @@ The content mode determines whether spans include prompts and responses:
 - **Metadata only** is the default. Spans include identifiers, timing, status, and token counts, but no prompts or responses.
 - **Full content** adds the system prompt, the input and output messages, and tool arguments and results. Use it to read full conversations in Axiom’s [Conversation view](/query-data/traces#choose-a-trace-view). Axiom stores this content under the retention and access settings of your dataset.
 
-If you select **Full content**, keep **Maximum content size in MB** under **Advanced settings** at 0.75 MB or lower. This keeps the content of each span below the [maximum field size](/reference/limits) of 1 MB in Axiom. Don’t leave the field empty because Claude then sends as much content as the API allows. For more information, see [Content limits](https://platform.claude.com/docs/en/manage-claude/opentelemetry#content-limits).
+If you select **Full content**, keep **Maximum content size in MB** under **Advanced settings** at 0.75 MB or lower. This keeps the content of each span below the [maximum field size](/reference/limits) of 1 MB in Axiom. If a message is larger, Axiom keeps the span but replaces the oversized text with `<invalid string: too long>`. Don’t leave the field empty because Claude then sends as much content as the API allows. For more information, see [Content limits](https://platform.claude.com/docs/en/manage-claude/opentelemetry#content-limits).
 
 ## Verify the integration
 
@@ -100,6 +100,8 @@ To build your own token usage queries, count each token once. Claude adds token 
     by bin_auto(_time), model = tostring(['attributes.gen_ai.response.model'])
 ```
 
+Attributes that aren’t part of the OpenTelemetry semantic conventions are in the `attributes.custom` map field. These include the Claude attributes that start with `anthropic.`, such as the workspace ID and the Managed Agents session ID, and the prompt cache token counts. For example, to filter by Claude workspace, use `['attributes.custom']['anthropic.workspace.id']`. For more information, see [Map fields](/apl/data-types/map-fields).
+
 For Managed Agents sessions and compactions, different spans hold the token usage. For more information, see [Counting tokens](https://platform.claude.com/docs/en/manage-claude/opentelemetry#count-tokens).
 
 Claude delivers spans at least once, so a span can arrive more than once. To remove duplicates, use the trace ID and the span ID.
@@ -117,11 +119,10 @@ If the **Delivery** column shows **Failing**, hover over it to see the last erro
 | Error | Likely cause in Axiom |
 | :--- | :--- |
 | HTTP error (status 401) or HTTP error (status 403) | The API token is wrong, or it doesn’t have permission to ingest data to the dataset. Check that the `Authorization` header value starts with `Bearer `. |
-| HTTP error (status 404) | The OTLP endpoint URL has a path. Enter `https://AXIOM_DOMAIN` without `/v1/traces`. |
-| HTTP error (status 413) | The request exceeds the [maximum request size](/reference/limits) in Axiom. Lower **Maximum content size in MB**. |
+| HTTP error (status 404) | The OTLP endpoint URL has a path, or the `X-Axiom-Dataset` header names a dataset that doesn’t exist. Enter `https://AXIOM_DOMAIN` without `/v1/traces`, and check the dataset name. |
 | Invalid address | The edge deployment domain is wrong. For the list of domains, see [Edge deployments](/reference/edge-deployments). |
 
-If the delivery succeeds but you can’t find spans in Axiom, check that the `X-Axiom-Dataset` header names an existing dataset and that the destination covers the workspace where you send requests.
+If the **Delivery** column shows **Healthy** but you can’t find spans of your requests in Axiom, check that the destination covers the workspace where you send requests.
 
 If all deliveries fail for 24 hours, Claude turns off the destination and the **Delivery** column shows **Disabled**. Claude doesn’t send the spans it drops while the destination is off. After you fix the cause, test the destination, and then enable it again. For the full list of errors and delivery rules, see [Troubleshooting](https://platform.claude.com/docs/en/manage-claude/opentelemetry/api#troubleshooting) and [Delivery and health](https://platform.claude.com/docs/en/manage-claude/opentelemetry/api#delivery-and-health) in the Claude documentation.
 
