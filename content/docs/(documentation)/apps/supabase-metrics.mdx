@@ -70,6 +70,18 @@ processors:
     check_interval: 1s
     limit_percentage: 80
     spike_limit_percentage: 25
+  # Supabase's target_info metric copies these labels to the resource,
+  # where they conflict with the same labels on each data point
+  resource:
+    attributes:
+      - key: supabase_project_ref
+        action: delete
+      - key: supabase_identifier
+        action: delete
+      - key: service_type
+        action: delete
+      - key: service_name
+        action: delete
   batch:
     send_batch_max_size: 8192
 
@@ -88,6 +100,7 @@ service:
         - prometheus
       processors:
         - memory_limiter
+        - resource
         - batch
       exporters:
         - otlphttp
@@ -190,12 +203,20 @@ Chart the number of Postgres backends:
 | group by supabase_project_ref using sum
 ```
 
-Chart active client connections to the Supavisor connection pooler by database and pool mode:
+Chart active client connections to the project’s dedicated PgBouncer connection pooler by database:
 
 ```mpl
-`DATASET_NAME`:`supavisor_connections_active`
+`DATASET_NAME`:`pgbouncer_pools_client_active_connections`
 | align to $__interval using max
-| group by db_name, mode using sum
+| group by database using sum
+```
+
+Chart clients waiting for a server connection in PgBouncer. A value that stays above zero means the pool is saturated:
+
+```mpl
+`DATASET_NAME`:`pgbouncer_pools_client_waiting_connections`
+| align to $__interval using max
+| group by database using sum
 ```
 
 ### Transactions
