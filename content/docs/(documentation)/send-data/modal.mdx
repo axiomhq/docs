@@ -22,9 +22,9 @@ Axiom routes OpenTelemetry data to datasets with request headers:
 - Logs and traces use the `X-Axiom-Dataset` header.
 - Metrics use the `X-Axiom-Metrics-Dataset` header, and they go to a separate dataset of the metrics type.
 
-The Modal integration sends all signals to one endpoint with one set of headers. You define the headers in a Modal Secret with one key per header, named `OTEL_HEADER_` followed by the header name. Modal Secret key names contain only letters, digits, and underscores, so a key name can’t contain the hyphens in `X-Axiom-Dataset`. For more information, see the Modal documentation on [OpenTelemetry integration](https://modal.com/docs/guide/otel-integration) and [Secret limits](https://modal.com/docs/guide/secrets).
+The Modal integration sends all signals to one endpoint with one set of headers. You define the headers in a Modal Secret with one key per header, named `OTEL_HEADER_` followed by the header name. Modal Secret key names contain only letters, digits, and underscores, so a key name can’t contain the hyphens in `X-Axiom-Dataset` or `X-Axiom-Metrics-Dataset`. For more information, see the Modal documentation on [OpenTelemetry integration](https://modal.com/docs/guide/otel-integration) and [Secret limits](https://modal.com/docs/guide/secrets).
 
-As a result, the Modal integration can’t send the Axiom dataset headers, and it sends logs and metrics with the same headers. An OpenTelemetry Collector solves both problems. Modal authenticates to the Collector with an `Authorization` header, which is a valid Secret key name. The Collector then forwards each signal to the right Axiom dataset with the right headers.
+As a result, the Modal integration can’t send the Axiom dataset headers, and Axiom can’t route its data to a dataset. An OpenTelemetry Collector solves this problem. Modal authenticates to the Collector with an `Authorization` header, which is a valid Secret key name. The Collector then forwards each signal to the right Axiom dataset with the right headers.
 
 ```mermaid
 flowchart LR
@@ -338,7 +338,7 @@ Use either this feature or the `axiom-otel` Secret for a Function, not both, so 
 
 ## Limitations
 
-- The Modal integration sends logs and metrics with one set of headers, and Modal Secret key names can’t contain hyphens. To send platform telemetry to Axiom, route it through an OpenTelemetry Collector.
+- Modal Secret key names can’t contain hyphens, so the Modal integration can’t send the Axiom dataset headers. To send platform telemetry to Axiom, route it through an OpenTelemetry Collector.
 - The Modal integration doesn’t create traces. To trace your workloads, instrument your code with the OpenTelemetry SDK.
 - The Collector must be reachable from Modal over the internet. Protect it with the bearer token and TLS as shown above.
 
