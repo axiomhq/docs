@@ -72,29 +72,50 @@ Optional flags:
 
 ### Quick setup
 
-Choose your client to get its fastest setup path, or copy a setup prompt for your AI agent.
+Choose your client to get its fastest setup path, or copy a setup prompt for your AI agent. You can also click **Copy setup prompt** in the Axiom Console help menu to copy an agent-ready prompt for Claude Code, Codex, OpenCode, Devin, and Copilot.
 
 <McpQuickSetup />
+
+<Tip>
+To install both [Axiom Skills](/console/intelligence/skills) and the hosted MCP Server together, use the Axiom plugin for Claude Code, Codex, Cursor, Amp, or Gemini CLI. For installation steps, see [Skills for AI agents](/console/intelligence/skills#install-axiom-skills).
+</Tip>
 
 #### Header-based authentication
 
 If your AI agent doesn’t support browser-based OAuth (for example, Agent Builder from OpenAI), authenticate with headers:
 
-1. [Create a personal access token](/reference/tokens#personal-access-tokens-pat).
+1. Create a [personal access token](/reference/tokens#personal-access-tokens-pat) (`xapt-...`) or an organization [API token](/reference/tokens#api-tokens) (`xaat-...`).
 1. [Determine organization ID](/reference/tokens#determine-organization-id).
 1. Configure your AI agent to use the [remote MCP URL](#choose-a-region) for your region, for example `https://mcp.axiom.co/mcp`.
 1. Send these headers with each request:
 
-    - **Authorization:** `Bearer PERSONAL_ACCESS_TOKEN`
+    - **Authorization:** `Bearer API_OR_PERSONAL_ACCESS_TOKEN`
     - **x-axiom-org-id:** `ORGANIZATION_ID`
 
     <Info>
-    Replace `PERSONAL_ACCESS_TOKEN` with the personal access token you have generated.
+    Replace `API_OR_PERSONAL_ACCESS_TOKEN` with your full API token (`xaat-...`) or personal access token (`xapt-...`).
 
     <ReplaceOrgId />
     </Info>
 
-    If your agent only supports the Authorization header, pass the organization ID as a URL parameter: `https://mcp.axiom.co/mcp?org-id=ORGANIZATION_ID`
+    If your agent only supports the `Authorization` header, pass the organization ID as a URL parameter: `https://mcp.axiom.co/mcp?org-id=ORGANIZATION_ID`
+
+##### Optional URL parameters
+
+Header-based authentication connections accept the following kebab-case query parameters on the MCP URL:
+
+| Parameter | Value | Description |
+| --- | --- | --- |
+| `org-id` | Organization ID | Sets the default organization when your client can’t send the `x-axiom-org-id` header. |
+| `with-otel` | `1` or `true` | Enables the OpenTelemetry and GenAI tool family (10 `otel-*` tools, 8 `genai-*` tools, and 5 OpenTelemetry prompts). OAuth sessions are always pinned to an organization without opting in, so these tools and prompts are available only on header-auth connections with `with-otel=1`. |
+| `with-stitch` | `1` or `true` | Asserts service-map entitlement for header-auth sessions that authenticate with an organization API token, because API tokens can’t read the license endpoint. |
+| `max-age` | Positive integer | Sets the maximum number of table cells (`maxCells`) returned in formatted query results. Defaults to `1000`. |
+
+For example:
+
+```text
+https://mcp.axiom.co/mcp?org-id=ORGANIZATION_ID&with-otel=1&max-age=500
+```
 
 ## Token hygiene
 

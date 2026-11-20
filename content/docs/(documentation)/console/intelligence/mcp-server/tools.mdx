@@ -9,24 +9,37 @@ Axiom MCP Server exposes [tools](https://modelcontextprotocol.io/docs/concepts/t
 
 For setup, see [Axiom MCP Server](/console/intelligence/mcp-server).
 
+Every organization-scoped tool accepts an optional `orgId` parameter to override the session’s default organization. Call `listOrganizations` to find available organization IDs.
+
 ## Tools at a glance
 
 | Category | Read | Write |
 | --- | --- | --- |
+| Organizations | `listOrganizations` | — |
 | Query | `queryDataset`, `getSavedQueries` | — |
 | Datasets | `listDatasets`, `getDatasetFields` | `createDataset`, `deleteDatasetFields` |
 | Metrics | `listMetrics`, `listMetricTags`, `getMetricTagValues`, `searchMetrics`, `queryMetrics`, `getMetricsSpec` | — |
 | Annotations | `getAnnotations` | — |
-| Dashboards | `listDashboards`, `getDashboard`, `exportDashboard` | `createDashboard`, `replaceDashboard`, `updateDashboardChart`, `deleteDashboard` |
+| Dashboards | `listDashboards`, `getDashboard` | `createDashboard`, `replaceDashboard`, `updateDashboardChart`, `deleteDashboard` |
 | Monitors and notifiers | `checkMonitors`, `getMonitor`, `getMonitorHistory`, `listNotifiers` | `createMonitor`, `updateMonitor`, `deleteMonitor`, `createNotifier`, `updateNotifier`, `deleteNotifier` |
+| Labels | `listLabels` | `manageLabels`, `setLabels` |
 | Service map | `services-getMap`, `services-getChanges`, `services-getEdgeHistory` | — |
+| OpenTelemetry (`?with-otel=1`) | `otel-listServices`, `otel-listOperations`, `otel-getErrorBreakdown`, `otel-getServiceMetrics`, `otel-getOperationMetrics`, `otel-getTraceSpans`, `otel-findTraces`, `otel-findSimilarTraces`, `otel-getTraceCriticalPath`, `otel-findTraceAnomalies`, `genai-getOverview`, `genai-analyzeTokenUsage`, `genai-getModelPerformance`, `genai-analyzeCosts`, `genai-findErrors`, `genai-compareModels`, `genai-analyzeToolUsage`, `genai-getCapabilityMetrics` | — |
 | Documentation | `searchAxiomDocs`, `readAxiomDoc` | — |
 | Feedback | — | `sendFeedback` |
+
+## Organizations
+
+<ParamField path="listOrganizations" type="Read">
+List organizations the current credentials can access. Use an organization’s ID as the optional `orgId` parameter on other tools to override the session’s default organization.
+
+**Example:** “List the Axiom organizations I can access.”
+</ParamField>
 
 ## Query
 
 <ParamField path="queryDataset" type="Read">
-Run an APL query against an events or traces dataset. For metrics datasets, use `queryMetrics` instead.
+Run an APL query (`apl`) against an events or traces dataset, or pass `queryId` to load the APL or MPL query and time range of a stored query from an Axiom URL’s `qid` parameter. Pass `saveResults: true` to save the query results and return a shareable **Open in Axiom** link. For metrics datasets, use `queryMetrics` instead.
 
 **Example:** “Show the top 10 status codes in `logs` for the last 30 minutes and give me a link to the results.”
 </ParamField>
@@ -125,12 +138,6 @@ Get details for a dashboard by UID.
 **Example:** “Show the configuration for dashboard `abc123`.”
 </ParamField>
 
-<ParamField path="exportDashboard" type="Read">
-Export a dashboard as JSON.
-
-**Example:** “Export dashboard `abc123` as JSON.”
-</ParamField>
-
 <ParamField path="createDashboard" type="Write">
 Create a dashboard from a JSON document.
 
@@ -217,6 +224,26 @@ Delete a notifier by ID.
 **Example:** “Delete notifier `ntf_123`.”
 </ParamField>
 
+## Labels
+
+<ParamField path="listLabels" type="Read">
+List organization resource labels (`id`, `name`, `description`, `color`), with an optional `name` filter.
+
+**Example:** “List all resource labels in this organization.”
+</ParamField>
+
+<ParamField path="manageLabels" type="Write">
+Create, update, or delete a label in the organization catalog. Deleting a label removes it from every resource. This tool doesn’t assign labels to resources; use `setLabels` for that.
+
+**Example:** “Create a label named `production` with description `Production resources`.”
+</ParamField>
+
+<ParamField path="setLabels" type="Write">
+Replace all labels on one dataset, dashboard, monitor, notifier, or integration dashboard. Pass the complete set of label IDs to keep on the resource; omitted IDs are removed, and an empty list clears all labels.
+
+**Example:** “Assign the `production` label to the `logs` dataset.”
+</ParamField>
+
 ## Service map
 
 These tools are available when service map is enabled for your organization.
@@ -237,6 +264,122 @@ Report what changed in the service dependency graph, such as new or missing depe
 Get time-series history for a service’s dependency edges.
 
 **Example:** “Show edge history from `api-gateway` to `checkout` over the last day.”
+</ParamField>
+
+## OpenTelemetry
+
+These OpenTelemetry and GenAI tools are available on [header-based authentication](/console/intelligence/mcp-server#header-based-authentication) connections when `?with-otel=1` is set on the MCP URL. They aren’t exposed on OAuth sessions.
+
+### OpenTelemetry tracing and service metrics
+
+<ParamField path="otel-listServices" type="Read">
+List available OpenTelemetry services in a traces dataset.
+
+**Example:** “List OpenTelemetry services in `traces` over the last hour.”
+</ParamField>
+
+<ParamField path="otel-listOperations" type="Read">
+List available OpenTelemetry operations for a service.
+
+**Example:** “List operations for the `checkout` service in `traces`.”
+</ParamField>
+
+<ParamField path="otel-getErrorBreakdown" type="Read">
+Break down errors for an OpenTelemetry service or operation.
+
+**Example:** “Show the error breakdown for `checkout` over the last 2 hours.”
+</ParamField>
+
+<ParamField path="otel-getServiceMetrics" type="Read">
+Get latency percentiles, error rates, and throughput over time for an OpenTelemetry service by operation.
+
+**Example:** “Show service metrics for `api-gateway` over the last hour.”
+</ParamField>
+
+<ParamField path="otel-getOperationMetrics" type="Read">
+Get detailed latency, error rate, and throughput metrics for a specific service operation.
+
+**Example:** “Show operation metrics for `POST /orders` on `checkout`.”
+</ParamField>
+
+<ParamField path="otel-getTraceSpans" type="Read">
+Fetch all spans for a trace ID.
+
+**Example:** “Get all spans for trace `4bf92f3577b34da6a3ce929d0e0e4736`.”
+</ParamField>
+
+<ParamField path="otel-findTraces" type="Read">
+Search for traces matching filters such as service, operation, duration, or error status.
+
+**Example:** “Find slow traces over 2 seconds in `checkout` from the last hour.”
+</ParamField>
+
+<ParamField path="otel-findSimilarTraces" type="Read">
+Find traces with a similar structure or behavior to a reference trace.
+
+**Example:** “Find traces similar to `4bf92f3577b34da6a3ce929d0e0e4736`.”
+</ParamField>
+
+<ParamField path="otel-getTraceCriticalPath" type="Read">
+Find the critical path (longest blocking chain) through a trace.
+
+**Example:** “Find the critical path for trace `4bf92f3577b34da6a3ce929d0e0e4736`.”
+</ParamField>
+
+<ParamField path="otel-findTraceAnomalies" type="Read">
+Detect anomalous traces in a dataset based on latency or error behavior.
+
+**Example:** “Find trace anomalies for `checkout` over the last 6 hours.”
+</ParamField>
+
+### GenAI observability
+
+<ParamField path="genai-getOverview" type="Read">
+Summarize GenAI request volume, latency, token usage, errors, and estimated cost across models and providers.
+
+**Example:** “Give me a GenAI overview from `traces` for the last 24 hours.”
+</ParamField>
+
+<ParamField path="genai-analyzeTokenUsage" type="Read">
+Analyze input and output token usage across GenAI models, providers, or capabilities.
+
+**Example:** “Analyze token usage by model in `traces` over the last day.”
+</ParamField>
+
+<ParamField path="genai-getModelPerformance" type="Read">
+Evaluate latency percentiles, throughput, and error rates for GenAI models.
+
+**Example:** “Show model performance in `traces` over the last 6 hours.”
+</ParamField>
+
+<ParamField path="genai-analyzeCosts" type="Read">
+Estimate GenAI token costs by model, provider, or capability.
+
+**Example:** “Break down estimated GenAI costs by model for the last 7 days.”
+</ParamField>
+
+<ParamField path="genai-findErrors" type="Read">
+Find and group errors across GenAI spans.
+
+**Example:** “Find GenAI errors in `traces` from the last hour.”
+</ParamField>
+
+<ParamField path="genai-compareModels" type="Read">
+Compare latency, token usage, error rates, and cost across GenAI models.
+
+**Example:** “Compare GenAI models used in `traces` over the last 7 days.”
+</ParamField>
+
+<ParamField path="genai-analyzeToolUsage" type="Read">
+Analyze GenAI tool call frequency, latency, and error rates.
+
+**Example:** “Analyze GenAI tool usage in `traces` over the last 24 hours.”
+</ParamField>
+
+<ParamField path="genai-getCapabilityMetrics" type="Read">
+Get latency, token usage, cost, and error metrics grouped by `gen_ai.capability.name` and `gen_ai.step.name`.
+
+**Example:** “Show GenAI capability metrics from `traces` for the last 24 hours.”
 </ParamField>
 
 ## Documentation
@@ -306,6 +449,38 @@ Analyze monitor health, alert patterns, and effectiveness.
 Walk a system’s service dependency graph to find what talks to what, which dependency is at fault, and when it changed. Available when service map is enabled for your organization.
 
 **Example:** “Investigate the topology around `api-gateway`.”
+</ParamField>
+
+The following OpenTelemetry prompts are available on [header-based authentication](/console/intelligence/mcp-server#header-based-authentication) connections when `?with-otel=1` is set on the MCP URL:
+
+<ParamField path="investigate-service-outage" type="Prompt">
+Follow a systematic workflow to investigate service outages and performance degradation.
+
+**Example:** “Run `investigate-service-outage` for `checkout` in `traces`.”
+</ParamField>
+
+<ParamField path="performance-degradation-analysis" type="Prompt">
+Analyze service performance issues and identify optimization opportunities against a baseline period.
+
+**Example:** “Run `performance-degradation-analysis` for `api-gateway` in `traces`.”
+</ParamField>
+
+<ParamField path="new-service-health-baseline" type="Prompt">
+Establish performance baselines and a monitoring strategy for a new service.
+
+**Example:** “Run `new-service-health-baseline` for `billing-api` in `traces`.”
+</ParamField>
+
+<ParamField path="trace-analysis-workflow" type="Prompt">
+Follow a structured workflow to analyze a distributed trace and identify bottlenecks.
+
+**Example:** “Run `trace-analysis-workflow` for trace `4bf92f3577b34da6a3ce929d0e0e4736`.”
+</ParamField>
+
+<ParamField path="distributed-system-health-check" type="Prompt">
+Run a health check across all services in a distributed system.
+
+**Example:** “Run `distributed-system-health-check` on `traces` for the last 24 hours.”
 </ParamField>
 
 Axiom plans to support MCP [resources](https://modelcontextprotocol.io/docs/concepts/resources) in the future.
