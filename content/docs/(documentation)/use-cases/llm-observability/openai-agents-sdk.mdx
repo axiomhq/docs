@@ -179,16 +179,20 @@ import { context, SpanKind, SpanStatusCode, trace, type Span, type Tracer } from
 
 type Message = { role: string; parts: Record<string, unknown>[]; finish_reason?: string };
 
-// Convert Responses API items and Chat Completions messages to OpenTelemetry GenAI messages
+// Convert Agents SDK items, Responses API items, and Chat Completions messages to OpenTelemetry GenAI messages
 function toMessages(items: unknown): Message[] {
   if (typeof items === 'string') return [{ role: 'user', parts: [{ type: 'text', content: items }] }];
   if (!Array.isArray(items)) return [];
   const messages: Message[] = [];
   for (const item of items) {
+    // The Agents SDK uses `callId` and `function_call_result`, the Responses API uses `call_id` and `function_call_output`
+    const id = item.call_id ?? item.callId;
     if (item.type === 'function_call') {
-      messages.push({ role: 'assistant', parts: [{ type: 'tool_call', id: item.call_id, name: item.name, arguments: item.arguments }] });
-    } else if (item.type === 'function_call_output') {
-      messages.push({ role: 'tool', parts: [{ type: 'tool_call_response', id: item.call_id, response: item.output }] });
+      messages.push({ role: 'assistant', parts: [{ type: 'tool_call', id, name: item.name, arguments: item.arguments }] });
+    } else if (item.type === 'function_call_output' || item.type === 'function_call_result') {
+      const output = item.output;
+      const response = typeof output === 'string' ? output : typeof output?.text === 'string' ? output.text : JSON.stringify(output);
+      messages.push({ role: 'tool', parts: [{ type: 'tool_call_response', id, response }] });
     } else if (item.role) {
       const content = typeof item.content === 'string' ? [{ text: item.content }] : (item.content ?? []);
       const parts: Record<string, unknown>[] = content
