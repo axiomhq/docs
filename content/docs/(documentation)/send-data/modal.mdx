@@ -332,6 +332,90 @@ Modal offers custom metrics and spans as a beta feature that you enable by conta
 
 Use either this feature or the `axiom-otel` Secret for a Function, not both, so that each span reaches Axiom once.
 
+## Query Modal telemetry
+
+The following queries are a starting point for a [dashboard](/dashboards/create) of your Modal workloads. Replace `LOGS_DATASET_NAME`, `TRACES_DATASET_NAME`, and `METRICS_DATASET_NAME` with the names of your Axiom datasets.
+
+<Frame>
+  <img src="/docs/doc-assets/shots/modal-dashboard.png" alt="Axiom dashboard with GPU utilization, GPU memory, running containers, inputs, cold start time, Function log errors, and chat latency of Modal apps" />
+</Frame>
+
+### GPU utilization
+
+Show the average GPU compute utilization of each app by GPU type:
+
+```mpl
+`METRICS_DATASET_NAME`:`modal.gpu.compute.utilization`
+| align to 5m using avg
+| group by app_name, gpu_billing_type using avg
+```
+
+### Input execution time and cold start time
+
+Show the 95th percentile of the time each input takes to run. Modal sends the timing metrics as histograms with delta temporality:
+
+```mpl
+`METRICS_DATASET_NAME`:`modal.input_events.elapsed_time_us`
+| bucket by app_name to 5m using interpolate_delta_histogram(0.95)
+```
+
+To see how long containers take to start, use the same query with the `modal.input_events.coldstart_time_us` metric.
+
+### Input success rate
+
+Divide the successful inputs by all inputs:
+
+```mpl
+(
+  `METRICS_DATASET_NAME`:`modal.input_events.successes`
+  | align to 5m using sum
+  | group by app_name using sum,
+  `METRICS_DATASET_NAME`:`modal.input_events.total_inputs`
+  | align to 5m using sum
+  | group by app_name using sum
+)
+| compute success_rate using /
+```
+
+### Container terminations
+
+Show why containers stop, for example because they’re idle or run out of memory:
+
+```mpl
+`METRICS_DATASET_NAME`:`modal.container.terminations`
+| align to 5m using sum
+| group by reason using sum
+```
+
+### Function errors
+
+Find the most frequent errors in Function logs:
+
+```kusto
+['LOGS_DATASET_NAME']
+| where ['service.name'] == 'modal.function-logs' and severity_text == 'ERROR'
+| summarize errors = count() by app = ['attributes.app_name'], message = body
+| order by errors desc
+```
+
+### Inference latency and cold starts
+
+Show the median and 95th percentile duration of inference calls from the [tracing example](#send-traces-from-modal-functions):
+
+```kusto
+['TRACES_DATASET_NAME']
+| where ['attributes.gen_ai.operation.name'] == 'chat'
+| summarize percentiles_array(duration, 50, 95) by bin_auto(_time)
+```
+
+Count cold starts and measure how long model loading takes:
+
+```kusto
+['TRACES_DATASET_NAME']
+| where name == 'load_model'
+| summarize cold_starts = count(), p95_load_time = percentile(duration, 95) by ['service.name']
+```
+
 ## Limitations
 
 - Modal Secret key names can’t contain hyphens, so the Modal integration can’t send the Axiom dataset headers. To send platform telemetry to Axiom, route it through an OpenTelemetry Collector.
