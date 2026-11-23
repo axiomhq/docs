@@ -26,12 +26,12 @@ Logs and metrics require separate datasets. Create one dataset with the **Events
 
 ## Send logs to Axiom
 
-Atlas exports logs from `M10+` clusters running MongoDB 7.0 or later. Atlas sends the logs every minute. For more information, see [Export logs to OpenTelemetry](https://www.mongodb.com/docs/atlas/export-logs-otel/) in the Atlas documentation.
+Atlas exports database logs from `M10+` clusters running MongoDB 7.0 or later. Activity Feed events export from projects with clusters of any tier, including free clusters. Atlas sends logs every minute. For more information, see [Export logs to OpenTelemetry](https://www.mongodb.com/docs/atlas/export-logs-otel/) in the Atlas documentation.
 
 1. In Atlas, open your project, and then go to **Project Settings > Integrations**.
 1. Click **Configure** on the **OpenTelemetry Log Export** card.
 1. In the **OTLP Endpoint** field, enter `https://AXIOM_DOMAIN/v1/logs`.
-1. In the **OTLP Header** fields, add the following headers:
+1. In the **OTLP Headers** fields, add the following headers. Click **Add Header** to add the second header.
 
     | Header | Value |
     | :--- | :--- |
@@ -39,12 +39,13 @@ Atlas exports logs from `M10+` clusters running MongoDB 7.0 or later. Atlas send
     | `X-Axiom-Dataset` | `DATASET_NAME` |
 
 1. Under **Log Type**, select the logs to export:
-    - **MongoDB Logs**: Diagnostic logs from each `mongod` process.
-    - **MongoDB Audit Logs**: Audit logs from each `mongod` process.
-    - **MongoDB Router Logs**: Diagnostic logs from each `mongos` router in a sharded cluster.
-    - **MongoDB Router Audit Logs**: Audit logs from each `mongos` router in a sharded cluster.
-    - **Events**: Events from the Project Activity Feed.
-1. Click **Validate** to check the endpoint and the headers, and then click **Save**.
+    - **Mongod**: Diagnostic logs from each `mongod` process.
+    - **Mongos**: Diagnostic logs from each `mongos` router in a sharded cluster.
+    - **Mongod Audit**: Audit logs from each `mongod` process.
+    - **Mongos Audit**: Audit logs from each `mongos` router in a sharded cluster.
+    - **Activity Feed Events**: Events from the Project Activity Feed.
+1. Click **Test Integration**. Atlas sends a test log event to Axiom and confirms that the request succeeded.
+1. Click **Save**.
 
 <Info>
 <ReplaceDomain />
@@ -78,25 +79,27 @@ Replace `ATLAS_PROJECT_ID` with the ID of your Atlas project, and `ATLAS_ACCESS_
 
 Atlas also exports the Organization Activity Feed to OTel endpoints. To send organization events to Axiom, follow the same procedure in **Organization Settings > Integrations**. This requires the `Organization Owner` role. For more information, see [Export organization Activity Feed events](https://www.mongodb.com/docs/atlas/export-logs-otel/#export-organization-activity-feed-events) in the Atlas documentation.
 
-Atlas sets the `service.name` resource attribute of Activity Feed events to `mongodb-atlas-events`, so you can tell events apart from database logs.
+Atlas sets the `service.name` resource attribute of Activity Feed events to `mongodb-atlas-events` and the `log_type` attribute to `EVENTS`, so you can tell events apart from database logs.
 
 ## Send metrics to Axiom
 
 Atlas sends metrics from `M10+` clusters to OTel endpoints. For more information, see [Integrate with OpenTelemetry](https://www.mongodb.com/docs/atlas/tutorial/otel-integration/) in the Atlas documentation.
 
 1. In Atlas, open your project, and then go to **Project Settings > Integrations**.
-1. Click **Configure** on the **OpenTelemetry Metrics** card.
+1. Click **Configure** on the **OpenTelemetry (OTel) Metrics** card.
 1. In the **Provider** list, select **Custom**.
 1. In the **OTLP Endpoint** field, enter `https://AXIOM_DOMAIN/v1/metrics`.
-1. In the **OTLP Headers** fields, add the following headers. Click **+ Add Header** to add the second header.
+1. Under **Authentication**, select **Header**.
+1. In the **OTLP Headers** fields, add the following headers. Click **Add Header** to add the second header.
 
     | Header | Value |
     | :--- | :--- |
     | `Authorization` | `Bearer API_TOKEN` |
     | `X-Axiom-Metrics-Dataset` | `DATASET_NAME` |
 
-1. In the **Aggregation Temporality** list, select **Delta** or **Cumulative**. Axiom accepts both and stores the temporality with each metric.
-1. Under **Select Metrics to Send**, select the metric categories to export.
+1. In the **Aggregation Temporality** list, select **DELTA** or **CUMULATIVE**. Axiom accepts both and stores the temporality with each metric.
+1. Under **Select Metrics to Send**, select the metric categories to export, such as **MongoDB Metrics** and **Hardware Metrics**.
+1. Click **Test Integration**. Atlas sends a test metric to Axiom and confirms that the request succeeded.
 1. Click **Save**.
 
 <Info>
@@ -132,7 +135,7 @@ The `metricSelection` array accepts the metric categories listed in the [API ref
 
 ## Explore your Atlas data
 
-Atlas exports logs every minute. Open the [Stream tab](/query-data/stream) to watch log events arrive in real time and inspect their fields.
+Atlas exports logs every minute. Open the [Stream tab](/query-data/stream) to watch log events arrive in real time and inspect their fields. The first event is the test event from **Test Integration**, with the service name `mongodb-atlas`.
 
 In Axiom, the `service.name` resource attribute becomes a top-level field, other resource attributes appear under `resource`, and log record attributes appear under `attributes`. For example, the following query charts the volume of Atlas log events over time for each service. Activity Feed events appear with the service name `mongodb-atlas-events`.
 
