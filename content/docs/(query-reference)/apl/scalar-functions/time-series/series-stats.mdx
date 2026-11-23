@@ -3,7 +3,7 @@ title: series_stats
 description: 'This page explains how to use the series_stats function in APL.'
 ---
 
-The `series_stats` function computes comprehensive statistical measures for a numeric dynamic array (series), returning an array with seven elements containing minimum, maximum, average, variance, standard deviation, and the positions of minimum and maximum values.
+The `series_stats` function computes comprehensive statistical measures for a numeric dynamic array (series), returning an array with eight elements containing minimum, maximum, sum, average, variance, standard deviation, and the positions of minimum and maximum values.
 
 You can use `series_stats` when you need a complete statistical summary of time-series data in a single operation. This is particularly useful for understanding data distribution, identifying outliers, calculating confidence intervals, or performing comprehensive data quality assessments without running multiple separate aggregations.
 
@@ -12,28 +12,30 @@ You can use `series_stats` when you need a complete statistical summary of time-
 ### Syntax
 
 ```kusto
-series_stats(array)
+series_stats(array [, ignore_nonfinite])
 ```
 
 ### Parameters
 
-| Parameter | Type    | Description                        |
-| --------- | ------- | ---------------------------------- |
-| `array`   | dynamic | A dynamic array of numeric values. |
+| Parameter          | Type    | Description                                                                                |
+| ------------------ | ------- | ------------------------------------------------------------------------------------------ |
+| `array`            | dynamic | A dynamic array of numeric values.                                                         |
+| `ignore_nonfinite` | bool    | (Optional) When `true`, ignores `NaN` and infinite values. Defaults to `false`.            |
 
 ### Returns
 
-An array with seven numeric elements in the following order:
+An array with eight numeric elements in the following 0-based order (you can also unpack them as a tuple, for example `project (min, min_idx, max, max_idx, sum, avg, variance, stdev) = series_stats(x)`):
 
-| Index | Statistic  | Description                                               |
-| ----- | ---------- | --------------------------------------------------------- |
-| 0     | min        | The minimum value in the input array.                     |
-| 1     | min_idx    | The first position of the minimum value in the array.     |
-| 2     | max        | The maximum value in the input array.                     |
-| 3     | max_idx    | The first position of the maximum value in the array.     |
-| 4     | avg        | The average value of the input array.                     |
-| 5     | variance   | The sample variance of the input array.                   |
-| 6     | stdev      | The sample standard deviation of the input array.         |
+| Index | Statistic | Description                                           |
+| ----- | --------- | ----------------------------------------------------- |
+| 0     | min       | The minimum value in the input array.                 |
+| 1     | min_idx   | The first position of the minimum value in the array. |
+| 2     | max       | The maximum value in the input array.                 |
+| 3     | max_idx   | The first position of the maximum value in the array. |
+| 4     | sum       | The sum of the values in the input array.             |
+| 5     | avg       | The average value of the input array.                 |
+| 6     | variance  | The sample variance of the input array.               |
+| 7     | stdev     | The sample standard deviation of the input array.     |
 
 ## Use case examples
 
@@ -51,12 +53,12 @@ In log analysis, you can use `series_stats` to get a comprehensive statistical s
 | project id,
     min_duration = stats_array[0],
     max_duration = stats_array[2],
-    avg_duration = stats_array[4],
-    stdev_duration = stats_array[6]
+    avg_duration = stats_array[5],
+    stdev_duration = stats_array[7]
 | take 5
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20stats_array%20%3D%20series_stats(durations)%20%7C%20project%20id%2C%20min_duration%20%3D%20stats_array%5B0%5D%2C%20max_duration%20%3D%20stats_array%5B2%5D%2C%20avg_duration%20%3D%20stats_array%5B4%5D%2C%20stdev_duration%20%3D%20stats_array%5B6%5D%20%7C%20take%205%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20id%20%7C%20extend%20stats_array%20%3D%20series_stats(durations)%20%7C%20project%20id%2C%20min_duration%20%3D%20stats_array%5B0%5D%2C%20max_duration%20%3D%20stats_array%5B2%5D%2C%20avg_duration%20%3D%20stats_array%5B5%5D%2C%20stdev_duration%20%3D%20stats_array%5B7%5D%20%7C%20take%205%22%7D)
 
 **Output**
 
@@ -65,7 +67,7 @@ In log analysis, you can use `series_stats` to get a comprehensive statistical s
 | u123 | 15           | 245          | 95           | 45.2           |
 | u456 | 8            | 189          | 78           | 38.7           |
 
-This query calculates comprehensive statistics for each user's request durations by extracting specific elements from the 7-element stats array.
+This query calculates comprehensive statistics for each user's request durations by extracting specific elements from the 8-element stats array.
 
 </Tab>
 <Tab title="Security logs">
@@ -79,14 +81,14 @@ In security logs, you can use `series_stats` to establish behavioral baselines a
 | summarize durations = make_list(req_duration_ms) by status
 | extend stats_array = series_stats(durations)
 | project status,
-    typical_duration = stats_array[4],
-    variance = stats_array[5],
-    stdev = stats_array[6],
+    typical_duration = stats_array[5],
+    variance = stats_array[6],
+    stdev = stats_array[7],
     max_observed = stats_array[2]
 | extend anomaly_threshold = typical_duration + (3 * stdev)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20status%20%7C%20extend%20stats_array%20%3D%20series_stats(durations)%20%7C%20project%20status%2C%20typical_duration%20%3D%20stats_array%5B4%5D%2C%20variance%20%3D%20stats_array%5B5%5D%2C%20stdev%20%3D%20stats_array%5B6%5D%2C%20max_observed%20%3D%20stats_array%5B2%5D%20%7C%20extend%20anomaly_threshold%20%3D%20typical_duration%20%2B%20(3%20*%20stdev)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20summarize%20durations%20%3D%20make_list(req_duration_ms)%20by%20status%20%7C%20extend%20stats_array%20%3D%20series_stats(durations)%20%7C%20project%20status%2C%20typical_duration%20%3D%20stats_array%5B5%5D%2C%20variance%20%3D%20stats_array%5B6%5D%2C%20stdev%20%3D%20stats_array%5B7%5D%2C%20max_observed%20%3D%20stats_array%5B2%5D%20%7C%20extend%20anomaly_threshold%20%3D%20typical_duration%20%2B%20(3%20*%20stdev)%22%7D)
 
 **Output**
 
@@ -114,7 +116,7 @@ This query uses statistical analysis to establish normal behavior patterns and c
 <LanguageComparisons>
 <Accordion title="Splunk SPL users">
 
-In Splunk SPL, you typically use multiple `stats` functions to calculate different statistics. In APL, `series_stats` provides all common statistics in a single operation on array data, returning them as a 7-element array.
+In Splunk SPL, you typically use multiple `stats` functions to calculate different statistics. In APL, `series_stats` provides all common statistics in a single operation on array data, returning them as an 8-element array.
 
 <CodeGroup>
 ```sql Splunk example
@@ -126,14 +128,14 @@ In Splunk SPL, you typically use multiple `stats` functions to calculate differe
 ['sample-http-logs']
 | summarize values = make_list(req_duration_ms) by id
 | extend stats = series_stats(values)
-| extend min_val = stats[0], max_val = stats[2], avg_val = stats[4]
+| extend min_val = stats[0], max_val = stats[2], avg_val = stats[5]
 ```
 </CodeGroup>
 
 </Accordion>
 <Accordion title="ANSI SQL users">
 
-In SQL, you calculate multiple aggregate functions separately. In APL, `series_stats` provides all these statistics in a single function call on array data, returned as a 7-element array.
+In SQL, you calculate multiple aggregate functions separately. In APL, `series_stats` provides all these statistics in a single function call on array data, returned as an 8-element array.
 
 <CodeGroup>
 ```sql SQL example
@@ -150,7 +152,7 @@ GROUP BY user_id;
 ['sample-http-logs']
 | summarize values = make_list(req_duration_ms) by id
 | extend stats = series_stats(values)
-| extend min_val = stats[0], max_val = stats[2], avg_val = stats[4]
+| extend min_val = stats[0], max_val = stats[2], avg_val = stats[5]
 ```
 </CodeGroup>
 

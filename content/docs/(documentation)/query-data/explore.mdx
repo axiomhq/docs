@@ -21,7 +21,7 @@ Builder adapts to the type of data you query:
 
 ## Query data using Builder
 
-1. Click the Query tab.
+1. In the sidebar, click **Query**.
 1. Click **Builder** in the top left.
 1. Define the query:
 
@@ -62,7 +62,7 @@ See below for more information about each of these steps.
 <img src="/docs/doc-assets/shots/example-logs-query.png" alt="Example logs query" />
 </Frame>
 
-This example queries the `sample-http-logs` dataset to find all events where the HTTP status code is 200 and groups the results by county.
+This example queries the `sample-http-logs` dataset to find all events where the HTTP status code is 200 and groups the results by country.
 
 </Tab>
 <Tab title="Metrics">
@@ -70,7 +70,7 @@ This example queries the `sample-http-logs` dataset to find all events where the
 <img src="/docs/doc-assets/shots/example-metrics-query.png" alt="Example metrics query" />
 </Frame>
 
-This example queries the `axiom-dev.metrics` dataset’s `alertmanager_alerts` metric one hour before the current time. It filters results to events where `k8s.namespace.name` is `monitoring` and aggregates events over 30-second time windows into their average value.
+This example queries the `axiom-dev.metrics` dataset’s `alertmanager_alerts` metric over the previous 30 minutes. It filters results to series where `k8s.namespace.name` is `monitoring` and aggregates metric values over 30-second time windows using the average. The Builder also shows an automatic interval alignment for chart resolution.
 
 </Tab>
 </Tabs>
@@ -85,7 +85,7 @@ To add a filter:
 
 1. Click **+** in the **Where** section.
 2. Select the field where you want to filter for values. For example, `geo.country`.
-3. Select the logical operator of the filter. These are different for each field type. For example, you can use **starts-with** for string fields and **>=** for number fields. In this example, select `==` for an exact match.
+3. Select the logical operator of the filter. Operators vary by field type. For example, use **Starts with** or **Has** for string fields and **At least** for number or timespan fields. In this example, select **Equals** for an exact match.
 4. Specify the value for which you want to filter. In this example, enter `France`.
 
 When you run the query, the results only show events matching the criteria you specified for the filter.
@@ -154,7 +154,7 @@ Use the **Where** section to filter series based on tag values:
 1. Specify the value for which you want to filter.
 1. Click **+** to add another filter. Choose **and** to match both filters, or select **or** to match either filter.
 
-For example, the following joins three filters: `project == /.*metrics.*/ and code >= 200 and code < 300`.
+For example, the following joins three filters: `project == #/.*metrics.*/ and code >= 200 and code < 300`.
 
 ### Transformations
 
@@ -173,12 +173,19 @@ Use `map` to transform individual values.
 
 Available mapping functions:
 
-| Function              | Description                                                      |
-|-----------------------|------------------------------------------------------------------|
-| `rate`                | Computes the per-second rate of change for a metric.             |
-| `abs`                 | Returns the absolute value of each data point.                   |
-| `interpolate::linear` |  Linear interpolation of missing values. |
-| `fill::prev`          | Fills missing values using the previous non-null value.          |
+| Function              | Description                                                          |
+|-----------------------|----------------------------------------------------------------------|
+| `rate`                | Computes the per-second rate of change for a metric.                 |
+| `increase`            | Calculates the increase between the data point and the previous one. |
+| `min(arg)`            | Returns the minimum between the argument and the value.              |
+| `max(arg)`            | Returns the maximum between the argument and the value.              |
+| `abs`                 | Returns the absolute value of each data point.                       |
+| `fill::prev`          | Fills missing values using the previous non-null value.              |
+| `fill::const(arg)`    | Fills missing values with a constant.                                |
+| `interpolate::linear` | Linear interpolation of missing values.                              |
+| `filter::eq(v)`, `filter::neq(v)`, `filter::gt(v)`, `filter::gte(v)`, `filter::lt(v)`, `filter::lte(v)` | Keeps only data points matching the numeric condition. |
+| `is::eq(v)`, `is::neq(v)`, `is::gt(v)`, `is::gte(v)`, `is::lt(v)`, `is::lte(v)` | Sets matching data points to `1.0` and non-matching data points to `0.0`. |
+| `+`, `-`, `*`, `/`   | Performs the respective mathematical calculation on each value.      |
 
 For example, to calculate rate per second for the metric, use `map rate`. To fill empty values with the latest value, use `map fill::prev`.
 
@@ -229,12 +236,12 @@ Available aggregation functions:
 
 | Function | Description                           |
 |----------|---------------------------------------|
-| `avg`    | Averages values in each group and time inverval.     |
-| `count`  | Counts non-null values per group and time inverval.  |
-| `max`    | Takes the maximum value per group and time inverval. |
-| `min`    | Takes the minimum value per group and time inverval. |
-| `sum`    | Sums values in each group and time inverval.         |
-| `quantile`    | Computes the specified quantile per group and time inverval. Specify the quantile as a value between 0 and 1. For example, specifying 0.99 corresponds to the 99th percentile.        |
+| `avg`    | Averages values in each group and time interval.     |
+| `count`  | Counts non-null values per group and time interval.  |
+| `max`    | Takes the maximum value per group and time interval. |
+| `min`    | Takes the minimum value per group and time interval. |
+| `sum`    | Sums values in each group and time interval.         |
+| `quantile`    | Computes the specified quantile per group and time interval. Specify the quantile as a value between 0 and 1. For example, specifying 0.99 corresponds to the 99th percentile.        |
 
 For example:
 - To calculate the average value per group and time interval, use `bucket using histogram(avg)`.
@@ -245,7 +252,7 @@ To show the results of multiple aggregations in a single chart, use multiple fun
 
 If you don’t specify tags with `bucket`, Axiom applies the specified aggregations to all tags.
 
-When the underlying metric is a histogram, Axiom computes `bucket` aggregations using the `interpolate_cumulative_histogram` and `interpolate_delta_histogram` functions depending on the temporality used. For quantile aggregations, this estimates the quantile using the underlying histogram data.
+When the underlying metric is a histogram, Axiom computes `bucket` aggregations using the `interpolate_cumulative_histogram` and `interpolate_delta_histogram` functions depending on the temporality used. `min` and `max` aren't available for cumulative histograms. For quantile aggregations, Axiom estimates the quantile using the underlying histogram data.
 </Note>
 
 ## Select time range

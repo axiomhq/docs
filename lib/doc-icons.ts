@@ -26,6 +26,7 @@ export const FA_TO_LUCIDE = {
   'clock-rotate-left': 'History',
   coins: 'Coins',
   diamond: 'Diamond',
+  ellipsis: 'Ellipsis',
   'ellipsis-vertical': 'EllipsisVertical',
   envelope: 'Mail',
   function: 'SquareFunction',

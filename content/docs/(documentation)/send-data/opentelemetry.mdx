@@ -120,8 +120,21 @@ When using the OTLP/HTTP endpoint, the following endpoint URLs should be used in
 - Logs: `https://AXIOM_DOMAIN/v1/logs`
 - Metrics: `https://AXIOM_DOMAIN/v1/metrics`
 
+### Dataset in the path (no dataset header)
+
+If your exporter can’t send custom dataset headers, pass the dataset name in the URL path instead:
+
+- Traces: `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME/traces`
+- Logs: `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME/logs`
+- Metrics: `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME/metrics`
+- Metrics (OTLP base URL): `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME/v1/metrics`
+
 <Note>
-The `/v1/metrics` endpoint accepts OTLP data encoded as Protobuf (`application/x-protobuf`) or JSON (`application/json`). Protobuf payloads are smaller, so prefer Protobuf when you send large volumes of metrics.
+Only metrics supports the `/v1/metrics` suffix under `/v1/ingest/DATASET_NAME`. If you set `OTEL_EXPORTER_OTLP_ENDPOINT=https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`, logs and traces return `404` because `/v1/ingest/DATASET_NAME/v1/logs` and `/v1/ingest/DATASET_NAME/v1/traces` don’t exist.
+</Note>
+
+<Note>
+All three OTLP endpoints accept Protobuf (`application/x-protobuf`). Logs and traces also accept JSON (`application/json`). Metrics accepts JSON only when JSON metrics ingestion is enabled for your organization. Protobuf payloads are smaller, so prefer Protobuf when you send large volumes of data.
 </Note>
 
 ## OpenTelemetry for Go
@@ -416,8 +429,8 @@ const opentelemetry = require('@opentelemetry/sdk-node');
 const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
 const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-proto');
 const { BatchSpanProcessor } = require('@opentelemetry/sdk-trace-base');
-const { Resource } = require('@opentelemetry/resources');
-const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
+const { resourceFromAttributes } = require('@opentelemetry/resources');
+const { ATTR_SERVICE_NAME } = require('@opentelemetry/semantic-conventions');
 
 // Initialize OTLP trace exporter with the URL and headers for the Axiom API
 const traceExporter = new OTLPTraceExporter({
@@ -429,8 +442,8 @@ const traceExporter = new OTLPTraceExporter({
 });
 
 // Define the resource attributes, in this case, setting the service name for the traces
-const resource = new Resource({
-  [SemanticResourceAttributes.SERVICE_NAME]: 'node traces', // Name for the tracing service
+const resource = resourceFromAttributes({
+  [ATTR_SERVICE_NAME]: 'node traces', // Name for the tracing service
 });
 
 // Create a NodeSDK instance with the configured span processor, resource, and auto-instrumentations
@@ -494,6 +507,10 @@ export default instrument(handler, config);
 
 Axiom supports [severity matching](/reference/limits#requirements-for-log-level-fields) for OpenTelemetry logs.
 
+## View OpenTelemetry Traces dashboard
+
+When an event dataset contains OpenTelemetry trace spans with the standard trace fields (`duration`, `kind`, `name`, `parent_span_id`, `service.name`, `span_id`, and `trace_id`), Axiom automatically creates a read-only **OpenTelemetry Traces** dashboard under **Dashboards > Integration**. For more information, see [Browse traces with the OpenTelemetry app](/query-data/traces#browse-traces-with-the-opentelemetry-app) and [Integration dashboards](/dashboards/create#integration-dashboards).
+
 ## Additional resources
 
 For further guidance on integrating OpenTelemetry with Axiom, explore the following guides:
@@ -502,5 +519,6 @@ For further guidance on integrating OpenTelemetry with Axiom, explore the follow
 - [Python OpenTelemetry guide](/guides/opentelemetry-python)
 - [Golang OpenTelemetry guide](/guides/opentelemetry-go)
 - [Cloudflare Workers guide](/guides/opentelemetry-cloudflare-workers)
+- [Hono guide](/guides/hono)
 - [Ruby on Rails OpenTelemetry guide](/guides/opentelemetry-ruby)
 - [.NET OpenTelemetry guide](/guides/opentelemetry-dotnet)

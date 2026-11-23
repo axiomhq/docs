@@ -36,7 +36,7 @@ The [Ingest data endpoint](/restapi/endpoints/ingestToDataset) only supports API
 To send data to Axiom in JSON format:
 1. Encode the events as JSON objects.
 1. Enter the array of JSON objects into the body of the API request.
-1. Optional: In the body of the request, set optional parameters such as `timestamp-field` and `timestamp-format`. For more information, see the [ingest data API reference](/restapi/endpoints/ingestToDataset).
+1. Optional: Pass URL query parameters such as `timestamp-field` and `timestamp-format` (for example, `?timestamp-field=timestamp`), or optional request headers such as `X-Axiom-Event-Labels`. The request body contains only the events. For more information, see the [ingest data API reference](/restapi/endpoints/ingestToDataset).
 1. Set the `Content-Type` header to `application/json`.
 1. Set the `Authorization` header to `Bearer API_TOKEN`.
 1. Send the POST request to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`.
@@ -203,7 +203,7 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 To send data to Axiom in NDJSON format:
 1. Encode the events as JSON objects.
 1. Enter each JSON object in a separate line into the body of the API request.
-1. Optional: In the body of the request, set optional parameters such as `timestamp-field` and `timestamp-format`. For more information, see the [ingest data API reference](/restapi/endpoints/ingestToDataset).
+1. Optional: Pass URL query parameters such as `timestamp-field` and `timestamp-format`, or optional request headers such as `X-Axiom-Event-Labels`. The request body contains only the events. For more information, see the [ingest data API reference](/restapi/endpoints/ingestToDataset).
 1. Set the `Content-Type` header to either `application/json` or `application/x-ndjson`.
 1. Set the `Authorization` header to `Bearer API_TOKEN`. Replace `API_TOKEN` with the Axiom API token you have generated.
 1. Send the POST request to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`. Replace `DATASET_NAME` with the name of the Axiom dataset where you want to send data.
@@ -247,10 +247,10 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 
 ## Send data in CSV format
 
-To send data to Axiom in JSON format:
+To send data to Axiom in CSV format:
 1. Encode the events in CSV format. The first line specifies the field names separated by commas. Subsequent new lines specify the values separated by commas.
 1. Enter the CSV representation in the body of the API request.
-1. Optional: In the body of the request, set optional parameters such as `timestamp-field` and `timestamp-format`. For more information, see the [ingest data API reference](/restapi/endpoints/ingestToDataset).
+1. Optional: Pass URL query parameters such as `timestamp-field`, `timestamp-format`, and `csv-delimiter`, or optional request headers such as `X-Axiom-CSV-Fields` (to supply field names outside the first line) and `X-Axiom-Event-Labels`. The request body contains only the CSV data. For more information, see the [ingest data API reference](/restapi/endpoints/ingestToDataset).
 1. Set the `Content-Type` header to `text/csv`.
 1. Set the `Authorization` header to `Bearer API_TOKEN`. Replace `API_TOKEN` with the Axiom API token you have generated.
 1. Send the POST request to `https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME`. Replace `DATASET_NAME` with the name of the Axiom dataset where you want to send data.
@@ -288,6 +288,23 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 }
 ```
 
+## Add labels to all events
+
+To attach the same key-value labels to every event in a request, pass a JSON object in the `X-Axiom-Event-Labels` header. The label bytes count toward your ingest size.
+
+```bash
+curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
+  -H 'Authorization: Bearer API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -H 'X-Axiom-Event-Labels: {"env":"prod","service":"api"}' \
+  -d '[{"message":"hello"}]'
+```
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+</Info>
+
 ## Send data with Axiom Node.js
 
 1. [Install and configure](/guides/javascript#use-axiomhq-js) the Axiom Node.js library.
@@ -304,7 +321,7 @@ curl -X 'POST' 'https://AXIOM_DOMAIN/v1/ingest/DATASET_NAME' \
 <ReplaceDatasetToken />
 </Info>
 
-For more information on other libraries you can use to send data, see [Send data](/send-data/methods).
+For more information on other libraries you can use to send data, see [Send data](/send-data/methods). For response behavior when an event introduces new fields beyond a dataset's field limit, see [Restrictions on datasets and fields](/reference/limits#restrictions-on-datasets-and-fields).
 
 ## What’s next
 

@@ -1,0 +1,250 @@
+---
+title: 'Send Supabase metrics to Axiom'
+description: 'This page explains how to send Supabase project metrics to Axiom using the OpenTelemetry Collector.'
+overview: 'Postgres performance and health metrics from the Supabase Metrics API'
+sidebarTitle: Supabase metrics
+keywords: ['axiom documentation', 'documentation', 'axiom', 'supabase', 'metrics', 'metrics api', 'postgres', 'prometheus', 'opentelemetry', 'otel collector', 'mpl', 'database monitoring']
+logoId: 'supabase'
+---
+
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+
+Every Supabase project exposes a Prometheus-compatible [Metrics API](https://supabase.com/docs/guides/observability/metrics) with Postgres performance and health metrics, such as CPU, memory, disk, connections, and query throughput. To send these metrics to Axiom, run an OpenTelemetry Collector that scrapes the Metrics API and forwards the metrics to Axiom over OTLP/HTTP.
+
+This page covers metrics. To send Supabase logs to Axiom, see [Connect Axiom with Supabase](/apps/supabase).
+
+<Note>
+The Supabase Metrics API is in beta and isn’t available for self-hosted Supabase. Metric names and labels can change. For more information, see the [Supabase documentation](https://supabase.com/docs/guides/observability/metrics).
+</Note>
+
+<Prerequisites />
+- [Create a Supabase project](https://supabase.com/dashboard).
+- [Install the contrib distribution of the OpenTelemetry Collector](https://opentelemetry.io/docs/collector/installation/) (`otelcol-contrib`). The Prometheus receiver isn’t included in the core distribution.
+
+<Note>
+When you create the dataset, select **Metrics** as the dataset type. Metrics require their own dedicated dataset. For more information, see [Create dataset](/reference/datasets#create-dataset).
+</Note>
+
+## Get Supabase credentials
+
+The Metrics API is available at `https://PROJECT_REF.supabase.co/customer/v1/privileged/metrics` and uses HTTP basic authentication. The username is `service_role` and the password is a secret API key of your project.
+
+1. In Supabase, find your project reference. It’s the subdomain of your project URL, and it’s also displayed in the dashboard.
+1. Go to [**Project Settings > API Keys**](https://supabase.com/dashboard/project/_/settings/api-keys), and then create or copy a secret API key. Secret API keys start with `sb_secret_`. Recommended: Create a dedicated secret API key for metrics collection so that you can rotate it independently.
+1. Optional: Check that the endpoint returns metrics:
+
+    ```shell
+    curl https://PROJECT_REF.supabase.co/customer/v1/privileged/metrics \
+      --user "service_role:SUPABASE_SECRET_KEY"
+    ```
+
+Replace `PROJECT_REF` with your Supabase project reference and `SUPABASE_SECRET_KEY` with your secret API key.
+
+For more information, see [Metrics API](https://supabase.com/docs/guides/observability/metrics) and [API keys](https://supabase.com/docs/guides/getting-started/api-keys) in the Supabase documentation.
+
+## Configure the OpenTelemetry Collector
+
+Create a file named `config.yaml` with a Prometheus receiver that scrapes the Supabase Metrics API, and an OTLP/HTTP exporter that sends the metrics to Axiom:
+
+```yaml
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: supabase
+          # Supabase refreshes metrics once per minute
+          scrape_interval: 60s
+          scrape_timeout: 30s
+          scheme: https
+          metrics_path: /customer/v1/privileged/metrics
+          basic_auth:
+            username: service_role
+            password: ${env:SUPABASE_SECRET_KEY}
+          static_configs:
+            - targets: ["PROJECT_REF.supabase.co:443"]
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  # Supabase's target_info metric copies these labels to the resource,
+  # where they conflict with the same labels on each data point
+  resource:
+    attributes:
+      - key: supabase_project_ref
+        action: delete
+      - key: supabase_identifier
+        action: delete
+      - key: service_type
+        action: delete
+      - key: service_name
+        action: delete
+  batch:
+    send_batch_max_size: 8192
+
+exporters:
+  otlphttp:
+    compression: zstd
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-metrics-dataset: DATASET_NAME
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - prometheus
+      processors:
+        - memory_limiter
+        - resource
+        - batch
+      exporters:
+        - otlphttp
+```
+
+<Info>
+Replace `PROJECT_REF` with your Supabase project reference.
+
+<ReplaceDomain />
+<ReplaceDatasetToken />
+For metrics, use the `x-axiom-metrics-dataset` header instead of `x-axiom-dataset`.
+</Info>
+
+The OTLP/HTTP exporter appends `/v1/metrics` to the endpoint and sends Protobuf-encoded data. In OpenTelemetry Collector v0.144.0 and later, the exporter is called `otlp_http`. The `otlphttp` name still works as a deprecated alias.
+
+Start the Collector with your secret API key in the `SUPABASE_SECRET_KEY` environment variable:
+
+```shell
+SUPABASE_SECRET_KEY="sb_secret_..." otelcol-contrib --config config.yaml
+```
+
+To monitor several Supabase projects, add one entry to `targets` for each project, or one scrape job for each project if their secret API keys differ.
+
+## Query Supabase metrics
+
+After about a minute, metrics appear in your dataset. The Collector keeps the original Prometheus metric names, such as `node_cpu_seconds_total` and `pg_database_size_mb`. It sets the `service.name` tag to the scrape job name (`supabase`) and `service.instance.id` to the scrape target. Supabase metrics also carry tags such as `supabase_project_ref`.
+
+Counters, such as metrics ending in `_total`, are cumulative. Use `prom::rate` to turn them into per-second rates.
+
+The queries below make a starter dashboard. Add each one as a chart to a [new dashboard](/dashboards/create) and replace `DATASET_NAME` with the name of your metrics dataset. For more information about the query language, see [Introduction to MPL](/mpl/introduction).
+
+<Frame caption="Axiom dashboard built from the queries on this page">
+  <img src="/docs/doc-assets/shots/supabase-metrics-dashboard.png" alt="Axiom dashboard showing Supabase database size, CPU, memory, disk, transaction, and PgBouncer connection metrics" />
+</Frame>
+
+### CPU usage
+
+Calculate the fraction of CPU time spent outside the idle mode:
+
+```mpl
+(
+  `DATASET_NAME`:`node_cpu_seconds_total`
+  | where mode != "idle"
+  | align to $__interval using prom::rate
+  | group by supabase_project_ref using sum,
+  `DATASET_NAME`:`node_cpu_seconds_total`
+  | align to $__interval using prom::rate
+  | group by supabase_project_ref using sum
+)
+| compute cpu_busy using /
+```
+
+### Available memory
+
+Calculate the fraction of memory available to applications:
+
+```mpl
+(
+  `DATASET_NAME`:`node_memory_MemAvailable_bytes`
+  | align to $__interval using last
+  | group by supabase_project_ref using sum,
+  `DATASET_NAME`:`node_memory_MemTotal_bytes`
+  | align to $__interval using last
+  | group by supabase_project_ref using sum
+)
+| compute memory_available using /
+```
+
+### Free disk space
+
+Calculate the fraction of free space on the data disk:
+
+```mpl
+(
+  `DATASET_NAME`:`node_filesystem_avail_bytes`
+  | where mountpoint == "/data"
+  | align to $__interval using last
+  | group by supabase_project_ref using sum,
+  `DATASET_NAME`:`node_filesystem_size_bytes`
+  | where mountpoint == "/data"
+  | align to $__interval using last
+  | group by supabase_project_ref using sum
+)
+| compute disk_free using /
+```
+
+### Database size
+
+Chart the database size in megabytes:
+
+```mpl
+`DATASET_NAME`:`pg_database_size_mb`
+| align to $__interval using last
+| group by supabase_project_ref using max
+```
+
+### Connections
+
+Chart the number of Postgres backends:
+
+```mpl
+`DATASET_NAME`:`pg_stat_database_num_backends`
+| align to $__interval using max
+| group by supabase_project_ref using sum
+```
+
+Chart active client connections to the project’s dedicated PgBouncer connection pooler by database:
+
+```mpl
+`DATASET_NAME`:`pgbouncer_pools_client_active_connections`
+| align to $__interval using max
+| group by database using sum
+```
+
+Chart clients waiting for a server connection in PgBouncer. A value that stays above zero means the pool is saturated:
+
+```mpl
+`DATASET_NAME`:`pgbouncer_pools_client_waiting_connections`
+| align to $__interval using max
+| group by database using sum
+```
+
+### Transactions
+
+Chart committed and rolled-back transactions per second:
+
+```mpl
+`DATASET_NAME`:`pg_stat_database_xact_commit_total`
+| align to $__interval using prom::rate
+| group by supabase_project_ref using sum
+```
+
+```mpl
+`DATASET_NAME`:`pg_stat_database_xact_rollback_total`
+| align to $__interval using prom::rate
+| group by supabase_project_ref using sum
+```
+
+Supabase refreshes Postgres statistics counters, such as the transaction counters, about every two minutes. If a rate chart alternates between zero and higher values over a short time range, replace `$__interval` with `2m` or a longer window.
+
+To translate other panels from the [Supabase Grafana dashboard](https://github.com/supabase/supabase-grafana) or the [example alert rules](https://github.com/supabase/supabase-grafana/blob/main/docs/example-alerts.md), see [Migrate PromQL queries to Axiom](/mpl/migrate-metrics).
+
+## What’s next
+
+- Set up [threshold monitors](/monitor-data/threshold-monitors) on metrics such as free disk space or CPU usage to get alerted before your project runs out of resources.
+- [Send Supabase logs to Axiom](/apps/supabase) to investigate the events behind a change in a metric.
+- For more information about metrics in Axiom, see [Metrics](/query-data/metrics).
