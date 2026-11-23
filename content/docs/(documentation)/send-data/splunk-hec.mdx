@@ -1,23 +1,27 @@
 ---
-title: 'Send data to Axiom using the Splunk HEC API'
-description: 'This page explains how to send data to Axiom through the Splunk HTTP Event Collector (HEC) compatible API.'
+title: 'Send data with the Splunk HEC API'
+description: 'This page explains how to send data to Axiom from Splunk forwarders, the OpenTelemetry splunk_hec exporter, logging libraries, and custom clients through the Splunk HTTP Event Collector (HEC) compatible API.'
 overview: 'Splunk-compatible HTTP Event Collector endpoint for ingesting events'
-sidebarTitle: Splunk HEC
-keywords: ['splunk', 'hec', 'http event collector', 'axiom documentation', 'documentation', 'axiom', 'logs', 'ingest']
+sidebarTitle: Splunk HEC API
+keywords: ['splunk', 'hec', 'http event collector', 'axiom documentation', 'documentation', 'axiom', 'logs', 'ingest', 'forwarder', 'javascript', 'python', 'go']
 ---
 
 import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
 import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 
-Axiom offers a Splunk [HTTP Event Collector (HEC)](https://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector) compatible API so you can send events from Splunk forwarders, the OpenTelemetry `splunk_hec` exporter, and any other HEC client without changing your existing tooling.
+Axiom offers a Splunk [HTTP Event Collector (HEC)](https://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector) compatible API so you can send events from Splunk forwarders, the OpenTelemetry `splunk_hec` exporter, Splunk logging libraries, and custom HTTP clients without changing your existing tooling.
 
 The HEC API is served from a dedicated host on your edge deployment: `hec.AXIOM_DOMAIN`. For example, if your edge deployment’s base domain is `us-east-1.aws.edge.axiom.co`, the HEC endpoint is `https://hec.us-east-1.aws.edge.axiom.co`.
+
+To connect a SaaS product or security tool that offers a built-in Splunk destination, such as GitHub, Vercel, or Bitwarden, see [Send data from products with a Splunk HEC destination](/send-data/splunk-hec-destinations).
 
 <Prerequisites />
 
 <Info>
 <ReplaceDomain />
 The HEC endpoints are hosted at `hec.AXIOM_DOMAIN`, a dedicated subdomain of your edge deployment’s base domain.
+<ReplaceDatasetToken />
 </Info>
 
 ## Authentication
@@ -65,7 +69,7 @@ Axiom interprets the standard HEC envelope fields as follows:
 
 | Field | Behavior |
 | :--- | :--- |
-| `event` | When an object, its keys become top-level fields of the Axiom event. When a string, it is stored in the `_raw` field. |
+| `event` | When an object, its keys become top-level fields of the Axiom event. When a string, it’s stored in the `_raw` field. |
 | `fields` | Merged into the event as top-level fields. |
 | `time` | Parsed as the event timestamp (`_time`). Accepts epoch seconds, epoch milliseconds, or an RFC 3339 string. When omitted, Axiom assigns the ingest time. |
 | `index` | Selects the target dataset (see [Choose the target dataset](#choose-the-target-dataset)) and is also retained as a field. |
@@ -107,6 +111,101 @@ curl 'https://hec.AXIOM_DOMAIN/services/collector/health'
 {"text": "HEC is healthy", "code": 17}
 ```
 
+## Client examples
+
+The following examples send events from Splunk logging libraries and from custom code.
+
+### Send logs from JavaScript using `splunk-logging`
+
+```js
+var SplunkLogger = require('splunk-logging').Logger;
+
+var config = {
+  token: 'API_TOKEN',
+  url: 'https://hec.AXIOM_DOMAIN:443/services/collector/event?index=DATASET_NAME',
+};
+
+var Logger = new SplunkLogger(config);
+
+var payload = {
+  // Message can be anything; doesn’t have to be an object
+  message: {
+    temperature: '70F',
+    chickenCount: 500,
+  },
+};
+
+console.log('Sending payload', payload);
+Logger.send(payload, function (err, resp, body) {
+  // If successful, body will be { text: 'Success', code: 0 }
+  console.log('Response from Axiom', body);
+});
+```
+
+### Send logs from Python using `splunk_handler`
+
+```py
+import logging
+from splunk_handler import SplunkHandler
+splunk = SplunkHandler(
+        host='hec.AXIOM_DOMAIN',
+        port='443',
+        protocol='https',
+        token='API_TOKEN',
+        index='DATASET_NAME'
+    )
+
+logging.getLogger('').addHandler(splunk)
+
+logging.warning('Hello from Axiom!')
+```
+
+### Send logs from Go using `net/http`
+
+```go
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+)
+
+func main() {
+	event := map[string]any{
+		"time":       time.Now().Unix(),
+		"sourcetype": "httpevent",
+		"event": map[string]any{
+			"message": "hello from Axiom",
+			"level":   "info",
+		},
+	}
+	body, _ := json.Marshal(event)
+
+	req, _ := http.NewRequest(http.MethodPost, "https://hec.AXIOM_DOMAIN/services/collector/event?index=DATASET_NAME", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Splunk API_TOKEN")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	fmt.Println(resp.Status)
+}
+```
+
+## Limitations
+
+The Axiom HEC API differs from a Splunk HEC endpoint in the following ways:
+
+- Axiom only accepts HTTPS on port `443`. Splunk’s default port `8088` isn’t available. Axiom redirects plain HTTP requests on port `80` to HTTPS, and many HTTP clients don’t resend the request body after the redirect.
+- Axiom doesn’t serve the versioned `/services/collector/event/1.0` and `/services/collector/raw/1.0` paths. Requests to these paths return `404`. The versioned health path `/services/collector/health/1.0` is available.
+- Axiom doesn’t support indexer acknowledgment. Axiom accepts the `X-Splunk-Request-Channel` header and the `channel` query parameter, but doesn’t serve `/services/collector/ack`.
+- Axiom stores the fields inside `event`, the `fields` object, and the standard envelope fields listed in [Event envelope fields](#event-envelope-fields). Axiom doesn’t store other top-level fields of the envelope.
+
 ## Response codes
 
 Responses follow the Splunk HEC convention: an HTTP status code plus a JSON body carrying a Splunk `code`.
@@ -117,7 +216,7 @@ Responses follow the Splunk HEC convention: an HTTP status code plus a JSON body
 | `200` | `17` | The collector is healthy (health endpoints only). |
 | `400` | `5` | No data. The request body was empty. |
 | `400` | `6` | Invalid data format. The body couldn’t be parsed, the dataset is in another edge deployment, or the dataset isn’t an events or logs dataset. |
-| `400` | `7` | Incorrect index. The target dataset could not be resolved. |
+| `400` | `7` | Incorrect index. The target dataset couldn’t be resolved. |
 | `401` | `2` | Token missing. |
 | `401` | `3` | Token invalid. |
 | `403` | `4` | Token can’t ingest into the dataset, the dataset is shared, or the organization is suspended. |
