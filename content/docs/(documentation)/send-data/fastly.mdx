@@ -39,13 +39,13 @@ In Fastly, create a Splunk logging endpoint for your service. For more informati
 The Axiom Splunk HEC API is hosted at `hec.AXIOM_DOMAIN`. For example, if your edge deployment’s base domain is `us-east-1.aws.edge.axiom.co`, the URL is `https://hec.us-east-1.aws.edge.axiom.co/services/collector/event`.
 </Info>
 
-After you create the endpoint, activate the new version of your service. Fastly starts to batch log lines and post them to Axiom, and the events appear in your dataset.
+After you create the endpoint, activate the new version of your service. Fastly starts to batch log lines and post them to Axiom. It can take a few minutes after activation before the first events appear in your dataset.
 
 The `index` field of each log line selects the Axiom dataset. If you leave out `index`, Axiom sends the events to the dataset that the API token is scoped to, provided that the token grants ingest access to exactly one dataset. For more information, see [Choose the target dataset](/send-data/splunk-hec#choose-the-target-dataset).
 
 ## Recommended log format
 
-Each log line that Fastly sends must be a Splunk HEC event envelope. Axiom turns the keys of the `event` object into top-level fields, uses `time` as the event timestamp, and keeps `host`, `source`, and `sourcetype` as fields. For more information, see [Event envelope fields](/send-data/splunk-hec#event-envelope-fields).
+Each log line that Fastly sends must be a Splunk HEC event envelope. Axiom turns the keys of the `event` object into top-level fields, uses `time` as the event timestamp, and keeps `host`, `source`, `sourcetype`, and `index` as fields. For more information, see [Event envelope fields](/send-data/splunk-hec#event-envelope-fields).
 
 The following log format for CDN services records the request, the response, the cache state, timing, and the location of the client and the POP. It uses [VCL variables](https://www.fastly.com/documentation/reference/vcl/variables/) and runs in `vcl_log`, which is the default placement for the current format version. Strings that come from the client pass through `json.escape` so that each line stays valid JSON.
 
@@ -110,7 +110,7 @@ The following query shows the cache hit ratio and the 95th percentile request du
 ```kusto
 ['DATASET_NAME']
 | where fastly_is_edge == true
-| summarize requests = count(), hit_ratio = round(100.0 * countif(cache_state startswith "HIT") / count(), 2), p95_duration_ms = percentile(duration_us, 95) / 1000 by pop
+| summarize requests = count(), hit_ratio = round(100.0 * countif(cache_state startswith "HIT") / count(), 2), p95_duration_ms = percentile(duration_us, 95) / 1000.0 by pop
 | sort by requests desc
 ```
 
