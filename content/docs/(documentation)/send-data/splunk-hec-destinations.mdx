@@ -12,6 +12,8 @@ import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 
 Many SaaS products, security tools, and agents can stream data to Splunk but to no other observability platform. Axiom offers a [Splunk HTTP Event Collector (HEC) compatible API](/send-data/splunk-hec), so you can point these Splunk destinations at Axiom instead.
 
+To send data from Splunk forwarders, logging libraries, or your own code, see [Send data with the Splunk HEC API](/send-data/splunk-hec).
+
 This page explains the values to enter in a Splunk HEC destination, and then lists the settings for specific products.
 
 <Prerequisites />
@@ -36,7 +38,7 @@ Most Splunk HEC destinations ask for some of the following values. Enter the Axi
 | Index | `DATASET_NAME` |
 | Indexer acknowledgment | Turned off |
 
-When the product only asks for a host, it adds the path itself. Axiom accepts the `/services/collector`, `/services/collector/event`, and `/services/collector/raw` paths. For more information about these paths, the event envelope, and response codes, see [Send data to Axiom using the Splunk HEC API](/send-data/splunk-hec).
+When the product only asks for a host, it adds the path itself. Axiom accepts the `/services/collector`, `/services/collector/event`, and `/services/collector/raw` paths. For more information about these paths, the event envelope, and response codes, see [Send data with the Splunk HEC API](/send-data/splunk-hec).
 
 ### Choose the target dataset
 
@@ -52,11 +54,13 @@ Recommended: Create a separate dataset and a separate single-dataset token for e
 
 ### Limitations
 
-Axiom’s HEC API differs from a Splunk HEC endpoint in the following ways. If a product depends on one of these features, it can’t send data to Axiom through its Splunk destination.
+If a product depends on one of the following Splunk HEC features, it can’t send data to Axiom through its Splunk destination:
 
-- Axiom only accepts HTTPS on port `443`. Splunk’s default port `8088` isn’t available. Axiom redirects plain HTTP requests on port `80` to HTTPS, and many HTTP clients don’t resend the request body after the redirect.
-- Axiom doesn’t serve the versioned `/services/collector/event/1.0` and `/services/collector/raw/1.0` paths. Requests to these paths return `404`. The versioned health path `/services/collector/health/1.0` is available.
-- Axiom doesn’t support indexer acknowledgment. Axiom accepts the `X-Splunk-Request-Channel` header and the `channel` query parameter, but doesn’t serve `/services/collector/ack`.
+- Port `8088`. Axiom only accepts HTTPS on port `443`.
+- The versioned `/services/collector/event/1.0` and `/services/collector/raw/1.0` paths.
+- Indexer acknowledgment and the `/services/collector/ack` path.
+
+For more information, see [Limitations of the Splunk HEC API](/send-data/splunk-hec#limitations).
 
 ## Product settings
 
