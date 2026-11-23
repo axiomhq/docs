@@ -6,6 +6,7 @@ keywords: ["architecture", "opentelemetry", "vector", "collector", "agent", "agg
 
 import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
 import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceToken from "@/content/snippets/replace-token.mdx"
 
 Successfully adopting a new platform at scale requires a robust and reliable data collection strategy. In complex distributed systems, how you collect and forward telemetry is as important as the platform that analyzes it.
 
@@ -93,6 +94,8 @@ The [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) is the C
 
 Axiom natively supports the OpenTelemetry Line Protocol (OTLP). Configuring the collector to send data to Axiom is simple.
 
+Use an **Events** dataset for logs, another **Events** dataset for traces, and a **Metrics** dataset for metrics. Connect them with a [correlation group](/query-data/correlations#create-a-correlation-group).
+
 **Example Collector Configuration (`otel-collector-config.yaml`):**
 
 ```yaml
@@ -114,13 +117,21 @@ processors:
     send_batch_max_size: 8192
 
 exporters:
-  # Exporter for logs and traces
-  otlphttp:
+  # Exporter for logs
+  otlphttp/logs:
     compression: zstd
     endpoint: https://AXIOM_DOMAIN
     headers:
       authorization: Bearer API_TOKEN
-      x-axiom-dataset: DATASET_NAME
+      x-axiom-dataset: LOGS_DATASET_NAME
+
+  # Exporter for traces
+  otlphttp/traces:
+    compression: zstd
+    endpoint: https://AXIOM_DOMAIN
+    headers:
+      authorization: Bearer API_TOKEN
+      x-axiom-dataset: TRACES_DATASET_NAME
   
   # Exporter for metrics
   otlphttp/metrics:
@@ -128,7 +139,7 @@ exporters:
     endpoint: https://AXIOM_DOMAIN
     headers:
       authorization: Bearer API_TOKEN
-      x-axiom-metrics-dataset: DATASET_NAME
+      x-axiom-metrics-dataset: METRICS_DATASET_NAME
 
 service:
   pipelines:
@@ -139,7 +150,7 @@ service:
         - memory_limiter
         - batch
       exporters:
-        - otlphttp
+        - otlphttp/traces
     
     logs:
       receivers:
@@ -148,7 +159,7 @@ service:
         - memory_limiter
         - batch
       exporters:
-        - otlphttp
+        - otlphttp/logs
     
     metrics:
       receivers:
@@ -162,8 +173,8 @@ service:
 
 <Info>
 <ReplaceDomain />
-<ReplaceDatasetToken />
-Logs and traces share an **Events** dataset in this example. To use separate datasets, configure a separate exporter and `x-axiom-dataset` value for each signal.
+<ReplaceToken />
+Replace `LOGS_DATASET_NAME`, `TRACES_DATASET_NAME`, and `METRICS_DATASET_NAME` with the names of the Axiom datasets for logs, traces, and metrics.
 When configuring metrics, use the `x-axiom-metrics-dataset` header instead of `x-axiom-dataset`.
 </Info>
 
