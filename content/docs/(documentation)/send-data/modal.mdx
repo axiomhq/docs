@@ -172,7 +172,7 @@ In Axiom, the logs dataset receives a `Hello from Modal! 🚀` log from the `mod
 After your Modal Functions run, Axiom receives the following:
 
 - The logs dataset receives Function logs from the `modal.function-logs` service, with attributes such as `app_name`, `function_name`, and `container_id`. If your Modal plan includes audit logs, the logs dataset receives them too.
-- The metrics dataset receives container and Function metrics such as `modal.cpu.utilization`, `modal.memory.usage`, and `modal.input_events.coldstart_time_us`, tagged with `app_name`, `function_name`, and other tags. GPU Functions also send GPU metrics such as `modal.gpu.compute.utilization`.
+- The metrics dataset receives container and Function metrics such as `modal.cpu.utilization`, `modal.memory.usage`, and `modal.input_events.coldstart_time_us`, tagged with `app_name`, `function_name`, and other tags. GPU Functions also send GPU metrics such as `modal.gpu.compute.utilization` and `modal.gpu.memory.usage`, with a `gpu_billing_type` tag such as `H100`.
 
 For the full list of metrics and their tags, see the [Modal documentation](https://modal.com/docs/guide/otel-integration#metrics).
 
@@ -299,7 +299,7 @@ Replace `load_model` and `run_model` with your own code. Change `gpu="H100"` to 
 
 The example uses the following Modal features:
 
-- The `@modal.enter()` method runs once when a container starts. It configures the tracer provider and records model loading in a `load_model` span, so cold starts are visible in each container’s first trace.
+- The `@modal.enter()` method runs once when a container starts. It configures the tracer provider and records model loading in a `load_model` span. Each cold start appears as a separate `load_model` trace with the same `service.instance.id` as the inference calls of that container.
 - The `@modal.method()` method records each inference call in a `chat MODEL_NAME` span with the `gen_ai.*` attributes that Axiom uses for its AI trace views.
 - The `@modal.exit()` method exports buffered spans before the container stops. Modal gives exit handlers a grace period of 30 seconds. For more information, see the Modal documentation on [container lifecycle hooks](https://modal.com/docs/guide/lifecycle-functions).
 - The `MODAL_TASK_ID` and `MODAL_ENVIRONMENT` environment variables identify the container and the Modal environment. For more information, see the Modal documentation on [environment variables](https://modal.com/docs/guide/environment_variables).
@@ -315,7 +315,7 @@ Run the following command in your terminal:
 modal run traced_inference.py
 ```
 
-In Axiom, the traces dataset receives a `load_model` span and a `chat MODEL_NAME` span. The `chat` span carries the `gen_ai.*` attributes, so Axiom shows the trace in its AI trace views.
+In Axiom, the traces dataset receives a `load_model` span and a `chat MODEL_NAME` span, each in its own trace. The `chat` span carries the `gen_ai.*` attributes, so Axiom shows the trace in its AI trace views.
 
 </Step>
 </Steps>
