@@ -1,0 +1,174 @@
+---
+title: 'Send MongoDB Atlas logs and metrics to Axiom'
+description: 'This page explains how to send MongoDB Atlas logs, Activity Feed events, and metrics to Axiom with the Atlas OpenTelemetry integrations.'
+overview: 'Managed MongoDB database service'
+sidebarTitle: MongoDB Atlas
+keywords: ['mongodb', 'mongodb atlas', 'atlas', 'axiom documentation', 'documentation', 'axiom', 'database monitoring', 'logs', 'audit logs', 'metrics', 'opentelemetry', 'otlp', 'mongod', 'mongos']
+---
+
+import Prerequisites from "@/content/snippets/standard-prerequisites.mdx"
+import ReplaceDomain from "@/content/snippets/replace-domain.mdx"
+import ReplaceDatasetToken from "@/content/snippets/replace-dataset-token.mdx"
+
+MongoDB Atlas is a managed MongoDB database service. Atlas exports database logs and metrics to any OpenTelemetry (OTel) endpoint over OTLP/HTTP. Axiom accepts OTLP/HTTP natively, so Atlas sends data straight to Axiom without an OpenTelemetry Collector in between.
+
+This page explains how to set up the following Atlas integrations:
+
+- [OpenTelemetry log export](#send-logs-to-axiom) sends `mongod` and `mongos` diagnostic logs, audit logs, and Project Activity Feed events to an Axiom events dataset.
+- [OpenTelemetry metrics](#send-metrics-to-axiom) sends Atlas metrics to an Axiom metrics dataset.
+
+<Prerequisites />
+- [Create an Atlas account](https://www.mongodb.com/cloud/atlas/register) with the `Project Owner` role on the project you want to monitor.
+
+<Note>
+Logs and metrics require separate datasets. Create one dataset with the **Events** type for logs, and one dataset with the **Metrics** type for metrics. Use an API token that can ingest into both. For more information, see [Create dataset](/reference/datasets#create-dataset).
+</Note>
+
+## Send logs to Axiom
+
+Atlas exports database logs from `M10+` clusters running MongoDB 7.0 or later. Activity Feed events export from projects with clusters of any tier, including free clusters. Atlas sends logs every minute. For more information, see [Export logs to OpenTelemetry](https://www.mongodb.com/docs/atlas/export-logs-otel/) in the Atlas documentation.
+
+1. In Atlas, open your project, and then go to **Project Settings > Integrations**.
+1. Click **Configure** on the **OpenTelemetry Log Export** card.
+1. In the **OTLP Endpoint** field, enter `https://AXIOM_DOMAIN/v1/logs`.
+1. In the **OTLP Headers** fields, add the following headers. Click **Add Header** to add the second header.
+
+    | Header | Value |
+    | :--- | :--- |
+    | `Authorization` | `Bearer API_TOKEN` |
+    | `X-Axiom-Dataset` | `DATASET_NAME` |
+
+1. Under **Log Type**, select the logs to export:
+    - **Mongod**: Diagnostic logs from each `mongod` process.
+    - **Mongos**: Diagnostic logs from each `mongos` router in a sharded cluster.
+    - **Mongod Audit**: Audit logs from each `mongod` process.
+    - **Mongos Audit**: Audit logs from each `mongos` router in a sharded cluster.
+    - **Activity Feed Events**: Events from the Project Activity Feed.
+1. Click **Test Integration**. Atlas sends a test log event to Axiom and confirms that the request succeeded.
+1. Click **Save**.
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+Use the name of the events dataset for `DATASET_NAME`.
+</Info>
+
+### Configure log export with the Atlas Administration API
+
+To create the same integration programmatically, send a request to the [log integration endpoints](https://www.mongodb.com/docs/atlas/export-events/#configure-event-export-with-the-api) of the Atlas Administration API:
+
+```shell wrap
+curl --request POST "https://cloud.mongodb.com/api/atlas/v2/groups/ATLAS_PROJECT_ID/logIntegrations" \
+  --header "Authorization: Bearer ATLAS_ACCESS_TOKEN" \
+  --header "Content-Type: application/json" \
+  --header "Accept: application/vnd.atlas.2025-03-12+json" \
+  --data '{
+    "type": "OTEL_LOG_EXPORT",
+    "logTypes": ["MONGOD", "MONGOS", "MONGOD_AUDIT", "MONGOS_AUDIT", "EVENTS"],
+    "otelEndpoint": "https://AXIOM_DOMAIN/v1/logs",
+    "otelSuppliedHeaders": [
+      { "name": "Authorization", "value": "Bearer API_TOKEN" },
+      { "name": "X-Axiom-Dataset", "value": "DATASET_NAME" }
+    ]
+  }'
+```
+
+Replace `ATLAS_PROJECT_ID` with the ID of your Atlas project, and `ATLAS_ACCESS_TOKEN` with an Atlas service account access token that has the `Project Owner` role.
+
+### Send organization events
+
+Atlas also exports the Organization Activity Feed to OTel endpoints. To send organization events to Axiom, follow the same procedure in **Organization Settings > Integrations**. This requires the `Organization Owner` role. For more information, see [Export organization Activity Feed events](https://www.mongodb.com/docs/atlas/export-logs-otel/#export-organization-activity-feed-events) in the Atlas documentation.
+
+Atlas sets the `service.name` resource attribute of Activity Feed events to `mongodb-atlas-events` and the `log_type` attribute to `EVENTS`, so you can tell events apart from database logs.
+
+## Send metrics to Axiom
+
+Atlas sends metrics from `M10+` clusters to OTel endpoints. For more information, see [Integrate with OpenTelemetry](https://www.mongodb.com/docs/atlas/tutorial/otel-integration/) in the Atlas documentation.
+
+1. In Atlas, open your project, and then go to **Project Settings > Integrations**.
+1. Click **Configure** on the **OpenTelemetry (OTel) Metrics** card.
+1. In the **Provider** list, select **Custom**.
+1. In the **OTLP Endpoint** field, enter `https://AXIOM_DOMAIN/v1/metrics`.
+1. Under **Authentication**, select **Header**.
+1. In the **OTLP Headers** fields, add the following headers. Click **Add Header** to add the second header.
+
+    | Header | Value |
+    | :--- | :--- |
+    | `Authorization` | `Bearer API_TOKEN` |
+    | `X-Axiom-Metrics-Dataset` | `DATASET_NAME` |
+
+1. In the **Aggregation Temporality** list, select **DELTA** or **CUMULATIVE**. Axiom accepts both and stores the temporality with each metric.
+1. Under **Select Metrics to Send**, select the metric categories to export, such as **MongoDB Metrics** and **Hardware Metrics**.
+1. Click **Test Integration**. Atlas sends a test metric to Axiom and confirms that the request succeeded.
+1. Click **Save**.
+
+<Info>
+<ReplaceDomain />
+<ReplaceDatasetToken />
+Use the name of the metrics dataset for `DATASET_NAME`. For metrics, use the `X-Axiom-Metrics-Dataset` header instead of `X-Axiom-Dataset`.
+</Info>
+
+### Configure metrics export with the Atlas Administration API
+
+To create the same integration programmatically, send a request to the [metric integration endpoints](https://www.mongodb.com/docs/api/doc/atlas-admin-api-v2/operation/operation-creategroupmetricintegration) of the Atlas Administration API:
+
+```shell wrap
+curl --request POST "https://cloud.mongodb.com/api/atlas/v2/groups/ATLAS_PROJECT_ID/metricIntegrations" \
+  --header "Authorization: Bearer ATLAS_ACCESS_TOKEN" \
+  --header "Content-Type: application/vnd.atlas.2025-03-12+json" \
+  --header "Accept: application/vnd.atlas.2025-03-12+json" \
+  --data '{
+    "integrationType": "OTEL",
+    "providerType": "CUSTOM",
+    "endpoint": "https://AXIOM_DOMAIN/v1/metrics",
+    "authType": "HEADER",
+    "headers": [
+      { "name": "Authorization", "value": "Bearer API_TOKEN" },
+      { "name": "X-Axiom-Metrics-Dataset", "value": "DATASET_NAME" }
+    ],
+    "aggregationTemporality": "DELTA",
+    "metricSelection": ["MONGODB_METRICS", "HARDWARE_METRICS"]
+  }'
+```
+
+The `metricSelection` array accepts the metric categories listed in the [API reference](https://www.mongodb.com/docs/api/doc/atlas-admin-api-v2/operation/operation-creategroupmetricintegration), such as `MONGODB_METRICS`, `HARDWARE_METRICS`, `DB_STATS`, `SEARCH_METRICS`, `SHARDING_METRICS`, `QUERY_SHAPE_INSIGHTS`, and `ATLAS_STREAM_PROCESSING`.
+
+## Explore your Atlas data
+
+Atlas exports logs every minute. Open the [Stream tab](/query-data/stream) to watch log events arrive in real time and inspect their fields. The first event is the test event from **Test Integration**, with the service name `mongodb-atlas`.
+
+In Axiom, the `service.name` resource attribute becomes a top-level field, other resource attributes appear under `resource`, and log record attributes appear under `attributes`. For example, the following query charts the volume of Atlas log events over time for each service. Activity Feed events appear with the service name `mongodb-atlas-events`.
+
+```kusto
+['DATASET_NAME']
+| summarize count() by bin_auto(_time), ['service.name']
+```
+
+The following query counts Activity Feed events by event type:
+
+```kusto
+['DATASET_NAME']
+| where ['service.name'] == 'mongodb-atlas-events'
+| summarize count() by ['attributes.mongodb.event.type']
+```
+
+To list the metrics Atlas sends, open the metrics dataset in the [Query tab](/query-data/explore). For more information about querying metrics, see [Metrics](/query-data/metrics).
+
+Add queries like these to a [dashboard](/dashboards/create) to monitor your Atlas clusters. For example, the following dashboard shows log volume, slow queries, failed authentication attempts, Activity Feed events, and cluster metrics:
+
+<Frame caption="Dashboard of MongoDB Atlas logs and metrics in Axiom">
+  <img src="/docs/doc-assets/shots/mongodb-atlas-dashboard.png" alt="Dashboard of MongoDB Atlas logs and metrics in Axiom" />
+</Frame>
+
+## Limitations
+
+- Each Atlas host produces about 1 GB of logs per day. Atlas charges data transfer costs for log export.
+- Network issues or retries can cause duplicate log events in Axiom. To deduplicate Activity Feed events, use the `attributes.mongodb.event.id` field.
+- Logs can contain sensitive information. To have Atlas redact information before export, contact MongoDB Support.
+- Atlas requires an HTTPS endpoint with a certificate from a public certificate authority. Axiom edge endpoints meet this requirement.
+
+## What’s next
+
+- [Create a dashboard](/dashboards/create) for your Atlas clusters.
+- [Set up monitors](/monitor-data/monitors) to get alerts about slow queries or failed authentication attempts.
+- [Learn more about OpenTelemetry in Axiom](/send-data/opentelemetry).
