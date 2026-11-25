@@ -35,10 +35,10 @@ In log analysis, you can use `array_concat` to merge collections of user request
 ```kusto
 ['sample-http-logs']
 | take 50
-| summarize combined_requests = array_concat(pack_array(uri), pack_array(method))
+| extend combined_requests = array_concat(pack_array(uri), pack_array(method))
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20take%2050%20%7C%20summarize%20combined_requests%20%3D%20array_concat(pack_array(uri)%2C%20pack_array(method))%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20take%2050%20%7C%20extend%20combined_requests%20%3D%20array_concat(pack_array(uri)%2C%20pack_array(method))%22%7D)
 
 **Output**
 
@@ -58,20 +58,16 @@ In OpenTelemetry traces, use `array_concat` to join span IDs and trace IDs for a
 ```kusto
 ['otel-demo-traces']
 | take 50
-| summarize combined_ids = array_concat(pack_array(span_id), pack_array(trace_id))
+| extend combined_ids = array_concat(pack_array(span_id), pack_array(trace_id))
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20take%2050%20%7C%20summarize%20combined_ids%20%3D%20array_concat(pack_array(span_id)%2C%20pack_array(trace_id))%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20take%2050%20%7C%20extend%20combined_ids%20%3D%20array_concat(pack_array(span_id)%2C%20pack_array(trace_id))%22%7D)
 
 **Output**
 
-| combined_ids                            |
-|-----------------------------------------|
-| ["span1", "trace1", "span2", ...]       |
-
 | _time               | trace_id      | span_id       | combined_ids       |
 |---------------------|---------------|---------------|--------------------|
-| 2024-10-28T12:30:00 | trace_abc123  | span_001      | ["trace_abc123", "span_001"]           |
+| 2024-10-28T12:30:00 | trace_abc123  | span_001      | ["span_001", "trace_abc123"]           |
 
 This example creates an array containing both `span_id` and `trace_id` values, offering a unified view of the trace journey across services.
 
@@ -86,14 +82,14 @@ In security logs, `array_concat` can consolidate multiple IP addresses or user I
 ['sample-http-logs']
 | where status == '500'
 | take 50
-| summarize failed_attempts = array_concat(pack_array(id), pack_array(['geo.city']))
+| extend failed_attempts = array_concat(pack_array(id), pack_array(['geo.city']))
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20%3D%3D%20'500'%20%7C%20take%2050%20%7C%20summarize%20failed_attempts%20%3D%20array_concat(pack_array(id)%2C%20pack_array(%5B'geo.city'%5D))%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20status%20%3D%3D%20'500'%20%7C%20take%2050%20%7C%20extend%20failed_attempts%20%3D%20array_concat(pack_array(id)%2C%20pack_array(%5B'geo.city'%5D))%22%7D)
 
 **Output**
 
-| _time               | id      | geo.city       | combined_ids       |
+| _time               | id      | geo.city       | failed_attempts       |
 |---------------------|---------------|---------------|--------------------|
 | 2024-10-28T12:30:00 | fc1407f5-04ca-4f4e-ad01-f72063736e08  | Avenal      | ["fc1407f5-04ca-4f4e-ad01-f72063736e08", "Avenal"]  |
 
