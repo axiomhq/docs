@@ -777,6 +777,108 @@
         "x-axiom-preview": true
       }
     },
+    "/datasets/_apl/delete": {
+      "post": {
+        "description": "Deletes the storage blocks that contain at least one event matching an APL filter query. Axiom deletes whole blocks, so events that don't match the query but share a block with a matching event are deleted too. Run the request with `commit` set to `false` first to preview the result, and compare `rowsMatched` with `rowsDeleted` to see how many events outside the query would be deleted.\n\nThe query must target a single dataset and only filter events, for example with `where` or `search`. Queries that aggregate, sort, limit, expand, or project fields are rejected. Deletion runs asynchronously: a successful commit queues the matching blocks for deletion and returns before they're deleted. Not available while the organization is on legal hold.",
+        "tags": [
+          "query"
+        ],
+        "summary": "Delete events matching a query",
+        "operationId": "datasetAPLDeletionQuery",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AplDeletionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Preview of the deletion, or confirmation that the matching blocks were queued for deletion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplDeletionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query is invalid, uses unsupported operators, or matches too many blocks. Narrow the time range or the filter and retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplQueryError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The token or user lacks the Update action on the Trim capability for the dataset, or the dataset is shared with your organization and not writable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplQueryError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The dataset doesn't exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplQueryError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The organization is on legal hold, so data can't be deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplQueryError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplQueryError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Recently ingested data couldn't be prepared for deletion. Nothing was deleted; retry the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AplQueryError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Auth": [
+              "trim|update"
+            ]
+          }
+        ],
+        "x-axiom-nocompress": true,
+        "x-axiom-not-suspended": true,
+        "x-axiom-preview": true
+      }
+    },
     "/datasets/{dataset_id}/fields": {
       "get": {
         "description": "Lists the fields in the schema of a dataset with their type, unit, description, and hidden setting. Not supported for metrics datasets.",
@@ -4873,30 +4975,21 @@
           "commit"
         ],
         "properties": {
-          "Modules": {
-            "description": "Key-value pairs of module names and module sources. Axiom will make modules available for this query later.",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
           "apl": {
+            "description": "APL query that selects the events to delete. It must target a single dataset and only filter events, for example `['my-dataset'] | where user_id == \"123\"`.",
             "type": "string"
           },
           "commit": {
+            "description": "Whether to delete the matching blocks. When `false`, nothing is deleted and the response previews the effect of the deletion.",
             "type": "boolean"
           },
           "endTime": {
+            "description": "End of the time range to search, as an RFC3339 timestamp or a relative time expression such as `now`.",
             "type": "string"
           },
           "startTime": {
-            "description": "start and end time for the query, these must be specified as RFC3339 strings\nor using relative time expressions (e.g. now-1h, now-1d, now-1w, etc)",
+            "description": "Start of the time range to search, as an RFC3339 timestamp or a relative time expression such as `now-1d`.",
             "type": "string"
-          },
-          "variables": {
-            "description": "Variables is an optional set of additional variables that are inserted into the APL",
-            "type": "object",
-            "additionalProperties": {}
           }
         }
       },
@@ -4907,25 +5000,25 @@
           "rowsDeleted"
         ],
         "properties": {
-          "blocksMatched": {
-            "type": "integer",
-            "format": "uint64"
-          },
           "dryRun": {
+            "description": "Whether the request was a preview. `true` when `commit` was `false`.",
             "type": "boolean"
           },
           "firstMatchedEvent": {
-            "description": "these are timestamps",
+            "description": "Timestamp of the earliest matching event.",
             "type": "string"
           },
           "lastMatchedEvent": {
+            "description": "Timestamp of the latest matching event.",
             "type": "string"
           },
           "rowsDeleted": {
+            "description": "Number of events in the matching blocks, including events that don't match the query. This is the number of events deleted, or that would be deleted when `dryRun` is `true`.",
             "type": "integer",
             "format": "uint64"
           },
           "rowsMatched": {
+            "description": "Number of events that match the query.",
             "type": "integer",
             "format": "uint64"
           }
