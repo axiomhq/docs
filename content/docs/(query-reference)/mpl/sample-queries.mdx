@@ -20,15 +20,15 @@ Calculate the rate of successful HTTP requests by method and route using the his
 
 ## Histogram
 
-Calculate the 90th and 99th percentile HTTP request durations by service.
+Calculate the 90th and 99th percentile HTTP request durations by service. The `http.server.request.duration` metric in this dataset uses cumulative temporality, so the query uses `interpolate_cumulative_histogram`. For a histogram metric that uses delta temporality, use `interpolate_delta_histogram(0.90, 0.99)` instead.
 
 ```mpl
 `otel-demo-metrics`:`http.server.request.duration`
 | where `http.response.status_code` < 400
-| bucket by `service.name` to 5m using interpolate_delta_histogram(0.90, 0.99)
+| bucket by `service.name` to 5m using interpolate_cumulative_histogram(rate, 0.90, 0.99)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20%60http.response.status_code%60%20%3C%20400%20%7C%20bucket%20by%20%60service.name%60%20to%205m%20using%20interpolate_delta_histogram(0.90%2C%200.99)%22%2C%22metricsDataset%22%3A%22otel-demo-metrics%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%60otel-demo-metrics%60%3A%60http.server.request.duration%60%20%7C%20where%20%60http.response.status_code%60%20%3C%20400%20%7C%20bucket%20by%20%60service.name%60%20to%205m%20using%20interpolate_cumulative_histogram(rate%2C%200.90%2C%200.99)%22%2C%22metricsDataset%22%3A%22otel-demo-metrics%22%7D)
 
 ### Cumulative histogram
 
