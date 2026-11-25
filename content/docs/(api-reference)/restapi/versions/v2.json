@@ -1887,7 +1887,7 @@
     },
     "/monitors/{id}/history": {
       "get": {
-        "description": "Lists the notifications sent for the monitor between `startTime` and `endTime`. Each delivery is a separate item: one per notifier, and one per recipient for email notifiers. Failed deliveries are included. State changes that sent no notification, for example while the monitor had no notifiers, aren't listed. The caller needs query access to the monitor's datasets.",
+        "description": "Lists the notifications sent for the monitor between `startTime` and `endTime`. Each delivery is a separate item: one per notifier, and one per recipient for email notifiers. Failed deliveries are included. State changes that sent no notification, for example while the monitor had no notifiers, aren't listed. To list the runs of the monitor, set `kind` to `run`. The caller needs query access to the monitor's datasets.",
         "tags": [
           "Monitors"
         ],
@@ -1921,11 +1921,30 @@
               "type": "string",
               "format": "date-time"
             }
+          },
+          {
+            "description": "Kinds of item to list. `notification` lists the notifications sent. `run` lists the runs of the monitor, whether or not they sent a notification: one item per run, or one item per group for a monitor that groups its results, limited to the newest 1,000 in the time range. If you pass both, the items are merged and sorted from newest to oldest.",
+            "name": "kind",
+            "in": "query",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "notification",
+                  "run"
+                ]
+              },
+              "default": [
+                "notification"
+              ]
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Notifications sent in the time range.",
+            "description": "Notifications and runs in the time range, as selected by `kind`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4708,9 +4727,10 @@
         }
       },
       "AlertHistory": {
-        "description": "A notification sent for a monitor.",
+        "description": "An item in the history of a monitor: a notification sent for it, or the result of one run.",
         "type": "object",
         "required": [
+          "kind",
           "name",
           "checkId",
           "timestamp",
@@ -4722,22 +4742,35 @@
             "type": "string",
             "example": "QgOLFXIvK0ZbYf3tZE"
           },
+          "kind": {
+            "description": "`notification` for a notification sent for the monitor, `run` for the result of one run",
+            "type": "string",
+            "enum": [
+              "notification",
+              "run"
+            ],
+            "example": "notification"
+          },
           "name": {
-            "description": "Title of the notification: `Triggered: ` or `Resolved: ` followed by the monitor name",
+            "description": "For a notification, its title: `Triggered: ` or `Resolved: ` followed by the monitor name. For a run, the monitor name.",
             "type": "string",
             "example": "Triggered: High CPU usage"
           },
+          "run": {
+            "$ref": "#/components/schemas/MonitorRun"
+          },
           "state": {
-            "description": "`open` if the notification reported that the monitor triggered, `closed` if it reported that the monitor resolved",
+            "description": "For a notification, `open` if it reported that the monitor triggered and `closed` if it reported that the monitor resolved. For a run, the alert state after the run, or `error` if the run failed.",
             "type": "string",
             "enum": [
               "open",
-              "closed"
+              "closed",
+              "error"
             ],
             "example": "open"
           },
           "timestamp": {
-            "description": "Time the delivery was recorded, after any retries",
+            "description": "For a notification, the time the delivery was recorded, after any retries. For a run, the time of the run.",
             "type": "string",
             "format": "date-time",
             "example": "2024-03-20T15:30:00Z"
@@ -11457,6 +11490,49 @@
       },
       "DashboardOutput": {
         "$ref": "#/components/schemas/DashboardResource"
+      },
+      "MonitorRun": {
+        "description": "Details of a run. Only returned for items of kind `run`.",
+        "type": "object",
+        "required": [
+          "runId",
+          "matchingValue"
+        ],
+        "properties": {
+          "error": {
+            "description": "Error of the run, if it failed",
+            "type": "string"
+          },
+          "groupValues": {
+            "description": "Values of the fields the monitor groups by, for the group of this item. Not returned for a monitor that doesn't group its results.",
+            "type": "string"
+          },
+          "matchingValue": {
+            "description": "Value the run compared against the monitor's condition",
+            "type": "number",
+            "format": "double",
+            "example": 42
+          },
+          "queryEndTime": {
+            "description": "End of the time range the run queried, if the run recorded one",
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2024-03-20T15:30:00Z"
+          },
+          "queryStartTime": {
+            "description": "Start of the time range the run queried, if the run recorded one",
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2024-03-20T15:15:00Z"
+          },
+          "runId": {
+            "description": "ID of the run. A monitor that groups its results returns one item per group, and the items of one run share this ID.",
+            "type": "string",
+            "example": "7d602976-a160-460b-8edd-ed52f433638e"
+          }
+        }
       }
     }
   },
