@@ -70,7 +70,10 @@ Directives must appear before the query body.
 
 ```mpl
 set <directive_name> = <directive_value>;
+set <directive_name>;
 ```
+
+Some directives don't require a value.
 
 #### Supported directives
 
@@ -79,6 +82,7 @@ The following directives are currently supported in Axiom's MPL implementation:
 | Directive | Description |
 |-----------|-------------|
 | `custom_unit` | Sets the unit used when visualizing query results in Axiom. |
+| `legacy_prom_rate` | Restores the `prom::rate` calculation used before November 26, 2026. Write `set legacy_prom_rate;` or `set legacy_prom_rate = true;`. Setting it to `false` or omitting it uses the current calculation. |
 
 Use string values for `custom_unit`. Set it to `"1"` to render values as unitless numbers.
 
@@ -94,6 +98,13 @@ set custom_unit = "ms";
 set custom_unit = "1";
 `otel-demo-metrics`:`http.server.request.duration`
 | align to 5m using avg
+```
+
+```mpl
+set legacy_prom_rate;
+`otel-demo-metrics`:`http.server.request.duration`
+| where `axiom.histogram` == "count"
+| align to 5m using prom::rate
 ```
 
 ### Source
@@ -280,7 +291,7 @@ Available aggregation functions:
 | `count`  | Counts non-null values per interval.  |
 | `max`    | Takes the maximum value per interval. |
 | `min`    | Takes the minimum value per interval. |
-| `prom::rate` | PromQL-style rate calculation. |
+| `prom::rate` | Computes a per-second counter rate like Prometheus `rate()`, accounting for counter resets and extrapolating to the edges of each window or the query range. Changed on November 26, 2026; values for existing queries, dashboards, and monitors can differ (`map rate` is unaffected). Use [`set legacy_prom_rate;`](#directives) to restore the previous calculation. |
 | `sum`    | Sums values in each interval.         |
 | `last`   | Takes the last value in each interval.|
 
