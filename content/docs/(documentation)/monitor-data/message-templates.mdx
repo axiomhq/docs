@@ -1,0 +1,267 @@
+---
+title: 'Message templates'
+description: 'This page explains how to customize the title and body of monitor notifications with message templates.'
+sidebarTitle: Message templates
+keywords: ['axiom documentation', 'documentation', 'axiom', 'monitors', 'notifiers', 'message template', 'go template', 'slack', 'microsoft teams', 'discord', 'email']
+---
+
+<Note>
+Message templates are in private preview. To use them, contact Axiom to turn them on for your organization. For more information, see [Feature states](/platform-overview/roadmap#feature-states).
+</Note>
+
+A message template replaces the title and body of the notifications a monitor sends. Each monitor has one template, and it applies to every supported notifier of the monitor. Write templates in [Go template syntax](https://pkg.go.dev/text/template). The title is plain text. The body is Markdown. For how each notifier shows it, see [How Axiom renders templates](#how-axiom-renders-templates).
+
+Message templates apply to the following notifiers:
+
+- [Slack](/monitor-data/slack-notifier), including the Axiom Slack app
+- [Microsoft Teams](/monitor-data/microsoft-teams-notifier)
+- [Discord](/monitor-data/discord-notifier), including Discord webhooks
+- [Email](/monitor-data/email-notifier)
+
+Other notifiers ignore message templates and send their usual message. To change the payload of a [custom webhook notifier](/monitor-data/custom-webhook-notifier), edit the template of the notifier itself.
+
+## Add a message template
+
+1. Click **Monitors** in the sidebar.
+1. Create a monitor, or click a monitor in the list, and then click **Edit monitor**.
+1. In **Message template**, enter a template in **Title**, **Body**, or both. If you leave a field empty, Axiom uses the default text for that part of the notification.
+1. Check the result in **Preview**. The preview renders your template against sample notifications for the monitor type, such as **Triggered**, **Resolved**, and **No data**, and shows the text the selected notifier type receives.
+1. Click **Save**.
+
+The editor completes variables after `{{` and `.`. Click **Variables** to see the available variables and functions. For a match monitor, click **Event fields** to see the fields of the datasets your query reads. For other monitors, click **Group keys** to see the fields in the `by` clause of your query. Click an entry to insert it at the cursor.
+
+To remove a template, click **Reset to default**, and then click **Save**.
+
+### Use the API
+
+Set the `messageTemplate` object when you [create](/restapi/endpoints/createMonitor) or [update](/restapi/endpoints/updateMonitor) a monitor:
+
+```json
+{
+  "messageTemplate": {
+    "title": "{{ if eq .Action \"Open\" }}🔥{{ else }}✅{{ end }} {{ .Name }}",
+    "body": "**{{ .Name }}** is {{ .Action }}.\n\nValue: {{ .Value }}"
+  }
+}
+```
+
+## How Axiom renders templates
+
+- Each field is at most 4 KB. Axiom rejects a larger template when you save it.
+- When you save a monitor, Axiom renders its template against the sample notifications of the monitor type. If a sample fails, Axiom rejects the template and shows the error.
+- If a template fails when Axiom sends a notification, Axiom sends the default message instead.
+- Axiom trims spaces and blank lines at the start and end of the rendered title and body.
+- Notices about the monitor’s own state, rather than about its alerts, always use the default message.
+
+Each notifier shows the rendered template in its own way:
+
+| Notifier | Title | Body |
+| --- | --- | --- |
+| Slack | Section of at most 3,000 characters | Converted to Slack mrkdwn. Section of at most 3,000 characters. |
+| Slack app | Plain-text header of at most 150 characters | Converted to Slack mrkdwn. Cut to 3,000 characters. |
+| Microsoft Teams | Cut to 256 characters if the card is longer than 24 KB | Markdown subset: bold, italic, lists, and links. Headings show as plain text. Shortened if the card is longer than 24 KB. |
+| Discord | Embed title of at most 256 characters | Markdown. Embed description of at most 4,096 characters, and 6,000 for the whole embed. |
+| Email | Plain text | Plain text, so Markdown shows as written. Cut to 2,750 characters. |
+
+For Slack, Axiom converts bold, italic, strikethrough, links, headings, and lists to Slack mrkdwn. For example, `**bold**` becomes `*bold*`, `- item` becomes `• item`, and `[text](url)` becomes a Slack link. Inline code and code blocks stay as written.
+
+## Variables
+
+The following variables are available in every monitor type:
+
+| Variable | Type | Description |
+| --- | --- | --- |
+| `.Action` | string | `Open` when the monitor triggers and `Closed` when it resolves. |
+| `.Name` | string | The monitor’s name. |
+| `.Description` | string | The monitor’s description. |
+| `.Title` | string | The default title. |
+| `.Body` | string | The default message body. |
+| `.MonitorID` | string | The monitor’s ID. |
+| `.MonitorType` | string | The monitor type: `Threshold`, `MatchEvent`, `AnomalyDetection`, `NewValues`, or `NewValuesDetection`. |
+| `.MonitorURL` | string | Link to the monitor in Axiom. |
+| `.QueryURL` | string | Link to the monitor’s query over the time range of this run. Empty when Axiom can’t build the link. |
+| `.Value` | number | The value compared with the threshold. For a grouped monitor, the value of the first group. `0` when the monitor has no value, such as a match monitor. |
+| `.Threshold` | number | The threshold the value is compared with. On a monitor with levels, the threshold of the level the alert moves to, or leaves when it resolves. `0` when the monitor has no threshold. |
+| `.Operator` | string | How the value is compared with the threshold: `Above`, `AboveOrEqual`, `Below`, `BelowOrEqual`, or `AboveOrBelow`. Empty when the monitor has no threshold. |
+| `.NoData` | bool | `true` when the monitor alerts or resolves because its query returned no data. |
+| `.Range` | number | The time range the query covers, in minutes. |
+| `.Interval` | number | How often the monitor runs, in minutes. |
+| `.Timestamp` | string | When the monitor ran, in RFC 3339 format and UTC. |
+| `.QueryStartTime` | string | Start of the query’s time range, in RFC 3339 format and UTC. |
+| `.QueryEndTime` | string | End of the query’s time range, in RFC 3339 format and UTC. |
+| `.Labels` | list of strings | The monitor’s labels. |
+
+### Groups
+
+Threshold and anomaly monitors have `.Groups`, the list of groups the notification covers. It holds at most 100 groups. Groups have values only when you turn on **Notify by group**. Otherwise, the list holds at most one group without values.
+
+Inside `{{ range .Groups }}`, use the following fields of each group:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `.Values` | map | The group’s field names and values. Read one with `index .Values "service"`. |
+| `.Value` | string | The group’s value, as shown in the default message. |
+| `.NoData` | bool | `true` when the group’s query returned no data. |
+| `.Level.Name`, `.Level.Severity`, `.Level.Value`, `.Level.Recovery` | | The group’s level. Empty or `0` on monitors without named levels. |
+
+The keys of `.Values` are the fields in the `by` clause of the last `summarize` in your query. To read a top-level variable inside `range`, start it with `$`, for example `{{ $.Name }}`.
+
+### Matched event
+
+Match monitors have `.MatchedEvent`, a map of the fields of the event that matched. Read a field with `index`, for example `{{ index .MatchedEvent "message" }}`. If the field is missing, `index` renders nothing. `{{ .MatchedEvent.message }}` renders `<no value>` instead.
+
+For a nested field, pass each part of the name to `index`, for example `{{ index .MatchedEvent "attributes" "http" "status" }}`.
+
+### Threshold levels
+
+Threshold monitors with named levels have the following variables. On monitors without named levels, they’re empty or `0`.
+
+| Variable | Type | Description |
+| --- | --- | --- |
+| `.Level.Name` | string | The name of the level the alert moves to. Empty when the alert resolves. |
+| `.Level.Severity` | string | The severity of the level the alert moves to: `critical`, `error`, `warning`, or `info`. Empty when the alert resolves. |
+| `.Level.Value` | number | The threshold of the level the alert moves to. |
+| `.Level.Recovery` | number | The value the alert crosses to recover from the level. |
+| `.PreviousLevel.Name` | string | The name of the level the alert moves from. Empty when the alert opens. |
+| `.PreviousLevel.Severity` | string | The severity of the level the alert moves from. |
+| `.PreviousLevel.Value` | number | The threshold of the level the alert moves from. |
+| `.PreviousLevel.Recovery` | number | The recovery value of the level the alert moves from. |
+| `.Transition` | string | How the alert moves between levels: `open`, `escalate`, `deescalate`, or `resolve`. Empty when you turn on **Repeat alerts** and the level doesn’t change. |
+
+## Functions
+
+Message templates support the following functions:
+
+| Function | Description | Example |
+| --- | --- | --- |
+| `index` | Looks up a map key or list element. A missing key renders nothing. | `{{ index .MatchedEvent "message" }}` |
+| `join` | Joins a list of strings with a separator. | `{{ join .Labels ", " }}` |
+| `len` | The number of entries in a list or map, or of bytes in a string. | `{{ len .Groups }} groups` |
+| `slice` | Part of a string or list, from the first index up to the second. | `{{ slice .MonitorID 0 7 }}` |
+| `eq`, `ne` | Equal and not equal. | `{{ if eq .Action "Open" }}firing{{ end }}` |
+| `lt`, `le`, `gt`, `ge` | Less than, less than or equal, greater than, and greater than or equal. | `{{ if gt .Value 100.0 }}very high{{ end }}` |
+| `and`, `or`, `not` | Boolean logic. `or` returns its first non-empty argument. | `{{ or .Description .Name }}` |
+| `print`, `printf`, `println` | Format values like Go’s `fmt.Sprint`, `fmt.Sprintf`, and `fmt.Sprintln`. | `{{ printf "%.1f" .Value }}` |
+| `html`, `js`, `urlquery` | Escape text for HTML, a JavaScript string, or a URL query parameter. | `{{ urlquery .Name }}` |
+
+Numbers only compare with numbers of the same kind. All number variables are decimal numbers, so write `100.0` rather than `100` when you compare them.
+
+Templates have the following limits:
+
+- `define`, `template`, and `block` aren’t supported.
+- `range` works only over a field, such as `.Labels`, `.Groups`, or `.Values`. Nest `range` at most two levels deep.
+- Axiom renders at most 100 entries of each list or map.
+- A rendered title or body is at most 16 KB, and rendering takes at most 100 ms.
+- `printf` widths and precisions are below 1000.
+
+## Examples
+
+### Status and links
+
+This template shows an icon for the state, the value against the threshold, the query window, and links to the monitor and the query.
+
+Title:
+
+```text
+{{ if eq .Action "Open" }}🔥{{ else }}✅{{ end }} {{ .Name }}
+```
+
+Body:
+
+```text
+**{{ .Name }}** is {{ .Action }}.
+
+- **Value:** {{ printf "%.1f" .Value }} ({{ .Operator }} {{ .Threshold }})
+- **Window:** {{ .QueryStartTime }} to {{ .QueryEndTime }}
+{{ if .Labels }}- **Labels:** {{ join .Labels ", " }}
+{{ end }}
+[Open monitor]({{ .MonitorURL }}){{ if .QueryURL }} · [Open query]({{ .QueryURL }}){{ end }}
+```
+
+When a threshold monitor triggers, Slack shows:
+
+```text
+API errors is Open.
+
+• Value: 42.0 (Above 10)
+• Window: 2026-10-08T11:55:00Z to 2026-10-08T12:00:00Z
+• Labels: production, team-api
+
+Open monitor · Open query
+```
+
+### Threshold level changes
+
+This template names the level and its severity in the title, and explains how the alert moved between levels in the body. On a monitor without named levels, it falls back to the default body.
+
+Title:
+
+```text
+{{ if .Level.Name }}[{{ .Level.Severity }}] {{ .Level.Name }}{{ else }}{{ .Action }}{{ end }}: {{ .Name }}
+```
+
+Body:
+
+```text
+{{ if eq .Transition "escalate" }}Escalated from **{{ .PreviousLevel.Name }}** to **{{ .Level.Name }}**.
+{{- else if eq .Transition "deescalate" }}Dropped from **{{ .PreviousLevel.Name }}** to **{{ .Level.Name }}**.
+{{- else if eq .Transition "resolve" }}Resolved. The last level was **{{ .PreviousLevel.Name }}**.
+{{- else if .Level.Name }}Opened at **{{ .Level.Name }}**.
+{{- else }}{{ .Body }}{{ end }}
+
+Value: {{ .Value }}. Threshold: {{ .Threshold }}.
+{{- if .Level.Name }} Recovery value: {{ .Level.Recovery }}.{{ end }}
+```
+
+When an alert escalates from a level named `Heads up` to a critical level named `Page on-call`, the rendered title and body are:
+
+```text
+[critical] Page on-call: API errors
+
+Escalated from **Heads up** to **Page on-call**.
+
+Value: 97. Threshold: 95. Recovery value: 90.
+```
+
+The `-` in `{{-` trims the whitespace before the action, so the chosen branch doesn’t end with an extra line break.
+
+### Grouped results
+
+This body lists each group that crossed the threshold of a monitor that groups by `service` and has **Notify by group** turned on.
+
+```text
+{{ if .NoData }}No data in the last {{ .Range }} minutes.
+{{- else if eq .Action "Closed" }}{{ .Body }}
+{{- else }}Above {{ .Threshold }}:
+{{ range .Groups }}
+- `{{ index .Values "service" }}`: {{ .Value }}
+{{- end }}{{ end }}
+```
+
+The rendered body is:
+
+```text
+Above 10:
+
+- `api`: 42
+- `worker`: 17
+```
+
+### Matched event fields
+
+This template puts fields of the matched event into the notification of a match monitor. The trace line shows only when the event has a `trace_id` field.
+
+Title:
+
+```text
+{{ .Name }}: {{ index .MatchedEvent "status" }}
+```
+
+Body:
+
+```text
+**{{ index .MatchedEvent "message" }}**
+
+Status {{ index .MatchedEvent "status" }} at {{ index .MatchedEvent "_time" }}.
+{{ if index .MatchedEvent "trace_id" }}Trace: {{ index .MatchedEvent "trace_id" }}{{ end }}
+```
