@@ -641,13 +641,21 @@ param $codes: array;
 | align to 5m using avg
 ```
 
-When running a parameterized query through the API, pass parameter values as `param__<name>` query parameters formatted as MPL literals. For example:
+When running a parameterized query through the API, pass parameter values in the `params` object of the request body. Name each key `param__<name>` and format each value as an MPL literal. Quote dataset names that contain special characters, such as `-`, with backticks. For example:
 
-- `param__ds=otel-demo-metrics` (dataset identifier)
-- `param__svc="checkout"` (quoted string literal)
-- `param__code=200` (integer literal)
-- `param__window=5m` (duration literal)
-- `param__pattern=#/api-.*/` (regex literal)
+```json
+{
+  "mpl": "param $ds: Dataset;\nparam $svc: string;\n$ds:`http.server.request.duration` | where `service.name` == $svc | align to 5m using avg",
+  "startTime": "now-1h",
+  "endTime": "now",
+  "params": {
+    "param__ds": "`otel-demo-metrics`",
+    "param__svc": "\"frontend\""
+  }
+}
+```
+
+Other literal types work the same way. For example, `"param__code": "200"` (integer), `"param__window": "5m"` (duration), and `"param__pattern": "#/api-.*/"` (regex).
 
 For using dashboard filter bars as MPL parameters, see [Use filters with metrics queries](/query-data/filters#use-filters-with-metrics-queries).
 
