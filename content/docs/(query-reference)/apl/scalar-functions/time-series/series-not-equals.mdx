@@ -96,16 +96,16 @@ You can use `series_not_equals` to check if HTTP status codes differ between req
 ```kusto
 ['sample-http-logs']
 | where ['geo.country'] == 'United States'
-| summarize us_statuses = make_list(status) by uri
+| summarize us_statuses = make_list(toint(status)) by uri
 | join (
     ['sample-http-logs']
     | where ['geo.country'] == 'Germany'
-    | summarize de_statuses = make_list(status) by uri
+    | summarize de_statuses = make_list(toint(status)) by uri
 ) on uri
 | extend diff_flags = series_not_equals(us_statuses, de_statuses)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20'United%20States'%20%7C%20summarize%20us_statuses%20%3D%20make_list(status)%20by%20uri%20%7C%20join%20(%20%5B'sample-http-logs'%5D%20%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20'Germany'%20%7C%20summarize%20de_statuses%20%3D%20make_list(status)%20by%20uri%20)%20on%20uri%20%7C%20extend%20diff_flags%20%3D%20series_not_equals(us_statuses%2C%20de_statuses)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'sample-http-logs'%5D%20%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20'United%20States'%20%7C%20summarize%20us_statuses%20%3D%20make_list(toint(status))%20by%20uri%20%7C%20join%20(%20%5B'sample-http-logs'%5D%20%7C%20where%20%5B'geo.country'%5D%20%3D%3D%20'Germany'%20%7C%20summarize%20de_statuses%20%3D%20make_list(toint(status))%20by%20uri%20)%20on%20uri%20%7C%20extend%20diff_flags%20%3D%20series_not_equals(us_statuses%2C%20de_statuses)%22%7D)
 
 **Output**
 
