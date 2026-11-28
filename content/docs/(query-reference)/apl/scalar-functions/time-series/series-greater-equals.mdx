@@ -62,18 +62,18 @@ In OpenTelemetry traces, you can compare span durations from one service with ex
 ```kusto
 ['otel-demo-traces']
 | where ['service.name'] == 'checkout'
-| summarize durations = make_list(duration) by trace_id
-| extend baseline = dynamic([100ms,200ms,300ms])
+| summarize durations = make_list(duration / 1ms) by trace_id
+| extend baseline = dynamic([100, 200, 300])
 | extend slower = series_greater_equals(durations, baseline)
 ```
 
-[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'checkout'%20%7C%20summarize%20durations%20%3D%20make_list(duration)%20by%20trace_id%20%7C%20extend%20baseline%20%3D%20dynamic(%5B100ms%2C200ms%2C300ms%5D)%20%7C%20extend%20slower%20%3D%20series_greater_equals(durations%2C%20baseline)%22%7D)
+[Run in Playground](https://play.axiom.co/axiom-play-qf1k/query?initForm=%7B%22apl%22%3A%22%5B'otel-demo-traces'%5D%20%7C%20where%20%5B'service.name'%5D%20%3D%3D%20'checkout'%20%7C%20summarize%20durations%20%3D%20make_list(duration%20%2F%201ms)%20by%20trace_id%20%7C%20extend%20baseline%20%3D%20dynamic(%5B100%2C%20200%2C%20300%5D)%20%7C%20extend%20slower%20%3D%20series_greater_equals(durations%2C%20baseline)%22%7D)
 
 **Output**
 
 | trace_id | durations            | baseline             | slower             |
 | --------- | -------------------- | -------------------- | ------------------ |
-| t001      | [120ms,180ms,400ms] | [100ms,200ms,300ms] | [true,false,true] |
+| t001      | [120,180,400]       | [100,200,300]       | [true,false,true] |
 
 This query checks if spans in the checkout service are slower than the defined baseline series.
 
